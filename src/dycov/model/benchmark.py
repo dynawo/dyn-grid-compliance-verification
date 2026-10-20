@@ -8,6 +8,7 @@
 #     demiguelm@aia.es
 #
 import logging
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -48,6 +49,17 @@ class Summary:
 
 
 _FAILED_RESULTS: dict = {"compliance": False, "curves": None}
+
+_INTERNAL_NODE1_FIGURES = (
+    ("fig_InternalNode1P", "internal_node1_active_power", "P"),
+    ("fig_InternalNode1Q", "internal_node1_reactive_power", "Q"),
+)
+
+_FREQUENCY_BANDS = {
+    "freq_1": FrequencyBand(upper=1.0, lower=1.0, color="#c44e52"),
+    "freq_200": FrequencyBand(upper=0.2, lower=0.2, color="#55a868"),
+    "freq_250": FrequencyBand(upper=0.25, lower=0.25, color="#c44e52"),
+}
 
 
 def _compliance_for_simulation_error(error: SimulationError) -> Compliance:
@@ -329,14 +341,15 @@ class Benchmark:
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
         self._figures_description = []
         self.__init_figures_v(validations, pcs_benchmark_name)
+        self.__init_figures_uit(validations, pcs_benchmark_name)
         self.__init_figures_p(validations, pcs_benchmark_name)
         self.__init_figures_q(validations, pcs_benchmark_name)
+        self.__init_figures_internal_node1(pcs_benchmark_name)
         self.__init_figures_ip(validations, pcs_benchmark_name)
         self.__init_figures_iq(validations, pcs_benchmark_name)
+        self.__init_figures_i(validations, pcs_benchmark_name)
         self.__init_figures_w(validations, pcs_benchmark_name)
         self.__init_figures_wref(validations, pcs_benchmark_name)
-        self.__init_figures_i(validations, pcs_benchmark_name)
-        self.__init_figures_uit(validations, pcs_benchmark_name)
         self.__init_figures_ustator(validations, pcs_benchmark_name)
         self.__init_figures_theta(validations, pcs_benchmark_name)
         self.__init_figures_tap(validations, pcs_benchmark_name)
@@ -371,6 +384,7 @@ class Benchmark:
                 ylabel="V (pu base Unom)",
                 event_markers=event_markers,
                 tolerance_band=tolerance_band,
+                setpoint=self.__setpoint_driving("voltage"),
             )
         )
 
@@ -400,6 +414,7 @@ class Benchmark:
                 ),
                 ylabel=p_label,
                 tolerance_band=tolerance_band,
+                setpoint=self.__setpoint_driving("active_power"),
             )
         )
 
@@ -420,8 +435,41 @@ class Benchmark:
                     self._producer.get_zone(), "reactive_power"
                 ),
                 ylabel=q_label,
+                setpoint=self.__setpoint_driving("reactive_power"),
             )
         )
+
+    def __setpoint_driving(self, label: str) -> str | None:
+        return compared_curves.setpoint_driving(
+            self._producer.get_zone(), label, self._producer.controls_internal_node2()
+        )
+
+    def __init_figures_internal_node1(self, pcs_benchmark_name: str) -> None:
+        """The power at InternalNode1, where the DTR sets the operating point of a Zone 1 test.
+
+        No check compares it. The PDF leaves it out when the converter controls InternalNode1,
+        because it then repeats the figures of the controlled power.
+        """
+        for name, label, magnitude in _INTERNAL_NODE1_FIGURES:
+            if pcs_benchmark_name not in config.get_list("ReportCurves", name):
+                continue
+            variables = compared_curves.plot_variables(self._producer.get_zone(), label)
+            if variables is None:
+                continue
+
+            self._figures_description.append(
+                FigureDescription(
+                    name=name,
+                    variables=variables,
+                    ylabel=self.__power_ylabel(magnitude),
+                    in_pdf=self._producer.controls_internal_node2(),
+                )
+            )
+
+    def __power_ylabel(self, magnitude: str) -> str:
+        if self._producer.is_dynawo_model():
+            return f"{magnitude} (pu base Snom = {self._producer.s_nom}MVA)"
+        return f"{magnitude} (pu base Snom)"
 
     def __init_figures_ip(self, validations: list, pcs_benchmark_name: str) -> None:
         fig_Ip = config.get_list("ReportCurves", "fig_Ip")
@@ -473,6 +521,7 @@ class Benchmark:
                 name="fig_W",
                 variables=[{"type": "generator", "variable": "RotorSpeedPu"}],
                 ylabel=r"$\omega$ (Hz)",
+                in_hz=True,
             )
         )
 
@@ -481,20 +530,17 @@ class Benchmark:
         if pcs_benchmark_name not in fig_WRef:
             return
 
-        frequency_band = None
-        if "freq_1" in validations:
-            frequency_band = FrequencyBand(upper=1.0, lower=1.0)
-        elif "freq_250" in validations:
-            frequency_band = FrequencyBand(upper=0.250, lower=0.250)
-        elif "freq_200" in validations:
-            frequency_band = FrequencyBand(upper=0.2, lower=0.2)
+        frequency_bands = [
+            band for validation, band in _FREQUENCY_BANDS.items() if validation in validations
+        ]
 
         self._figures_description.append(
             FigureDescription(
                 name="fig_WRef",
                 variables=[{"type": "generator", "variable": "NetworkFrequencyPu"}],
                 ylabel=r"$\omega$ (Hz)",
-                frequency_band=frequency_band,
+                frequency_bands=frequency_bands,
+                in_hz=True,
             )
         )
 
@@ -536,6 +582,7 @@ class Benchmark:
                 name="fig_UIt",
                 variables=[{"type": "generator", "variable": "VoltageInjTerminal"}],
                 ylabel="V (pu base Unom)",
+                setpoint=self.__setpoint_driving("injector_voltage"),
             )
         )
 
@@ -817,13 +864,15 @@ class Benchmark:
         """
         success = False
 
-        for op_cond in self._oc_list:
+        for position, op_cond in enumerate(self._oc_list, start=1):
             dycov_logging.set_test_context(
                 pcs=self._pcs_name,
                 benchmark=self._name,
                 oc=op_cond.get_name(),
+                producer=self._producer_name,
             )
-            dycov_logging.get_logger("Benchmark").info("Validate")
+            logger = dycov_logging.get_logger("Benchmark")
+            logger.info(f"Start ({position}/{len(self._oc_list)})")
             if dycov_logging.get_logger("PCS").isEnabledFor(logging.DEBUG):
                 dump_effective_pcs_description(
                     config,
@@ -831,15 +880,17 @@ class Benchmark:
                     benchmark=self._name,
                     oc=op_cond.get_name(),
                 )
+            started_at = time.perf_counter()
             try:
                 op_cond_success, compliance, results = self.__validate_operating_condition(op_cond)
-            except Exception as error:
-                dycov_logging.get_logger("Benchmark").error(
-                    f"Operating condition not evaluated: {error}"
-                )
+            except Exception:
+                logger.exception("Operating condition not evaluated")
                 op_cond_success = False
                 compliance = Compliance.InvalidTest
                 results = {**_FAILED_RESULTS, "summary": compliance, "missed_columns": []}
+            logger.info(
+                f"Done in {time.perf_counter() - started_at:.1f}s -> {compliance.to_str()}"
+            )
             success |= op_cond_success
 
             summary_list.append(
@@ -863,13 +914,16 @@ class Benchmark:
     def generate(self) -> None:
         """Execute the generation step for all operating conditions of the benchmark."""
 
-        for op_cond in self._oc_list:
+        for position, op_cond in enumerate(self._oc_list, start=1):
             dycov_logging.set_test_context(
                 pcs=self._pcs_name,
                 benchmark=self._name,
                 oc=op_cond.get_name(),
+                producer=self._producer_name,
             )
-            dycov_logging.get_logger("Benchmark").info("Generate")
+            dycov_logging.get_logger("Benchmark").info(
+                f"Generate ({position}/{len(self._oc_list)})"
+            )
             working_oc_dir = (
                 self._working_dir
                 / self._producer_name

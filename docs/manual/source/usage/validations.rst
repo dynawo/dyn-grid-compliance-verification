@@ -25,6 +25,10 @@ to the DTR's PCS structure. The following tests are currently implemented:
     Ride-Through (like I5), V-sag Ride-Through (like I6), V-surge Ride-Through
     (like I7), Ramp Response to Grid Frequency, and Islanding (like I10).
 
+* **RMS model validation against on-site measurements (Power Parks and
+  BESS)**: PCS F16, the second phase of PCS I16, on Zone 3 only, with the
+  tests the producer recorded during the commissioning of the installation.
+
 * **Electrical performance (Power Park Modules)**: PCSs I2, I5, I6, I7, and I10.
 
 * **Electrical performance (Battery Energy Storage Systems)**: PCSs I2, I5, I6,
@@ -178,14 +182,29 @@ plant model, named **InternalNode1** in DyCoV outputs (the node called *Node1*
 in the DTR). The name *PDR* is reserved for the real connection point of the
 complete installation to RTE's grid, which is the point used in Zone 3.
 
-The injector-terminal figures of the Zone 1 reports (currents Ip and Iq and the
+The injector-terminal curves of the Zone 1 reports (currents Ip and Iq and the
 voltage magnitude at the converter output) are measured at **InternalNode2**,
 the node between the unit and its transformer (the node called *Node2* in the
-DTR). Both nodes are labeled in the network schema of each report. The
-injector-terminal currents are computed as P/U and Q/U at InternalNode2; if
-that voltage ever falls below the 2e-4 pu numerical guard, the currents are
-zeroed at those samples and DyCoV emits a warning both in the logs and in the
-report, since this normally reveals a transformer with near-zero impedance.
+DTR). Both nodes are labeled in the network schema of each report. These
+curves are read from the unit model itself at the injector terminal — the LV
+side of its internal transformer — where the voltage never reaches zero during
+a fault; samples where it is not available are discarded rather than turned
+into a current.
+
+Zone 1 compares six curves, in every one of its benchmarks: the voltage at
+InternalNode1, the voltage at InternalNode2, the active and reactive power at
+the point controlled by the converter, and the currents Ip and Iq at
+InternalNode2. The two voltages carry no DTR threshold, so no compliance
+check applies to them; the powers and currents are checked against the
+``thr_P_*``, ``thr_Q_*``, ``thr_Ip_*`` and ``thr_Iq_*`` threshold families.
+
+In a setpoint step, the figure of the magnitude the step drives also draws the
+setpoint, twice: as simulated and as the reference curves declare it. The two
+should lie on top of each other; when they do not, the reference curves were
+obtained with a different setpoint from the one the test applies. The active
+and reactive power setpoints drive the power at the point the converter
+controls, and the voltage setpoint the voltage there: at InternalNode2 when
+``ConverterLVControl`` is true, at InternalNode1 otherwise.
 
 Reference curves are always required. The producer response can come from
 Dynawo simulations or from producer-provided curves.
@@ -328,6 +347,54 @@ defined by an operating point (OP), event parameters, and grid parameters.
    :width: 70%
    :alt: network setup for PCS I16 Zone 1
    :align: center
+
+
+PCS F16
+^^^^^^^
+
+PCS F16 is the second phase of the open phasor model validation: the model is
+compared against the on-site measurements recorded during the commissioning
+tests of the installation, at the connection point (Zone 3). The fiche
+selects no test of its own: the producer proposes the on-site tests, RTE
+approves them, and the recorded signals are the reference. It only fixes two
+things, and those are what the tool ships:
+
+* the active power levels every test runs at — minimum, 50% of the maximum
+  and maximum injection for a PPM; maximum and 50% consumption, 50% and
+  maximum injection for a BESS. The minimum is declared in ``Producer.ini``
+  as ``p_min_injection`` (``p_min_consumption`` for the consumption mode),
+  in MW, 0 when absent; in the input workbook, these are the
+  ``Pmin_injection_PDR`` and ``Pmin_soutirage_PDR`` rows of the ``Zone3``
+  sheet;
+* the errors it tolerates on the controlled magnitude — MXE/ME/MAE of
+  0.05/0.03/0.04 before and after the event and 0.1/0.05/0.07 during it,
+  configured as ``thr_FT_reftrack_*`` in the ``[GridCode]`` section. The PCS
+  names that family in its description, ``setpoint_tracking_thresholds = FT``,
+  which is what selects the table; PCS I16 keeps its own whatever the
+  reference curves are.
+
+The inputs of PCS F16 are the Zone 3 model of the installation and the
+records of its commissioning tests; no Zone 1 model is needed. The tests
+themselves are declared by the producer, with their records, in an
+``F16Description.ini`` delivered at the root of the reference curves
+directory. DyCoV takes it as the user description of ``PCS_RTE-F16z3``, the
+PCS the file names in its ``[PCS-Benchmarks]``: one benchmark per kind of
+recorded test, one operating condition per active power level, the grid and
+the event of each one, the compliance tests to apply and the figures to
+draw. The shipped ``PCSDescription.ini`` of ``PCS_RTE-F16z3`` declares no
+test; a template of ``F16Description.ini`` ships next to it, and DyCoV
+leaves a copy of it at start-up in the user configuration, under
+``templates/PCS/model/<technology>/PCS_RTE-F16z3/F16Description.ini``, to
+copy next to the reference curves and complete. A PCS that declares no
+test is left out of the run, and every declared test is reported with a
+template shared by all of them.
+
+The tutorial *Declaring the on-site tests of PCS F16* walks through the
+declaration step by step; every key it can carry is described in
+:ref:`The F16 declaration file <f16-description>`, and the tests it can
+activate in :ref:`Compliance tests <compliance-tests>`. The ``Wind/IECB2015`` and
+``BESS/WECC`` examples carry such declarations, invented for the example,
+with records anonymized from the tool's own simulations.
 
 
 Electrical performance verification  (Power Park Modules)
@@ -541,13 +608,16 @@ process re-synchronizes the subnetwork with the bulk transmission network.
    :align: center
 
 
+.. _step-response-characteristics:
+
 Step-response Characteristics
 -------------------------------
 
 Several compliance criteria are based on reaction time, rise time, settling
-time, and overshoot. For RMS model validation tests, these definitions follow
-exactly the IEC standard. For Electrical performance verification, the rise time is
-defined as equivalent to the IEC reaction + rise time combined.
+time, and overshoot. These definitions follow exactly the IEC standard, in the
+RMS model validation tests and in the Electrical performance verification alike:
+the rise time runs from the reaction time (the 10 % crossing) to the 90 % crossing,
+and the overshoot is measured after the event in the direction of the step.
 
 The figure below, taken from IEC 61400-21-1 (Section 3, Terms and definitions),
 illustrates these step-response characteristics:

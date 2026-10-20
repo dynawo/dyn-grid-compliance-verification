@@ -22,9 +22,15 @@ RIPPLE_GATE = 0.01  # pu
 RIPPLE_PERIOD = 0.1  # s
 RIPPLE_SWINGS = 6
 RIPPLE_GRID = 1e-3  # s
+# A response to an event also swings fast for a while, but it dies out: only an oscillation that
+# lasts this long, with this many swings of at least this fraction of its largest one, is ripple.
+RIPPLE_SUSTAIN = 0.2  # s
+RIPPLE_COMPARABLE = 0.5
+RIPPLE_COMPARABLE_SWINGS = 4
 
 
-def _ripple_spans(time: np.ndarray, values: np.ndarray) -> List[tuple]:
+def _turns(time: np.ndarray, values: np.ndarray) -> List[tuple]:
+    """Where the signal reverses by at least the gate, with the value of the extreme it leaves."""
     turns = []
     last_extreme = values[0]
     direction = 0
@@ -33,25 +39,36 @@ def _ripple_spans(time: np.ndarray, values: np.ndarray) -> List[tuple]:
             continue
         new_direction = 1 if value > last_extreme else -1
         if direction and new_direction != direction:
-            turns.append(instant)
+            turns.append((instant, last_extreme))
         direction = new_direction
         last_extreme = value
+    return turns
 
-    spans = []
-    run_start = None
-    run_length = 0
-    for turn, next_turn in zip(turns, turns[1:]):
-        if next_turn - turn <= RIPPLE_PERIOD:
-            run_start = turn if run_start is None else run_start
-            run_length += 1
-            continue
-        if run_length >= RIPPLE_SWINGS:
-            spans.append((run_start, turn))
-        run_start, run_length = None, 0
-    if run_length >= RIPPLE_SWINGS:
-        spans.append((run_start, turns[-1]))
 
-    return spans
+def _is_sustained(run: List[tuple]) -> bool:
+    if run[-1][0] - run[0][0] < RIPPLE_SUSTAIN:
+        return False
+    swings = np.abs(np.diff([extreme for _, extreme in run]))
+    return np.count_nonzero(swings >= RIPPLE_COMPARABLE * swings.max()) >= RIPPLE_COMPARABLE_SWINGS
+
+
+def _fast_runs(turns: List[tuple]) -> List[List[tuple]]:
+    """The turns grouped in runs whose consecutive turns are at most a ripple period apart."""
+    runs = []
+    for turn in turns:
+        if runs and turn[0] - runs[-1][-1][0] <= RIPPLE_PERIOD:
+            runs[-1].append(turn)
+        else:
+            runs.append([turn])
+    return runs
+
+
+def _ripple_spans(time: np.ndarray, values: np.ndarray) -> List[tuple]:
+    return [
+        (run[0][0], run[-1][0])
+        for run in _fast_runs(_turns(time, values))
+        if len(run) > RIPPLE_SWINGS and _is_sustained(run)
+    ]
 
 
 def _remove_spikes(values: np.ndarray) -> np.ndarray:

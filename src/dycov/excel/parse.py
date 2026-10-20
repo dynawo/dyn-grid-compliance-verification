@@ -12,7 +12,7 @@
 - ``read_selected_key``: the Excel-computed Model-Map key, read from the derived table of the
   configuration sheet (the tool has no knowledge of which blocks form the key);
 - ``resolve_models``: that key -> Dynawo ``lib`` + prefix (per zone), by looking up the Model Map;
-- ``resolve_multi_models``: plant key and turbine keys -> Dynawo ``lib`` + prefix (per zone);
+- ``resolve_unit_models``: the model of each generating unit (``Zone1<x>`` sheet);
 - ``parse_zone``: the electrical tables, locating the value column per sheet (the two differ);
 - ``parse_control_params``: the selected control parameters, flat, in workbook order;
 - ``technology`` / ``template_for``: derive PV/BESS/Wind and the DyCoV template;
@@ -127,45 +127,27 @@ def resolve_models(workbook: dict) -> dict:
     return {"key": key, **table[key]}
 
 
-def resolve_multi_models(workbook: dict, zone1_sheets: list[str]) -> dict:
-    """Resolve the selected variants for the Zone3 (plant) and every Zone1<x> (turbines).
+def resolve_unit_models(workbook: dict, zone1_sheets: list) -> list:
+    """Resolve the model of every generating unit, one per ``Zone1<x>`` sheet.
 
-    Returns ``{"zone3": {"key", "zone3_lib", ...},
-    "zone1": {"Zone1a": {"key", "zone1_lib", ...}}}``.
-    Raises if any key is not present in the ``Model Map``.
+    ``Général`` holds one block selection, so it resolves one model, and a duplicated
+    ``Zone1<x>`` copies electrical data only: nothing in the workbook says which model each of
+    several units is, and they may differ (``examples/Model/Wind/WECC4`` mixes ``WTG4A`` with
+    ``WTG4B``). Several units are refused until the workbook can say it (dycov#474).
+
+    Returns
+    -------
+    list
+        ``resolve_models``'s result for each sheet, in the order of *zone1_sheets*.
     """
-    plant_key = read_selected_key(workbook)
-    table = _read_model_map(workbook)
-
-    if plant_key not in table:
+    if len(zone1_sheets) > 1:
         raise ValueError(
-            f"Variant combination not found in '{MODEL_MAP_SHEET}': {plant_key!r}."
-            f"Pick a combination "
-            f"Dynawo has a model for in the 'Choix' column of 'Général', among: "
-            f"{', '.join(sorted(table)) or '(none)'}"
+            f"the workbook describes {len(zone1_sheets)} generating units "
+            f"({', '.join(zone1_sheets)}), but '{names.sheet('config')}' resolves a single "
+            f"model and no sheet says which model each unit is: multiple-generator plants "
+            f"cannot be generated yet"
         )
-
-    resolved = {"zone3": {"key": plant_key, **table[plant_key]}, "zone1": {}}
-    model_key_row = names.row("Zone1", "model_key")
-
-    for sheet in zone1_sheets:
-        zone_data = parse_zone(workbook, sheet)
-
-        # Fallback to global plant_key if the specific Model_Variant row is missing
-        if model_key_row in zone_data:
-            gen_key = zone_text(zone_data, model_key_row)
-        else:
-            gen_key = plant_key
-
-        if gen_key not in table:
-            raise ValueError(
-                f"Variant combination not found in '{MODEL_MAP_SHEET}': {gen_key!r}"
-                f"(read from sheet '{sheet}')."
-            )
-
-        resolved["zone1"][sheet] = {"key": gen_key, **table[gen_key]}
-
-    return resolved
+    return [resolve_models(workbook)]
 
 
 # ---------------------------------------------------------------------------
@@ -348,6 +330,29 @@ def optional_number(zone_key: str, zone: dict, key: str) -> float | None:
         The number, or None when the sheet has no such row or leaves it empty.
     """
     return zone_optional_number(zone, names.row(zone_key, key))
+
+
+def optional_value(zone_key: str, zone: dict, key: str) -> str | None:
+    """The value of a row that may be left empty, validated as a number but kept as written.
+
+    Parameters
+    ----------
+    zone_key: str
+        Zone the sheet describes, ``Zone1`` or ``Zone3``.
+    zone: dict
+        Rows of that sheet.
+    key: str
+        Concept the row stands for.
+
+    Returns
+    -------
+    str or None
+        The value as written, or None when the sheet has no such row or leaves it empty.
+    """
+    name = names.row(zone_key, key)
+    if zone_optional_number(zone, name) is None:
+        return None
+    return zone_text(zone, name)
 
 
 def parse_zone(workbook: dict, sheet_name: str) -> ZoneValues:

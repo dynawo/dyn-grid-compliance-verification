@@ -7,11 +7,14 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-"""The curves each zone compares against the reference, declared once.
+"""The curves each zone compares against the reference, declared once, and the ones it only draws.
 
 The set was spelled out in six places — the error calculation, the compliance checks, the
 threshold lookup, the report table, the required-curve check and the setpoint-tracking target —
 and every one of them had to agree. They all read this registry instead.
+
+The curves a zone draws without comparing them are declared apart, so that none of those readers
+ever sees them: they are neither required of the reference nor part of the verdict.
 """
 
 from __future__ import annotations
@@ -73,6 +76,72 @@ _ZONE_3 = (
 _BY_ZONE = {1: _ZONE_1, 3: _ZONE_3}
 
 
+@dataclass(frozen=True)
+class DrawnCurve:
+    """A curve a zone draws in the report without comparing it against the reference.
+
+    Attributes
+    ----------
+    selector : str
+        The curve's column name, or the suffix that identifies it when the column carries the
+        id of the generating unit that produced it.
+    label : str
+        The name a figure asks for it by, unique within a zone.
+    """
+
+    selector: str
+    label: str
+
+
+_ZONE_1_DRAWN = (
+    DrawnCurve("BusPDR_BUS_ActivePower", "internal_node1_active_power"),
+    DrawnCurve("BusPDR_BUS_ReactivePower", "internal_node1_reactive_power"),
+)
+
+_DRAWN_BY_ZONE = {1: _ZONE_1_DRAWN}
+
+
+@dataclass(frozen=True)
+class DrawnSetpoint:
+    """A setpoint a zone draws over the magnitude it drives, in the test that steps it.
+
+    Attributes
+    ----------
+    name : str
+        The setpoint's variable, which its column names after the id of the generating unit.
+    test_type : str
+        The ``setpoint_change_test_type`` of the test that steps it.
+    drives : str
+        The label of the curve it drives when the converter controls InternalNode1.
+    drives_at_internal_node2 : str
+        The label of the curve it drives when the converter controls InternalNode2.
+    asked : bool
+        Whether the zone asks the producer for it. The workbook of the TSO asks for no voltage
+        setpoint in Zone 1, and the curves of a producer name their generating units by theirs.
+    """
+
+    name: str
+    test_type: str
+    drives: str
+    drives_at_internal_node2: str
+    asked: bool
+
+    def driven_label(self, controls_internal_node2: bool) -> str:
+        """The label of the curve the setpoint drives, given the node the converter controls."""
+        return self.drives_at_internal_node2 if controls_internal_node2 else self.drives
+
+
+_ZONE_1_SETPOINTS = (
+    DrawnSetpoint("ActivePowerSetpointPu", "PSetpoint", "active_power", "active_power", True),
+    DrawnSetpoint(
+        "ReactivePowerSetpointPu", "QSetpoint", "reactive_power", "reactive_power", True
+    ),
+    DrawnSetpoint("VoltageSetpointPu", "USetpoint", "voltage", "injector_voltage", False),
+)
+
+_DRAWN_SETPOINTS_BY_ZONE = {1: _ZONE_1_SETPOINTS}
+
+
 def for_zone(zone: int) -> tuple[ComparedCurve, ...]:
     """The curves a zone compares, in report order."""
     return _BY_ZONE.get(zone, _ZONE_3)
@@ -112,6 +181,11 @@ def in_zone(zone: int, label: str) -> ComparedCurve | None:
     return next((curve for curve in for_zone(zone) if curve.label == label), None)
 
 
+def in_column(zone: int, column: str) -> ComparedCurve | None:
+    """The curve a zone compares in a column, or None when the column carries none of them."""
+    return next((curve for curve in for_zone(zone) if curve.matches(column)), None)
+
+
 def column_of(zone: int, label: str, columns: Iterable[str]) -> str | None:
     """The column that carries a zone's compared curve, or None when no column does."""
     curve = in_zone(zone, label)
@@ -120,13 +194,52 @@ def column_of(zone: int, label: str, columns: Iterable[str]) -> str | None:
     return next((column for column in columns if curve.matches(column)), None)
 
 
+def setpoint_label(modified_setpoint: str) -> str:
+    """The label of the magnitude a setpoint drives, the reactive power for an unknown one, as
+    the tool has always done."""
+    return _SETPOINT_LABELS.get(modified_setpoint, "reactive_power")
+
+
+def asked_setpoints(zone: int) -> tuple[str, ...]:
+    """The setpoints a zone asks the producer for, which it draws without comparing them."""
+    return tuple(
+        setpoint.name for setpoint in _DRAWN_SETPOINTS_BY_ZONE.get(zone, ()) if setpoint.asked
+    )
+
+
+def setpoint_driving(zone: int, label: str, controls_internal_node2: bool) -> str | None:
+    """The setpoint a zone draws over the curve it compares under a label, given the node the
+    converter controls, or None when it draws none there."""
+    return next(
+        (
+            setpoint.name
+            for setpoint in _DRAWN_SETPOINTS_BY_ZONE.get(zone, ())
+            if setpoint.driven_label(controls_internal_node2) == label
+        ),
+        None,
+    )
+
+
+def setpoint_stepped_by(zone: int, test_type: str | None) -> str | None:
+    """The setpoint a zone draws that a test of a ``setpoint_change_test_type`` steps, or None
+    when the test steps none of them."""
+    return next(
+        (
+            setpoint.name
+            for setpoint in _DRAWN_SETPOINTS_BY_ZONE.get(zone, ())
+            if setpoint.test_type == test_type
+        ),
+        None,
+    )
+
+
 def for_setpoint(zone: int, modified_setpoint: str, columns: Iterable[str]) -> str:
     """The column a setpoint step is tracked on: the magnitude the setpoint drives, in this zone.
 
-    Falls back to the reactive power, as the tool has always done for an unknown setpoint, and to
-    the selector itself when no column carries it, so the caller reports it as not computable.
+    Falls back to the selector itself when no column carries it, so the caller reports it as not
+    computable.
     """
-    label = _SETPOINT_LABELS.get(modified_setpoint, "reactive_power")
+    label = setpoint_label(modified_setpoint)
     curve = in_zone(zone, label)
     if curve is None:
         return modified_setpoint
@@ -169,13 +282,18 @@ def curve_names(zone: int, generator_ids: Iterable[str]) -> list[str]:
     return names
 
 
+def _drawn_in_zone(zone: int, label: str) -> DrawnCurve | None:
+    return next((curve for curve in _DRAWN_BY_ZONE.get(zone, ()) if curve.label == label), None)
+
+
 def plot_variables(zone: int, label: str):
-    """The ``variables`` a report figure needs to draw the curve a zone compares under a label.
+    """The ``variables`` a report figure needs to draw the curve a zone compares or only draws
+    under a label, or None when the zone has no curve under it.
 
     A curve of the generating unit is drawn for every unit the curves carry, so it is named by
     its suffix; one of the bus is a single column, named in full.
     """
-    curve = in_zone(zone, label)
+    curve = in_zone(zone, label) or _drawn_in_zone(zone, label)
     if curve is None:
         return None
     if curve.selector.startswith(_GENERATOR_SELECTOR):

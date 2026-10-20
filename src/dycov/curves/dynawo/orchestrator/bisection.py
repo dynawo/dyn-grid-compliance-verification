@@ -12,7 +12,6 @@ import math
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from tempfile import TemporaryDirectory
 
 import pandas as pd
 
@@ -55,7 +54,6 @@ class BisectionEngine:
         launcher_dwo: str,
         producer: Producer,
         s_nref: float,
-        f_nom: float,
         sim_time: float,
         thr_ss_tol: float,
         curves_dict: dict,
@@ -71,8 +69,6 @@ class BisectionEngine:
             The producer associated with the simulation.
         s_nref : float
             Reference apparent power (MVA).
-        f_nom : float
-            Nominal frequency (Hz).
         sim_time : float
             Current simulation elapsed time; updated after successful runs.
         thr_ss_tol : float
@@ -84,7 +80,6 @@ class BisectionEngine:
         self._launcher_dwo = launcher_dwo
         self._producer = producer
         self._s_nref = s_nref
-        self._f_nom = f_nom
         self.sim_time = sim_time
         self._thr_ss_tol = thr_ss_tol
         self._curves_dict = curves_dict
@@ -96,16 +91,16 @@ class BisectionEngine:
     @contextmanager
     def _isolated_copy(self, src_dir: Path):
         """
-        Yields a temporary directory pre-populated with a copy of src_dir.
-        The directory is cleaned up automatically on exit.
+        Yields a copy of the files of src_dir in a subdirectory of its own, as the CCT search
+        clones it, so the run stays within its working directory. The copy is removed on exit.
         """
-        with TemporaryDirectory(prefix="dynawo_") as temp_dir:
-            work = (
-                Path(temp_dir)
-                / f"fault_time_execution_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
-            )
-            manage_files.copy_directory(src_dir, work)
+        work = manage_files.clone_as_subdirectory(
+            src_dir, f"fault_time_execution_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+        )
+        try:
             yield work
+        finally:
+            manage_files.remove_dir(work)
 
     @staticmethod
     def _fault_rpu_from_xpu(xpu: float, r_factor: float) -> float:
@@ -562,7 +557,6 @@ class BisectionEngine:
             self._producer.generators,
             self._producer.s_nom,
             self._s_nref,
-            self._f_nom,
             save_file=False,
             simulation_limit=self.sim_time + 10,
         )

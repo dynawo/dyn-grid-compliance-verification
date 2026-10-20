@@ -10,7 +10,7 @@
 import pandas as pd
 
 from dycov.configuration.cfg import config
-from dycov.report.curve_classification import get_measurement_type, is_controlled_magnitude
+from dycov.report.curve_classification import get_curve_style
 from dycov.report.figure_renderer import FigureRenderer
 from dycov.report.types import (
     DynamicBand,
@@ -21,6 +21,7 @@ from dycov.report.types import (
     ToleranceBand,
     band_limits,
 )
+from dycov.validation import compared_curves
 
 _COLOR_MXE = "#9acd83"
 _COLOR_REACTION = "#bee7fa"
@@ -29,9 +30,14 @@ _COLOR_SETTLE_LINE = "#f7d7f6"
 _COLOR_SETTLE_POINT = "#fcb1fa"
 _COLOR_SETTLE_LABEL = "#ff82fc"
 _COLOR_EXCLUSION = "#e8e8e8"
-_COLOR_REFERENCE = "#dd8452"
 _COLOR_IMAX_REAC = "#8172b3"
 _COLOR_EVENT_MARKER = "#cccccc"
+
+
+def drawn_scale(figure_description: FigureDescription) -> float:
+    """The factor the figure multiplies the values of its curves by when it draws them: f_nom
+    for a frequency drawn in Hz, 1 otherwise."""
+    return config.get_float("Dynawo", "f_nom", 50.0) if figure_description.in_hz else 1.0
 
 
 def draw_tolerance_band(
@@ -75,6 +81,7 @@ def draw_frequency_band(
     band: FrequencyBand,
     ymin: float,
     ymax: float,
+    scale: float = 1.0,
 ) -> tuple[float, float]:
     """Draw frequency deviation bands on the figure.
 
@@ -88,6 +95,8 @@ def draw_frequency_band(
         The current minimum y-axis limit, used to adjust the limit if the band extends beyond it.
     ymax: float
         The current maximum y-axis limit, used to adjust the limit if the band extends beyond it.
+    scale: float
+        The factor the figure draws its curves with (see drawn_scale).
 
     Returns
     -------
@@ -95,20 +104,19 @@ def draw_frequency_band(
         Updated ymin and ymax values after considering the frequency band limits.
     """
     f_nom = config.get_float("Dynawo", "f_nom", 50.0)
-    margin = band.upper * 0.5 if band.upper is not None else 0.0
-    color = "#c44e52" if band.upper and band.upper >= 1.0 else "#55a868"
+    margin = (band.upper * 0.5 if band.upper is not None else 0.0) / f_nom * scale
 
     if band.upper is not None:
-        y_upper = (f_nom + band.upper) / f_nom
-        renderer.add_hline(y=y_upper, color=color)
-        if ymax and ymax < y_upper + margin / f_nom:
-            ymax = y_upper + margin / f_nom
+        y_upper = (f_nom + band.upper) / f_nom * scale
+        renderer.add_hline(y=y_upper, color=band.color)
+        if ymax and ymax < y_upper + margin:
+            ymax = y_upper + margin
 
     if band.lower is not None:
-        y_lower = (f_nom - band.lower) / f_nom
-        renderer.add_hline(y=y_lower, color=color)
-        if ymin and ymin > y_lower - margin / f_nom:
-            ymin = y_lower - margin / f_nom
+        y_lower = (f_nom - band.lower) / f_nom * scale
+        renderer.add_hline(y=y_lower, color=band.color)
+        if ymin and ymin > y_lower - margin:
+            ymin = y_lower - margin
 
     return ymin, ymax
 
@@ -211,8 +219,14 @@ def draw_additional_curves(
     """
     if figure_description.tolerance_band is not None:
         draw_tolerance_band(renderer, figure_description.tolerance_band, last_val, results)
-    if figure_description.frequency_band is not None:
-        ymin, ymax = draw_frequency_band(renderer, figure_description.frequency_band, ymin, ymax)
+    for frequency_band in figure_description.frequency_bands:
+        ymin, ymax = draw_frequency_band(
+            renderer,
+            frequency_band,
+            ymin,
+            ymax,
+            drawn_scale(figure_description),
+        )
     if figure_description.dynamic_band is not None:
         draw_dynamic_band(renderer, figure_description.dynamic_band, time, results)
     draw_event_markers(renderer, figure_description.event_markers, results)
@@ -250,6 +264,7 @@ def draw_response_characteristics(
     renderer: FigureRenderer,
     curve_name: str,
     results: dict,
+    scale: float = 1.0,
 ) -> None:
     """Draw response characteristics (reaction time, rise time, settling time) on the figure based
     on the results.
@@ -264,16 +279,22 @@ def draw_response_characteristics(
         The results dictionary containing the calculated response characteristics under the keys
         "calc_reaction_time", "calc_reaction_target", "calc_rise_time", "calc_rise_target",
         "calc_settling_time", "calc_ss_value", and "calc_settling_tube".
+    scale: float
+        The factor the figure draws its curves with (see drawn_scale).
     """
     if "calc_reaction_target" in results and curve_name in results["calc_reaction_target"]:
         treaction = results["calc_reaction_time"] + results["sim_t_event_start"]
-        target = results["calc_reaction_target"][curve_name]
+        target = results["calc_reaction_target"][curve_name] * scale
         renderer.add_hline(y=target, color=_COLOR_REACTION, style="-", linewidth=0.2)
         renderer.add_vline(x=treaction, color=_COLOR_SETTLE_LINE, style="-", linewidth=0.2)
 
     if "calc_rise_target" in results and curve_name in results["calc_rise_target"]:
-        trise = results["calc_rise_time"] + results["sim_t_event_start"]
-        target = results["calc_rise_target"][curve_name]
+        trise = (
+            results["sim_t_event_start"]
+            + results["calc_reaction_time"]
+            + results["calc_rise_time"]
+        )
+        target = results["calc_rise_target"][curve_name] * scale
         renderer.add_hline(y=target, color=_COLOR_REACTION, style="-", linewidth=0.2)
         renderer.add_vline(x=trise, color=_COLOR_SETTLE_LINE, style="-", linewidth=0.2)
         renderer.add_scatter(x=trise, y=target, color=_COLOR_SETTLE_POINT, name="rise time")
@@ -290,9 +311,9 @@ def draw_response_characteristics(
 
     if "calc_settling_tube" in results and curve_name in results["calc_settling_tube"]:
         tsettling = results["calc_settling_time"] + results["sim_t_event_start"]
-        ss_value = results["calc_ss_value"]
+        ss_value = results["calc_ss_value"] * scale
         tube = results["calc_settling_tube"][curve_name]
-        renderer.add_hrect(y0=tube[0], y1=tube[1], color=_COLOR_SETTLE_RECT)
+        renderer.add_hrect(y0=tube[0] * scale, y1=tube[1] * scale, color=_COLOR_SETTLE_RECT)
         renderer.add_vline(x=tsettling, color=_COLOR_SETTLE_LINE, style="-", linewidth=0.2)
         renderer.add_scatter(
             x=tsettling, y=ss_value, color=_COLOR_SETTLE_POINT, name="settling time"
@@ -356,12 +377,30 @@ def _build_mxe_text(
     return text
 
 
+def _checked_as(label: str, results: dict) -> str | None:
+    """The name the test checked the errors of a compared magnitude under, or None when the test
+    does not check them: the curves a test checks depend on the test, as its compliance table
+    shows."""
+    if (
+        "setpoint_tracking_controlled_magnitude_check" in results
+        and results.get("setpoint_tracking_controlled_magnitude_label") == label
+    ):
+        return "tc_controlled_magnitude"
+    if f"setpoint_tracking_{label}_check" in results:
+        return f"tc_{label}"
+    if f"voltage_dips_{label}_check" in results:
+        return label
+    return None
+
+
 def draw_mxe(
     renderer: FigureRenderer,
     curve_name: str,
     results: dict,
+    zone: int,
 ) -> None:
-    """Draw MXE (Maximum Excursion) annotations on the figure based on the results.
+    """Draw the MXE (maximum error) of each window on the figure of the curve it was measured
+    on.
 
     Parameters
     ----------
@@ -374,15 +413,16 @@ def draw_mxe(
         keys "before_mxe_{measurement_type}_value", "before_mxe_{measurement_type}_position",
         "during_mxe_{measurement_type}_value", "during_mxe_{measurement_type}_position",
         "after_mxe_{measurement_type}_value", and "after_mxe_{measurement_type}_position", where
-        {measurement_type} is determined based on the curve_name.
+        {measurement_type} is the name the test checked the errors of the curve under.
+    zone: int
+        Validation zone, whose compared curves say which curve each MXE was measured on.
     """
-    measurement_type = get_measurement_type(curve_name)
-    if "setpoint_tracking_controlled_magnitude_name" in results:
-        measurement_type = "tc_controlled_magnitude"
-        if not is_controlled_magnitude(
-            curve_name, results["setpoint_tracking_controlled_magnitude_name"]
-        ):
-            return
+    curve = compared_curves.in_column(zone, curve_name)
+    if curve is None:
+        return
+    measurement_type = _checked_as(curve.label, results)
+    if measurement_type is None:
+        return
 
     text = _build_mxe_text(curve_name, measurement_type, results, renderer)
     if text:
@@ -400,6 +440,7 @@ def draw_reference_curve(
     curve_name: str,
     reference_curves: pd.DataFrame,
     label: str = "reference",
+    scale: float = 1.0,
 ) -> None:
     """Draw a reference curve on the figure if it exists in the reference_curves DataFrame.
 
@@ -413,18 +454,19 @@ def draw_reference_curve(
         The DataFrame containing reference curves, with a "time" column and columns for each curve.
     label: str
         The label to use for the reference curve in the legend.
+    scale: float
+        The factor the figure draws its curves with (see drawn_scale).
     """
     if reference_curves is None:
         return
     if curve_name not in reference_curves:
         return
-    if "VoltageSetpointPu" in curve_name:
-        return
 
+    curve_style = get_curve_style(curve_name, is_reference=True)
     renderer.add_curve(
         x=reference_curves["time"],
-        y=reference_curves[curve_name],
-        color=_COLOR_REFERENCE,
-        style="-",
+        y=reference_curves[curve_name] * scale,
+        color=curve_style.color,
+        style=curve_style.style,
         name=label,
     )

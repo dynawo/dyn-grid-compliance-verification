@@ -15,6 +15,7 @@
 #
 # Artifacts generated:
 #   - Dynawo_omc_v1.8.0.zip        (zipped from DYNAWO_DIR)
+#   - dycov_examples.zip            (the examples with the curves of this release)
 #   - linux_install.sh              (updated with new version and URLs)
 #   - dycov_rawimage.tar.gz         (Docker image export)
 #   - import_image.sh
@@ -31,6 +32,10 @@ set -o nounset -o errexit -o pipefail
 
 # Fixed Dynawo zip name — update here when Dynawo version changes
 DYNAWO_ZIP_NAME="Dynawo_omc_v1.8.0.zip"
+
+# The examples, with the curves this release ships. They are not versioned: this is how they
+# reach the user, and linux_install.sh downloads it as it downloads the Dynawo build.
+EXAMPLES_ZIP_NAME="dycov_examples.zip"
 
 RED='\033[1;31m'
 GREEN='\033[1;32m'
@@ -100,11 +105,25 @@ else
 
     # Git-ignored leftovers under examples/ are invisible to the check above, and a
     # stale Results/ from a local run means the examples on disk are not what the
-    # release describes.
-    STALE_EXAMPLES=$(git status --porcelain --ignored -- examples | grep "^!! " || true)
+    # release describes. The curve directories are ignored by design — they ship as
+    # $EXAMPLES_ZIP_NAME — so they are the one thing that belongs there.
+    STALE_EXAMPLES=$(git status --porcelain --ignored -- examples | grep "^!! " \
+        | grep -vE '/(ReferenceCurves|ProducerCurves)/|/\.curves-release$' || true)
     if [[ -n "$STALE_EXAMPLES" ]]; then
         echo "$STALE_EXAMPLES" >&2
         error "Git-ignored artifacts found under examples/ (see above). Remove them before releasing."
+    fi
+
+    # And the other half of the same coin: the curves are not in the commit, so nothing else
+    # would notice a release built from a tree where they were never generated. A directory
+    # that holds dictionaries is a directory whose curves ship.
+    CURVELESS=$(find examples -name '*.dict' -printf '%h\n' | sort -u \
+        | while read -r directory; do
+              compgen -G "$directory/*.csv" > /dev/null || echo "$directory"
+          done)
+    if [[ -n "$CURVELESS" ]]; then
+        echo "$CURVELESS" >&2
+        error "No curves under the directories above. Run tools/scripts/regenerate_curves.sh."
     fi
 
     info "Git state OK:"
@@ -151,12 +170,36 @@ zip -qr "$DYNAWO_ZIP" "$DYNAWO_BASENAME"
 info "$DYNAWO_ZIP_NAME generated."
 
 ###############################################################################
+# Step 1b — Generate the examples ZIP, curves included
+###############################################################################
+step "Step 1b: Generating $EXAMPLES_ZIP_NAME..."
+
+EXAMPLES_ZIP="$OUTPUT_DIR/$EXAMPLES_ZIP_NAME"
+EXAMPLES_STAGING=$(mktemp -d)
+
+# Two sources, and neither alone is right: Git carries the tracked tree, so no local artifact
+# can reach the asset, and the working tree carries the curve directories, which Git no longer
+# holds at all — not the curves, not their dictionaries, not the declarations beside them.
+cd "$REPO_ROOT"
+git archive HEAD examples | tar -x -C "$EXAMPLES_STAGING"
+find examples -type d \( -name ReferenceCurves -o -name ProducerCurves \) \
+    -exec cp -a --parents {} "$EXAMPLES_STAGING" \;
+
+cd "$EXAMPLES_STAGING"
+zip -qr "$EXAMPLES_ZIP" examples
+cd "$REPO_ROOT"
+rm -rf "$EXAMPLES_STAGING"
+info "$EXAMPLES_ZIP_NAME generated ($(du -h "$EXAMPLES_ZIP" | cut -f1))."
+
+###############################################################################
 # Step 2 — Generate updated linux_install.sh in output dir
 ###############################################################################
 step "Step 2: Generating updated linux_install.sh..."
 
 DYNAWO_SHA256=$(sha256sum "$DYNAWO_ZIP" | cut -d' ' -f1)
+EXAMPLES_SHA256=$(sha256sum "$EXAMPLES_ZIP" | cut -d' ' -f1)
 info "SHA256: $DYNAWO_SHA256"
+info "SHA256: $EXAMPLES_SHA256"
 
 LINUX_INSTALL_OUT="$OUTPUT_DIR/linux_install.sh"
 cp "$LINUX_INSTALL" "$LINUX_INSTALL_OUT"
@@ -168,12 +211,13 @@ sed -i '/git fetch .*--tags/d' "$LINUX_INSTALL_OUT"
 # Update TARGET_BRANCH (with 'v' prefix, matches the git tag)
 sed -i -E "s|^TARGET_BRANCH=.*|TARGET_BRANCH=\"${VERSION}\"|" "$LINUX_INSTALL_OUT"
 
-# Update DYNAWO_SHA256SUM with the checksum of the zip generated in Step 1
+# Update the checksums with those of the zips generated in Steps 1 and 1b
 sed -i -E "s|^DYNAWO_SHA256SUM=.*|DYNAWO_SHA256SUM=\"${DYNAWO_SHA256}\"|" "$LINUX_INSTALL_OUT"
+sed -i -E "s|^EXAMPLES_SHA256SUM=.*|EXAMPLES_SHA256SUM=\"${EXAMPLES_SHA256}\"|" "$LINUX_INSTALL_OUT"
 
 info "linux_install.sh updated."
 info "--- Relevant lines ---"
-grep -E "^(TARGET_BRANCH|DYNAWO_SHA256SUM)=" "$LINUX_INSTALL_OUT"
+grep -E "^(TARGET_BRANCH|DYNAWO_SHA256SUM|EXAMPLES_SHA256SUM)=" "$LINUX_INSTALL_OUT"
 echo "----------------------"
 
 ###############################################################################
@@ -198,8 +242,12 @@ uv pip install -q sphinx
 SETUPTOOLS_SCM_PRETEND_VERSION_FOR_dycov=${VERSION_PLAIN} \
     uv pip install -q "$REPO_ROOT"
 cd "$REPO_ROOT/docs/manual"
-make latexpdf > /dev/null 2>&1
-make html > /dev/null 2>&1
+MANUAL_LOG="$OUTPUT_DIR/manual_build.log"
+make latexpdf > "$MANUAL_LOG" 2>&1 < /dev/null \
+    || error "The manual PDF build failed. See $MANUAL_LOG"
+make html >> "$MANUAL_LOG" 2>&1 < /dev/null \
+    || error "The manual HTML build failed. See $MANUAL_LOG"
+rm -f "$MANUAL_LOG"
 deactivate
 rm -rf "$REPO_ROOT/.manual_venv"
 

@@ -160,29 +160,32 @@ def _add_connection(
 
 
 TOPOLOGY_LAYOUTS = {
-    "S": {"units": 1, "aux_load": False, "int_line": False},
-    "S+i": {"units": 1, "aux_load": False, "int_line": True},
-    "S+Aux": {"units": 1, "aux_load": True, "int_line": False},
-    "S+Aux+i": {"units": 1, "aux_load": True, "int_line": True},
-    "M": {"units": 2, "aux_load": False, "int_line": False},
-    "M+i": {"units": 2, "aux_load": False, "int_line": True},
-    "M+Aux": {"units": 2, "aux_load": True, "int_line": False},
-    "M+Aux+i": {"units": 2, "aux_load": True, "int_line": True},
+    "S": {"multiple": False, "aux_load": False, "int_line": False},
+    "S+i": {"multiple": False, "aux_load": False, "int_line": True},
+    "S+Aux": {"multiple": False, "aux_load": True, "int_line": False},
+    "S+Aux+i": {"multiple": False, "aux_load": True, "int_line": True},
+    "M": {"multiple": True, "aux_load": False, "int_line": False},
+    "M+i": {"multiple": True, "aux_load": False, "int_line": True},
+    "M+Aux": {"multiple": True, "aux_load": True, "int_line": False},
+    "M+Aux+i": {"multiple": True, "aux_load": True, "int_line": True},
 }
 
 
-def _layout(topology: str, n_generators: int = None) -> dict:
-    """Returns the layout of the selected topology, dynamically updating units
-    count for M topologies."""
+def _layout(topology: str) -> dict:
+    """Returns the layout of the selected topology, whichever way the caller spelled it."""
     for name, layout in TOPOLOGY_LAYOUTS.items():
         if name.casefold() == topology.casefold():
-            result = layout.copy()
-            if topology.casefold().startswith("m") and n_generators is not None:
-                result["units"] = n_generators
-            return result
+            return layout
 
     available = "".join(f"  - {name}\n" for name in TOPOLOGY_LAYOUTS)
     raise ValueError(f"Select one of the 8 available topologies:\n{available}")
+
+
+def unit_ids(base_id: str, units: int) -> list[str]:
+    """Returns the block id of each generating unit: the base id alone, or numbered from 1."""
+    if units == 1:
+        return [base_id]
+    return [f"{base_id}_{i}" for i in range(1, units + 1)]
 
 
 def _generating_units(validation_type: int, units: int) -> list[tuple[str, str, str]]:
@@ -193,10 +196,7 @@ def _generating_units(validation_type: int, units: int) -> list[tuple[str, str, 
         lib, terminal, base_id = PPM_DYNAMIC_MODEL, PPM_TERMINAL, PPM_ID
     else:
         lib, terminal, base_id = BESS_DYNAMIC_MODEL, BESS_TERMINAL, BESS_ID
-
-    if units == 1:
-        return [(base_id, lib, terminal)]
-    return [(f"{base_id}_{i + 1}", lib, terminal) for i in range(units)]
+    return [(gen_id, lib, terminal) for gen_id in unit_ids(base_id, units)]
 
 
 class _DydWriter:
@@ -249,9 +249,8 @@ def _plant_generators(validation_type: int, topology: str, n_generators: int = 2
         gen_base, gen_terminal = BESS_ID, BESS_TERMINAL
     else:
         return []
-    if topology.casefold().startswith("m"):
-        return [(f"{gen_base}_{i}", gen_terminal) for i in range(1, n_generators + 1)]
-    return [(gen_base, gen_terminal)]
+    units = n_generators if _layout(topology)["multiple"] else 1
+    return [(gen_id, gen_terminal) for gen_id in unit_ids(gen_base, units)]
 
 
 def _add_remote_control(dyd_root: etree.Element, ns: str, gen_id: str, gen_terminal: str):
@@ -303,16 +302,16 @@ def _create_zone3_topology(
     validation_type: int,
     par_filename: str,
     topology: str,
-    n_generators: int = None,
+    n_generators: int,
 ) -> None:
     """Zone 3: PDR - Main_Xfmr - [IntNetwork_Line] - Int_Bus - generating units.
 
     The group transformer of each unit lives inside its dynamic model, so the only
     transformer in series with the PDR is the main one.
     """
-    layout = _layout(topology, n_generators)
+    layout = _layout(topology)
     writer = _DydWriter(dyd_root, ns, par_filename)
-    units = _generating_units(validation_type, layout["units"])
+    units = _generating_units(validation_type, n_generators if layout["multiple"] else 1)
 
     writer.blackbox(MAIN_XFMR_ID, XFMR_DYNAMIC_MODEL)
     if layout["int_line"]:
@@ -413,7 +412,7 @@ def _create_producer_dyd_file(
     validation_type: int,
     zone: int,
     remote_control: bool = True,
-    n_generators: int = None,
+    n_generators: int = 2,
 ) -> None:
     if (target / "Producer.dyd").exists():
         (target / "Producer.dyd").unlink()
@@ -426,14 +425,13 @@ def _create_producer_dyd_file(
 
     par_filename = filename.replace(".dyd", ".par")
     if zone == 1:
-        _layout(topology, n_generators)
+        _layout(topology)
         _create_zone1_topology(dyd_root, ns, validation_type, par_filename)
     else:
         _create_zone3_topology(dyd_root, ns, validation_type, par_filename, topology, n_generators)
 
     if remote_control:
-        units_count = n_generators if n_generators is not None else 2
-        for gen_id, gen_terminal in _plant_generators(validation_type, topology, units_count):
+        for gen_id, gen_terminal in _plant_generators(validation_type, topology, n_generators):
             _add_remote_control(dyd_root, ns, gen_id, gen_terminal)
 
     write_producer_dyd(dyd_root, target / filename)
@@ -443,7 +441,7 @@ def create_producer_dyd_file(
     target: Path,
     topology: str,
     template: str,
-    n_generators: int = None,
+    n_generators: int = 2,
 ) -> None:
     """Create a DYD file in target path with the selected topology.
 
@@ -460,8 +458,9 @@ def create_producer_dyd_file(
         * 'performance_BESS' if it is electrical performance for Storage Model
         * 'model_PPM' if it is model validation for Power Park Module Model
         * 'model_BESS' if it is model validation for Storage Model
-    n_generators: int, optional
-        Number of generating units identified from the topology.
+    n_generators: int
+        Number of generators for an ``M`` topology (one ``Producer_G<i>.dyd`` per ``Zone1<x>``
+        sheet); default 2.
     """
     if template.startswith("performance"):
         validation_type = PERFORMANCE_SM
@@ -477,10 +476,8 @@ def create_producer_dyd_file(
         validation_type = VALIDATION_PPM
         if template == "model_BESS":
             validation_type = VALIDATION_BESS
-
         if topology.casefold().startswith("m"):
-            units = n_generators if n_generators is not None else 2
-            for i in range(1, units + 1):
+            for i in range(1, n_generators + 1):
                 _create_producer_dyd_file(
                     target / "Zone1",
                     f"Producer_G{i}.dyd",
@@ -493,7 +490,6 @@ def create_producer_dyd_file(
             _create_producer_dyd_file(
                 target / "Zone1", "Producer.dyd", "S", validation_type, 1, remote_control=False
             )
-
         _create_producer_dyd_file(
             target / "Zone3",
             "Producer.dyd",

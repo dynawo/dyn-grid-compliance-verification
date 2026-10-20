@@ -87,7 +87,9 @@ class Parameters:
     selected_pcs: str
         Individual PCS to validate
     output_dir: Path
-        User output directory
+        User output directory. The working directory of the run is created next to it, so moving
+        it there at the end is a rename within one filesystem; without one, in the current
+        directory.
     """
 
     def __init__(
@@ -106,7 +108,8 @@ class Parameters:
 
         tmp_path = config.get_value("Global", "temporal_path")
         username = getpass.getuser()
-        base_dir = Path.cwd()
+        base_dir = Path(output_dir).parent if output_dir else Path.cwd()
+        base_dir.mkdir(parents=True, exist_ok=True)
         prefix = f"{tmp_path}_{username}_"
 
         _purge_stale_temp_dirs(base_dir=base_dir, prefix=prefix, older_than=timedelta(minutes=30))

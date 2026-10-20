@@ -303,11 +303,10 @@ class PerformanceValidator(Validator):
             check_freq1 = True
             time_freq1 = -1
             f_nom = config.get_float("Dynawo", "f_nom", 50.0)
-            filter_col = self.__get_filtered_columns("_GEN_NetworkFrequencyPu")
-            for curve_name in filter_col:
+            for frequency in self.__separated_network_frequencies(f_nom):
                 gen_check_freq1, gen_time_freq1 = common.check_frequency(
                     1 / f_nom,
-                    self.__curve_list(curve_name),
+                    frequency,
                     self.__curve_list("time"),
                 )
                 check_freq1 &= gen_check_freq1
@@ -315,6 +314,17 @@ class PerformanceValidator(Validator):
                     time_freq1 = gen_time_freq1
             compliance_values["check_freq1"] = check_freq1
             compliance_values["time_freq1"] = time_freq1
+
+    def __separated_network_frequencies(self, f_nom: float) -> list:
+        """The frequency of the separated network, in pu of f_nom, which is what Fiche I10 bounds:
+        that of the synchronous condenser when the test models one, as the frequency the units
+        measure jumps for a few milliseconds at the load step; the units' own otherwise."""
+        sources = (("_GEN_TSO_FrequencyHz", 1.0 / f_nom), ("_GEN_NetworkFrequencyPu", 1.0))
+        for suffix, to_pu in sources:
+            columns = self.__get_filtered_columns(suffix)
+            if columns:
+                return [[value * to_pu for value in self.__curve_list(c)] for c in columns]
+        return []
 
     def __calculate_others(
         self,
@@ -430,13 +440,12 @@ class PerformanceValidator(Validator):
         compliance_values["calc_reaction_time"] = res_reaction_time + event_duration
         compliance_values["calc_reaction_target"] = {measurement_name: res_reaction_target}
 
-        res_rise_time, res_rise_target = common.get_reached_time(
-            0.9,
+        res_rise_time, res_rise_target = common.get_rise_time(
             time_curve,
             measurement_curve,
             time_clear,
         )
-        compliance_values["calc_rise_time"] = res_rise_time + event_duration
+        compliance_values["calc_rise_time"] = res_rise_time
         compliance_values["calc_rise_target"] = {measurement_name: res_rise_target}
 
         res_settling_time, _, res_settling_min, res_settling_max, calc_ss_value = (
@@ -709,6 +718,7 @@ class PerformanceValidator(Validator):
             results["AVR_5_check"] = compliance_values["AVR_5_check"]
             results["AVR_5"] = compliance_values["AVR_5"]
             results["AVR_5_crvs"] = compliance_values["AVR_5_crvs"]
+            results["compliance"] &= results["AVR_5_check"]
 
         if compliance_list.contains_key(["freq_1"], self._validations):
             results["freq1"] = compliance_values["time_freq1"]

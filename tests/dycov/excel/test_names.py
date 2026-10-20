@@ -30,28 +30,28 @@ def user_dictionary(tmp_path, monkeypatch):
 def test_without_a_user_copy_the_names_are_the_ones_shipped(user_dictionary):
     assert not user_dictionary.exists()
 
-    assert names.sheet("zone1") == "Zone1a"
+    assert names.sheet("zone3") == "Zone3"
 
 
 def test_a_user_copy_overrides_one_name_and_leaves_the_rest(user_dictionary):
-    user_dictionary.write_text("[Sheets]\nzone1 = HojaZona1\n", encoding="utf-8")
+    user_dictionary.write_text("[Sheets]\nzone3 = HojaZona3\n", encoding="utf-8")
 
-    assert names.sheet("zone1") == "HojaZona1"
-    assert names.sheet("zone3") == "Zone3"  # untouched: it still comes from the package
+    assert names.sheet("zone3") == "HojaZona3"
+    assert names.sheet("model_map") == "Model Map"  # untouched: it still comes from the package
 
 
 def test_a_name_the_tool_no_longer_reads_is_reported(user_dictionary, caplog):
     user_dictionary.write_text("[Sheets]\nzone9 = HojaZona9\n", encoding="utf-8")
 
-    names.sheet("zone1")
+    names.sheet("zone3")
 
     assert "zone9" in caplog.text
 
 
 def test_a_whole_section_the_tool_no_longer_reads_is_reported(user_dictionary, caplog):
-    user_dictionary.write_text("[Feuilles]\nzone1 = HojaZona1\n", encoding="utf-8")
+    user_dictionary.write_text("[Feuilles]\nzone3 = HojaZona3\n", encoding="utf-8")
 
-    names.sheet("zone1")
+    names.sheet("zone3")
 
     assert "Feuilles" in caplog.text
 

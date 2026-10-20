@@ -61,7 +61,10 @@ named ``Zone1/`` and ``Zone3/``, each with its own set of three files.
 Zone 1 should represent a single production unit (e.g. a single wind turbine),
 while Zone 3 should represent the complete installation at the PDR, including
 plant-level control. For the precise definition of these zones, refer to
-PCS I16 in the RTE DTR.
+PCS I16 in the RTE DTR. The ``Zone1/`` model is what the PCS of zone 1
+(``PCS_RTE-I16z1``) validate: a run limited with ``-p`` to a PCS of zone 3
+(``PCS_RTE-I16z3``, or the tests declared for ``PCS_RTE-F16z3``) accepts a
+directory with ``Zone3/`` alone.
 
 .. note::
    The name *PDR* always refers to the real connection point of the complete
@@ -76,7 +79,15 @@ PCS I16 in the RTE DTR.
    called *Node2* in the DTR); the injector-terminal signals
    (``*_GEN_ActiveCurrentInjTerminal``, ``*_GEN_ReactiveCurrentInjTerminal``,
    ``*_GEN_VoltageInjTerminal``)
-   are measured there.
+   are measured there. A Zone 1 reference-curve dictionary declares six
+   signals: those three, ``InternalNode1_BUS_Voltage`` (or its
+   ``BusPDR_BUS_Voltage`` alias), and the active and reactive power at the
+   point controlled by the converter,
+   ``*_GEN_ActivePowerControlledPu`` and ``*_GEN_ReactivePowerControlledPu``.
+   It may also declare the setpoints sent to the converter,
+   ``*_GEN_ActivePowerSetpointPu``, ``*_GEN_ReactivePowerSetpointPu`` and
+   ``*_GEN_VoltageSetpointPu``, which are not compared: in a setpoint step,
+   the report draws the one the step moves over the magnitude it drives.
 
 For information on the DYD and PAR file formats, refer to the
 `Dynawo documentation <https://dynawo.github.io/>`_.
@@ -456,12 +467,13 @@ everything the conversion writes it uses only ``Dynawo/Zone3``. In both
 commands the workbook replaces the other inputs: giving a model, curves or a
 reference directory alongside it is refused.
 
-The inputs are generated into a temporary directory that is removed when the
-run ends — the only input you keep is the workbook, and the report names it
-instead of the directory that no longer exists. The conversion is checked
-before the validation starts: if the workbook leaves the curve metadata of a
-test blank, the run stops there saying which tests are affected, rather than
-failing later when DyCoV tries to read the reference curves.
+The inputs are generated into a temporary directory next to the output
+directory, removed when the run ends — the only input you keep is the
+workbook, and the report names it instead of the directory that no longer
+exists. The conversion is checked before the validation starts: if the
+workbook leaves the curve metadata of a test blank, the run stops there saying
+which tests are affected, rather than failing later when DyCoV tries to read
+the reference curves.
 
 The run reports what it could not complete rather than failing silently: the
 blocks of ``Général`` whose parameter sheet contributed nothing, the ``.csv``

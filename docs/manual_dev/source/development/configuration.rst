@@ -9,16 +9,47 @@ through the tool.
 
 The configuration is written in the standard INI format
 (`Python flavor <https://docs.python.org/3/library/configparser.html>`_)
-and organized into three levels, in decreasing order of priority:
+and organized into five layers, in decreasing order of priority:
 
-1. **User Configuration** — settings provided by the user in
-   ``~/.config/dycov/config.ini``. These always take precedence.
-2. :ref:`PCS Configuration <pcsconf>` — settings defined per PCS in
+1. **User PCS Description** — the ``PCSDescription.ini`` the user writes under
+   ``~/.config/dycov/templates/PCS/``, or delivers with the reference curves of
+   a case as ``<ReferenceCurves>/<fiche>Description.ini`` (``F16Description.ini``
+   for PCS F16), which takes its place for the PCS the file declares. Being the
+   most specific file, it takes precedence over everything else.
+2. **User Configuration** — settings provided by the user in
+   ``~/.config/dycov/config.ini``.
+3. **DTR Revision** — the PCS description of a selected DTR revision. This
+   layer is not populated yet.
+4. :ref:`PCS Configuration <pcsconf>` — settings defined per PCS in
    ``src/dycov/templates/PCS/``. These should only be modified when a DTR
    update changes the PCS definition.
-3. :ref:`Tool Configuration <toolconf>` — global defaults in
+5. :ref:`Tool Configuration <toolconf>` — global defaults in
    ``src/dycov/configuration/defaultConfig.ini``. These should only be
    modified when a DTR update changes global conditions.
+
+Each file lands in the layer of its origin, so which one wins is a matter of
+precedence and never of the order in which the files happen to be read.
+
+
+How the layers combine
+----------------------
+
+A file in a higher layer is a **patch over** the ones below it, not a
+replacement: it only has to carry the keys it changes. Reading an option walks
+the layers from the top and returns the first one that defines it with a
+non-empty value, so:
+
+* A key a layer does not mention keeps the value of the layer below.
+* A key a layer defines **empty** is a way of removing it: the tool treats an
+  empty value as "not defined here" and keeps looking down the stack. This is
+  how a PCS turns off a report figure that the defaults would otherwise draw.
+* Listing the keys of a section gathers them from every layer, so a partial
+  override never hides the keys it does not mention.
+
+The three PCS layers describe one PCS at a time and are rebuilt every time the
+tool prepares a PCS, so nothing read for one PCS can reach the next. The two
+user layers are not: they also hold the settings given on the command line and
+the overrides the tool applies at start-up, which belong to the whole run.
 
 
 .. _pcsconf:
@@ -27,12 +58,19 @@ PCS Configuration
 ------------------
 
 Each PCS has its own ``PCSDescription.ini`` file, located under
-``src/dycov/templates/PCS/<workflow>/<technology>/<PCSName>/``. This file
+``src/dycov/templates/PCS/<workflow>/<technology>/<PCSName>/`` (the ``gfm``
+workflow has no technology level: ``templates/PCS/gfm/<PCSName>/``). This file
 defines the complete structure of the PCS — its benchmarks, operating
 conditions, validation tests, and report curves.
 
 These files should only be edited by developers, and only when a DTR update
-requires it.
+requires it. A user adapts a PCS by writing the same relative path under
+``~/.config/dycov/templates/PCS/``, carrying only the sections and keys to
+change; see the *Advanced PCS customization* tutorial.
+
+The file must be named ``PCSDescription.ini``. A PCS directory that holds an
+INI file under any other name is reported as an invalid PCS and skipped,
+rather than loading a file whose role the tool cannot tell.
 
 
 PCS structure parameters
@@ -72,8 +110,10 @@ each Benchmark or Operating Condition must pass. Available tests:
 * ``time_10P_85U`` — time when 10P is achieved, measured from when voltage
   returns above 0.85 pu.
 * ``freq_1`` — checks that frequency stays between 49 Hz and 51 Hz.
-* ``freq_200`` — checks that frequency stays within ±200 mHz.
-* ``freq_250`` — checks that frequency stays within ±250 mHz.
+* ``freq_200`` — draws a ±200 mHz band around the nominal frequency on the
+  frequency figure; nothing is checked.
+* ``freq_250`` — draws a ±250 mHz band around the nominal frequency on the
+  frequency figure; nothing is checked.
 * ``time_10Pfloor_85U`` — time when 10P_floor is achieved after voltage
   returns above 0.85 pu.
 * ``time_10Pfloor_clear`` — time when 10P_tclear is achieved after voltage
@@ -91,8 +131,9 @@ Benchmark or Operating Condition must pass. Available tests:
   the tolerance range of the target value.
 * ``settling_time`` — time from step command until measured value enters the
   tolerance range for the last time.
-* ``overshoot`` — difference between maximum response and final steady-state
-  value.
+* ``overshoot`` — how far the response goes beyond its final steady-state
+  value in the direction of the step, after the event (the undershoot of a
+  downward step).
 * ``ramp_time_lag`` — tracking error time.
 * ``ramp_error`` — tracking error value.
 * ``mean_absolute_error_power_1P`` — P and Q MAE must not exceed 1% of Pmax.
@@ -130,6 +171,11 @@ listing the Benchmarks or Operating Conditions that should include each graph:
 * ``fig_WRef`` — network frequency (Hz).
 * ``fig_I`` — injected active and reactive currents.
 * ``fig_Tap`` — main transformer tap ratio.
+* ``fig_InternalNode1P`` and ``fig_InternalNode1Q`` — active and reactive power at
+  InternalNode1, where the DTR sets the operating point of a Zone 1 test (Zone 1 only). No
+  check compares them, so they need no reference curve. They always go to the HTML figures,
+  and to the PDF only when the converter controls InternalNode2 (``ConverterLVControl =
+  true``), since otherwise they repeat the figures of the controlled power.
 
 
 PCS-level parameters
@@ -151,7 +197,8 @@ Under ``[PCSName.BenchmarkName.OCName]``:
 
 * ``report_name`` — LaTeX file name for the Operating Condition report.
 * ``reference_step_size`` — step magnitude for reference tracking tests,
-  used to scale the compliance tolerance. Optional.
+  used to scale the absolute tolerance with which the figures frame the
+  response (it plays no part in the compliance checks). Optional.
 * ``bolted_fault`` — whether the fault test uses a bolted fault.
 * ``hiz_fault`` — whether the fault test uses a Hi-Z fault.
 * ``setpoint_change_test_type`` — type of setpoint affected in step tests.
@@ -169,12 +216,16 @@ Every multiplier-based value read from ``PCSDescription.ini`` is written as a
 ``pdr_P``/``pdr_Q``/``pdr_U``, ``setpoint_step_value``, ``reference_step_size``,
 the islanding ``step_event_PPu``/``step_event_QPu``, and the TSO-load initial
 values. All of them resolve against a single registry
-(``model_parameters.unit_characteristics``) via ``resolve_value_definition``:
+(``value_registry.unit_characteristics``) via ``resolve_value_definition``:
 ``Pmax``/``PmaxInjection``/``PmaxConsumption``, ``Snom`` for power; ``Qmax``,
 ``Qmin``; ``Udim``, ``Unom`` for voltage; and ``line_XPu`` for the connection line
 reactance. Every magnitude in the registry is in the per-unit Dynawo uses for the
 network — base SnRef (``s_nref``) for powers and impedances, ``Unom`` for voltages
-— which is also the base used in the report figures. Adding a new base magnitude
+— which is also the base used in the report figures. Two callers override
+``Unom`` with the nominal voltage in kV before resolving: the report (for the
+figure ranges) and the TSO-load initialization, which resolves voltages
+against a kV variant of the registry and divides by ``u_nom`` afterwards.
+Adding a new base magnitude
 is a matter of adding an entry to that registry — no per-key parsing code changes.
 (GFM keys and the ``line_XPu`` *key*, whose base is a DTR reactance-table entry,
 use their own resolution and are not part of this registry.)
@@ -189,16 +240,19 @@ was read from and its line number, plus the magnitudes accepted at that point
 The infinite bus table configuration also lives in this section. The tool
 replaces placeholders found in the ``TableInfiniteBus.txt`` file with the
 values defined here. If a value depends on the generator type, append the
-type identifier to the variable name (e.g. ``u_ret_HTB1``).
+type identifier to the variable name (e.g. ``u_fault_HTB1``,
+``fault_duration_HTB1``).
 
 The same placeholder substitution applies to the TSO model files
-(``TSOModel.jobs``, ``TSOModel.dyd``, ``TSOModel.par``). Commonly used
-examples:
+(``TSOModel.jobs``, ``TSOModel.dyd``, ``TSOModel.par``). Examples used by the
+shipped models:
 
-* ``main_P0Pu``, ``main_Q0Pu``, ``main_U0Pu`` — initial conditions for the
-  main load.
-* ``secondary_P0Pu``, ``secondary_Q0Pu``, ``secondary_U0Pu`` — initial
-  conditions for the secondary load.
+* ``pdr_P``, ``pdr_Q``, ``pdr_U`` — initial conditions of the islanding
+  loads.
+* ``step_event_PPu``, ``step_event_QPu`` — magnitude of the islanding load
+  steps.
+* ``line_RPu``, ``line_XPu``, ``bus_UNom``, ``event_start`` — grid-side
+  parameters of the benchmark.
 
 Under ``[PCSName.BenchmarkName.OCName.Event]``:
 
@@ -236,12 +290,11 @@ Logging:
 Path configuration (these paths are relative to the package installation and
 should not normally be changed):
 
-* ``input_templates_path`` — path to input skeleton templates within the package.
 * ``latex_templates_path`` — path to PDF templates within the package.
 * ``templates_path`` — path to PCS templates within the package.
 * ``lib_path`` — path to RTE models within the package.
-* ``modelica_path`` — path to Modelica models within the package.
-* ``temporal_path`` — path for temporary calculation files.
+* ``temporal_path`` — name prefix of the working directory of a run, created
+  next to the output directory and moved onto it at the end.
 
 PCS execution scope (empty means "run all"):
 

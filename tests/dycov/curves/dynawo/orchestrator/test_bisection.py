@@ -6,7 +6,6 @@
 #
 import logging
 import math
-from collections import namedtuple
 from contextlib import contextmanager
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -19,14 +18,13 @@ from dycov.curves.dynawo.orchestrator.bisection import (
     CCT_REL_TOL,
     BisectionEngine,
 )
+from dycov.curves.dynawo.orchestrator.curves import SimulateOutcome
 from dycov.curves.voltage_dip import VoltDipResult
 from dycov.model.parameters import SimulationError, SimulationOutcomeError
 
 # ---------------------------------------------------------------------------
 # Shared fixtures
 # ---------------------------------------------------------------------------
-
-SimulateOutcome = namedtuple("SimulateOutcome", "succeeded time_exceeds has_curves curves")
 
 
 def _make_engine(**overrides) -> BisectionEngine:
@@ -41,7 +39,6 @@ def _make_engine(**overrides) -> BisectionEngine:
         launcher_dwo="/path/to/dynawo",
         producer=producer,
         s_nref=100.0,
-        f_nom=50.0,
         sim_time=30.0,
         thr_ss_tol=10.0,
         curves_dict={"var1": "GEN1_var1"},
@@ -56,12 +53,13 @@ def _succeed_outcome(curves: pd.DataFrame | None = None) -> SimulateOutcome:
         time_exceeds=False,
         has_curves=True,
         curves=curves if curves is not None else pd.DataFrame(),
+        sim_time=1.0,
     )
 
 
 def _fail_outcome() -> SimulateOutcome:
     return SimulateOutcome(
-        succeeded=False, time_exceeds=False, has_curves=False, curves=pd.DataFrame()
+        succeeded=False, time_exceeds=False, has_curves=False, curves=pd.DataFrame(), sim_time=1.0
     )
 
 
@@ -165,18 +163,36 @@ class TestModifyFault:
 # ---------------------------------------------------------------------------
 
 
+@pytest.fixture
+def oc_dir(tmp_path):
+    working_oc_dir = tmp_path / "OC"
+    working_oc_dir.mkdir()
+    (working_oc_dir / "TSOModel.par").write_text("par")
+    (working_oc_dir / "curves_calculated.csv").write_text("time;P")
+    return working_oc_dir
+
+
 class TestIsolatedCopy:
-    @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")
-    def test_yields_populated_temp_dir_and_cleans_up(self, mock_mf):
+    def test_copies_the_inputs_into_a_subdirectory_and_removes_it(self, oc_dir):
         engine = _make_engine()
 
-        with engine._isolated_copy(Path("/src")) as work:
-            assert work.name.startswith("fault_time_execution_")
-            mock_mf.copy_directory.assert_called_once_with(Path("/src"), work)
-            temp_root = work.parent
-            assert temp_root.exists()
+        with engine._isolated_copy(oc_dir) as work:
+            copied = sorted(p.name for p in work.iterdir())
+            inside = work.parent == oc_dir
 
-        assert not temp_root.exists()
+        assert work.name.startswith("fault_time_execution_")
+        assert inside
+        assert copied == ["TSOModel.par"]
+        assert not work.exists()
+
+    def test_removes_the_copy_when_the_iteration_fails(self, oc_dir):
+        engine = _make_engine()
+
+        with pytest.raises(RuntimeError):
+            with engine._isolated_copy(oc_dir) as work:
+                raise RuntimeError("simulation failed")
+
+        assert not work.exists()
 
 
 # ---------------------------------------------------------------------------

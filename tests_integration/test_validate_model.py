@@ -29,20 +29,20 @@ def test_model_validation_ppm_dynawo_model():
         Compliance.Compliant,  # PCS_RTE-I16z1.SetPointStep.Active
         Compliance.Compliant,  # PCS_RTE-I16z1.SetPointStep.Reactive
         Compliance.NotApplicableTest,  # PCS_RTE-I16z1.SetPointStep.Voltage
-        Compliance.NonCompliant,  # PCS_RTE-I16z1.GridVoltageStep.Rise
+        Compliance.Compliant,  # PCS_RTE-I16z1.GridVoltageStep.Rise
         Compliance.Compliant,  # PCS_RTE-I16z1.GridVoltageStep.Drop
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.USetPointStep.AReactance
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.USetPointStep.BReactance
+        Compliance.Compliant,  # PCS_RTE-I16z3.USetPointStep.AReactance
+        Compliance.Compliant,  # PCS_RTE-I16z3.USetPointStep.BReactance
         Compliance.Compliant,  # PCS_RTE-I16z3.PSetPointStep.Dec40
         Compliance.Compliant,  # PCS_RTE-I16z3.PSetPointStep.Inc40
         Compliance.NotApplicableTest,  # PCS_RTE-I16z3.QSetPointStep.Inc10
         Compliance.NotApplicableTest,  # PCS_RTE-I16z3.QSetPointStep.Dec20
         Compliance.Compliant,  # PCS_RTE-I16z3.ThreePhaseFault.TransientBolted
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageDip.Qzero
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMax
+        Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMax
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMin
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250ms
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4
+        Compliance.Compliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250ms
+        Compliance.Compliant,  # PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4
     ] == compliance
 
 
@@ -77,14 +77,14 @@ def test_model_validation_bess_dynawo_model():
         Compliance.Compliant,  # PCS_RTE-I16z1.SetPointStep.ActiveConsumption
         Compliance.Compliant,  # PCS_RTE-I16z1.SetPointStep.ReactiveConsumption
         Compliance.NotApplicableTest,  # PCS_RTE-I16z1.SetPointStep.VoltageConsumption
-        Compliance.NonCompliant,  # PCS_RTE-I16z1.GridVoltageStep.RiseInjection
+        Compliance.Compliant,  # PCS_RTE-I16z1.GridVoltageStep.RiseInjection
         Compliance.Compliant,  # PCS_RTE-I16z1.GridVoltageStep.DropInjection
-        Compliance.NonCompliant,  # PCS_RTE-I16z1.GridVoltageStep.RiseConsumption
+        Compliance.Compliant,  # PCS_RTE-I16z1.GridVoltageStep.RiseConsumption
         Compliance.Compliant,  # PCS_RTE-I16z1.GridVoltageStep.DropConsumption
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.USetPointStep.AReactanceInjection
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.USetPointStep.BReactanceInjection
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.USetPointStep.AReactanceConsumption
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.USetPointStep.BReactanceConsumption
+        Compliance.Compliant,  # PCS_RTE-I16z3.USetPointStep.AReactanceInjection
+        Compliance.Compliant,  # PCS_RTE-I16z3.USetPointStep.BReactanceInjection
+        Compliance.Compliant,  # PCS_RTE-I16z3.USetPointStep.AReactanceConsumption
+        Compliance.Compliant,  # PCS_RTE-I16z3.USetPointStep.BReactanceConsumption
         Compliance.Compliant,  # PCS_RTE-I16z3.PSetPointStep.Dec40Injection
         Compliance.Compliant,  # PCS_RTE-I16z3.PSetPointStep.Inc40Injection
         Compliance.Compliant,  # PCS_RTE-I16z3.PSetPointStep.Dec40Consumption
@@ -94,15 +94,23 @@ def test_model_validation_bess_dynawo_model():
         Compliance.NotApplicableTest,  # PCS_RTE-I16z3.QSetPointStep.Inc10Consumption
         Compliance.NotApplicableTest,  # PCS_RTE-I16z3.QSetPointStep.Dec20Consumption
         Compliance.Compliant,  # PCS_RTE-I16z3.ThreePhaseFault.TransientBoltedInjection
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.ThreePhaseFault.TransientBoltedConsumption
+        Compliance.Compliant,  # PCS_RTE-I16z3.ThreePhaseFault.TransientBoltedConsumption
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageDip.QzeroInjection
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.GridVoltageDip.QzeroConsumption
+        Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageDip.QzeroConsumption
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMaxInjection
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMinInjection
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMaxConsumption
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMinConsumption
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250msInjection
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250msConsumption
-        Compliance.NonCompliant,  # PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Injection
+        Compliance.Compliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250msInjection
+        Compliance.Compliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250msConsumption
+        Compliance.Compliant,  # PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Injection
         Compliance.Compliant,  # PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Consumption
+        Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.ConsumptionPmax
+        Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.ConsumptionP50
+        Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.InjectionP50
+        Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.InjectionPmax
+        Compliance.Compliant,  # PCS_RTE-F16z3.USetPointStep.ConsumptionPmax
+        Compliance.Compliant,  # PCS_RTE-F16z3.USetPointStep.ConsumptionP50
+        Compliance.Compliant,  # PCS_RTE-F16z3.USetPointStep.InjectionP50
+        Compliance.Compliant,  # PCS_RTE-F16z3.USetPointStep.InjectionPmax
     ] == compliance

@@ -23,7 +23,14 @@ from dycov.curves.dynawo.io.table import TableFile
 from dycov.electrical.generator_variables import generator_variables
 from dycov.electrical.initialization_calcs import init_calcs
 from dycov.electrical.pimodel_parameters import line_pimodel
-from dycov.files import model_parameters, omega_file, tso_file
+from dycov.files import (
+    omega_file,
+    pcs_parameters,
+    producer_init,
+    simulation_files,
+    tso_file,
+    value_registry,
+)
 from dycov.logging import dycov_logging
 from dycov.model.parameters import GenParams, LoadInit, LoadParams, PdrParams, PimodelParams
 
@@ -67,7 +74,7 @@ class ModelSetup:
     run any simulations.
     """
 
-    def __init__(self, producer: ProducerCurves, pcs_name: str, s_nref: float, f_nom: float):
+    def __init__(self, producer: ProducerCurves, pcs_name: str, s_nref: float):
         """
         Parameters
         ----------
@@ -79,13 +86,10 @@ class ModelSetup:
             Name of the PCS (Power Control System).
         s_nref : float
             Reference apparent power (MVA).
-        f_nom : float
-            Nominal frequency (Hz).  (Unused directly here but kept for completeness.)
         """
         self._owner = producer
         self._pcs_name = pcs_name
         self._s_nref = s_nref
-        self._f_nom = f_nom
 
         # State populated during complete_model; exposed as attributes so that
         # DynawoCurves can read them after the call.
@@ -157,7 +161,7 @@ class ModelSetup:
                 xpu_multiplier = float(parts[0])
                 line_xtype = parts[1]
             try:
-                line_xpu = float(line_xtype)
+                line_xpu = xpu_multiplier * float(line_xtype)
             except ValueError:
                 line_xpu = xpu_multiplier * generator_variables.calculate_line_xpu(
                     line_xtype,
@@ -241,14 +245,14 @@ class ModelSetup:
         dycov_logging.get_logger("ModelSetup").debug(f"\tpdr_U={pdr_u_cfg}")
 
         producer.set_consumption("PmaxConsumption" in pdr_p_cfg)
-        characteristics = model_parameters.unit_characteristics(producer, u_dim)
-        ini_pdr_p = model_parameters.resolve_value_definition(
+        characteristics = value_registry.unit_characteristics(producer, u_dim)
+        ini_pdr_p = value_registry.resolve_value_definition(
             pdr_p_cfg, characteristics, -1, (config_section, "pdr_P")
         )
-        ini_pdr_q = model_parameters.resolve_value_definition(
+        ini_pdr_q = value_registry.resolve_value_definition(
             pdr_q_cfg, characteristics, -1, (config_section, "pdr_Q")
         )
-        ini_pdr_u = model_parameters.resolve_value_definition(
+        ini_pdr_u = value_registry.resolve_value_definition(
             pdr_u_cfg, characteristics, origin=(config_section, "pdr_U")
         )
         return PdrParams(ini_pdr_u, 0.0, complex(ini_pdr_p, ini_pdr_q), ini_pdr_p, ini_pdr_q)
@@ -292,8 +296,8 @@ class ModelSetup:
             load for load in init_loads if connected_to.get(load.id) not in pdr_bus_equipment
         ]
         return (
-            model_parameters.get_grid_load(pdr_loads),
-            model_parameters.get_grid_load(grid_loads),
+            pcs_parameters.get_grid_load(pdr_loads),
+            pcs_parameters.get_grid_load(grid_loads),
         )
 
     def _complete_loads(
@@ -322,7 +326,7 @@ class ModelSetup:
         list[LoadInit]
         """
         producer = self._owner.get_producer()
-        power_chars = model_parameters.unit_characteristics(producer, u_dim)
+        power_chars = value_registry.unit_characteristics(producer, u_dim)
         # Load voltages are normalized by u_nom afterwards, so their bases stay in kV here.
         voltage_chars = {**power_chars, "Udim": u_dim, "Unom": producer.u_nom}
 
@@ -332,7 +336,7 @@ class ModelSetup:
             except ValueError:
                 cfg_value = config.get_value(config_section, param_name)
                 dycov_logging.get_logger("ModelSetup").debug(f"\t{param_name}={cfg_value}")
-                return model_parameters.resolve_value_definition(
+                return value_registry.resolve_value_definition(
                     cfg_value, characteristics, origin=(config_section, param_name)
                 )
 
@@ -484,13 +488,11 @@ class ModelSetup:
         start_time = config.get_float(config_section, "sim_t_event_start", 0.0)
         dycov_logging.get_logger("ModelSetup").debug(f"\tsim_t_event_start={start_time}")
 
-        if config.has_option(config_section, "fault_duration"):
-            fault_duration = config.get_float(config_section, "fault_duration", 0.0)
-        else:
-            generator_type = generator_variables.get_generator_type(producer.u_nom)
-            fault_duration = config.get_float(
-                config_section, f"fault_duration_{generator_type}", 0.0
-            )
+        generator_type = generator_variables.get_generator_type(producer.u_nom)
+        fault_duration_key = config.find_option(config_section, "fault_duration", generator_type)
+        fault_duration = 0.0
+        if fault_duration_key is not None:
+            fault_duration = config.get_float(config_section, fault_duration_key, 0.0)
         dycov_logging.get_logger("ModelSetup").debug(f"\tfault_duration={fault_duration}")
 
         step_value = 0.0
@@ -636,7 +638,7 @@ class ModelSetup:
         )
 
         # Read TSO network loads
-        self.tso_loads = model_parameters.get_pcs_load_params(
+        self.tso_loads = pcs_parameters.get_pcs_load_params(
             working_oc_dir / _TSO_DYD,
             working_oc_dir / _TSO_PAR,
         )
@@ -647,7 +649,7 @@ class ModelSetup:
 
         tso_lines = []
         if self.has_line:
-            tso_lines = model_parameters.get_pcs_lines_params(
+            tso_lines = pcs_parameters.get_pcs_lines_params(
                 working_oc_dir / _TSO_DYD,
                 working_oc_dir / _TSO_PAR,
                 line_rpu,
@@ -681,7 +683,7 @@ class ModelSetup:
         section = get_cfg_oc_name(pcs_name, bm_name, oc_name)
         control_mode = config.get_value(section, "setpoint_change_test_type")
         force_voltage_droop = config.get_boolean(self._pcs_name, "force_voltage_droop", False)
-        is_test_applicable = model_parameters.adjust_producer_init(
+        is_test_applicable = producer_init.adjust_producer_init(
             working_oc_dir,
             producer.get_producer_par(),
             producer.generators,
@@ -720,9 +722,10 @@ class ModelSetup:
         self._table_file = TableFile(self._owner, pcs_bm_name, oc_name)
         self._solvers_file = SolversFile(self._owner, pcs_bm_name, oc_name)
 
-        solver_id = self._owner._solver_id
-        solver_lib = self._owner._solver_lib
-        self._jobs_file.complete_file(working_oc_dir, solver_id, solver_lib, event_params)
+        solver = self._owner.get_solver_params()
+        self._jobs_file.complete_file(
+            working_oc_dir, solver.solver_id, solver.solver_lib, event_params
+        )
         self._par_file.complete_file(
             working_oc_dir,
             line_rpu,
@@ -736,7 +739,7 @@ class ModelSetup:
         self._table_file.complete_file(working_oc_dir, tso_gen, event_params)
         self._solvers_file.complete_file(working_oc_dir)
 
-        tso_generators = model_parameters.get_pcs_generators_params(
+        tso_generators = pcs_parameters.get_pcs_generators_params(
             working_oc_dir / _TSO_DYD,
             working_oc_dir / _TSO_PAR,
         )
@@ -756,12 +759,12 @@ class ModelSetup:
             config.get_value(pcs_bm_name, "TSO_model"),
             event_params,
         )
-        model_parameters.write_pdr_comment(
+        simulation_files.write_pdr_comment(
             working_oc_dir,
             producer.get_producer_par().name,
             pdr,
         )
-        model_parameters.write_pdr_comment(
+        simulation_files.write_pdr_comment(
             working_oc_dir,
             _TSO_PAR,
             pdr,

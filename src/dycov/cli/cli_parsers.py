@@ -61,6 +61,7 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
     _add_performance_subparser(subparsers)
     _add_excel2inputs_subparser(subparsers)
     _add_anonymize_subparser(subparsers)
+    _add_migrate_inputs_subparser(subparsers)
 
     return main_parser
 
@@ -574,7 +575,8 @@ def _add_results_argument(parser: argparse.ArgumentParser) -> None:
         "--results",
         arg_type=Path,
         help_msg="Path to a verification results directory. If provided,"
-        " 'curves_calculated.csv' and 'dycov.log' files will be copied from here.",
+        " 'curves_calculated.csv' and 'simulation_inputs.ini' files will be copied"
+        " from here.",
         completion=shtab.DIRECTORY,
     )
 
@@ -618,6 +620,28 @@ def _add_deripple_argument(parser: argparse.ArgumentParser) -> None:
         " simulation adds to the curves. It must sit well below that oscillation, which the"
         " examples show between 12 and 17 Hz."
         " Default: 5.0, 0 to keep the oscillation.",
+    )
+
+
+def _add_inputs_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the positional path of the producer input files."""
+    _add_argument(
+        parser,
+        "inputs",
+        help_msg="Path to the producer's input files, searched recursively, or to a single "
+        "INI file.",
+        completion=shtab.DIRECTORY,
+    )
+
+
+def _add_dry_run_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--dry-run' argument, which reports the changes instead of making them."""
+    _add_argument(
+        parser,
+        "-n",
+        "--dry-run",
+        help_msg="Report what would be renamed, without writing anything.",
+        action="store_true",
     )
 
 
@@ -745,24 +769,6 @@ def _add_excel2inputs_subparser(subparsers: argparse._SubParsersAction) -> None:
     dycov_logging.get_logger("CliParsers").debug("Added 'excel2inputs' subparser.")
 
 
-def _add_compile_subparser(subparsers: argparse._SubParsersAction) -> None:
-    """Adds the 'compile' subparser to the given subparsers action.
-
-    Parameters
-    ----------
-    subparsers: argparse._SubParsersAction
-        The subparsers action to which the 'compile' subparser will be added.
-    """
-    compile_model = subparsers.add_parser(
-        "compile",
-        help="Compile custom Modelica models.",
-    )
-    _add_launcher_argument(compile_model)
-    _add_dynamic_model_argument(compile_model)
-    _add_force_argument(compile_model)
-    dycov_logging.get_logger("CliParsers").debug("Added 'compile' subparser.")
-
-
 def _add_anonymize_subparser(subparsers: argparse._SubParsersAction) -> None:
     """Adds the 'anonymize' subparser to the given subparsers action.
 
@@ -784,3 +790,20 @@ def _add_anonymize_subparser(subparsers: argparse._SubParsersAction) -> None:
     _add_compression_argument(anonymize)
     _add_deripple_argument(anonymize)
     dycov_logging.get_logger("CliParsers").debug("Added 'anonymize' subparser.")
+
+
+def _add_migrate_inputs_subparser(subparsers: argparse._SubParsersAction) -> None:
+    """Adds the 'migrate_inputs' subparser to the given subparsers action.
+
+    Parameters
+    ----------
+    subparsers: argparse._SubParsersAction
+        The subparsers action to which the 'migrate_inputs' subparser will be added.
+    """
+    migrate_inputs = subparsers.add_parser(
+        "migrate_inputs",
+        help="Rename the magnitude keys of a producer's INI files to the names DyCoV reads.",
+    )
+    _add_inputs_argument(migrate_inputs)
+    _add_dry_run_argument(migrate_inputs)
+    dycov_logging.get_logger("CliParsers").debug("Added 'migrate_inputs' subparser.")

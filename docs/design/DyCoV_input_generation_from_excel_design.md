@@ -30,8 +30,9 @@ template. Its only checking role is at the **submodel** level (§9).
 auxiliary load + its transformer; `+i` = the plant's collector network, aggregated as a PI line.
 
 **In scope:** the single-`Zone1` topologies (`S`, `S+Aux`, `S+i`, `S+Aux+i`), both zones' input
-files, and the reference-curve tree (§8). A topology outside that list — the `M` family included —
-is refused by name rather than truncated to one generator.
+files, and the reference-curve tree (§8). The `M` family is laid out but refused (§11): the
+workbook cannot yet say which model each generator is, and a plant is not generated with a model
+it may not have. A topology DyCoV does not know is refused by name.
 
 **Out of scope:** parameter-value validation, and the initialization / power-flow parameters
 (`P0Pu`, `Q0Pu`, `U0Pu`, `UPhase0`, `*Pcc0Pu`, …), which are not in the Excel and which DyCoV
@@ -69,7 +70,7 @@ model, curves or a reference directory given alongside it is refused.
 | `Général` | Block selection (`Type de bloc \| Choix \| Zone`: block → variant or `Aucun`, plus the `;`-separated zones the block's parameters go to) and the Excel-computed `Model Map` lookup key (derived table; the tool reads the cached key cell verbatim). |
 | `Model Map` | Variant tuple → Dynawo `lib` + prefix, per zone (§6). |
 | `Zone1<x>` (`Zone1a`, …) | One sheet per generator. Zone-1 data: `SnZone1`, `N_Zone1`, `ConverterLVControl`, `Un1`, `Un2`, the group transformer (`Z_cc_TG`, `R_cc_TG / X_cc_TG`, `r_TG`), `Pmax_injection_z1`, `Pmax_soutirage_z1`, `Qmax_z1`, `Qmin_z1`, `P_share`, `Q_share`. |
-| `Zone3` | Exactly one. `Topologie`, `SnZone3` (computed as `N_Zone1 · SnZone1`), `Un_PDR`, `Pmax_injection_PDR`, `Pmax_soutirage_PDR`, `Qmax_PDR`, `Qmin_PDR`, main transformer (`Z_cc_TP`, `R/X`, `N_prises`, `r_max`, `r_min`, and the starting tap `Tap_0` or `r_0`), aux load (`+Aux`), collector (`+i`). |
+| `Zone3` | Exactly one. `Topologie`, `SnZone3` (computed as `N_Zone1 · SnZone1`), `Un_PDR`, `Pmax_injection_PDR`, `Pmax_soutirage_PDR`, `Qmax_PDR`, `Qmin_PDR`, the optional `Pmin_injection_PDR` and `Pmin_soutirage_PDR`, main transformer (`Z_cc_TP`, `R/X`, `N_prises`, `r_max`, `r_min`, and the starting tap `Tap_0` or `r_0`), aux load (`+Aux`), collector (`+i`). |
 | `Signaux zone 1` / `Signaux zone 3` | Per zone: the quantities to provide with the `.csv` column holding each, the DTR cases to run with the `.csv` file of each, and the folder those files live in (§8). |
 | Control sheets (`REPC`, `REEC`, `REGC`, `Mechanical Part`, …) | Control-block parameters, one column group per variant. Any sheet with a parameter table is one; how many there are, and their names, are the workbook's business. |
 | Descriptive sheets | Ignored: without a parameter table they yield nothing. |
@@ -82,7 +83,7 @@ arrives fully commented out, so uncommenting a name is what overrides it:
 
 | Section | Holds |
 | :--- | :--- |
-| `[Sheets]` | The fixed sheet names, and the `Zone1` prefix for the day a plant describes several. |
+| `[Sheets]` | The fixed sheet names, and the prefix of the `Zone1<x>` sheets, one per generating unit. |
 | `[Anchors]` | The header texts tables are located by, as comma-separated alternatives. |
 | `[Markers]` | The `/` sentinel, the `Choix` values meaning "no block", the empty annotations, and the `Un1 ou Un2` base. |
 | `[Zone1-Rows]`, `[Zone3-Rows]` | Row name of every electrical concept (`main_impedance = Z_cc_TP`). |
@@ -127,11 +128,15 @@ Every zone field reaches the output except three, which are informative:
 Three files per zone, plus the reference-curve tree (§8). The resolved model class (§6) drives the
 `lib` ids and the parameter-name prefix; parameter type and value come from the Excel:
 
-- **Producer.ini** — DTR envelope + topology: `p_max_injection_at_PDR`, `u_nom_at_PDR`,
-  `q_max_at_PDR`, `q_min_at_PDR`, `topology`, `P_sharing_*`, `Q_sharing_*`, and
-  `p_max_consumption_at_PDR` for storage, which DyCoV requires in both zones. Each zone declares
-  the node it connects at, so `u_nom_at_PDR` is `Un1` in Zone1 and `Un_PDR` in Zone3, and Zone1's
-  `topology` is always `S`: one unit connected to its internal node, whatever the plant's.
+- **Producer.ini** — DTR envelope + topology: `p_max_injection`, `u_nom`, `q_max`, `q_min`,
+  `topology`, `P_sharing_*`, `Q_sharing_*`, and `p_max_consumption` for storage, which DyCoV
+  requires in both zones. A unit is alone in its Zone1 test, so it declares the whole of the
+  power there (`1.0`); `P_share` and `Q_share` say how the plant spreads its own among the units,
+  and reach the Zone3 INI only, keyed by each unit's block. Zone3 also declares `p_min_injection` (and `p_min_consumption` for
+  storage) when its row is filled: they are the starting points of the Fiche F16 tests, which only
+  Zone3 runs. The keys name no node, because each zone declares the node it connects at: `u_nom` is
+  `Un1` in Zone1 and `Un_PDR` in Zone3, and Zone1's `topology` is always `S`: one unit connected to
+  its internal node, whatever the plant's.
 - **Producer.dyd** — a `blackBoxModel` for the converter (resolved `lib`), the topology network
   blocks and the `connect` lines. The converter terminal is `<prefix>terminal`. Zone3 uses the
   **plant** lib, Zone1 its **turbine** sibling (§6).
@@ -152,6 +157,14 @@ the `examples/Model/**` references so they read and diff cleanly.
 The base name of every file, and the `ReferenceCurves` subdirectory, come from one constant
 (`PRODUCER_NAME`), since DyCoV derives both from the same producer name.
 
+**Generating units.** Each `Zone1<x>` sheet is a unit (`units.py`), and the outputs are written
+per unit the way DyCoV lays an `M` plant out (`examples/Model/Wind/WECC4`): its own Zone1 files,
+`Producer_G<i>.{dyd,par,ini}`, with the technology's block id and its own step-up transformer,
+and a block of its own in Zone3, numbered (`Wind_Turbine1`, `Wind_Turbine2`…), on the plant's
+`SnZone3` as `SNom`, its share of the plant's power coming from the INI. The units connect at the
+same internal node, so their `Un1` must agree. An `S` plant is the single-unit case: one sheet,
+`Producer.*` files, the block id unnumbered.
+
 ---
 
 ### 5. Organization
@@ -168,6 +181,7 @@ generator.py              what to build, in what order, and the run report
   electrical.py           pure conversions: impedances, tap positions, per-unit bases
   producer_dyd.py         DYD: topology, libs, terminals, the group transformer's absence
   producer_ini.py         INI: each zone's limits, nominal voltage and power sharing
+  units.py                the generating units: one per Zone1<x>, its model and its names
   par/                    PAR, one module per kind of equipment
     converter.py            the generating unit's model
     transformers.py         group, main and auxiliary
@@ -338,7 +352,9 @@ results-file cell per case, so the workbook carries the file's base name and the
 suffix of `[Storage]` to both the test name and the file name (`…ActiveInjection.csv`,
 `…ActiveConsumption.csv`). The template needs no storage-specific row.
 
-A row with no curve of its own — the setpoint rows, say — is informative: DyCoV reads no such curve.
+A row with no curve of its own — the active power setpoint of zone 3, say — is informative: DyCoV
+reads no such curve. The two setpoint rows of zone 1 do name a curve, which no check compares: the
+report draws each over the power it drives.
 Likewise, a DTR case the sheets do not list gets no reference file. The frequency ramp is listed by
 both sheets, and only zone 3 runs it: its zone-1 row carries the note that marks it as not
 applicable there, and no results file.
@@ -403,10 +419,16 @@ nothing and raises no error.
   generator set, and are the only examples their workbook does not reproduce in full: the
   placeholder curves allow 0.33 s where theirs allow 2 s, which disconnects the turbine in the
   500 ms and 800 ms voltage dips and in Zone 3's `GridVoltageDip`.
-- **`M` topologies.** `Général` holds one block selection, so it resolves one plant/turbine pair,
-  while an `M` plant needs a model per generator in both zones — `examples/Model/Wind/WECC4` has
-  two different ones. Duplicating a `Zone1<x>` sheet copies electrical data only, so nothing in the
-  workbook says which model each generator is. It needs a design before it can be asked of RTE.
+- **`M` topologies** (dycov#474). The outputs are already written per generating unit (§4), and
+  an `M` plant's DYD matches the structure of `examples/Model/Wind/WECC4`; what stops it is the
+  workbook. `Général` holds one block selection, so it resolves one plant/turbine pair, while an
+  `M` plant needs a model per generator in both zones — WECC4 mixes `WTG4A` with `WTG4B`.
+  Duplicating a `Zone1<x>` sheet copies electrical data only, so nothing in the workbook says which
+  model each generator is, nor which control parameters it takes, and the tool refuses the plant
+  in `parse.resolve_unit_models`, where that answer will be read. Also open with RTE: the zone-1
+  signal sheet describes one unit's curves, while DyCoV reads a reference-curve directory per unit
+  (`ReferenceCurves/Producer_G<i>`); and the transformer in Zone3 that groups all generators. DyCoV
+  itself does not run `M` plants yet either, which is why WECC4 is set aside.
 - **Standalone packaging.** The generator ships as the `excel2inputs` subcommand, which keeps the
   topology catalog in one place at the price of requiring DyCoV. Reaching the user as a
   self-contained installable would instead mean vendoring DyCoV's producer-file builders, and with

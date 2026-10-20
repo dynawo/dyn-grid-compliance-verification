@@ -134,6 +134,10 @@ Depending on your objective:
 Example cases are available in the `examples/` directory and can be copied
 and adapted to your own projects.
 
+> **Note:** `examples/Model/Wind/WECC4`, the only multi-generator example, is not usable
+> until multi-generator topologies are supported: it carries no reference curves and is left
+> out of the example runs.
+
 For a hands-on introduction, proceed to the [Quick start](#quick-start) section.  
 For detailed workflow explanations, refer to the [Documentation](#documentation) section.
 
@@ -176,7 +180,7 @@ The following steps install DyCoV in a native Linux environment.
 For detailed procedures and advanced setups, see: [Linux native](docs/installation/linux_native.md)
 
 DyCoV requires a Linux environment with system dependencies
-(e.g. Python ≥ 3.13, build tools, LaTeX).
+(e.g. Python 3.13 or 3.14, build tools, LaTeX).
 
 #### Install DyCoV
 

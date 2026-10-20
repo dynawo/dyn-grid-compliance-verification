@@ -21,7 +21,6 @@ the user documentation instead:
 | `linux_install.sh` | Native Linux installer; shipped to end users as a release artifact. |
 | `docker/` | Image definition plus the build/export scripts and the end-user import/run helpers. |
 | `wsl/` | Windows WSL installer and launcher shipped to end users. |
-| `DGCV_win_installer.iss`, `dycov_GFM_only_setup.iss`, `DyCoV_GFM_only.md` | Legacy Inno Setup installers for native Windows; unused by the current release flow. |
 
 ## Building a release
 

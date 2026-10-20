@@ -7,11 +7,14 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+import logging
 from pathlib import Path
 
+from dycov.configuration.cfg import config
 from dycov.curves.curves import ProducerCurves
 from dycov.curves.dynawo.io.file_variables import FileVariables
 from dycov.files import replace_placeholders
+from dycov.logging import dycov_logging
 
 
 class JobsFile(FileVariables):
@@ -40,6 +43,7 @@ class JobsFile(FileVariables):
             "solver_lib",
             "solver_id",
             "producer_dyd",
+            "dynawo_log_level",
         ]
         super().__init__(
             tool_variables,
@@ -71,8 +75,15 @@ class JobsFile(FileVariables):
         variables_dict["solver_id"] = solver_id
 
         variables_dict["producer_dyd"] = self._dynawo_curves.get_producer().get_producer_dyd().name
+        variables_dict["dynawo_log_level"] = self.__log_level()
 
         # Complete other parameters using the inherited method from FileVariables
         self.complete_parameters(variables_dict, event_params)
 
         replace_placeholders.dump_file(working_oc_dir, "TSOModel.jobs", variables_dict)
+
+    def __log_level(self) -> str:
+        """How much Dynawo is asked to log, which debugging DyCoV also asks of Dynawo."""
+        if dycov_logging.get_logger("JobsFile").isEnabledFor(logging.DEBUG):
+            return "DEBUG"
+        return config.get_value("Dynawo", "log_level", "WARN")

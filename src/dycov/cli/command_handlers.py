@@ -18,8 +18,8 @@ from typing import Optional
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 from dycov.curves import anonymizer
-from dycov.curves.dynawo.tooling import prepare_tool
 from dycov.excel import generator as excel_generator
+from dycov.files import producer_ini_migration
 from dycov.gfm.generator import GFMGeneration
 from dycov.gfm.parameters import GFMParameters
 from dycov.gfm.verification.functional_tests import compare_csv_directories
@@ -221,7 +221,9 @@ def _verify_from_workbook(
     """Convert the workbook, then run the verification on what came out.
 
     The conversion goes to a temporary directory that is removed when the run ends: the input the
-    user keeps is the workbook itself, and the report names it instead of the temporary copy.
+    user keeps is the workbook itself, and the report names it instead of the temporary copy. That
+    directory sits next to the output, where the user chose to write, rather than in the system
+    temporary directory, which current distributions keep in memory.
     """
     logger = dycov_logging.get_logger("CommandHandlers")
     flow = _WORKBOOK_FLOWS[verification_type]
@@ -233,7 +235,9 @@ def _verify_from_workbook(
         return 1
 
     output_dir = args.output if args.output else workbook.parent / "Results"
-    with tempfile.TemporaryDirectory(prefix="dycov_excel2inputs_") as tmpdir:
+    scratch_parent = Path(output_dir).parent
+    scratch_parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix="dycov_excel2inputs_", dir=scratch_parent) as tmpdir:
         generated = Path(tmpdir)
         if not _convert_workbook(parser, workbook, generated, flow["purpose"]):
             return 1
@@ -338,43 +342,6 @@ def handle_performance_command(
     return result_code
 
 
-def handle_compile_command(
-    parser: argparse.ArgumentParser, args: argparse.Namespace, dwo_launcher: Path
-) -> int:
-    """Handles the 'compile' command.
-
-    Compiles custom Modelica models.
-
-    Parameters
-    ----------
-    parser: argparse.ArgumentParser
-        The argument parser instance.
-    args: argparse.Namespace
-        Parsed command-line arguments.
-    dwo_launcher: Path
-        Path to the Dynawo launcher.
-    """
-    dycov_logging.get_logger("CommandHandlers").info("Handling 'compile' command.")
-    model_name: Optional[str] = args.dynamic_model if args.dynamic_model else None
-    force_recompile: bool = args.force
-
-    try:
-        if prepare_tool.precompile(dwo_launcher, model_name, force_recompile):
-            dycov_logging.get_logger("CommandHandlers").info("Model compilation aborted by user.")
-            result_code = 1
-        else:
-            dycov_logging.get_logger("CommandHandlers").info("Model(s) compiled successfully.")
-            result_code = 0
-    except Exception as e:
-        if dycov_logging.get_logger("CommandHandlers").isEnabledFor(logging.DEBUG):
-            dycov_logging.get_logger("CommandHandlers").exception("Error compiling models")
-        else:
-            dycov_logging.get_logger("CommandHandlers").error(f"Error compiling models: {e}")
-        parser.error(f"Failed to compile models: {e}")
-        result_code = 1
-    return result_code
-
-
 def handle_excel2inputs_command(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     """Handles the 'excel2inputs' command.
 
@@ -418,6 +385,46 @@ def handle_excel2inputs_command(parser: argparse.ArgumentParser, args: argparse.
 
     logger.info(report)
     logger.info(f"Input files written under {output}")
+    return 0
+
+
+def handle_migrate_inputs_command(
+    parser: argparse.ArgumentParser, args: argparse.Namespace
+) -> int:
+    """Handles the 'migrate_inputs' command.
+
+    Renames the magnitude keys a producer's INI files declare to the names DyCoV reads, so a
+    case written for an earlier version runs unchanged.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The argument parser instance.
+    args: argparse.Namespace
+        Parsed command-line arguments.
+    """
+    logger = dycov_logging.get_logger("CommandHandlers")
+    logger.info("Handling 'migrate_inputs' command.")
+    inputs = Path(args.inputs)
+    if not inputs.exists():
+        parser.error(f"Input files not found: {inputs}")
+        return 1
+
+    try:
+        renamed = producer_ini_migration.migrate(inputs, dry_run=args.dry_run)
+    except OSError as e:
+        parser.error(f"Failed to migrate the input files: {e}")
+        return 1
+
+    if not renamed:
+        logger.info(f"Nothing to rename under {inputs}.")
+        return 0
+
+    for ini_file, keys in renamed.items():
+        logger.info(f"{ini_file}: {', '.join(keys)}")
+    keys_renamed = sum(len(keys) for keys in renamed.values())
+    outcome = "would be renamed" if args.dry_run else "renamed"
+    logger.info(f"{keys_renamed} keys {outcome} in {len(renamed)} files.")
     return 0
 
 
@@ -519,6 +526,8 @@ def _run_verification(
     except ValueError as e:
         dycov_logging.get_logger("CommandHandlers").error(f"{e}")
         return 1
+
+    dycov_logging.add_run_handler(params.get_working_dir())
 
     try:
         # Determine if the execution parameters are valid or complete based on the

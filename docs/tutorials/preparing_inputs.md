@@ -362,7 +362,10 @@ RMS model validation introduces additional constraints due to the Zone 1 / Zone 
 
 RMS model validation is performed on **two independent zones**:
 **Zone 1** and **Zone 3**.
-Inputs must therefore explicitly distinguish between these two zones.
+Inputs must therefore explicitly distinguish between these two zones. The
+`Zone1/` model is what the PCS of zone 1 (`PCS_RTE-I16z1`) validate: a run
+limited with `-p` to a PCS of zone 3 (`PCS_RTE-I16z3`, or the tests declared
+for `PCS_RTE-F16z3`) accepts a `Dynawo/` directory with `Zone3/` alone.
 
 This impacts both the Dynawo‑based workflow
 and the producer‑curve‑based workflow.

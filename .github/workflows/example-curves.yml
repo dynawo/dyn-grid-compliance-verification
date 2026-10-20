@@ -1,0 +1,63 @@
+name: Example curves
+
+on:
+  pull_request:
+  push:
+    branches: ['**']
+
+permissions:
+  contents: read
+
+jobs:
+  not-versioned:
+    name: The example curves are not under version control
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          filter: blob:none
+
+      - name: No curve directory is tracked
+        run: |
+          git ls-files -- examples |
+            grep -E '/(ReferenceCurves|ProducerCurves)/|^examples/\.curves-release$' \
+            > "$RUNNER_TEMP/tracked.txt" || true
+          tracked=$(wc -l < "$RUNNER_TEMP/tracked.txt")
+          if [ "$tracked" -gt 0 ]; then
+            echo "$tracked files of the example curve directories are under version control:"
+            head -5 "$RUNNER_TEMP/tracked.txt"
+            echo "  ..."
+            echo "::error::The curves of the examples ship as an asset of the release and are not in the repository. A branch started before that keeps them, and merging it puts them back. Merge the base branch into this one and keep the deletions it brings."
+            exit 1
+          fi
+
+      - name: This work descends from the history of the repository
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          if [ "$EVENT" = "pull_request" ]; then
+            reference="$BASE_REF"
+            head_spec="+refs/pull/$PR_NUMBER/head:refs/remotes/origin/compared"
+            what="This pull request"
+          else
+            reference="$DEFAULT_BRANCH"
+            head_spec=""
+            what="This push"
+          fi
+
+          git fetch --quiet --filter=blob:none --no-tags origin \
+            "+refs/heads/$reference:refs/remotes/origin/reference" $head_spec
+
+          base=refs/remotes/origin/reference
+          [ -n "$head_spec" ] && head=refs/remotes/origin/compared || head="$GITHUB_SHA"
+
+          git merge-base "$base" "$head" > /dev/null 2>&1 && exit 0
+
+          echo "::error::$what shares no commit with $reference. It was built on the repository as it was before its history was rewritten to drop the example curves, so the copy it came from is stale: delete it and clone the repository again. Work in progress travels with git format-patch beforehand and git am afterwards. Taking this as it is would restore the whole old history, and the 6.5 GB that came with it."
+          exit 1

@@ -17,10 +17,31 @@ from typing import Optional
 
 from dycov._build_info import commit_id, version
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.tooling.prepare_tool import precompile
 from dycov.excel import names as excel_names
 from dycov.files import manage_files
 from dycov.logging import dycov_logging, enable_warning_capture
+
+# The technologies each verification mode has PCS for: only the performance verification
+# covers synchronous machines.
+_TEMPLATE_MODELS = {"model": ("BESS", "PPM"), "performance": ("BESS", "PPM", "SM")}
+
+
+def _declares_no_test(description: Path) -> bool:
+    """Whether a PCS description leaves its tests to the producer, as the DTR Fiche F16 does."""
+    parser = configparser.ConfigParser(inline_comment_prefixes=("#",))
+    parser.optionxform = str
+    parser.read(description, encoding="utf-8")
+    return parser.has_section("PCS-Benchmarks") and not any(
+        value.strip() for _, value in parser.items("PCS-Benchmarks")
+    )
+
+
+def _declaration_templates(pcs_dir: Path) -> list[Path]:
+    return sorted(
+        path
+        for path in pcs_dir.glob("*[dD]escription.[iI][nN][iI]")
+        if path.name.lower() != "pcsdescription.ini"
+    )
 
 
 def _get_linux_info() -> str:
@@ -119,8 +140,7 @@ class DycovInitializer:
         This includes creating the config directory if it doesn't exist,
         and setting up basic and advanced configuration files.
         """
-        if not config.get_config_dir().is_dir():
-            manage_files.create_dir(config.get_config_dir())
+        manage_files.create_dir(config.get_config_dir(), clean_first=False)
 
         # Create basic and advanced configuration files from templates.
         manage_files.create_config_file(
@@ -185,8 +205,7 @@ class DycovInitializer:
         Sets up file and console loggers based on configuration settings.
         """
         log_dir = config.get_config_dir() / "log"
-        if not log_dir.is_dir():
-            manage_files.create_dir(log_dir)
+        manage_files.create_dir(log_dir, clean_first=False)
 
         file_log_level = config.get_int("Global", "file_log_level", 20)
         file_formatter = config.get_value("Global", "file_formatter")
@@ -213,8 +232,7 @@ class DycovInitializer:
         """
         Ensures the existence of a specific template command directory.
         """
-        if not template_path.is_dir():
-            manage_files.create_dir(template_path)
+        manage_files.create_dir(template_path, clean_first=False)
 
     def _configure_template_category(self, base_template_dir: Path, sub_template: str):
         """
@@ -223,10 +241,7 @@ class DycovInitializer:
         category_path = base_template_dir / sub_template
         self._template_cmd_config(category_path)  # Create the base category directory
 
-        subdirs = ["model", "performance"]
-        models = ["BESS", "PPM", "SM"]
-
-        for subdir in subdirs:
+        for subdir, models in _TEMPLATE_MODELS.items():
             self._template_cmd_config(category_path / subdir)
             for model in models:
                 self._template_cmd_config(category_path / subdir / model)
@@ -240,13 +255,12 @@ class DycovInitializer:
         templates_to_configure = ["PCS", "reports"]
         config_templates_dir = config.get_config_dir() / "templates"
 
-        # Create base templates directory if it doesn't exist
-        if not config_templates_dir.is_dir():
-            manage_files.create_dir(config_templates_dir)
+        manage_files.create_dir(config_templates_dir, clean_first=False)
 
         for template in templates_to_configure:
             self._configure_template_category(config_templates_dir, template)
             self._copy_dummy_samples(tool_path, template)
+        self._copy_pcs_to_declare(tool_path)
 
         # Copy top-level READMEs and report-specific assets
         manage_files.copy_from_path(tool_path / "templates" / "README.md", config_templates_dir)
@@ -264,12 +278,28 @@ class DycovInitializer:
             config_templates_dir / "reports",
         )
 
+    def _copy_pcs_to_declare(self, tool_path: Path):
+        """A PCS whose fiche fixes no test ships the template of the declaration file the
+        producer delivers with the reference curves (``<fiche>Description.ini``): a copy goes to
+        the user's templates under that same name, unless one is already there."""
+        shipped = tool_path / "templates" / "PCS" / "model"
+        for description in sorted(shipped.glob("*/PCS_*/PCSDescription.ini")):
+            if not _declares_no_test(description):
+                continue
+            target_dir = (
+                config.get_config_dir() / "templates" / "PCS" / "model"
+            ) / description.relative_to(shipped).parent
+            for declaration in _declaration_templates(description.parent):
+                if (target_dir / declaration.name).exists():
+                    continue
+                self._template_cmd_config(target_dir)
+                manage_files.copy_from_path(declaration, target_dir)
+
     def _copy_dummy_samples(self, tool_path: Path, source: str):
         """
         Copies dummy sample files from the tool's templates to the user's configuration directory.
         """
         categories = ["performance", "model", "gfm"]
-        models = ["SM", "PPM", "BESS"]
         for category in categories:
             if category == "gfm":
                 src = tool_path / "templates" / source / category / ".DummySample"
@@ -277,12 +307,12 @@ class DycovInitializer:
                 if src.exists():
                     try:
                         manage_files.copy_directory(src, dest, dirs_exist_ok=True)
-                    except Exception as e:
-                        dycov_logging.get_logger("Initialization").error(
-                            f"Failed to copy {src} to {dest}: {e}"
+                    except Exception:
+                        dycov_logging.get_logger("Initialization").exception(
+                            f"Failed to copy {src} to {dest}"
                         )
             else:
-                for model in models:
+                for model in _TEMPLATE_MODELS[category]:
                     src = tool_path / "templates" / source / category / model / ".DummySample"
                     dest = (
                         config.get_config_dir()
@@ -295,9 +325,9 @@ class DycovInitializer:
                     if src.exists():
                         try:
                             manage_files.copy_directory(src, dest, dirs_exist_ok=True)
-                        except Exception as e:
-                            dycov_logging.get_logger("Initialization").error(
-                                f"Failed to copy {src} to {dest}: {e}"
+                        except Exception:
+                            dycov_logging.get_logger("Initialization").exception(
+                                f"Failed to copy {src} to {dest}"
                             )
 
     def _configure_user_models(self):
@@ -352,19 +382,6 @@ class DycovInitializer:
             return False
 
         return True
-
-    def _prepare_dynawo_models(self, launcher_dwo: Path) -> None:
-        """
-        Precompiles Dynawo models.
-
-        Parameters
-        ----------
-        launcher_dwo: Path
-            Path to the Dynawo launcher.
-        """
-        is_aborted = precompile(launcher_dwo)
-        if is_aborted:
-            sys.exit(1)
 
     def _check_config_file(self, tool_config_file: Path, user_config_file: Path):
         """

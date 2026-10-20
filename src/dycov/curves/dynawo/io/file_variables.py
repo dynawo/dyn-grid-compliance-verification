@@ -88,14 +88,10 @@ class FileVariables:
         str
             The obtained value if found, otherwise None.
         """
-        # Prioritize key specific to generator type
-        key_type = f"{key}_{generator_type}"
-        if config.has_option(section, key_type):
-            return self.__obtain_value(config.get_value(section, key_type), section, key_type)
-        # Fallback to general key if type-specific key is not found
-        elif config.has_option(section, key):
-            return self.__obtain_value(config.get_value(section, key), section, key)
-        return None
+        option = config.find_option(section, key, generator_type)
+        if option is None:
+            return None
+        return self.__obtain_value(config.get_value(section, option), section, option)
 
     def __get_variable_value(self, key: str) -> str:
         """

@@ -41,12 +41,8 @@ def dummy_config(monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-def test_get_ss_tolerance_without_setpoint_variation_returns_the_configured_tolerance():
-    assert common.get_ss_tolerance(0.0) == pytest.approx(0.002)
-
-
-def test_get_ss_tolerance_scales_with_the_setpoint_variation():
-    assert common.get_ss_tolerance(0.1) == pytest.approx(0.0002)
+def test_get_ss_tolerance_returns_the_configured_tolerance():
+    assert common.get_ss_tolerance() == pytest.approx(0.002)
 
 
 # ---------------------------------------------------------------------------
@@ -320,6 +316,27 @@ def test_get_txpfloor_only_considers_the_lower_bound():
     assert result == pytest.approx(0.5)
 
 
+def test_get_txpfloor_in_consumption_only_considers_the_upper_bound():
+    time = [0, 1, 2, 3]
+    curve = [-2.0, -0.5, -1.0, -1.0]
+
+    result = common.get_txpfloor(0.1, time, curve, sim_t_event_end=0.5)
+
+    # The overshoot into consumption at t = 0 s is ignored; only the -0.5 sample is above the
+    # -0.9 floor.
+    assert result == pytest.approx(0.5)
+
+
+def test_get_txpfloor_in_consumption_ignores_an_overshoot_after_the_recovery():
+    time = [0, 1, 2, 3, 4]
+    curve = [-1.0, -0.2, -1.0, -1.6, -1.0]
+
+    result = common.get_txpfloor(0.1, time, curve, sim_t_event_end=0.5)
+
+    # The power is back at t = 2 s; going further into consumption at t = 3 s is no delay.
+    assert result == pytest.approx(0.5)
+
+
 def test_get_txpfloor_of_an_event_after_the_deviation_returns_zero():
     time = [0, 1, 2]
     curve = [0.5, 1.0, 1.0]
@@ -373,36 +390,50 @@ def test_get_txu_raises_on_length_mismatch():
 # ---------------------------------------------------------------------------
 
 
-def test_check_generator_imax_prioritizes_the_reactive_current():
-    time = [0, 1, 2, 3, 4, 5]
-
-    first_id_value, id_not_increase = common.check_generator_imax(
-        5, time, [1, 3, 5, 5, 5, 5], [2, 2, 2, 2, 2, 2]
-    )
-
-    assert id_not_increase is True
-    assert first_id_value == -1
-
-
-def test_check_generator_imax_detects_an_active_current_increase_under_saturation():
+def test_check_generator_imax_accepts_a_current_within_the_limit():
     time = [0, 1, 2, 3]
 
-    first_id_value, id_not_increase = common.check_generator_imax(
-        5, time, [5, 5, 5, 5], [1, 1, 2, 2]
-    )
+    first_time, respected = common.check_generator_imax(5, time, [1, 3, 5, 5], [1, 1, 3, 4])
 
-    assert id_not_increase is False
-    assert first_id_value == 2
+    assert respected is True
+    assert first_time == -1
 
 
-def test_check_generator_imax_resets_when_the_saturation_ends():
+def test_check_generator_imax_accepts_more_active_current_as_the_reactive_current_falls():
     time = [0, 1, 2]
 
-    first_id_value, id_not_increase = common.check_generator_imax(5, time, [5, 1, 5], [1, 1, 5])
+    first_time, respected = common.check_generator_imax(5, time, [5, 5, 5], [1, 2, 3])
 
-    # Leaving saturation drops the reference, so the later increase is not a violation.
-    assert id_not_increase is True
-    assert first_id_value == -1
+    # At the limit the active current takes the room the reactive current leaves.
+    assert respected is True
+    assert first_time == -1
+
+
+def test_check_generator_imax_detects_active_current_beyond_the_limit():
+    time = [0, 1, 2]
+
+    first_time, respected = common.check_generator_imax(5, time, [4, 6, 5], [1, 1, 1])
+
+    assert respected is False
+    assert first_time == 1
+
+
+def test_check_generator_imax_accepts_a_reactive_current_alone_beyond_the_limit():
+    time = [0, 1]
+
+    first_time, respected = common.check_generator_imax(5, time, [6, 6], [0, 0])
+
+    assert respected is True
+    assert first_time == -1
+
+
+def test_check_generator_imax_measures_the_active_current_in_consumption():
+    time = [0, 1]
+
+    first_time, respected = common.check_generator_imax(5, time, [5, 6], [-1, -1])
+
+    assert respected is False
+    assert first_time == 1
 
 
 def test_check_generator_imax_raises_on_length_mismatch():
@@ -537,6 +568,9 @@ class _RecordingLogger:
     def warning(self, msg):
         self.warnings.append(msg)
 
+    def warn_once(self, name, msg):
+        self.warnings.append(msg)
+
 
 @pytest.fixture
 def logged_warnings(monkeypatch):
@@ -658,6 +692,30 @@ def test_get_settling_time_raises_on_length_mismatch():
         common.get_settling_time(0.05, [0, 1, 2], [1, 2], sim_t_event_start=1)
 
 
+@pytest.mark.parametrize("step", [0.0222, -0.0222])
+def test_get_settling_time_of_a_step_takes_its_band_from_the_step(step):
+    time = [0, 1, 2, 3, 4]
+    curve = [0.0, 0.0, 0.0195, 0.0191, 0.0192]
+
+    ret_val, pos, tube_min, tube_max, _ = common.get_settling_time(
+        0.005, time, curve, sim_t_event_start=1, step=step
+    )
+
+    assert tube_min == pytest.approx(0.0192 - 0.005 * 0.0222)
+    assert tube_max == pytest.approx(0.0192 + 0.005 * 0.0222)
+    assert pos == 2
+    assert ret_val == pytest.approx(1.0)
+
+
+def test_get_response_time_of_a_step_takes_its_band_from_the_step():
+    time = [0, 1, 2, 3, 4]
+    curve = [0.0, 0.0, 0.018, 0.0191, 0.0192]
+
+    result = common.get_response_time(0.005, time, curve, sim_t_event_start=1, step=0.0222)
+
+    assert result == pytest.approx(1.0)
+
+
 # ---------------------------------------------------------------------------
 # Reached time
 # ---------------------------------------------------------------------------
@@ -727,9 +785,81 @@ def test_get_reached_time_raises_on_length_mismatch():
 
 
 def test_get_overshoot_measures_the_peak_above_the_final_value():
-    result = common.get_overshoot([1.0, 2.0, 3.5, 2.5, 2.0])
+    time = [0, 1, 2, 3, 4]
+
+    result = common.get_overshoot(time, [1.0, 2.0, 3.5, 2.5, 2.0], sim_t_event_start=1)
 
     assert result == pytest.approx(1.5)
+
+
+def test_get_overshoot_ignores_the_samples_before_the_event():
+    """Issue #586: a sample before the event is not part of the response."""
+    time = [0, 1, 2, 3, 4]
+
+    result = common.get_overshoot(time, [2.0, 0.0, 0.0, 1.2, 1.0], sim_t_event_start=2)
+
+    assert result == pytest.approx(0.2)
+
+
+def test_get_overshoot_of_a_downward_step_is_its_undershoot():
+    """Issue #586: a step from 1.0 to 0.5 that dips 8 % of the step below its final value."""
+    time = [0, 1, 2, 3, 4]
+
+    result = common.get_overshoot(time, [1.0, 1.0, 0.5, 0.46, 0.5], sim_t_event_start=2)
+
+    assert result == pytest.approx(0.04)
+
+
+def test_get_overshoot_of_a_monotone_response_is_zero():
+    time = [0, 1, 2, 3]
+
+    result = common.get_overshoot(time, [0.0, 0.0, 0.5, 1.0], sim_t_event_start=1)
+
+    assert result == pytest.approx(0.0)
+
+
+def test_get_overshoot_raises_on_length_mismatch():
+    with pytest.raises(ValueError, match="different length"):
+        common.get_overshoot([0, 1, 2], [1, 2], sim_t_event_start=1)
+
+
+def test_get_overshoot_tolerance_of_a_step_is_the_settling_band_of_the_step():
+    result = common.get_overshoot_tolerance([0.0, 0.5, 2.0], setpoint_variation=0.1)
+
+    assert result == pytest.approx(0.0002)
+
+
+def test_get_overshoot_tolerance_without_a_step_is_the_settling_band_of_the_value():
+    result = common.get_overshoot_tolerance([0.0, 0.5, 2.0], setpoint_variation=0.0)
+
+    assert result == pytest.approx(0.004)
+
+
+# ---------------------------------------------------------------------------
+# Rise time
+# ---------------------------------------------------------------------------
+
+
+def _first_order_response(time: np.ndarray, start: float) -> list:
+    """A unit first-order response of 1 s time constant starting at a given instant."""
+    return list(np.where(time < start, 0.0, 1.0 - np.exp(-(time - start))))
+
+
+def test_get_rise_time_of_a_delayed_response_is_the_same():
+    """Issue #586: a pure delay moves the reaction time, not the rise time (CdC, annex 2)."""
+    time = np.linspace(0.0, 10.0, 1001)
+
+    rise_time, target = common.get_rise_time(
+        list(time), _first_order_response(time, 1.0), sim_t_event_start=1.0
+    )
+    delayed_rise_time, _ = common.get_rise_time(
+        list(time), _first_order_response(time, 1.3), sim_t_event_start=1.0
+    )
+
+    # From 10 % to 90 % of a first-order response takes ln(9) time constants.
+    assert rise_time == pytest.approx(2.2)
+    assert delayed_rise_time == pytest.approx(rise_time)
+    assert target == pytest.approx(0.9, abs=1e-3)
 
 
 # ---------------------------------------------------------------------------

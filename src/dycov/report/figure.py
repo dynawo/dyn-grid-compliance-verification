@@ -19,15 +19,15 @@ from matplotlib.figure import Figure
 from matplotlib.ticker import FormatStrFormatter
 
 from dycov.configuration.cfg import config
-from dycov.files import model_parameters
+from dycov.files import value_registry
 from dycov.logging import dycov_logging
 from dycov.report.curve_classification import get_curve_style
 from dycov.report.figure_decorations import (
-    _COLOR_REFERENCE,
     draw_additional_curves,
     draw_exclusion_windows,
     draw_mxe,
     draw_response_characteristics,
+    drawn_scale,
 )
 from dycov.report.figure_renderer import MatplotlibRenderer
 from dycov.report.types import FigureDescription
@@ -42,8 +42,6 @@ def _add_curve2plot(
 ) -> None:
     if curve_name is None:
         return
-    if variable_tool_name == "VoltageSetpointPu" and is_reference:
-        return
 
     curve_style = get_curve_style(variable_tool_name, is_reference)
     if curve_name in curves:
@@ -55,6 +53,14 @@ def _add_curve2plot(
                 "style": curve_style.style,
             }
         )
+
+
+def _scaled(plot_curves: list | None, scale: float) -> list | None:
+    if plot_curves is None or scale == 1.0:
+        return plot_curves
+    return [
+        {**curve, "curve": [value * scale for value in curve["curve"]]} for curve in plot_curves
+    ]
 
 
 def _get_xrange(
@@ -94,7 +100,7 @@ def _get_xrange_for_curve(
         graph_scale = 1.0
     else:
         graph_scale = abs(
-            model_parameters.resolve_value_definition(
+            value_registry.resolve_value_definition(
                 str(reference_step_size),
                 unit_characteristics,
                 origin=(operating_condition, "reference_step_size"),
@@ -198,7 +204,10 @@ def _save_plot(
     if time_reference is not None and curves_reference is not None:
         for curve_reference in curves_reference:
             ax.plot(
-                time_reference, curve_reference["curve"], color=_COLOR_REFERENCE, linestyle="-"
+                time_reference,
+                curve_reference["curve"],
+                color=curve_reference["color"],
+                linestyle=curve_reference["style"],
             )
 
     for curve in curves:
@@ -321,6 +330,7 @@ def create_plot(
     output_file: Path,
     results: dict,
     band_ref_val: float | None = None,
+    zone: int = 0,
 ) -> None:
     """Draw a figure.
 
@@ -344,9 +354,14 @@ def create_plot(
         Results of the validations applied in the pcs
     band_ref_val: float | None
         Reference value for the tolerance band, if applicable
+    zone: int
+        Validation zone (1 for Zone1, 3 for Zone3, 0 otherwise)
     """
-    ymin, ymax = _get_yrange(curves + curves_reference if curves_reference is not None else curves)
     last_val = band_ref_val if band_ref_val is not None else curves[0]["curve"][-1]
+    scale = drawn_scale(figure_description)
+    curves = _scaled(curves, scale)
+    curves_reference = _scaled(curves_reference, scale)
+    ymin, ymax = _get_yrange(curves + curves_reference if curves_reference is not None else curves)
 
     variable_names = figure_description.variables
     unit = figure_description.ylabel
@@ -364,8 +379,9 @@ def create_plot(
             unit,
             ymin,
             ymax,
-            figure_description=figure_description,
-            last_val=last_val,
+            figure_description,
+            last_val,
+            zone,
         )
     elif variable_names[0]["type"] == "bus":
         curve_name = "BusPDR_BUS_" + variable_names[0]["variable"]
@@ -383,6 +399,7 @@ def create_plot(
             ymax,
             figure_description,
             last_val,
+            zone,
         )
     else:
         variable_type = variable_names[0]["type"]
@@ -413,6 +430,7 @@ def create_plot(
                 ymax,
                 figure_description,
                 last_val,
+                zone,
             )
 
 
@@ -430,6 +448,7 @@ def _plot_curve(
     ymax: float,
     figure_description: FigureDescription,
     last_val: float,
+    zone: int,
 ) -> None:
     fig, ax = plt.subplots()
     plt.sca(ax)
@@ -438,9 +457,10 @@ def _plot_curve(
     ymin, ymax = draw_additional_curves(
         renderer, figure_description, time, last_val, results, ymin, ymax
     )
-    draw_response_characteristics(renderer, curve_name, results)
+    draw_response_characteristics(renderer, curve_name, results, drawn_scale(figure_description))
     draw_exclusion_windows(renderer, results)
-    draw_mxe(renderer, curve_name, results)
+    if figure_description.draws_one_magnitude():
+        draw_mxe(renderer, curve_name, results, zone)
 
     _save_plot(
         fig,

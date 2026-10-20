@@ -21,13 +21,21 @@ At a high level, the DyCoV repository is organized as follows:
 dyn-grid-compliance-verification/
 ├── src/
 ├── examples/
+├── workbooks/
 ├── docs/
 ├── installers/
 ├── tests/
 ├── tests_integration/
+├── tools/
+├── attic/
 ├── pyproject.toml
 └── ...
 ```
+
+`workbooks/` holds the Excel templates that `dycov excel2inputs` consumes;
+`tools/` holds the development utilities (with its own README);
+`attic/` keeps retired code — the in-tool model compilation and the native
+Windows installers live there and are not part of the product.
 
 Each top‑level directory serves a distinct purpose.
 Understanding these roles is essential when introducing changes, 
@@ -75,6 +83,12 @@ examples/
 This directory contains **validated example inputs** for the main DyCoV
 workflows.
 
+Their curves are the one thing it does not hold: they are regenerated once per
+release and ship as its `dycov_examples.zip` asset, so a clone gets them with
+`tools/scripts/fetch_example_curves.sh` and git ignores them where they land.
+Everything else — the models, the dictionaries, the descriptions — is versioned
+as usual.
+
 It is used for:
 
 *   user onboarding,
@@ -118,8 +132,11 @@ tooling and are not part of the main reading flow.
 ```text
 installers/
 ├── linux_install.sh
+├── install_bash_completion.sh
+├── prepare_release.sh
+├── RELEASING.md
 ├── docker/
-└── windows/
+└── wsl/
 ```
 
 This directory contains scripts and tooling used to:

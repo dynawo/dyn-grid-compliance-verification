@@ -23,12 +23,9 @@ from dycov.validation.checks import (
     calculate_errors,
     check_measurement,
     complete_setpoint_tracking,
+    is_error_within_threshold,
     save_measurement_errors,
 )
-
-
-def _check_value_by_threshold(mxre: float, threshold: float) -> bool:
-    return mxre < threshold
 
 
 def _get_column_name(
@@ -70,6 +67,10 @@ class ModelValidator(Validator):
             curves_manager, producer, validations, is_field_measurements, pcs_name, bm_name
         )
         self._pcs_bm_name = pcs_bm_name
+
+    def __thresholds_family(self) -> str:
+        """The family of [GridCode] thresholds the PCS applies to the controlled magnitude."""
+        return config.get_value(self._pcs_name, "setpoint_tracking_thresholds", "")
 
     def __active_power_recovery_error(
         self,
@@ -133,14 +134,12 @@ class ModelValidator(Validator):
             results["calc_reaction_target"] = {measurement_name: res_reaction_target}
 
         if compliance_list.contains_key(["rise_time"], self._validations):
-            res_rise_time, res_rise_target = common.get_reached_time(
-                0.9,
+            res_rise_time, res_rise_target = common.get_rise_time(
                 list(self._get_calculated_curve_by_name(("time"))),
                 list(self._get_calculated_curve_by_name((measurement_name))),
                 start_event,
             )
-            ref_rise_time, ref_rise_target = common.get_reached_time(
-                0.9,
+            ref_rise_time, ref_rise_target = common.get_rise_time(
                 list(self._get_reference_curve_by_name(("time"))),
                 list(self._get_reference_curve_by_name((measurement_name))),
                 start_event,
@@ -151,16 +150,18 @@ class ModelValidator(Validator):
 
         if compliance_list.contains_key(["response_time"], self._validations):
             res_response_time = common.get_response_time(
-                common.get_ss_tolerance(setpoint_variation),
+                common.get_ss_tolerance(),
                 list(self._get_calculated_curve_by_name(("time"))),
                 list(self._get_calculated_curve_by_name((measurement_name))),
                 start_event,
+                setpoint_variation,
             )
             ref_response_time = common.get_response_time(
-                common.get_ss_tolerance(setpoint_variation),
+                common.get_ss_tolerance(),
                 list(self._get_reference_curve_by_name(("time"))),
                 list(self._get_reference_curve_by_name((measurement_name))),
                 start_event,
+                setpoint_variation,
             )
             results["calc_response_time"] = res_response_time
             results["ref_response_time"] = ref_response_time
@@ -173,16 +174,18 @@ class ModelValidator(Validator):
                 res_settling_max,
                 calc_ss_value,
             ) = common.get_settling_time(
-                common.get_ss_tolerance(setpoint_variation),
+                common.get_ss_tolerance(),
                 list(self._get_calculated_curve_by_name(("time"))),
                 list(self._get_calculated_curve_by_name((measurement_name))),
                 start_event,
+                setpoint_variation,
             )
             ref_settling_time, _, _, _, _ = common.get_settling_time(
-                common.get_ss_tolerance(setpoint_variation),
+                common.get_ss_tolerance(),
                 list(self._get_reference_curve_by_name(("time"))),
                 list(self._get_reference_curve_by_name((measurement_name))),
                 start_event,
+                setpoint_variation,
             )
             results["calc_settling_time"] = res_settling_time
             results["calc_ss_value"] = calc_ss_value
@@ -193,13 +196,21 @@ class ModelValidator(Validator):
 
         if compliance_list.contains_key(["overshoot"], self._validations):
             res_overshoot = common.get_overshoot(
+                list(self._get_calculated_curve_by_name(("time"))),
                 list(self._get_calculated_curve_by_name((measurement_name))),
+                start_event,
             )
             ref_overshoot = common.get_overshoot(
+                list(self._get_reference_curve_by_name(("time"))),
                 list(self._get_reference_curve_by_name((measurement_name))),
+                start_event,
             )
             results["calc_overshoot"] = res_overshoot
             results["ref_overshoot"] = ref_overshoot
+            results["overshoot_tolerance"] = common.get_overshoot_tolerance(
+                list(self._get_calculated_curve_by_name((measurement_name))),
+                setpoint_variation,
+            )
 
     def __compare_ideal_ramp(
         self,
@@ -261,17 +272,19 @@ class ModelValidator(Validator):
         reference_curves = curves[1]
 
         _, ref_settlin_t_pos, _, _, _ = common.get_settling_time(
-            common.get_ss_tolerance(setpoint_variation),
+            common.get_ss_tolerance(),
             list(reference_curves["time"]),
             list(reference_curves[measurement_name]),
             reference_curves["time"][0],
+            setpoint_variation,
         )
 
         _, res_settlin_t_pos, _, _, _ = common.get_settling_time(
-            common.get_ss_tolerance(setpoint_variation),
+            common.get_ss_tolerance(),
             list(calculated_curves["time"]),
             list(calculated_curves[measurement_name]),
             calculated_curves["time"][0],
+            setpoint_variation,
         )
 
         thr_ss_tol = config.get_float("GridCode", "thr_ss_tol", 100.0)
@@ -488,6 +501,7 @@ class ModelValidator(Validator):
                         compliance_values["calc_overshoot"],
                         compliance_values["ref_overshoot"],
                         thr_overshoot,
+                        compliance_values["overshoot_tolerance"],
                     )
                 )
 
@@ -537,7 +551,7 @@ class ModelValidator(Validator):
             if "mae_voltage_1P" in compliance_values:
                 check_results["mae_voltage_1P"] = compliance_values["mae_voltage_1P"]
                 check_results["ss_error_voltage_1P"] = compliance_values["ss_error_voltage_1P"]
-                check_results["mae_voltage_1P_check"] = _check_value_by_threshold(
+                check_results["mae_voltage_1P_check"] = is_error_within_threshold(
                     compliance_values["mae_voltage_1P"], thr_final_ss_mae
                 )
                 check_results["mae_voltage_1P_stabilized"] = compliance_values[
@@ -560,7 +574,7 @@ class ModelValidator(Validator):
                 check_results["ss_error_active_power_1P"] = compliance_values[
                     "ss_error_active_power_1P"
                 ]
-                check_results["mae_active_power_1P_check"] = _check_value_by_threshold(
+                check_results["mae_active_power_1P_check"] = is_error_within_threshold(
                     compliance_values["mae_active_power_1P"], thr_final_ss_mae
                 )
                 check_results["mae_active_power_1P_stabilized"] = compliance_values[
@@ -582,7 +596,7 @@ class ModelValidator(Validator):
                 check_results["ss_error_reactive_power_1P"] = compliance_values[
                     "ss_error_reactive_power_1P"
                 ]
-                check_results["mae_reactive_power_1P_check"] = _check_value_by_threshold(
+                check_results["mae_reactive_power_1P_check"] = is_error_within_threshold(
                     compliance_values["mae_reactive_power_1P"], thr_final_ss_mae
                 )
                 check_results["mae_reactive_power_1P_stabilized"] = compliance_values[
@@ -605,7 +619,7 @@ class ModelValidator(Validator):
                 check_results["ss_error_active_current_1P"] = compliance_values[
                     "ss_error_active_current_1P"
                 ]
-                check_results["mae_active_current_1P_check"] = _check_value_by_threshold(
+                check_results["mae_active_current_1P_check"] = is_error_within_threshold(
                     compliance_values["mae_active_current_1P"], thr_final_ss_mae
                 )
                 check_results["mae_active_current_1P_stabilized"] = compliance_values[
@@ -629,7 +643,7 @@ class ModelValidator(Validator):
                 check_results["ss_error_reactive_current_1P"] = compliance_values[
                     "ss_error_reactive_current_1P"
                 ]
-                check_results["mae_reactive_current_1P_check"] = _check_value_by_threshold(
+                check_results["mae_reactive_current_1P_check"] = is_error_within_threshold(
                     compliance_values["mae_reactive_current_1P"], thr_final_ss_mae
                 )
                 check_results["mae_reactive_current_1P_stabilized"] = compliance_values[
@@ -685,9 +699,13 @@ class ModelValidator(Validator):
                 "controlled_magnitude",
                 check_results,
                 zone,
+                self.__thresholds_family(),
             )
             check_results["setpoint_tracking_controlled_magnitude_name"] = _get_column_name(
                 modified_setpoint
+            )
+            check_results["setpoint_tracking_controlled_magnitude_label"] = (
+                compared_curves.setpoint_label(modified_setpoint)
             )
 
         if compliance_list.contains_key(["setpoint_tracking_active_power"], self._validations):
@@ -697,6 +715,7 @@ class ModelValidator(Validator):
                 "active_power",
                 check_results,
                 zone,
+                self.__thresholds_family(),
             )
             check_results["setpoint_tracking_active_power_name"] = "P"
 
@@ -707,6 +726,7 @@ class ModelValidator(Validator):
                 "reactive_power",
                 check_results,
                 zone,
+                self.__thresholds_family(),
             )
             check_results["setpoint_tracking_reactive_power_name"] = "Q"
 
@@ -771,6 +791,7 @@ class ModelValidator(Validator):
                 'ref_settling_time': float, reference settling time.
                 'calc_overshoot': float, calculated overshoot.
                 'ref_overshoot': float, reference overshoot.
+                'overshoot_tolerance': float, half-width of the tolerance band of the response.
                 'ramp_time_lag': float, ramp time lag.
                 'ramp_error': float, ramp error.
                 'mae_voltage_1P': float, mean absolute error for voltage.
@@ -785,6 +806,8 @@ class ModelValidator(Validator):
                 'ss_error_reactive_current_1P': float, steady-state error for reactive current.
                 'setpoint_tracking_controlled_magnitude_name': str, name of the controlled
                     magnitude.
+                'setpoint_tracking_controlled_magnitude_label': str, label under which the
+                    zone compares the controlled magnitude.
                 'setpoint_tracking_active_power_name': str, name of the active power setpoint.
                 'setpoint_tracking_reactive_power_name': str, name of the reactive power setpoint.
                 't_P90_error': float, error in reaching 90% of the active power recovery.

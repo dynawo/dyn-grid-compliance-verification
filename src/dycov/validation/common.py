@@ -33,11 +33,8 @@ SS_WINDOW_FRACTION = 0.1
 MIN_SS_WINDOW_SAMPLES = 2
 
 
-def get_ss_tolerance(setpoint_variation: float) -> float:
-    tolerance = config.get_float("GridCode", "thr_ss_tol", 0.002)
-    if setpoint_variation > 0.0:
-        tolerance = setpoint_variation * tolerance
-    return tolerance
+def get_ss_tolerance() -> float:
+    return config.get_float("GridCode", "thr_ss_tol", 0.002)
 
 
 # Absolute tube for small targets avoids unrealistic relative tolerances near zero
@@ -47,17 +44,20 @@ def _show_error(calculated_value: float, reference_value: float, rtol: float, at
     return False
 
 
-def _compute_tube(target: float, percent: float) -> tuple[float, float]:
+def _compute_tube(target: float, percent: float, step: float = 0.0) -> tuple[float, float]:
     """Compute tolerance tube around target value.
 
-    If target is near zero (<TUBE_TARGET_THRESHOLD), use absolute ±TUBE_ABSOLUTE_TOL.
-    Otherwise, use relative tolerance based on percent.
+    The response to a step gets percent of the step, whichever its sign. Otherwise, if target
+    is near zero (<TUBE_TARGET_THRESHOLD), use absolute ±TUBE_ABSOLUTE_TOL, and else percent of
+    the target.
     """
-    if abs(target) < TUBE_TARGET_THRESHOLD:
-        return target - TUBE_ABSOLUTE_TOL, target + TUBE_ABSOLUTE_TOL
+    if step:
+        delta = abs(percent * step)
+    elif abs(target) < TUBE_TARGET_THRESHOLD:
+        delta = TUBE_ABSOLUTE_TOL
     else:
         delta = abs(percent * target)
-        return target - delta, target + delta
+    return target - delta, target + delta
 
 
 def check_time(
@@ -370,9 +370,16 @@ def get_txp(percent: float, time: list, curve: list, sim_t_event_end: float) -> 
     return ret_val
 
 
+def _short_of_target(value: float, target: float, tube: tuple[float, float]) -> bool:
+    """Whether value still lies between zero and the tube around target."""
+    tube_min, tube_max = tube
+    return value < tube_min if target >= 0 else value > tube_max
+
+
 def get_txpfloor(percent: float, time: list, curve: list, sim_t_event_end: float) -> float:
     """Gets the time when the curve reaches a value equivalent to a percentage of its target value,
-    only applies to the minimum value.
+    only applies to the side of zero: below the target when it is positive, above it when it is
+    negative.
 
     Parameters
     ----------
@@ -396,11 +403,11 @@ def get_txpfloor(percent: float, time: list, curve: list, sim_t_event_end: float
 
     # Get the tube
     mean_val = curve[-1]
-    mean_val_min, _ = _compute_tube(mean_val, percent)
+    tube = _compute_tube(mean_val, percent)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
-        if curve[pos] < mean_val_min:
+        if _short_of_target(curve[pos], mean_val, tube):
             break
 
     if time[pos] < sim_t_event_end:
@@ -460,8 +467,9 @@ def check_generator_imax(
     current_at_converter: list,
     active_current_at_converter: list,
 ) -> tuple[float, bool]:
-    """Check that, when the generator current reaches Imax, reactive current is
-    prioritized over active current (Id should not increase while saturated).
+    """Check that the reactive current keeps its priority at the current limit, as the DTR
+    states it: the active current fits in what the reactive current leaves under Imax,
+    IA² <= IMAX² - IQ².
 
     Parameters
     ----------
@@ -472,12 +480,12 @@ def check_generator_imax(
     current_at_converter : list
         Total current magnitude |I|
     active_current_at_converter : list
-        Active current Id
+        Active current IA
 
     Returns
     -------
     float
-        Time where Id increases while |I| >= Imax. -1 if no issue detected.
+        First time the active current exceeds that room. -1 if it never does.
     bool
         True if the condition is respected, False otherwise
     """
@@ -486,36 +494,14 @@ def check_generator_imax(
 
     TOL = 1e-3
 
-    in_saturation = False
-    id_ref = None
-    first_id_value = -1
-    id_not_increase = True
-
-    for i in range(len(time)):
-        Im = current_at_converter[i]
-        Id = active_current_at_converter[i]
-
-        if Im >= imax - TOL:
-            # Entering saturation
-            if not in_saturation:
-                in_saturation = True
-                id_ref = Id
-            else:
-                # Check condition only while saturated
-                if Id > id_ref + TOL:
-                    first_id_value = time[i]
-                    id_not_increase = False
-                    break
-
-                # Update reference (Id should not increase, allow decrease)
-                id_ref = min(id_ref, Id)
-
-        else:
-            # Leave saturation → reset logic
-            in_saturation = False
-            id_ref = None
-
-    return first_id_value, id_not_increase
+    current = np.asarray(current_at_converter, dtype=float)
+    active = np.abs(np.asarray(active_current_at_converter, dtype=float))
+    reactive_squared = np.maximum(current**2 - active**2, 0.0)
+    room = np.sqrt(np.maximum(imax**2 - reactive_squared, 0.0))
+    exceeded = np.nonzero(active > room + TOL)[0]
+    if len(exceeded) == 0:
+        return -1, True
+    return time[exceeded[0]], False
 
 
 def get_AVR_x(
@@ -702,7 +688,7 @@ def maximum_error_position(
         )
 
     if len(reference) == 0 or np.isnan(reference).all():
-        dycov_logging.get_logger("Common Validation").warning(f"No reference values in {name}")
+        dycov_logging.warn_once("Common Validation", f"No reference values in {name}")
         return None
 
     errors = abs(signal - reference)
@@ -710,20 +696,32 @@ def maximum_error_position(
     return time.iloc[pos], signal.iloc[pos], reference.iloc[pos]
 
 
-def get_response_time(percent: float, time: list, curve: list, sim_t_event_start: float) -> float:
+def _position_at(time: list, instant: float) -> int:
+    """The position of the first sample at or after an instant, the last one when none is."""
+    pos = 0
+    while instant > time[pos] and pos < len(time) - 1:
+        pos += 1
+    return pos
+
+
+def get_response_time(
+    percent: float, time: list, curve: list, sim_t_event_start: float, step: float = 0.0
+) -> float:
     """Gets the time when the curve reaches a value equivalent to a percentage of its target value
     for the first time.
 
     Parameters
     ----------
     percent: float
-        Percentage of the target value
+        Percentage of the target value, or of the step when there is one
     time: list
         List of time instants that make up the curve
     curve: list
         List of values that make up the curve
     sim_t_event_start: float
         Instant of time when the event is triggered
+    step: float
+        Magnitude of the setpoint step the curve responds to, 0 when there is none
 
     Returns
     -------
@@ -733,9 +731,7 @@ def get_response_time(percent: float, time: list, curve: list, sim_t_event_start
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
 
-    pos_t_event = 0
-    while sim_t_event_start > time[pos_t_event] and pos_t_event < len(time) - 1:
-        pos_t_event += 1
+    pos_t_event = _position_at(time, sim_t_event_start)
 
     # Cut list values
     time = time[pos_t_event:]
@@ -743,7 +739,7 @@ def get_response_time(percent: float, time: list, curve: list, sim_t_event_start
 
     # Get the tube
     mean_val = curve[-1]
-    mean_val_min, mean_val_max = _compute_tube(mean_val, percent)
+    mean_val_min, mean_val_max = _compute_tube(mean_val, percent, step)
 
     for pos in range(len(curve)):
         if mean_val_min < curve[pos] < mean_val_max:
@@ -761,20 +757,22 @@ def get_response_time(percent: float, time: list, curve: list, sim_t_event_start
 
 
 def get_settling_time(
-    percent: float, time: list, curve: list, sim_t_event_start: float
+    percent: float, time: list, curve: list, sim_t_event_start: float, step: float = 0.0
 ) -> tuple[float, int, float, float, float]:
     """Gets the time when the curve reaches a value equivalent to a percentage of its target value.
 
     Parameters
     ----------
     percent: float
-        Percentage of the target value
+        Percentage of the target value, or of the step when there is one
     time: list
         List of time instants that make up the curve
     curve: list
         List of values that make up the curve
     sim_t_event_start: float
         Instant of time when the event is triggered
+    step: float
+        Magnitude of the setpoint step the curve responds to, 0 when there is none
 
     Returns
     -------
@@ -794,7 +792,7 @@ def get_settling_time(
 
     # Get the tube
     mean_val = curve[-1]
-    mean_val_min, mean_val_max = _compute_tube(mean_val, percent)
+    mean_val_min, mean_val_max = _compute_tube(mean_val, percent, step)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
@@ -835,9 +833,7 @@ def get_reached_time(
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
 
-    pos_t_event = 0
-    while sim_t_event_start > time[pos_t_event] and pos_t_event < len(time) - 1:
-        pos_t_event += 1
+    pos_t_event = _position_at(time, sim_t_event_start)
 
     stable_value = curve[pos_t_event - 1]
 
@@ -869,21 +865,76 @@ def get_reached_time(
     return ret_val, objective_value
 
 
-def get_overshoot(curve: list) -> float:
-    """Gets the difference between the peak of the curve and the mean stability value
+def get_rise_time(time: list, curve: list, sim_t_event_start: float) -> tuple[float, float]:
+    """Gets the time the curve takes from 10 % to 90 % of its variation after the event.
+
+    Parameters
+    ----------
+    time: list
+        List of time instants that make up the curve
+    curve: list
+        List of values that make up the curve
+    sim_t_event_start: float
+        Instant of time when the event is triggered
+
+    Returns
+    -------
+    float
+        Time between the 10 % and the 90 % crossings
+    float
+        Target value of the 90 % crossing
+    """
+    reaction_time, _ = get_reached_time(0.1, time, curve, sim_t_event_start)
+    reached_time, target = get_reached_time(0.9, time, curve, sim_t_event_start)
+    return reached_time - reaction_time, target
+
+
+def get_overshoot(time: list, curve: list, sim_t_event_start: float) -> float:
+    """Gets how far the curve goes beyond its final value, in the direction of the step, after
+    the event: the undershoot of a downward step is its overshoot.
+
+    Parameters
+    ----------
+    time: list
+        List of time instants that make up the curve
+    curve: list
+        List of values that make up the curve
+    sim_t_event_start: float
+        Instant of time when the event is triggered
+
+    Returns
+    -------
+    float
+        Overshoot of the curve compared to its final value, never negative
+    """
+    if len(time) != len(curve):
+        raise ValueError("curve values and time values have different length")
+
+    pos_t_event = _position_at(time, sim_t_event_start)
+    response = np.asarray(curve[pos_t_event:], dtype=float)
+    final_value = response[-1]
+    direction = -1.0 if final_value < curve[max(pos_t_event - 1, 0)] else 1.0
+    return float(max(direction * (response - final_value)))
+
+
+def get_overshoot_tolerance(curve: list, setpoint_variation: float) -> float:
+    """Gets the half-width of the tolerance band around the final value of the curve, the band
+    the settling time is measured against: an excursion that never leaves it is no overshoot.
 
     Parameters
     ----------
     curve: list
         List of values that make up the curve
+    setpoint_variation: float
+        Magnitude of the setpoint step
 
     Returns
     -------
     float
-        Overshoot of the curve compared to the mean stability value
+        Half-width of the tolerance band
     """
-    overshoot = max(curve) - curve[-1]
-    return overshoot
+    band_min, band_max = _compute_tube(curve[-1], get_ss_tolerance(), setpoint_variation)
+    return (band_max - band_min) / 2
 
 
 def get_value_error(

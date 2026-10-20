@@ -16,6 +16,7 @@ tree, plus the reports and the refusals."""
 from __future__ import annotations
 
 import configparser
+import copy
 from pathlib import Path
 
 import pytest
@@ -24,15 +25,47 @@ from workbooks import GENERAL, ZONE3_ROWS, make_workbook, variant_sheet
 
 from dycov.excel import generator as G
 from dycov.excel import par
+from dycov.excel import parse as P
+from dycov.excel import units as U
+from dycov.excel import workbook as wb
+from dycov.excel.units import GeneratingUnit
+
+
+def _par_sets(path: Path) -> dict:
+    """``{set id -> {parameter name -> value}}`` of a PAR file."""
+    root = etree.parse(str(path)).getroot()
+    ns = etree.QName(root).namespace
+    return {
+        s.get("id"): {p.get("name"): p.get("value") for p in s.iter(f"{{{ns}}}par")}
+        for s in root.iterfind(f"{{{ns}}}set")
+    }
+
+
+def _two_unit_workbook() -> dict:
+    """The synthetic workbook as an ``M+Aux`` plant: ``Zone1b`` a smaller unit, with no external
+    step-up transformer of its own."""
+    book = make_workbook()
+    book["Zone1b"] = copy.deepcopy(book["Zone1a"])
+    second = {"SnZone1": "40", "ConverterLVControl": "False", "P_share": "0.4", "Q_share": "0.4"}
+    book["Zone1b"] = [
+        [row[0], "d", second[row[0]], "u", "c"] if row[0] in second else row
+        for row in book["Zone1b"]
+    ]
+    book["Zone3"] = [
+        ["cat", "Topologie", "d", "M+Aux", "u", "c"] if row[1:2] == ["Topologie"] else row
+        for row in book["Zone3"]
+    ]
+    return book
 
 
 def test_submodel_report_lists_general_blocks_present_and_missing():
-    resolved = {
+    model = {
         "zone3_lib": "PhotovoltaicsWeccCurrentSource",
         "zone3_prefix": "photovoltaics_",
         "zone1_lib": "PhotovoltaicsWeccCurrentSourceNoPlantControl",
         "zone1_prefix": "photovoltaics_",
     }
+    unit = GeneratingUnit({}, model, "Producer", gen_id="PV_Array", plant_id="PV_Array")
     # The reported blocks come from 'Général' (no fixed family list): an unknown block name is
     # reported all the same, and only blocks whose sheets contributed params are 'present'.
     selections = [("REPC", "REPC_A"), ("REEC", "REEC_B"), ("NEWBLK", "Aucun")]
@@ -41,8 +74,10 @@ def test_submodel_report_lists_general_blocks_present_and_missing():
         {"block": "REEC", "name": "Kqp", "type": "DOUBLE", "value": "1", "comments": []},
     ]
 
-    report = G._submodel_report(resolved, selections, control)
+    report = G._submodel_report([unit], selections, control)
 
+    assert "Zone3 (plant)   : PhotovoltaicsWeccCurrentSource  (prefix photovoltaics_)" in report
+    assert "Zone1 (turbine) : PhotovoltaicsWeccCurrentSourceNoPlantControl" in report
     assert "REPC  : present" in report
     assert "NEWBLK : missing" in report
     assert "WTGT" not in report
@@ -158,7 +193,7 @@ def test_generate_end_to_end(tmp_path, monkeypatch):
     # Zone3 INI: filled values
     cp = configparser.ConfigParser(inline_comment_prefixes=("#",))
     cp.read(root / "Zone3" / "Producer.ini")
-    assert cp.get("DEFAULT", "u_nom_at_PDR").strip() == ZONE3_ROWS["Un_PDR"]
+    assert cp.get("DEFAULT", "u_nom").strip() == ZONE3_ROWS["Un_PDR"]
     assert cp.get("DEFAULT", "topology").strip() == "S+Aux+i"
 
     assert "present" in report
@@ -210,3 +245,51 @@ def test_generate_fails_when_zone1_blocks_have_no_values(tmp_path, monkeypatch):
         ValueError, match=r"Zone1 control blocks \(REEC, REGC\) carry no parameter values"
     ):
         G.generate(Path("ignored.xlsx"), tmp_path)
+
+
+def test_generate_refuses_a_multiple_generator_plant(tmp_path, monkeypatch):
+    # The workbook cannot say which model each unit is, so nothing is written rather than a plant
+    # whose units all take the one model Général resolves.
+    monkeypatch.setattr(G.wb, "read_workbook", lambda _path: _two_unit_workbook())
+
+    with pytest.raises(ValueError, match="multiple-generator plants cannot be generated yet"):
+        G.generate(Path("ignored.xlsx"), tmp_path)
+
+    assert not (tmp_path / "Dynawo").exists()
+
+
+def test_a_multiple_plant_writes_one_zone1_per_unit_and_all_of_them_in_zone3(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        P,
+        "resolve_unit_models",
+        lambda workbook, sheets: [P.resolve_models(workbook) for _sheet in sheets],
+    )
+    book = _two_unit_workbook()
+    zone3 = P.parse_zone(book, "Zone3")
+    units = U.generating_units(book, "M+Aux", G.PRODUCER_NAME)
+    config = wb.parse_config(book)
+    controls = [G._unit_control(book, config, unit) for unit in units]
+    root = tmp_path / "Dynawo"
+
+    G._write_dynawo(root, config.zones, zone3, "M+Aux", units, controls, "model_PPM")
+
+    assert sorted(p.name for p in (root / "Zone1").iterdir()) == [
+        f"Producer_G{n}.{ext}" for n in (1, 2) for ext in ("dyd", "ini", "par")
+    ]
+    g1, g2 = (_par_sets(root / "Zone1" / f"Producer_G{n}.par") for n in (1, 2))
+    assert g1["PV_Array"]["photovoltaics_SNom"] == "100.0"
+    assert g2["PV_Array"]["photovoltaics_SNom"] == "40.0"
+    # Each unit's own ConverterLVControl decides whether its file carries the step-up transformer.
+    assert "Group_Xfmr" in g1 and "Group_Xfmr" not in g2
+    assert "Group_Xfmr" not in (root / "Zone1" / "Producer_G2.dyd").read_text()
+
+    plant = _par_sets(root / "Zone3" / "Producer.par")
+    assert list(plant) == ["PV_Array1", "PV_Array2", "Main_Xfmr", "AuxLoad_Xfmr", "Aux_Load"]
+    assert plant["PV_Array1"]["photovoltaics_SNom"] == plant["PV_Array2"]["photovoltaics_SNom"]
+    assert plant["PV_Array2"]["photovoltaics_PPCLocal"] == "false"
+    z3 = configparser.ConfigParser(inline_comment_prefixes=("#",))
+    z3.read(root / "Zone3" / "Producer.ini")
+    assert z3.get("DEFAULT", "P_sharing_PV_Array1").strip() == "1"
+    assert z3.get("DEFAULT", "P_sharing_PV_Array2").strip() == "0.4"

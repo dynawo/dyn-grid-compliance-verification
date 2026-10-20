@@ -29,7 +29,7 @@ Build tools:
 
 .. code-block:: console
 
-   sudo apt install git curl unzip gcc g++ cmake make
+   sudo apt install git curl unzip make
 
 LaTeX — DyCoV generates PDF compliance reports, so LaTeX must be available
 even during development if you want to inspect the full output:
@@ -39,9 +39,9 @@ even during development if you want to inspect the full output:
    sudo apt install \
      texlive-base texlive-latex-base texlive-latex-extra \
      texlive-latex-recommended texlive-science texlive-lang-french \
-     latexmk
+     latexmk dvisvgm
 
-Python 3.13 — DyCoV requires Python 3.13 or newer:
+Python — DyCoV runs on Python 3.13 and Python 3.14:
 
 .. code-block:: console
 
@@ -89,11 +89,25 @@ Clone the repository into a local directory of your choice:
    git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
    cd dycov_repo
 
+The clone comes without the curves of the examples. They are not versioned: a
+release publishes them as the ``dycov_examples.zip`` asset, beside the Dynawo
+build, and this puts them where the examples expect them:
+
+.. code-block:: console
+
+   tools/scripts/fetch_example_curves.sh
+
+It takes them from the release this checkout descends from. The other way to
+get them is ``tools/scripts/regenerate_curves.sh``, which produces them from
+the tool itself and needs Dynawo and a few hours; that is what a release runs.
+Until a release publishes the asset, regenerating is the only way.
+
 
 Setting up the Python environment
 -----------------------------------
 
-Create a virtual environment using Python 3.13:
+Create a virtual environment. This guide uses Python 3.13; Python 3.14 works
+the same way:
 
 .. code-block:: console
 
@@ -115,6 +129,13 @@ dependencies:
 Editable mode means that any change you make to the source files under
 ``src/dycov/`` is reflected immediately the next time you run ``dycov`` —
 no reinstallation needed.
+
+To get shell completion in the development environment, generate and hook the
+script into the venv once:
+
+.. code-block:: console
+
+   bash installers/install_bash_completion.sh "$PWD/dycov_venv"
 
 The ``[dev,test]`` extras pull in everything you need to work on the codebase:
 
@@ -196,9 +217,10 @@ environment active, get into the relevant directory and run ``make``:
    make latexpdf   # -> build/latex/dycov-dev.pdf
    make html       # -> build/html/index.html
 
-Both ``Makefile`` targets automatically run ``helps.py`` before invoking
-Sphinx, so the CLI reference pages are always regenerated from the current
-version of the tool before the manual is compiled.
+The user manual's ``Makefile`` automatically runs ``helps.py`` before
+invoking Sphinx, so its CLI reference pages are always regenerated from the
+current version of the tool. The developer manual's ``Makefile`` is the
+standard Sphinx catch-all and needs no such step.
 
 
 Day-to-day workflow
@@ -215,7 +237,7 @@ Once the environment is set up, a typical development loop looks like this:
 2. Make your changes under ``src/dycov/``.
 3. Make sure Dynawo is reachable (either in ``PATH`` or via ``-l``).
 4. Run DyCoV against one of the bundled examples to see the effect of your
-   changes:
+   changes, which needs their curves (see *Getting the code*):
 
    .. code-block:: console
 
@@ -228,10 +250,12 @@ Once the environment is set up, a typical development loop looks like this:
 
       pytest -q
 
-6. Check linting before committing:
+6. Check linting and formatting before committing — the CI runs both, over
+   ``src`` and ``tests``:
 
    .. code-block:: console
 
-      ruff check src
+      ruff check src tests
+      ruff format --check src tests
 
 7. Iterate.

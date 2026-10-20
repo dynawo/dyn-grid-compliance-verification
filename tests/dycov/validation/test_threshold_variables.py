@@ -29,6 +29,11 @@ FIELD_MEASUREMENT_THRESHOLDS = {
     "during": {"mxe": 0.10, "me": 0.05, "mae": 0.08},
     "after": {"mxe": 0.08, "me": 0.04, "mae": 0.07},
 }
+FIELD_MEASUREMENT_TRACKING_THRESHOLDS = {
+    "before": {"mxe": 0.05, "me": 0.03, "mae": 0.04},
+    "during": {"mxe": 0.10, "me": 0.05, "mae": 0.07},
+    "after": {"mxe": 0.05, "me": 0.03, "mae": 0.04},
+}
 UNDEFINED_THRESHOLDS = {
     "before": {"mxe": None, "me": None, "mae": None},
     "during": {"mxe": None, "me": None, "mae": None},
@@ -119,3 +124,22 @@ def test_get_setpoint_tracking_threshold_values_honours_the_configuration(monkey
     result = get_setpoint_tracking_threshold_values()
 
     assert result["after"]["mae"] == pytest.approx(0.42)
+
+
+def test_setpoint_tracking_thresholds_without_a_family_are_the_i16_table():
+    assert get_setpoint_tracking_threshold_values() == SIMULATION_THRESHOLDS
+    assert get_setpoint_tracking_threshold_values("") == SIMULATION_THRESHOLDS
+
+
+def test_setpoint_tracking_thresholds_of_the_ft_family_are_the_f16_table():
+    assert get_setpoint_tracking_threshold_values("FT") == FIELD_MEASUREMENT_TRACKING_THRESHOLDS
+
+
+def test_setpoint_tracking_thresholds_of_a_family_read_its_own_keys(monkeypatch):
+    monkeypatch.setattr(
+        f"{THRESHOLD_MODULE}.config",
+        DummyConfig(thr_FT_reftrack_me_during=0.2, thr_reftrack_me_during=0.9),
+    )
+
+    assert get_setpoint_tracking_threshold_values("FT")["during"]["me"] == 0.2
+    assert get_setpoint_tracking_threshold_values("")["during"]["me"] == 0.9

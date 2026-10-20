@@ -8,12 +8,15 @@
 #     demiguelm@aia.es
 #
 
+import pytest
+
 from dycov.report.curve_classification import (
     build_curve_label,
     build_figure_title,
     get_curve_style,
     get_equipment_label,
     get_variable_label,
+    is_setpoint,
 )
 
 
@@ -129,3 +132,86 @@ def test_get_curve_style_reference():
 
     assert style.color == "#dd8452"
     assert style.style == "-"
+
+
+@pytest.mark.parametrize(
+    "curve_name",
+    [
+        "WT_GEN_ActivePowerSetpointPu",
+        "WT_GEN_ReactivePowerSetpointPu",
+        "WT_GEN_VoltageSetpointPu",
+    ],
+)
+def test_every_setpoint_is_one(curve_name):
+    assert is_setpoint(curve_name)
+
+
+@pytest.mark.parametrize(
+    "curve_name", ["WT_GEN_ActivePowerControlledPu", "NetworkFrequencyPu", "BusPDR_BUS_Voltage"]
+)
+def test_a_magnitude_is_not_a_setpoint(curve_name):
+    assert not is_setpoint(curve_name)
+
+
+def test_the_reference_setpoint_is_told_apart_from_the_simulated_one_and_from_its_magnitude():
+    """#554: the two setpoints lie on top of each other when all is well, and the one that
+    matters is the one that does not."""
+    simulated = get_curve_style("WT_GEN_ActivePowerSetpointPu")
+    reference = get_curve_style("WT_GEN_ActivePowerSetpointPu", is_reference=True)
+    reference_magnitude = get_curve_style("WT_GEN_ActivePowerControlledPu", is_reference=True)
+
+    assert (simulated.color, simulated.style) == ("#8c8c8c", ":")
+    assert (reference.color, reference.style) == ("#dd8452", "--")
+    assert reference.style != reference_magnitude.style
+
+
+@pytest.mark.parametrize(
+    "curve_name, role, label",
+    [
+        (
+            "WT_GEN_ActivePowerSetpointPu",
+            "calculated",
+            "Active Power Setpoint — WT calculated",
+        ),
+        (
+            "WT_GEN_ActivePowerSetpointPu",
+            "reference",
+            "Active Power Setpoint — WT reference",
+        ),
+        (
+            "WT_GEN_ReactivePowerSetpointPu",
+            "reference",
+            "Reactive Power Setpoint — WT reference",
+        ),
+    ],
+)
+def test_build_curve_label_names_a_setpoint_apart_from_the_power_it_drives(
+    curve_name, role, label
+):
+    assert build_curve_label(curve_name, role, show_equipment=True, zone=1) == label
+
+
+def test_build_figure_title_leaves_the_setpoint_out():
+    variables = [
+        {"variable": "ActivePowerControlledPu", "type": "generator"},
+        {"variable": "ActivePowerSetpointPu", "type": "generator"},
+    ]
+
+    assert build_figure_title(variables, zone=1) == "Active Power — Generator"
+
+
+def test_build_figure_title_keeps_internal_node2_for_the_voltage_drawn_with_its_setpoint():
+    variables = [
+        {"variable": "VoltageInjTerminal", "type": "generator"},
+        {"variable": "VoltageSetpointPu", "type": "generator"},
+    ]
+
+    assert build_figure_title(variables, zone=1) == "Voltage — InternalNode2"
+
+
+@pytest.mark.parametrize(
+    "zone, label",
+    [(1, "Voltage Setpoint"), (3, "Plant-level voltage regulation Setpoint")],
+)
+def test_the_voltage_setpoint_is_the_unit_s_own_in_zone_1(zone, label):
+    assert get_variable_label("WT_GEN_VoltageSetpointPu", zone) == label

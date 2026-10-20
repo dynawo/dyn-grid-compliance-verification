@@ -88,7 +88,9 @@ or how the `Model Map` key is formed). It reads:
   installation.
 - **`Zone1a`** — the generator and its step-up transformer, described once
   (`Z_cc_TG`, `R_cc_TG / X_cc_TG`, `r_TG`), plus `ConverterLVControl`, `Un1`,
-  `Un2`, `SnZone1`, …; name in col A, value in col C.
+  `Un2`, `SnZone1`, …; name in col A, value in col C. Every sheet whose name
+  starts with `Zone1` is a generating unit (`units.py`): an `S` topology takes
+  exactly one, an `M` one a sheet per unit (`Zone1a`, `Zone1b`, …).
 - **`Zone3`** — the aggregated plant (`Topologie`, PDR limits, the main
   transformer `Z_cc_TP`/`N_prises`, the optional auxiliary load and collector
   line); name in col B, value in col D.
@@ -141,9 +143,12 @@ transformer) → `TransformerRatioTapChanger`.
 
 - **In scope now:** the single-`Zone1` topologies — `S`, `S+Aux`, `S+i`,
   `S+Aux+i` — for the WECC PV, wind and BESS models and the IEC wind ones.
-- **Deferred:** the multi-generator `M` family. The builders are already
-  parametrized to *N* generators, but the Excel cannot yet say *which model*
-  each duplicated `Zone1<x>` is (RTE questions Q5). Also the IEC decoupling
+- **Deferred:** the multi-generator `M` family. The generation is laid out
+  for *N* units the way DyCoV reads them — `Zone1/Producer_G<i>.{dyd,par,ini}`
+  per unit, and every unit in `Zone3` with its share of the plant — but an
+  `M` workbook is refused: the Excel cannot yet say *which model* each
+  duplicated `Zone1<x>` is (RTE questions Q5), and `parse.resolve_unit_models`
+  is where that answer will be read. Also the IEC decoupling
   protections' LVRT/HVRT curves (`Tablet*wtfilt*`, 25 points × 2 values per
   model): they are rows like any other, but the template offers only the four
   thresholds, so the curves take Dynawo's placeholder defaults until it carries

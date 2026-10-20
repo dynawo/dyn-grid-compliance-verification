@@ -66,6 +66,7 @@ The relevant substructure is:
 ├── config.ini
 └── templates/
     ├── PCS/
+    │   ├── gfm/
     │   ├── model/
     │   │   ├── BESS/
     │   │   └── PPM/
@@ -83,10 +84,48 @@ The relevant substructure is:
             └── SM/
 ```
 
+The `gfm/` category holds its PCS directories directly, without a technology
+level, and has no `reports/` counterpart: the GFM workflow produces no LaTeX
+report.
+
 Conceptually:
 
 *   `templates/PCS/` contains user‑defined PCS operating conditions.
 *   `templates/reports/` contains LaTeX report templates rendered using Jinja.
+
+#### Which file a customization goes in
+
+A PCS customization belongs in a `PCSDescription.ini` that mirrors the path of
+the PCS you are adapting:
+
+```text
+~/.config/dycov/templates/PCS/<workflow>/<technology>/<PCSName>/PCSDescription.ini
+```
+
+(For the `gfm` workflow there is no technology level:
+`templates/PCS/gfm/<PCSName>/PCSDescription.ini`.)
+
+That file is a **patch over** the one shipped with the tool, not a replacement:
+write only the sections and keys you change, and everything you leave out keeps
+the packaged value. The file name must be exactly `PCSDescription.ini`; a
+directory holding an INI file under another name is reported as an invalid PCS
+and skipped.
+
+DyCoV reads its settings from five layers, from the highest priority to the
+lowest:
+
+1. your `templates/PCS/.../PCSDescription.ini`
+2. your `config.ini`
+3. the PCS description of the selected DTR revision (not used yet)
+4. the `PCSDescription.ini` shipped with the tool
+5. the packaged defaults
+
+So a PCS section written in your `PCSDescription.ini` wins over the same
+section written in your `config.ini`. Keep PCS‑specific changes in the former
+and global ones in the latter, and the two never compete.
+
+The layers are rebuilt for every PCS, so a customization written for one PCS
+can never leak into another.
 
 ---
 
@@ -103,6 +142,11 @@ An Operating Condition defines:
 *   event characteristics (type, timing, duration, magnitude),
 *   grid‑side parameters (e.g. SCR).
 
+The chapter *PCS description reference* of the developer manual is the
+reference of every section and key of a `PCSDescription.ini`, kind of test by
+kind of test, and *Compliance tests* in the user manual the reference of the
+tests they activate.
+
 Each PCS includes a predefined set of operating conditions.
 User‑side customization can:
 
@@ -116,7 +160,8 @@ User‑side customization can:
 When only a small number of parameters must change, an existing OC can be
 overridden.
 
-Example:
+Example, in
+`~/.config/dycov/templates/PCS/model/PPM/PCS_RTE-I16z1/PCSDescription.ini`:
 
 ```ini
 [PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800.Model]

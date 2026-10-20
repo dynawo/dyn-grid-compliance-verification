@@ -184,3 +184,36 @@ def test_check_dynamic_models_with_unsupported_models():
         )
         tree.write(str(dyd_path), encoding="utf-8", pretty_print=True, xml_declaration=True)
         assert check_dynamic_models(target, "performance_SM") is False
+
+
+def test_model_m_has_a_zone1_file_and_a_zone3_block_per_generator(tmp_path):
+    (tmp_path / "Zone1").mkdir()
+    (tmp_path / "Zone3").mkdir()
+
+    create_producer_dyd_file(tmp_path, "M+Aux", "model_PPM", n_generators=3)
+
+    assert sorted(p.name for p in (tmp_path / "Zone1").iterdir()) == [
+        "Producer_G1.dyd",
+        "Producer_G2.dyd",
+        "Producer_G3.dyd",
+    ]
+    z3 = _connects(tmp_path / "Zone3" / "Producer.dyd")
+    plant = ["Power_Park_1", "Power_Park_2", "Power_Park_3"]
+    assert [i1 for i1, _, i2, _ in z3 if i2 == "Int_Bus" and i1.startswith("Power_Park")] == plant
+    assert [i2 for i1, v1, i2, _ in z3 if i1 == "Measurements" and v1 == "measurements_PPu"] == (
+        plant
+    )
+
+
+def test_model_m_defaults_to_two_generators(tmp_path):
+    (tmp_path / "Zone1").mkdir()
+    (tmp_path / "Zone3").mkdir()
+
+    create_producer_dyd_file(tmp_path, "M", "model_BESS")
+
+    assert sorted(p.name for p in (tmp_path / "Zone1").iterdir()) == [
+        "Producer_G1.dyd",
+        "Producer_G2.dyd",
+    ]
+    z3 = _connects(tmp_path / "Zone3" / "Producer.dyd")
+    assert [i1 for i1, _, i2, _ in z3 if i2 == "Int_Bus"] == ["Storage_1", "Storage_2"]

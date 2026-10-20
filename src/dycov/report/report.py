@@ -14,6 +14,7 @@ import shutil
 import signal
 import subprocess
 import time
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
@@ -32,7 +33,7 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_PPM,
     REPORT_NAME,
 )
-from dycov.files import manage_files, model_parameters
+from dycov.files import manage_files, value_registry
 from dycov.logging import dycov_logging
 from dycov.report import figure, html
 from dycov.report.curve_classification import get_curve_style
@@ -48,9 +49,11 @@ from dycov.report.tables import (
     summary,
     thresholds,
 )
+from dycov.report.types import FigureDescription
 from dycov.templates.reports.create_figures import create_figures
 from dycov.validate.parameters import ValidationParameters
 from dycov.validate.producer import ModelProducer
+from dycov.validation import compared_curves
 
 
 # --- Process registry for LaTeX compilation ---
@@ -78,10 +81,7 @@ def terminate_all_children(timeout: float = 5.0) -> None:
         return
     for p in procs:
         try:
-            if os.name == "nt":
-                p.terminate()
-            else:
-                os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+            os.killpg(os.getpgid(p.pid), signal.SIGTERM)
         except Exception:
             try:
                 p.terminate()
@@ -99,16 +99,7 @@ def terminate_all_children(timeout: float = 5.0) -> None:
     for p in procs:
         if p.poll() is None:
             try:
-                if os.name == "nt":
-                    subprocess.run(
-                        f"taskkill /F /T /PID {p.pid}",
-                        shell=True,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        check=False,
-                    )
-                else:
-                    os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+                os.killpg(os.getpgid(p.pid), signal.SIGKILL)
             except Exception:
                 pass
 
@@ -120,7 +111,7 @@ def _run_pdflatex(working_path: Path, report_name_noext: str):
         cwd=working_path,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        preexec_fn=os.setsid if os.name != "nt" else None,
+        preexec_fn=os.setsid,
     )
     _ReportProcRegistry.add(proc)
     try:
@@ -278,6 +269,9 @@ def _pcs_replace(
     # To avoid problems when compiling the LaTex doc, the name of the variables is abbreviated,
     #  eliminating potentially problematic characters and unnecessary information.
     producer_name = pcs_results["producer"].replace("_", "")
+    thresholds_family = config.get_value(
+        pcs_results["pcs"].get_name(), "setpoint_tracking_thresholds", ""
+    )
 
     _render_zone1_circuits(working_path, producer)
 
@@ -303,24 +297,30 @@ def _pcs_replace(
         solver_map = solver.create_map(oc_results)
         results_map = results.create_map(oc_results)
         compliance_map = compliance.create_map(oc_results)
-        thresholds_map = thresholds.create_map(oc_results, producer.is_field_measurements())
+        thresholds_map = thresholds.create_map(
+            oc_results, producer.is_field_measurements(), thresholds_family
+        )
         error_map = signal_error.create_map(oc_results)
         steady_state_error_map = steady_state_error.create_map(oc_results)
         time_error_map = characteristics_response.create_map(oc_results)
         active_power_recovery_map = active_power_recovery.create_map(oc_results)
 
-        subst_dict = subst_dict | {"producer": pcs_results["producer"].replace("_", r"\_")}
-        subst_dict = subst_dict | {"solver" + operating_condition_: solver_map}
-        subst_dict = subst_dict | {"rm" + operating_condition_: results_map}
-        subst_dict = subst_dict | {"cm" + operating_condition_: compliance_map}
-        subst_dict = subst_dict | {"thm" + operating_condition_: thresholds_map}
-        subst_dict = subst_dict | {"em" + operating_condition_: error_map}
-        subst_dict = subst_dict | {"ssem" + operating_condition_: steady_state_error_map}
-        subst_dict = subst_dict | {"tem" + operating_condition_: time_error_map}
-        subst_dict = subst_dict | {"apr" + operating_condition_: active_power_recovery_map}
+        oc_maps = {
+            "solver": solver_map,
+            "rm": results_map,
+            "cm": compliance_map,
+            "thm": thresholds_map,
+            "em": error_map,
+            "ssem": steady_state_error_map,
+            "tem": time_error_map,
+            "apr": active_power_recovery_map,
+        }
         if "stabilized" in oc_results:
-            stabilized = "stable" if oc_results["stabilized"] else "\textcolor{red}{unstable}"
-            subst_dict = subst_dict | {"stabilized" + operating_condition_: stabilized}
+            oc_maps["stabilized"] = _stability_label(oc_results["stabilized"])
+        subst_dict = subst_dict | {"producer": pcs_results["producer"].replace("_", r"\_")}
+        subst_dict = subst_dict | {
+            name + operating_condition_: value for name, value in oc_maps.items()
+        }
         if "steady_state_threshold" not in subst_dict:
             subst_dict = subst_dict | {
                 "steady_state_threshold": config.get_float("GridCode", "thr_final_ss_mae", 0.01)
@@ -329,7 +329,8 @@ def _pcs_replace(
 
         oc_report = config.get_value(operating_condition, "report_name")
         if oc_report is not None:
-            oc_report_name = f"{producer_name}.{oc_report}"
+            benchmark, oc_name = operating_condition.split(CASE_SEPARATOR)[-2:]
+            oc_report_name = f"{producer_name}.report.{operating_condition}.tex"
             if oc_results["summary"].show_report():
                 subreports.append(f"\\input{{{oc_report_name.replace('.tex', '')}}}")
 
@@ -337,8 +338,16 @@ def _pcs_replace(
             notices_block, watermark = _build_oc_notices(oc_results)
             oc_subst_dict2 |= {"missedColumns": notices_block}
             oc_subst_dict2 |= {"waterMarkText": watermark}
+            # A template shared by every test of a PCS reads the maps of the test it renders
+            # without the suffix that tells them apart in the whole-PCS dictionary.
+            oc_subst_dict2 |= oc_maps
+            oc_subst_dict2 |= {
+                "benchmark": benchmark,
+                "operatingcondition": oc_name,
+                "link": latex_link,
+            }
 
-            oc_template = _get_template(working_path, oc_report_name)
+            oc_template = _get_template(working_path, f"{producer_name}.{oc_report}")
             oc_template.stream(oc_subst_dict2).dump(str(working_path / oc_report_name))
 
     subst_dict = subst_dict | {"subReports": subreports}
@@ -351,6 +360,10 @@ def _pcs_replace(
     subst_dict2 = {k.replace("_", ""): v for k, v in subst_dict.items()}
     template.stream(subst_dict2).dump(str(working_path / report_name))
     return len(subreports)
+
+
+def _stability_label(stabilized: bool) -> str:
+    return "stable" if stabilized else r"\textcolor{red}{unstable}"
 
 
 def _get_template(path, template_file):
@@ -435,6 +448,22 @@ def _inject_current_magnitude_df(curves: pd.DataFrame) -> pd.DataFrame:
     return curves
 
 
+def _with_stepped_setpoint(
+    figure_description: FigureDescription, operating_condition: str, zone: int
+) -> FigureDescription:
+    """The figure as the test draws it: in a setpoint step, the figure of the magnitude the
+    stepped setpoint drives also draws that setpoint, both as simulated and as the reference
+    curves carry it, which is how a reference that stepped another setpoint shows."""
+    test_type = config.get_value(operating_condition, "setpoint_change_test_type")
+    stepped = compared_curves.setpoint_stepped_by(zone, test_type)
+    if stepped is None or figure_description.setpoint != stepped:
+        return figure_description
+    return replace(
+        figure_description,
+        variables=[*figure_description.variables, {"type": "generator", "variable": stepped}],
+    )
+
+
 def _generate_figures(
     working_path: Path,
     producer_name: str,
@@ -456,29 +485,32 @@ def _generate_figures(
         reference_curves = None
 
     for figure_description in figures_description[figure_key]:
+        figure_description = _with_stepped_setpoint(figure_description, operating_condition, zone)
         plot_curves = figure.get_curves2plot(figure_description.variables, curves)
         if len(plot_curves) == 0:
             continue
         _add_current_magnitude(plot_curves)
         iq_last_val = _get_iq_last_val(plot_curves)
 
-        plot_reference_curves = None
-        if reference_curves is not None:
-            plot_reference_curves = figure.get_curves2plot(
-                figure_description.variables, reference_curves, is_reference=True
+        if figure_description.in_pdf:
+            plot_reference_curves = None
+            if reference_curves is not None:
+                plot_reference_curves = figure.get_curves2plot(
+                    figure_description.variables, reference_curves, is_reference=True
+                )
+            figure.create_plot(
+                list(curves["time"]),
+                figure_description,
+                plot_curves,
+                list(reference_curves["time"]) if reference_curves is not None else None,
+                plot_reference_curves,
+                {"min": xmin, "max": xmax},
+                working_path
+                / (f"{producer_name}_{figure_description.name}_{operating_condition}.pdf"),
+                oc_results,
+                band_ref_val=iq_last_val,
+                zone=zone,
             )
-        figure.create_plot(
-            list(curves["time"]),
-            figure_description,
-            plot_curves,
-            list(reference_curves["time"]) if reference_curves is not None else None,
-            plot_reference_curves,
-            {"min": xmin, "max": xmax},
-            working_path
-            / (f"{producer_name}_{figure_description.name}_{operating_condition}.pdf"),
-            oc_results,
-            band_ref_val=iq_last_val,
-        )
 
         try:
             html_curves, div_id, html_figure = html.plotly_figures(
@@ -541,7 +573,7 @@ def _create_full_tex(
         if oc_results["curves"] is None:
             continue
 
-        unit_characteristics = model_parameters.unit_characteristics(producer, oc_results["udim"])
+        unit_characteristics = value_registry.unit_characteristics(producer, oc_results["udim"])
         unit_characteristics["Unom"] = producer.u_nom
 
         xmin, xmax = figure.get_common_time_range(
@@ -574,12 +606,11 @@ def _create_full_tex(
                     )
                 )
             html.create_html(pcs_results["producer"], figures, operating_condition, output_path)
-        except Exception as e:
-            dycov_logging.get_logger("Report").error(
+        except Exception:
+            dycov_logging.get_logger("Report").exception(
                 f"{operating_condition}: "
                 "A non fatal error occurred while generating the HTML report"
             )
-            dycov_logging.get_logger("Report").error(f"{operating_condition}: {e}")
 
     return _pcs_replace(working_path, pcs_results, report_name, producer)
 

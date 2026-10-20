@@ -190,7 +190,7 @@ def create_dir(path: Path, clean_first: bool = True, all_permissions: bool = Fal
         shutil.rmtree(path)
     elif path.exists():
         return
-    path.mkdir(parents=True)
+    path.mkdir(parents=True, exist_ok=True)
     if all_permissions:
         path.chmod(0o777)
 

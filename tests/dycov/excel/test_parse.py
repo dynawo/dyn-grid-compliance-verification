@@ -115,6 +115,20 @@ def test_resolve_models_pv():
     assert resolved["zone1_prefix"] == "photovoltaics_"
 
 
+def test_resolve_unit_models_resolves_a_single_unit_from_general():
+    wb = _workbook(_general(("REPC", "REPC_A"), key="REGC_A|REEC_B|Aucun|Aucun|Aucun|Aucun"))
+
+    assert P.resolve_unit_models(wb, ["Zone1a"]) == [P.resolve_models(wb)]
+
+
+def test_resolve_unit_models_refuses_several_units_naming_their_sheets():
+    # Général resolves one model, and nothing says which model each unit is.
+    wb = _workbook(_general(("REPC", "REPC_A"), key="REGC_A|REEC_B|Aucun|Aucun|Aucun|Aucun"))
+
+    with pytest.raises(ValueError, match=r"2 generating units \(Zone1a, Zone1b\)"):
+        P.resolve_unit_models(wb, ["Zone1a", "Zone1b"])
+
+
 def test_resolve_models_unknown_combination_raises():
     wb = _workbook(_general(("REPC", "REPC_A"), key="REGC_A|REEC_A|Aucun|WTGP_B|Aucun|Aucun"))
     with pytest.raises(ValueError) as error:

@@ -11,6 +11,8 @@
 from dataclasses import dataclass, field
 from enum import Enum
 
+from dycov.report.curve_classification import is_setpoint
+
 
 class BandUnit(Enum):
     PERCENT = "percent"
@@ -37,7 +39,7 @@ class FinalValueBand(ToleranceBand):
 class FrequencyBand(ToleranceBand):
     """Band relative to f_nom, deviation expressed in Hz."""
 
-    pass
+    color: str = "#55a868"
 
 
 @dataclass
@@ -56,15 +58,32 @@ class EventMarker:
 
 @dataclass
 class FigureDescription:
-    """Description of a figure to be rendered in reports."""
+    """Description of a figure to be rendered in reports.
+
+    Every figure goes to the HTML report; ``in_pdf`` says whether it also goes to the PDF.
+    ``setpoint`` is the setpoint that drives the magnitude the figure draws, which a test that
+    steps it draws over that magnitude. ``in_hz`` says the figure draws a frequency, which the
+    tool keeps in pu of f_nom, in Hz.
+    """
 
     name: str
     variables: str | list[dict]
     ylabel: str
     tolerance_band: ToleranceBand | None = None
-    frequency_band: FrequencyBand | None = None
+    frequency_bands: list[FrequencyBand] = field(default_factory=list)
     dynamic_band: DynamicBand | None = None
     event_markers: list[EventMarker] = field(default_factory=list)
+    in_pdf: bool = True
+    setpoint: str | None = None
+    in_hz: bool = False
+
+    def draws_one_magnitude(self) -> bool:
+        """Whether the figure draws a single magnitude, the setpoint that drives it aside. Only
+        such a figure marks the MXE of its curves: one that draws several repeats the figures of
+        each."""
+        if isinstance(self.variables, str):
+            return True
+        return len([v for v in self.variables if not is_setpoint(v["variable"])]) == 1
 
 
 def band_limits(

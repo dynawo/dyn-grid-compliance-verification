@@ -22,24 +22,34 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_PPM,
 )
 from dycov.files import model_parameters
+from dycov.files.producer_ini_file import MAGNITUDE_KEYS, RETIRED_SUFFIX
 from dycov.logging import dycov_logging
 from dycov.model.producer import Producer
 from dycov.sanity_checks import file_checks, parameter_checks, topology_checks
 
+_REQUIRED_PARAMETERS = ("u_nom", "q_min", "q_max", "p_max_injection")
+_CONSUMPTION_PARAMETER = "p_max_consumption"
+
+
+def _check_renamed_parameters(producer_config, section):
+    for parameter in MAGNITUDE_KEYS:
+        if producer_config.has_option(section, f"{parameter}{RETIRED_SUFFIX}"):
+            raise ValueError(
+                f"The parameter file declares {parameter}{RETIRED_SUFFIX}, a name DyCoV no "
+                f"longer reads. Run 'dycov migrate_inputs' on the input files to rename it "
+                f"to {parameter}."
+            )
+
 
 def _check_parameters_definition(producer_config, section, needs_consumption):
-    if not producer_config.has_option(section, "u_nom_at_PDR"):
-        raise ValueError("The parameter file must specify the u_nom_at_PDR")
-    if not producer_config.has_option(section, "q_min_at_PDR"):
-        raise ValueError("The parameter file must specify the q_min_at_PDR")
-    if not producer_config.has_option(section, "q_max_at_PDR"):
-        raise ValueError("The parameter file must specify the q_max_at_PDR")
-    if not producer_config.has_option(section, "p_max_injection_at_PDR"):
-        raise ValueError("The parameter file must specify the p_max_injection_at_PDR")
-    if needs_consumption and not producer_config.has_option(section, "p_max_consumption_at_PDR"):
-        raise ValueError("The parameter file must specify the p_max_consumption_at_PDR")
-    if not producer_config.has_option(section, "topology"):
-        raise ValueError("The parameter file must specify the topology")
+    _check_renamed_parameters(producer_config, section)
+
+    required = _REQUIRED_PARAMETERS
+    if needs_consumption:
+        required += (_CONSUMPTION_PARAMETER,)
+    for parameter in required + ("topology",):
+        if not producer_config.has_option(section, parameter):
+            raise ValueError(f"The parameter file must specify the {parameter}")
 
 
 class ModelProducer(Producer):
@@ -54,6 +64,9 @@ class ModelProducer(Producer):
     verification_type: int
         0 if it is an electrical performance verification
         10 if it is a model validation
+    zone1_required: bool
+        Whether the model validation needs the Zone 1 model: it does when a PCS of zone 1
+        is going to be validated
     """
 
     def __init__(
@@ -62,12 +75,14 @@ class ModelProducer(Producer):
         producer_curves_path: Path,
         reference_curves_path: Path,
         verification_type: int,
+        zone1_required: bool = True,
     ):
         self._s_nref = config.get_float("Dynawo", "s_nref", 100.0)
         self._producer_model_path = producer_model_path
         self._producer_curves_path = producer_curves_path
         self._reference_curves_path = reference_curves_path
         self._zone = 0
+        self._zone1_required = zone1_required
 
         self._is_dynawo_model = self._producer_model_path is not None
         self._is_user_curves = self._producer_curves_path is not None
@@ -221,10 +236,10 @@ class ModelProducer(Producer):
         if self.is_dynawo_model():
             sm_models, ppm_models, bess_models = self.__set_dynawo_model_validation_type()
         else:
-            sm_models, ppm_models, bess_models = self.__set_curves_model_validation_type()
             file_checks.check_validation_curves(
-                self._producer_curves_path, self._reference_curves_path
+                self._producer_curves_path, self._reference_curves_path, self._zone1_required
             )
+            sm_models, ppm_models, bess_models = self.__set_curves_model_validation_type()
 
         if sm_models > 0:
             raise ValueError("Synchronous machine models are not allowed for model validation")
@@ -297,34 +312,25 @@ class ModelProducer(Producer):
             len(generators_z3),
             self.get_filenames(zone=3),
             self.get_filenames(zone=1),
+            self._zone1_required,
         )
         return sm_models, ppm_models, bess_models
 
     def __set_curves_model_validation_type(self):
-        default_section = "DEFAULT"
-        self._zone = 1
-        producer_config = self.__read_producer_ini()
-        generator_type_z1 = producer_config.get(default_section, "generator_type")
-        self._zone = 3
-        producer_config = self.__read_producer_ini()
-        generator_type_z3 = producer_config.get(default_section, "generator_type")
-        sm_models = 0
-        ppm_models = 0
-        bess_models = 0
-        if "SM" == generator_type_z1:
-            sm_models += 1
-        elif "PPM" == generator_type_z1:
-            ppm_models += 1
-        elif "BESS" == generator_type_z1:
-            bess_models += 1
-        if "SM" == generator_type_z3:
-            sm_models += 1
-        elif "PPM" == generator_type_z3:
-            ppm_models += 1
-        elif "BESS" == generator_type_z3:
-            bess_models += 1
+        generator_types = [self.__generator_type_of_zone(zone) for zone in self.__zones_to_read()]
+        return (
+            generator_types.count("SM"),
+            generator_types.count("PPM"),
+            generator_types.count("BESS"),
+        )
 
-        return sm_models, ppm_models, bess_models
+    def __zones_to_read(self) -> list[int]:
+        zone1_delivered = (self._producer_curves_path / "Zone1").is_dir()
+        return [1, 3] if self._zone1_required or zone1_delivered else [3]
+
+    def __generator_type_of_zone(self, zone: int) -> str:
+        self._zone = zone
+        return self.__read_producer_ini().get("DEFAULT", "generator_type")
 
     def __read_producer_ini(self):
         if self._filename is None:
@@ -345,17 +351,24 @@ class ModelProducer(Producer):
         )
 
         self.p_max_injection_pu = (
-            float(producer_config.get(default_section, "p_max_injection_at_PDR")) / self._s_nref
+            float(producer_config.get(default_section, "p_max_injection")) / self._s_nref
         )
         self.p_max_consumption_pu = 0.0
-        if producer_config.has_option(default_section, "p_max_consumption_at_PDR"):
+        if producer_config.has_option(default_section, "p_max_consumption"):
             self.p_max_consumption_pu = (
-                float(producer_config.get(default_section, "p_max_consumption_at_PDR"))
-                / self._s_nref
+                float(producer_config.get(default_section, "p_max_consumption")) / self._s_nref
             )
-        self.q_max_pu = float(producer_config.get(default_section, "q_max_at_PDR")) / self._s_nref
-        self.q_min_pu = float(producer_config.get(default_section, "q_min_at_PDR")) / self._s_nref
-        self.u_nom = float(producer_config.get(default_section, "u_nom_at_PDR"))
+        self.p_min_injection_pu = (
+            producer_config.getfloat(default_section, "p_min_injection", fallback=0.0)
+            / self._s_nref
+        )
+        self.p_min_consumption_pu = (
+            producer_config.getfloat(default_section, "p_min_consumption", fallback=0.0)
+            / self._s_nref
+        )
+        self.q_max_pu = float(producer_config.get(default_section, "q_max")) / self._s_nref
+        self.q_min_pu = float(producer_config.get(default_section, "q_min")) / self._s_nref
+        self.u_nom = float(producer_config.get(default_section, "u_nom"))
         self.topology = producer_config.get(default_section, "topology")
         self.s_nom = float(producer_config.get(default_section, "s_nom", fallback=self._s_nref))
 
@@ -436,6 +449,8 @@ class ModelProducer(Producer):
                 path = self._producer_model_path / "Zone1"
             elif zone == 3:
                 path = self._producer_model_path / "Zone3"
+            if not path.is_dir():
+                return []
 
             pattern = re.compile(r".*.[dD][yY][dD]")
             return sorted(
@@ -445,12 +460,12 @@ class ModelProducer(Producer):
         elif self._producer_curves_path is not None:
             path = self._producer_curves_path
 
-            exclude_pattern = re.compile(r".*.Zone[13]")
+            zone_directories = {"Zone1", "Zone3"}
             return sorted(
                 [
                     p.stem
                     for p in path.resolve().iterdir()
-                    if not exclude_pattern.match(str(p)) and p.is_dir()
+                    if p.name not in zone_directories and p.is_dir()
                 ]
             )
 
@@ -458,22 +473,24 @@ class ModelProducer(Producer):
         return list()
 
     def set_consumption(self, consumption: bool) -> None:
-        """The value of p_max_pu is defined depending on the
+        """The values of p_max_pu and p_min_pu are defined depending on the
         operating mode: injection or consumption.
 
         Parameters
         ----------
         consumption: bool
-            If True use the maximum active power consumption.
-            If False use the maximum active power injection.
+            If True use the maximum and minimum active power consumption.
+            If False use the maximum and minimum active power injection.
 
         """
         if consumption:
-            # The maximum active power consumption value must be
+            # The active power consumption values must be
             # sign-flipped to adhere to the tool's adopted sign convention.
             self.p_max_pu = -self.p_max_consumption_pu
+            self.p_min_pu = -self.p_min_consumption_pu
         else:
             self.p_max_pu = self.p_max_injection_pu
+            self.p_min_pu = self.p_min_injection_pu
 
     @property
     def s_nom_pu(self) -> float:
@@ -581,6 +598,20 @@ class ModelProducer(Producer):
             True if has a dynamic model, False otherwise
         """
         return self._is_dynawo_model
+
+    def controls_internal_node2(self) -> bool:
+        """Check if the converter controls InternalNode2, the low-voltage side of its
+        transformer, rather than InternalNode1.
+
+        Returns
+        -------
+        bool
+            The ConverterLVControl flag of the model's generating units, or its default, True,
+            for curves supplied without a model, which do not state it
+        """
+        if not self.is_dynawo_model():
+            return True
+        return all(gen.converter_lv_control for gen in self.generators)
 
     def is_user_curves(self) -> bool:
         """Check if the producer has a curves directory.

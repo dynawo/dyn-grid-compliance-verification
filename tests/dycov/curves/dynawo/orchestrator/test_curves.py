@@ -10,19 +10,21 @@ Unit tests for DynawoCurves (curves.py).
 Strategy: DynawoCurves is an orchestrator — its value comes from *wiring*
 collaborators correctly, not from complex logic.  We therefore:
   1. Construct a DynawoCurves with all heavy dependencies mocked at the
-     module level (config, parameter_checks, manage_files, model_parameters,
+     module level (config, parameter_checks, manage_files, simulation_files,
      ModelSetup, BisectionEngine, SolverRetryStrategy).
   2. Test each public method by asserting on which collaborator is called,
      with which arguments, and how the return value is assembled.
 """
 
-from collections import namedtuple
+import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
 import pytest
 
+from dycov.curves.dynawo.runtime.run_types import SolverParams
+from dycov.files.simulation_files import SIMULATION_INPUTS_FILE
 from dycov.model.parameters import PdrParams, SimulationError, SimulationOutcomeError
 
 # We patch at the orchestrator module level throughout.
@@ -32,11 +34,8 @@ _MODULE = "dycov.curves.dynawo.orchestrator.curves"
 # Minimal helpers
 # ---------------------------------------------------------------------------
 
-SimulateOutcome = namedtuple("SimulateOutcome", "succeeded time_exceeds has_curves curves")
-
 _CONFIG_VALUES = {
     ("Dynawo", "solver_lib"): "dynawo_SolverIDA",
-    ("Dynawo", "f_nom"): 50.0,
     ("Dynawo", "s_nref"): 100.0,
     ("Dynawo", "simulation_start"): 0.0,
     ("Dynawo", "simulation_stop"): 100.0,
@@ -83,61 +82,32 @@ def _make_producer_mock():
 
 class TestResetSolver:
     def test_ida_solver_sets_rel_accuracy(self):
-        with (
-            patch(f"{_MODULE}.config") as mc,
-            patch(f"{_MODULE}.parameter_checks"),
-            patch(f"{_MODULE}.ModelSetup"),
-            patch(f"{_MODULE}.BisectionEngine"),
-            patch(f"{_MODULE}.ProducerCurves.__init__", return_value=None),
-        ):
-            from dycov.curves.dynawo.orchestrator.curves import DynawoCurves
+        curves, _, _ = _make_real_curves()
 
+        assert curves._solver.solver_id == "IDA"
+        assert curves._solver.relAccuracy == pytest.approx(1e-4)
+
+    def test_sim_solver_leaves_rel_accuracy_unset(self):
+        curves, _, _ = _make_real_curves(solver_lib="dynawo_SolverSIM")
+
+        assert curves._solver.solver_id == "SIM"
+        assert curves._solver.relAccuracy is None
+
+    def test_reset_discards_the_values_a_retry_left_behind(self):
+        curves, _, _ = _make_real_curves()
+        curves._solver.solver_id = "SIM"
+        curves._solver.solver_lib = "dynawo_SolverSIM"
+        curves._solver.minimum_time_step = 1e-9
+        curves._solver.absAccuracy = 1e-3
+
+        with patch(f"{_MODULE}.config") as mc, patch(f"{_MODULE}.parameter_checks"):
             mc.get_value.side_effect = _cfg_get_value
             mc.get_float.side_effect = _cfg_get_float
+            curves._DynawoCurves__reset_solver()
 
-            curves = DynawoCurves.__new__(DynawoCurves)
-            curves.get_producer = MagicMock(return_value=_make_producer_mock())
-            curves._setup = MagicMock()
-            curves._setup.curves_dict = {}
-            curves._solver_id = ""
-            curves._solver_lib = ""
-            curves._minimum_time_step = 0.0
-            curves._minimal_acceptable_step = 0.0
-            curves._absAccuracy = 0.0
-            curves._relAccuracy = 0.0
-
-            # Simulate __reset_solver by directly testing the IDA branch
-            curves._solver_lib = "dynawo_SolverIDA"
-            curves._solver_id = "IDA"
-            curves._minimum_time_step = mc.get_float("Dynawo", "ida_minStep", 1e-6)
-            curves._minimal_acceptable_step = mc.get_float(
-                "Dynawo", "ida_minimalAcceptableStep", 1e-6
-            )
-            curves._absAccuracy = mc.get_float("Dynawo", "ida_absAccuracy", 1e-6)
-            curves._relAccuracy = mc.get_float("Dynawo", "ida_relAccuracy", 1e-4)
-
-            assert hasattr(curves, "_relAccuracy")
-            assert curves._solver_id == "IDA"
-
-    def test_sim_solver_removes_rel_accuracy(self):
-        with patch(f"{_MODULE}.config") as mc, patch(f"{_MODULE}.parameter_checks"):
-            mc.get_value.side_effect = lambda s, k, d=None: (
-                "dynawo_SolverSIM" if k == "solver_lib" else d
-            )
-            mc.get_float.side_effect = _cfg_get_float
-
-            from dycov.curves.dynawo.orchestrator.curves import DynawoCurves
-
-            curves = DynawoCurves.__new__(DynawoCurves)
-            curves._relAccuracy = 0.1  # pre-existing
-
-            # Simulate the SIM branch of __reset_solver
-            curves._solver_lib = "dynawo_SolverSIM"
-            curves._solver_id = "SIM"
-            if hasattr(curves, "_relAccuracy"):
-                delattr(curves, "_relAccuracy")
-
-            assert not hasattr(curves, "_relAccuracy")
+        assert curves._solver.solver_id == "IDA"
+        assert curves._solver.minimum_time_step == pytest.approx(1e-6)
+        assert curves._solver.absAccuracy == pytest.approx(1e-6)
 
 
 # ---------------------------------------------------------------------------
@@ -254,12 +224,14 @@ class TestGetSolver:
         from dycov.curves.dynawo.orchestrator.curves import DynawoCurves
 
         curves = DynawoCurves.__new__(DynawoCurves)
-        curves._solver_id = "IDA"
-        curves._solver_lib = "dynawo_SolverIDA"
-        curves._minimum_time_step = 1e-6
-        curves._minimal_acceptable_step = 1e-6
-        curves._absAccuracy = 1e-6
-        curves._relAccuracy = 1e-4
+        curves._solver = SolverParams(
+            solver_id="IDA",
+            solver_lib="dynawo_SolverIDA",
+            minimum_time_step=1e-6,
+            minimal_acceptable_step=1e-6,
+            absAccuracy=1e-6,
+            relAccuracy=1e-4,
+        )
         return curves
 
     @patch(f"{_MODULE}.config")
@@ -287,11 +259,14 @@ class TestGetSolver:
         from dycov.curves.dynawo.orchestrator.curves import DynawoCurves
 
         curves = DynawoCurves.__new__(DynawoCurves)
-        curves._solver_id = "SIM"
-        curves._solver_lib = "dynawo_SolverSIM"
-        curves._minimum_time_step = 1e-6
-        curves._minimal_acceptable_step = 1e-6
-        curves._absAccuracy = 1e-4
+        curves._solver = SolverParams(
+            solver_id="SIM",
+            solver_lib="dynawo_SolverSIM",
+            minimum_time_step=1e-6,
+            minimal_acceptable_step=1e-6,
+            absAccuracy=1e-4,
+            relAccuracy=None,
+        )
 
         result = curves.get_solver()
 
@@ -310,6 +285,64 @@ class TestGetSolver:
         for name, param in result.items():
             assert hasattr(param, "actual"), f"SolverParam '{name}' missing .actual"
             assert hasattr(param, "default"), f"SolverParam '{name}' missing .default"
+
+    @patch(f"{_MODULE}.config")
+    def test_reports_the_values_a_retry_left_behind(self, mock_cfg):
+        mock_cfg.get_value.side_effect = _cfg_get_value
+        mock_cfg.get_float.side_effect = _cfg_get_float
+        mock_cfg.get_int.side_effect = _cfg_get_int
+
+        curves = self._make_ida_curves()
+        curves._solver.minimum_time_step = 1e-7
+        curves._solver.absAccuracy = 1e-5
+
+        result = curves.get_solver()
+
+        assert result["minStep"].actual == pytest.approx(1e-7)
+        assert result["minStep"].default == pytest.approx(1e-6)
+        assert result["absAccuracy"].actual == pytest.approx(1e-5)
+        assert result["absAccuracy"].default == pytest.approx(1e-6)
+
+    @patch(f"{_MODULE}.config")
+    def test_a_solver_no_retry_touched_declares_no_added_parameters(self, mock_cfg):
+        mock_cfg.get_value.side_effect = _cfg_get_value
+        mock_cfg.get_float.side_effect = _cfg_get_float
+        mock_cfg.get_int.side_effect = _cfg_get_int
+
+        result = self._make_ida_curves().get_solver()
+
+        assert "mxiterAlg" not in result
+
+    @patch(f"{_MODULE}.config")
+    def test_reports_the_parameters_a_retry_added(self, mock_cfg):
+        mock_cfg.get_value.side_effect = _cfg_get_value
+        mock_cfg.get_float.side_effect = _cfg_get_float
+        mock_cfg.get_int.side_effect = _cfg_get_int
+
+        curves = self._make_ida_curves()
+        curves._solver.added_parameters = {"mxiterAlg": "30"}
+
+        result = curves.get_solver()
+
+        assert result["mxiterAlg"].actual == "30"
+        assert result["mxiterAlg"].default == "not set"
+
+    @patch(f"{_MODULE}.config")
+    def test_reports_the_solver_a_retry_flipped_to(self, mock_cfg):
+        mock_cfg.get_value.side_effect = _cfg_get_value
+        mock_cfg.get_float.side_effect = _cfg_get_float
+        mock_cfg.get_int.side_effect = _cfg_get_int
+
+        curves = self._make_ida_curves()
+        curves._solver.solver_id = "SIM"
+        curves._solver.solver_lib = "dynawo_SolverSIM"
+
+        result = curves.get_solver()
+
+        assert result["lib"].actual == "dynawo_SolverSIM"
+        assert result["lib"].default == "dynawo_SolverIDA"
+        assert "fnormtol" in result
+        assert "minStep" not in result
 
 
 # ---------------------------------------------------------------------------
@@ -374,18 +407,19 @@ class TestObtainSimulatedCurve:
             curves._pcs_path = Path("/pcs")
             curves._job_name = "job1"
             curves._thr_ss_tol = 5.0
-            curves._f_nom = 50.0
             curves._s_nref = 100.0
             curves._sim_time = 30.0
             curves._simulation_start = 0.0
             curves._simulation_stop = 100.0
             curves._simulation_precision = 1e-6
-            curves._solver_id = "IDA"
-            curves._solver_lib = "dynawo_SolverIDA"
-            curves._minimum_time_step = 1e-6
-            curves._minimal_acceptable_step = 1e-6
-            curves._absAccuracy = 1e-6
-            curves._relAccuracy = 1e-4
+            curves._solver = SolverParams(
+                solver_id="IDA",
+                solver_lib="dynawo_SolverIDA",
+                minimum_time_step=1e-6,
+                minimal_acceptable_step=1e-6,
+                absAccuracy=1e-6,
+                relAccuracy=1e-4,
+            )
             curves._voltage_dip = None
             curves._setup = ms_instance
             curves._bisection = be_instance
@@ -396,6 +430,7 @@ class TestObtainSimulatedCurve:
             time_exceeds=False,
             has_curves=sim_succeeds,
             curves=fake_curves_df,
+            sim_time=12.34,
         )
 
         mc_hiz = mc
@@ -409,13 +444,13 @@ class TestObtainSimulatedCurve:
 
     @patch(f"{_MODULE}.measure_voltage_dip")
     @patch(f"{_MODULE}.manage_files")
-    @patch(f"{_MODULE}.model_parameters")
+    @patch(f"{_MODULE}.simulation_files")
     @patch(f"{_MODULE}.config")
-    def test_complete_model_is_called(self, mc, mock_mp, mock_mf, mock_mvd, tmp_path):
+    def test_complete_model_is_called(self, mc, mock_sf, mock_mf, mock_mvd, tmp_path):
         mc.get_value.side_effect = _cfg_get_value
         mc.get_float.side_effect = _cfg_get_float
         mc.get_boolean.return_value = False
-        mock_mp.find_output_dir.return_value = Path("results")
+        mock_sf.find_output_dir.return_value = Path("results")
 
         curves, ms, be, outcome, _ = self._prepare()
         curves._DynawoCurves__simulate = MagicMock(return_value=outcome)
@@ -534,6 +569,27 @@ class TestObtainSimulatedCurve:
             with pytest.raises(ValueError, match="Unknown magnitude 'Pnom'"):
                 curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
 
+    @patch(f"{_MODULE}.measure_voltage_dip")
+    @patch(f"{_MODULE}.config")
+    def test_the_run_log_says_how_long_dynawo_ran(self, mc, mock_mvd, tmp_path, caplog):
+        mc.get_value.side_effect = _cfg_get_value
+        mc.get_float.side_effect = _cfg_get_float
+        mc.get_boolean.return_value = False
+        curves, _ms, _be, outcome, _ = self._prepare()
+        curves._DynawoCurves__simulate = MagicMock(return_value=outcome)
+        curves._DynawoCurves__prepare_oc_validation = MagicMock(
+            return_value=(Path("/out"), Path("/jobs"))
+        )
+        curves._DynawoCurves__reset_solver = MagicMock()
+
+        with (
+            patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"),
+            caplog.at_level(logging.INFO, logger="DyCoV"),
+        ):
+            curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
+
+        assert "Dynawo ran in 12.3s" in [record.getMessage() for record in caplog.records]
+
     @patch(f"{_MODULE}.measure_voltage_dip", return_value=0.25)
     @patch(f"{_MODULE}.config")
     def test_voltage_dip_stored_after_simulation(self, mc, mock_mvd, tmp_path):
@@ -591,7 +647,7 @@ class TestObtainSimulatedCurve:
         with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
             curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
 
-        record = (tmp_path / "dycov.log").read_text()
+        record = (tmp_path / SIMULATION_INPUTS_FILE).read_text()
         assert "sim_t_event_start = 1.0" in record
         assert "fault_duration = 0.15" in record
         assert "frequency_sampling = 15.0" in record
@@ -605,7 +661,7 @@ class TestObtainSimulatedCurve:
         mc.get_boolean.return_value = False
 
         curves, ms, be, outcome, _ = self._prepare()
-        curves._minimum_time_step = 1e-4
+        curves._solver.minimum_time_step = 1e-4
         curves._DynawoCurves__simulate = MagicMock(return_value=outcome)
         curves._DynawoCurves__prepare_oc_validation = MagicMock(
             return_value=(Path("/out"), Path("/jobs"))
@@ -615,7 +671,7 @@ class TestObtainSimulatedCurve:
         with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
             curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
 
-        record = (tmp_path / "dycov.log").read_text()
+        record = (tmp_path / SIMULATION_INPUTS_FILE).read_text()
         assert "solver_lib = dynawo_SolverIDA" in record
         assert "solver_minStep = 0.0001" in record
         assert "simulation_stop = 100.0" in record
@@ -640,7 +696,7 @@ class TestObtainSimulatedCurve:
         with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
             curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
 
-        record = (tmp_path / "dycov.log").read_text()
+        record = (tmp_path / SIMULATION_INPUTS_FILE).read_text()
         assert "init_BusPDR_BUS_Voltage = 1.05" in record
         assert "init_BusPDR_BUS_ActivePower = 0.8" in record
         assert "init_BusPDR_BUS_ReactivePower = 0.2" in record
@@ -667,7 +723,7 @@ class TestObtainSimulatedCurve:
         with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
             curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
 
-        record = (tmp_path / "dycov.log").read_text()
+        record = (tmp_path / SIMULATION_INPUTS_FILE).read_text()
         assert "init_InternalNode1_BUS_Voltage = 1.05" in record
         assert "init_BusPDR_BUS_Voltage" not in record
 
@@ -688,7 +744,7 @@ class TestObtainSimulatedCurve:
         with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
             curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
 
-        assert not (tmp_path / "dycov.log").exists()
+        assert not (tmp_path / SIMULATION_INPUTS_FILE).exists()
 
 
 # ---------------------------------------------------------------------------
@@ -781,19 +837,19 @@ class TestConstructorWiring:
     def test_init_wires_ida_solver_and_collaborators(self):
         curves, ms, be = _make_real_curves()
 
-        assert curves._solver_id == "IDA"
-        assert curves._relAccuracy == pytest.approx(1e-4)
-        assert curves._minimum_time_step == pytest.approx(1e-6)
+        assert curves._solver.solver_id == "IDA"
+        assert curves._solver.relAccuracy == pytest.approx(1e-4)
+        assert curves._solver.minimum_time_step == pytest.approx(1e-6)
         assert curves._setup is ms
         assert curves._bisection is be
         assert curves._voltage_dip is None
 
-    def test_init_sim_solver_drops_rel_accuracy(self):
+    def test_init_sim_solver_leaves_rel_accuracy_unset(self):
         curves, _, _ = _make_real_curves(solver_lib="dynawo_SolverSIM")
 
-        assert curves._solver_id == "SIM"
-        assert not hasattr(curves, "_relAccuracy")
-        assert curves._absAccuracy == pytest.approx(1e-4)
+        assert curves._solver.solver_id == "SIM"
+        assert curves._solver.relAccuracy is None
+        assert curves._solver.absAccuracy == pytest.approx(1e-4)
 
     def test_get_voltage_dip_returns_none_before_simulation(self):
         curves, _, _ = _make_real_curves()
@@ -810,11 +866,11 @@ class TestConstructorWiring:
 
 
 class TestPrepareOcValidation:
-    @patch(f"{_MODULE}.model_parameters")
+    @patch(f"{_MODULE}.simulation_files")
     @patch(f"{_MODULE}.manage_files")
-    def test_copies_base_case_and_resolves_output_dirs(self, mock_mf, mock_mp):
+    def test_copies_base_case_and_resolves_output_dirs(self, mock_mf, mock_sf):
         curves, _, _ = _make_real_curves()
-        mock_mp.find_output_dir.return_value = Path("outputs")
+        mock_sf.find_output_dir.return_value = Path("outputs")
 
         output_dir, jobs_output_dir = curves._DynawoCurves__prepare_oc_validation(
             Path("/work"), "PCS1", "BM1", "OC1"
@@ -848,6 +904,32 @@ class TestSimulateOutcomeAssembly:
         assert outcome.succeeded is True
         assert outcome.time_exceeds is False
         assert outcome.has_curves is False
+        assert outcome.sim_time == pytest.approx(10.0)
+
+    def test_a_retry_mutation_reaches_the_solver_the_report_reads(self):
+        curves, _, _ = _make_real_curves()
+
+        def run(**kwargs):
+            kwargs["solver"].minimum_time_step = 1e-9
+            return MagicMock(succeeded=True, sim_time=1.0, curves=pd.DataFrame(), log="")
+
+        with (
+            patch(f"{_MODULE}.SolverRetryStrategy") as strat_cls,
+            patch(f"{_MODULE}.RetrySettings"),
+            patch(f"{_MODULE}.config") as mc,
+        ):
+            mc.get_value.side_effect = _cfg_get_value
+            mc.get_float.side_effect = _cfg_get_float
+            mc.get_int.side_effect = _cfg_get_int
+            strat_cls.return_value.run.side_effect = run
+
+            curves._DynawoCurves__simulate(
+                Path("/out"), Path("/work"), Path("outputs"), "BM1", "OC1"
+            )
+            reported = curves.get_solver()
+
+        assert reported["minStep"].actual == pytest.approx(1e-9)
+        assert reported["minStep"].default == pytest.approx(1e-6)
 
     def test_failure_outcome_exceeding_time(self):
         curves, _, _ = _make_real_curves()

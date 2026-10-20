@@ -49,15 +49,11 @@ sudo apt install \
   git \
   curl \
   unzip \
-  gcc \
-  g++ \
-  cmake
+  make
 ```
 
-These tools are required for:
-
-*   building and running Dynawo,
-*   developing and debugging DyCoV.
+`make` builds the Sphinx manuals and compiles the PDF reports at runtime;
+`curl` and `unzip` fetch and unpack the components.
 
 ---
 
@@ -73,22 +69,23 @@ sudo apt install \
   texlive-latex-extra \
   texlive-science \
   texlive-lang-french \
-  latexmk
+  latexmk \
+  dvisvgm
 ```
 
 ---
 
-### 2.4 Python (≥ 3.13)
+### 2.4 Python (3.13 or 3.14)
 
-DyCoV **requires Python version 3.13 or newer**.
+DyCoV runs on **Python 3.13 and Python 3.14**. CI builds and tests both.
 
-Ensure Python 3.13 is installed and available:
+Ensure one of them is installed and available:
 
 ```bash
 python3.13 --version
 ```
 
-If multiple Python versions are installed, explicitly use Python 3.13 when
+If several Python versions are installed, pass the one you want explicitly when
 creating the development environment.
 
 ---
@@ -164,11 +161,25 @@ git clone https://github.com/dynawo/dyn-grid-compliance-verification dycov_repo
 cd dycov_repo
 ```
 
+The clone comes without the curves of the examples. They are not versioned: a
+release publishes them as the `dycov_examples.zip` asset, beside the Dynawo
+build, and this puts them where the examples expect them:
+
+```bash
+tools/scripts/fetch_example_curves.sh
+```
+
+It takes them from the release this checkout descends from. The other way to
+get them is `tools/scripts/regenerate_curves.sh`, which produces them from the
+tool itself and needs Dynawo and a few hours; that is what a release runs.
+Until a release publishes the asset, regenerating is the only way.
+
 ---
 
 ## 5. Creating the development environment
 
-Create a virtual environment using **Python 3.13**:
+Create a virtual environment. This guide uses Python 3.13; Python 3.14 works
+the same way:
 
 ```bash
 uv venv dycov_venv --python 3.13
@@ -222,7 +233,82 @@ bash installers/install_bash_completion.sh "$PWD/dycov_venv"
 
 ---
 
-## 8. Typical development workflow
+## 8. Quality checks, tests and documentation
+
+The commands below are run from the repository root with the virtual
+environment activated. They are the checks CI runs on every pull request.
+
+### 8.1 Linting and formatting
+
+**ruff** handles both, configured in `pyproject.toml` (line length 99, rules
+`E`, `F`, `W` and `I`):
+
+```bash
+ruff check src tests            # lint
+ruff format --check src tests   # formatting, as CI verifies it
+ruff format src tests           # formatting, applied
+```
+
+### 8.2 Tests
+
+The unit tests live under `tests/`, mirroring the `src/dycov/` layout, and run
+with **pytest**; `pytest.ini` already points it at that directory:
+
+```bash
+pytest                          # the whole unit test suite
+pytest tests/dycov/model        # a single subtree
+pytest --cov=src                # with coverage
+```
+
+`tests/README.md` states the style every new test must follow. Coverage is
+informational: there is no coverage gate.
+
+The end-to-end tests under `tests_integration/` are not part of that run. They
+execute real Dynawo simulations, so they need a working Dynawo installation
+and take far longer. Run them explicitly:
+
+```bash
+pytest tests_integration
+```
+
+### 8.3 Building the manuals
+
+Both Sphinx manuals are built with `make`, from their own directory:
+
+```bash
+cd docs/manual        # user manual
+make html             # -> build/html/index.html
+make latexpdf         # -> build/latex/dycov.pdf
+
+cd ../manual_dev      # developer manual
+make html             # -> build/html/index.html
+make latexpdf         # -> build/latex/dycov-dev.pdf
+```
+
+The PDF targets need the LaTeX packages of section 2.3. The user manual's
+`Makefile` runs `helps.py` before Sphinx, so its CLI reference pages are
+regenerated from the installed version of the tool.
+
+### 8.4 Unattended runs: the `--testing` flag
+
+When `dycov validate` or `dycov performance` finishes, it opens the report it
+has just generated in the system viewer, whenever a display is available. That
+is convenient interactively, but it blocks any unattended run — a full example
+execution, a before/after comparison — on the first report it produces.
+
+Both commands accept `--testing`, which suppresses it:
+
+```bash
+dycov validate --testing -l /path/to/dynawo/dynawo.sh ...
+```
+
+The flag is declared with `argparse.SUPPRESS`, so it does not show up in
+`--help`. It is meant for developers and is deliberately absent from the user
+documentation.
+
+---
+
+## 9. Typical development workflow
 
 A common development loop is:
 
@@ -232,13 +318,15 @@ A common development loop is:
     ```
 2.  Modify source files under `src/dycov/`.
 3.  Ensure Dynawo is correctly configured and reachable.
-4.  Run DyCoV commands or tests.
+4.  Run DyCoV commands against one of the bundled examples, which needs their
+    curves (section 4).
 5.  Inspect logs, generated results, and reports.
-6.  Iterate.
+6.  Run the checks of section 8 before committing: `pytest` and `ruff`.
+7.  Iterate.
 
 ---
 
-## 9. When to use this setup
+## 10. When to use this setup
 
 Use this development setup if you:
 
@@ -252,7 +340,7 @@ use the installation methods described in `docs/installation/` instead.
 
 ---
 
-## 10. DyCoV architecture overview
+## 11. DyCoV architecture overview
 
 The diagram below provides a high-level view of the DyCoV execution flow.
 It is intended to help developers understand the main components and their

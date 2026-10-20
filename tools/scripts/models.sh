@@ -22,7 +22,6 @@ MODEL_EXAMPLES_WECC=(
     "Photovoltaics/WECCVoltageSource4"
     "Wind/WECC31"
     "Wind/WECC32"
-    "Wind/WECC4"
     "Wind/WECC4A"
     "Wind/WECC4B"
 )
@@ -31,4 +30,13 @@ MODEL_EXAMPLES_WECC=(
 PRODUCER_CURVES_SOURCE=(
     "PPM:Wind/IECB2015"
     "BESS:BESS/WECC"
+)
+
+# The producer curves of the Performance examples are the curves of a run in performance mode,
+# of the Zone 3 model of one of the examples above or, where there is no Model example of that
+# kind, of a Performance example of its own. The path is the input directory, under examples/.
+PERFORMANCE_CURVES_SOURCE=(
+    "SM:Performance/SingleAux/GeneratorSynchronousFourWindingsTGov1SexsPss2a/Dynawo"
+    "PPM:Model/Wind/IECB2015/Dynawo/Zone3"
+    "BESS:Model/BESS/WECC/Dynawo/Zone3"
 )

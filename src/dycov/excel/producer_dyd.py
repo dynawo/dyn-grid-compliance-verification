@@ -18,10 +18,13 @@ from lxml import etree
 
 from dycov.excel import parse as P
 from dycov.files.producer_dyd_file import (
+    BESS_ID,
     GROUP_XFMR_ID,
     MAIN_XFMR_ID,
+    PPM_ID,
     create_producer_dyd_file,
     fill_producer_dyd,
+    unit_ids,
     write_producer_dyd,
 )
 
@@ -34,7 +37,6 @@ _LIB_LINE = "Line"
 _LIB_LOAD = "LoadAlphaBeta"
 _LIB_BUS = "Bus"
 
-# Expanded to support multi-generator (M) topologies
 _SUPPORTED_TOPOLOGIES = ("S", "S+i", "S+Aux", "S+Aux+i", "M", "M+i", "M+Aux", "M+Aux+i")
 
 # The network blocks a topology may contain, with the lib each one takes.
@@ -67,7 +69,7 @@ def checked_topology(zone3: dict) -> str:
     topology = re.sub(r"\s+", "", P.texts("Zone3", zone3)("topology"))
     if topology not in _SUPPORTED_TOPOLOGIES:
         raise ValueError(
-            f"topology {topology!r} in sheet {P.sheet_of(zone3)!r} is not generated yet; "
+            f"topology {topology!r} in sheet {P.sheet_of(zone3)!r} is not one DyCoV knows; "
             f"supported: {', '.join(_SUPPORTED_TOPOLOGIES)}."
         )
     return topology
@@ -78,10 +80,12 @@ def write_dyd(
     producer_name: str,
     topology: str,
     template: str,
-    generators: list[dict],
-    rename: dict,
+    units: list,
 ) -> None:
-    """Write both zones' DYD: DyCoV's topology, with the resolved model filled in.
+    """Write both zones' DYD: DyCoV's topology, with the resolved model of each unit filled in.
+
+    Each unit has a Zone1 DYD of its own, with its step-up transformer, and a block in the Zone3
+    one, behind the plant's regulated transformer.
 
     Parameters
     ----------
@@ -93,47 +97,35 @@ def write_dyd(
         Topology name, as ``checked_topology`` returns it.
     template: str
         DyCoV input template (``model_PPM`` or ``model_BESS``).
-    generators: list[dict]
-        Information needed to build the topology for each generating unit.
-    rename: dict
-        Block ids to rename first, when the template's generator id is not generic.
+    units: list
+        The ``units.GeneratingUnit`` of the plant.
     """
-    n_generators = len(generators)
-    create_producer_dyd_file(root, topology, template, n_generators=n_generators)
-
-    for zone in ("Zone1", "Zone3"):
-        libs = {**_NETWORK_LIBS}
-        terminals = {}
-
-        if zone == "Zone3":
-            libs[MAIN_XFMR_ID] = _LIB_XFMR_OLTC
-
-        for gen in generators:
-            gen_id = gen["gen_id"]
-            xfmr_id = gen.get("xfmr_id", GROUP_XFMR_ID)
-
-            if zone == "Zone1":
-                lib = gen["resolved"]["zone1_lib"]
-                prefix = gen["resolved"]["zone1_prefix"]
-                libs[xfmr_id] = _LIB_XFMR_FIXED
-            else:
-                lib = gen["resolved"]["zone3_lib"]
-                prefix = gen["resolved"]["zone3_prefix"]
-
-            libs[gen_id] = lib
-            terminals[gen_id] = f"{prefix}terminal"
-
+    create_producer_dyd_file(root, topology, template, n_generators=len(units))
+    template_id = BESS_ID if template == "model_BESS" else PPM_ID
+    for unit in units:
         fill_producer_dyd(
-            root / zone / f"{producer_name}.dyd",
-            libs=libs,
-            terminals=terminals,
-            rename=rename,
+            root / "Zone1" / f"{unit.zone1_file}.dyd",
+            libs={
+                **_NETWORK_LIBS,
+                GROUP_XFMR_ID: _LIB_XFMR_FIXED,
+                unit.gen_id: unit.model["zone1_lib"],
+            },
+            terminals={unit.gen_id: f"{unit.model['zone1_prefix']}terminal"},
+            rename={template_id: unit.gen_id},
         )
+    fill_producer_dyd(
+        root / "Zone3" / f"{producer_name}.dyd",
+        libs={
+            **_NETWORK_LIBS,
+            MAIN_XFMR_ID: _LIB_XFMR_OLTC,
+            **{unit.plant_id: unit.model["zone3_lib"] for unit in units},
+        },
+        terminals={unit.plant_id: f"{unit.model['zone3_prefix']}terminal" for unit in units},
+        rename=dict(zip(unit_ids(template_id, len(units)), (unit.plant_id for unit in units))),
+    )
 
 
-def drop_group_transformer(
-    dyd_file: Path, gen_id: str, gen_terminal: str, xfmr_id: str = GROUP_XFMR_ID
-) -> None:
+def drop_group_transformer(dyd_file: Path, gen_id: str, gen_terminal: str) -> None:
     """Remove the group transformer and wire the generator to the node it fed.
 
     The unit's own transformer already reaches the internal node when
@@ -148,8 +140,6 @@ def drop_group_transformer(
         Id of the generator block.
     gen_terminal: str
         Terminal of the generator block, prefixed by its model.
-    xfmr_id: str
-        Id of the specific transformer block to remove. Defaults to GROUP_XFMR_ID.
     """
     parser = etree.XMLParser(remove_blank_text=True)
     tree = etree.parse(str(dyd_file), parser)
@@ -159,17 +149,15 @@ def drop_group_transformer(
     downstream = None
     for connect in list(root.iterfind(f"{{{ns}}}connect")):
         id1, var1, id2, var2 = (connect.get(k) for k in ("id1", "var1", "id2", "var2"))
-        if id1 == xfmr_id and var1 == _XFMR_TERMINAL2:
+        if id1 == GROUP_XFMR_ID and var1 == _XFMR_TERMINAL2:
             downstream = (id2, var2)
-        elif id2 == xfmr_id and var2 == _XFMR_TERMINAL2:
+        elif id2 == GROUP_XFMR_ID and var2 == _XFMR_TERMINAL2:
             downstream = (id1, var1)
-        if xfmr_id in (id1, id2):
+        if GROUP_XFMR_ID in (id1, id2):
             root.remove(connect)
-
     for bbmodel in list(root.iterfind(f"{{{ns}}}blackBoxModel")):
-        if bbmodel.get("id") == xfmr_id:
+        if bbmodel.get("id") == GROUP_XFMR_ID:
             root.remove(bbmodel)
-
     if downstream:
         etree.SubElement(
             root,

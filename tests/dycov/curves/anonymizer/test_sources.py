@@ -11,13 +11,16 @@ from __future__ import annotations
 
 import logging
 
+import pytest
 from tests.dycov.curves.anonymizer.conftest import create_flat_csv_and_log
 
 from dycov.curves.anonymizer.sources import (
     _create_dict_file,
+    copy_from_producer,
     create_curves_files_ini,
     extract_metadata_from_logs,
 )
+from dycov.files.simulation_files import SIMULATION_INPUTS_FILE
 
 ZONE1_COLUMNS = (
     "time;InternalNode1_BUS_Voltage;PV_Array_GEN_VoltageInjTerminal;"
@@ -97,7 +100,7 @@ def test_metadata_without_a_simulation_record_is_empty(tmp_path):
     assert metadata == {}
 
 
-def test_the_dictionary_asks_for_every_curve_the_zone_compares(tmp_path):
+def test_the_dictionary_asks_for_every_curve_the_zone_compares_or_draws(tmp_path):
     curves = tmp_path / "curves"
     curves.mkdir()
     csv = _make_zone1_curves(curves)
@@ -113,7 +116,40 @@ def test_the_dictionary_asks_for_every_curve_the_zone_compares(tmp_path):
         "PV_Array_GEN_ReactivePowerControlledPu = PV_Array_GEN_ReactivePowerControlledPu",
         "PV_Array_GEN_ActiveCurrentInjTerminal = PV_Array_GEN_ActiveCurrentInjTerminal",
         "PV_Array_GEN_ReactiveCurrentInjTerminal = PV_Array_GEN_ReactiveCurrentInjTerminal",
+        "PV_Array_GEN_ActivePowerSetpointPu = ",
+        "PV_Array_GEN_ReactivePowerSetpointPu = ",
     ]
+
+
+def test_a_setpoint_the_file_carries_is_declared_where_it_is_asked_for(tmp_path):
+    curves = tmp_path / "curves"
+    curves.mkdir()
+    csv = curves / "PCS_RTE-I16z1.SetPointStep.Active.csv"
+    csv.write_text(
+        ZONE1_COLUMNS.rstrip("\n") + ";PV_Array_GEN_ActivePowerSetpointPu\n"
+        "0.0;1.0;1.0;0.5;0.1;0.5;0.1;0.5\n",
+        encoding="utf-8",
+    )
+
+    _create_dict_file(csv, {})
+
+    section = _curves_section(csv.with_suffix(".dict"))
+    assert section[-2:] == [
+        "PV_Array_GEN_ActivePowerSetpointPu = PV_Array_GEN_ActivePowerSetpointPu",
+        "PV_Array_GEN_ReactivePowerSetpointPu = ",
+    ]
+
+
+def test_a_setpoint_the_file_does_not_carry_is_not_warned_about(tmp_path, caplog):
+    """#554: the setpoints are only drawn, so their absence costs nothing."""
+    curves = tmp_path / "curves"
+    curves.mkdir()
+    csv = _make_zone1_curves(curves)
+
+    with caplog.at_level(logging.WARNING):
+        _create_dict_file(csv, {})
+
+    assert "does not carry" not in caplog.text
 
 
 def test_an_existing_dictionary_is_repointed_at_the_file_just_written(tmp_path):
@@ -187,3 +223,39 @@ def test_a_synchronous_compensator_is_not_taken_for_a_generating_unit(tmp_path, 
     assert "SyncCompensator_GEN_VoltageSetpointPu" not in written
     assert "SyncCompensator_GEN_FrequencyHz = SyncCompensator_GEN_FrequencyHz" in written
     assert "does not carry" not in caplog.text
+
+
+def test_a_record_written_as_an_ini_is_read_the_same(tmp_path):
+    curves = tmp_path / "curves"
+    curves.mkdir()
+    (curves / "curveA.csv").write_text("time;signal1\n0.0;1.0\n", encoding="utf-8")
+    (curves / "curveA.log").write_text(
+        "[Simulation]\nsim_t_event_start = 1.0\nfault_duration = 2.0\nfrequency_sampling = 50.0\n",
+        encoding="utf-8",
+    )
+
+    metadata = extract_metadata_from_logs(curves)
+
+    assert metadata["curveA"]["sim_t_event_start"] == 1.0
+    assert metadata["curveA"]["fault_duration"] == 2.0
+    assert metadata["curveA"]["frequency_sampling"] == 50.0
+
+
+@pytest.mark.parametrize("record_name", [SIMULATION_INPUTS_FILE, "dycov.log"])
+def test_the_simulation_record_is_copied_whatever_the_results_call_it(tmp_path, record_name):
+    """Results produced before the record was renamed are still a valid source."""
+    operating_condition = tmp_path / "Producer" / "PCS" / "BM" / "OC"
+    operating_condition.mkdir(parents=True)
+    (operating_condition / "curves_calculated.csv").write_text(
+        "time;signal1\n0.0;1.0\n", encoding="utf-8"
+    )
+    (operating_condition / record_name).write_text(
+        "[Simulation]\nsim_t_event_start = 1.0\n", encoding="utf-8"
+    )
+    curves = tmp_path / "curves"
+    curves.mkdir()
+
+    copy_from_producer(tmp_path / "Producer", curves)
+
+    assert (curves / "PCS.BM.OC.csv").exists()
+    assert (curves / "PCS.BM.OC.log").read_text().startswith("[Simulation]")

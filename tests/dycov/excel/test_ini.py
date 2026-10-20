@@ -14,36 +14,28 @@ from __future__ import annotations
 import configparser
 
 from dycov.excel import producer_ini as ini
+from dycov.excel.units import GeneratingUnit
 
 
-def _read_ini(path):
-    """Helper to read the generated INI file and return its DEFAULT section as a dict."""
-    parser = configparser.ConfigParser()
+def _read(path):
+    parser = configparser.ConfigParser(inline_comment_prefixes=("#",))
     parser.read(path)
-    return dict(parser["DEFAULT"])
+    return {key: value.strip() for key, value in parser["DEFAULT"].items()}
 
 
 def _write(tmp_path, zone1, zone3, gen_id="PV_Array", include_consumption=False):
     for zone in ("Zone1", "Zone3"):
         (tmp_path / zone).mkdir(exist_ok=True)
-
-    # Wrap the single test generator into the new list format
-    generators = [{"gen_id": gen_id, "zone1_data": zone1}]
-
+    unit = GeneratingUnit(zone1, {}, "Producer", gen_id=gen_id, plant_id=gen_id)
     ini.write_ini(
         tmp_path,
         "Producer",
         "S+Aux",
-        generators,
+        [unit],
         zone3,
         include_consumption=include_consumption,
     )
-
-    # Read and return the generated INI files as dictionaries so tests can subscript them
-    return (
-        _read_ini(tmp_path / "Zone1" / "Producer.ini"),
-        _read_ini(tmp_path / "Zone3" / "Producer.ini"),
-    )
+    return _read(tmp_path / "Zone1" / "Producer.ini"), _read(tmp_path / "Zone3" / "Producer.ini")
 
 
 def test_each_zone_declares_the_node_it_connects_at(tmp_path, zone1, zone3):
@@ -51,10 +43,10 @@ def test_each_zone_declares_the_node_it_connects_at(tmp_path, zone1, zone3):
     # converter's own Un2.
     z1, z3 = _write(tmp_path, zone1, zone3)
 
-    assert (z1["u_nom_at_pdr"], z3["u_nom_at_pdr"]) == (zone1["Un1"], zone3["Un_PDR"])
-    assert z1["p_max_injection_at_pdr"] == zone1["Pmax_injection_z1"]
-    assert z3["p_max_injection_at_pdr"] == zone3["Pmax_injection_PDR"]
-    assert (z1["q_min_at_pdr"], z3["q_min_at_pdr"]) == (zone1["Qmin_z1"], zone3["Qmin_PDR"])
+    assert (z1["u_nom"], z3["u_nom"]) == (zone1["Un1"], zone3["Un_PDR"])
+    assert z1["p_max_injection"] == zone1["Pmax_injection_z1"]
+    assert z3["p_max_injection"] == zone3["Pmax_injection_PDR"]
+    assert (z1["q_min"], z3["q_min"]) == (zone1["Qmin_z1"], zone3["Qmin_PDR"])
 
 
 def test_zone1_describes_its_own_node_and_not_the_pdr(tmp_path, zone1, zone3):
@@ -63,7 +55,8 @@ def test_zone1_describes_its_own_node_and_not_the_pdr(tmp_path, zone1, zone3):
 
     text = (tmp_path / "Zone1" / "Producer.ini").read_text()
 
-    assert "# u_nom is the nominal voltage of Zone 1's internal node (Node 1), in kV" in text
+    assert "declared at InternalNode1" in text
+    assert "declared at the PDR" not in text
     assert "Allowed values" not in text
 
 
@@ -74,26 +67,90 @@ def test_zone1_is_a_single_unit_whatever_the_plant_topology(tmp_path, zone1, zon
 
 
 def test_the_power_sharing_is_keyed_by_the_generator_block(tmp_path, zone1, zone3):
-    z1, _z3 = _write(tmp_path, zone1, zone3, gen_id="Bess")
+    zone1["P_share"], zone1["Q_share"] = "0.8", "0.6"
 
-    assert z1["p_sharing_bess"] == zone1["P_share"]
-    assert z1["q_sharing_bess"] == zone1["Q_share"]
+    z1, z3 = _write(tmp_path, zone1, zone3, gen_id="Bess")
+
+    # Alone in its Zone1 test, the unit takes the whole power; the rows share the plant's.
+    assert (z1["p_sharing_bess"], z1["q_sharing_bess"]) == ("1.0", "1.0")
+    assert (z3["p_sharing_bess"], z3["q_sharing_bess"]) == ("0.8", "0.6")
+
+
+def test_each_unit_of_a_multiple_plant_declares_its_own_zone1(tmp_path, zone1, zone3):
+    for zone in ("Zone1", "Zone3"):
+        (tmp_path / zone).mkdir()
+    second = {**zone1, "Pmax_injection_z1": "2.5", "P_share": "0.4", "Q_share": "0.3"}
+    units = [
+        GeneratingUnit(
+            rows, {}, f"Producer_G{n}", gen_id="Wind_Turbine", plant_id=f"Wind_Turbine{n}"
+        )
+        for n, rows in ((1, {**zone1, "P_share": "0.6", "Q_share": "0.7"}), (2, second))
+    ]
+
+    ini.write_ini(tmp_path, "Producer", "M+Aux", units, zone3, include_consumption=False)
+
+    assert not (tmp_path / "Zone1" / "Producer.ini").exists()
+    g1, g2 = (_read(tmp_path / "Zone1" / f"Producer_G{n}.ini") for n in (1, 2))
+    assert (g1["topology"], g2["topology"]) == ("S", "S")
+    assert (g1["p_max_injection"], g2["p_max_injection"]) == (zone1["Pmax_injection_z1"], "2.5")
+    assert g2["p_sharing_wind_turbine"] == "1.0"
+    z3 = _read(tmp_path / "Zone3" / "Producer.ini")
+    assert z3["topology"] == "M+Aux"
+    assert (z3["p_sharing_wind_turbine1"], z3["p_sharing_wind_turbine2"]) == ("0.6", "0.4")
+    assert (z3["q_sharing_wind_turbine1"], z3["q_sharing_wind_turbine2"]) == ("0.7", "0.3")
 
 
 def test_storage_declares_its_consumption_in_both_zones(tmp_path, zone1, zone3):
     # DyCoV rejects a BESS INI without the consumption limit, and each zone takes its own row:
-    # the Zone1a one is per unit, the Zone3 one is the whole plant.
+    # the Zone1<x> one is per unit, the Zone3 one is the whole plant.
     zone1["Pmax_soutirage_z1"] = "0.333"
     zone3["Pmax_soutirage_PDR"] = "40"
 
     z1, z3 = _write(tmp_path, zone1, zone3, gen_id="Bess", include_consumption=True)
 
-    assert z1["p_max_consumption_at_pdr"] == "0.333"
-    assert z3["p_max_consumption_at_pdr"] == "40"
+    assert z1["p_max_consumption"] == "0.333"
+    assert z3["p_max_consumption"] == "40"
 
 
 def test_a_non_storage_model_declares_no_consumption(tmp_path, zone1, zone3):
     z1, z3 = _write(tmp_path, zone1, zone3)
 
-    assert "p_max_consumption_at_pdr" not in z1
-    assert "p_max_consumption_at_pdr" not in z3
+    assert "p_max_consumption" not in z1
+    assert "p_max_consumption" not in z3
+
+
+def test_zone3_declares_the_minimum_injection_the_f16_tests_start_from(tmp_path, zone1, zone3):
+    zone3["Pmin_injection_PDR"] = "7.5"
+
+    z1, z3 = _write(tmp_path, zone1, zone3)
+
+    assert z3["p_min_injection"] == "7.5"
+    assert "p_min_injection" not in z1
+
+
+def test_an_empty_minimum_injection_stays_commented_out(tmp_path, zone1, zone3):
+    zone3["Pmin_injection_PDR"] = None
+
+    _z1, z3 = _write(tmp_path, zone1, zone3)
+
+    assert "p_min_injection" not in z3
+    assert "# p_min_injection =" in (tmp_path / "Zone3" / "Producer.ini").read_text()
+
+
+def test_storage_declares_its_minimum_consumption_in_zone3(tmp_path, zone1, zone3):
+    zone1["Pmax_soutirage_z1"] = "0.333"
+    zone3["Pmax_soutirage_PDR"] = "40"
+    zone3["Pmin_soutirage_PDR"] = "4"
+
+    z1, z3 = _write(tmp_path, zone1, zone3, gen_id="Bess", include_consumption=True)
+
+    assert z3["p_min_consumption"] == "4"
+    assert "p_min_consumption" not in z1
+
+
+def test_a_non_storage_model_ignores_the_minimum_consumption(tmp_path, zone1, zone3):
+    zone3["Pmin_soutirage_PDR"] = "4"
+
+    _z1, z3 = _write(tmp_path, zone1, zone3)
+
+    assert "p_min_consumption" not in z3

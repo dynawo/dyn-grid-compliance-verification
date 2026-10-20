@@ -21,6 +21,8 @@ from dycov.logging import dycov_logging
 
 ProcessOutcome = namedtuple("ProcessOutcome", "completed_successfully stderr elapsed_seconds")
 
+_ERROR_MARKER = "| ERROR |"
+
 
 class _ProcRegistry:
     """Simple process registry for DynawoSimulator child processes."""
@@ -52,16 +54,7 @@ def kill_process(proc: subprocess.Popen) -> None:
     proc : subprocess.Popen
         The process to kill.
     """
-    if os.name == "nt":
-        subprocess.run(
-            f"taskkill /F /T /PID {proc.pid}",
-            shell=True,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            check=False,
-        )
-    else:
-        os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
+    os.killpg(os.getpgid(proc.pid), signal.SIGKILL)
 
 
 def run_dynawo_process(
@@ -99,7 +92,7 @@ def run_dynawo_process(
         cwd=inputs_path,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        preexec_fn=os.setsid if os.name != "nt" else None,
+        preexec_fn=os.setsid,
     )
     _proc_registry.add(proc)
     start_time = time.time()
@@ -129,45 +122,36 @@ def run_dynawo_process(
     )
 
 
-def has_error_timeline(pcs_name: str, bm_name: str, oc_name: str, log_path: Path) -> bool:
-    """Check if the Dynawo log file contains any error messages.
+def find_timeline_error(log_path: Path) -> str | None:
+    """Look in the Dynawo log file for the first error it reported.
 
     Parameters
     ----------
-    pcs_name : str
-        Name of the PCS.
-    bm_name : str
-        Name of the benchmark.
-    oc_name : str
-        Name of the operating condition.
     log_path : Path
         Path to the Dynawo log file.
 
     Returns
     -------
-    bool
-        True if an error message is found in the log file, False otherwise.
+    str | None
+        The error Dynawo reported, without the timestamp and level it is logged with,
+        or None if it reported none. A run that reports nothing at the configured log
+        level leaves no log file at all, which is the ordinary case.
     """
     if not log_path.is_file():
-        dycov_logging.get_logger("DynawoSimulator").warning(f"Log file not found at {log_path}")
-        return False
+        dycov_logging.get_logger("DynawoSimulator").debug(f"Dynawo logged nothing at {log_path}")
+        return None
     with open(log_path, "r") as log:
         for line in log:
             if "ERROR" in line:
-                dycov_logging.get_logger("DynawoSimulator").debug(
-                    f"{pcs_name}.{bm_name}.{oc_name}: Error found in: {line.strip()}"
-                )
-                return True
-    return False
+                _, marker, message = line.partition(_ERROR_MARKER)
+                return (message if marker else line).strip()
+    return None
 
 
 def _sigterm_all(procs: list[subprocess.Popen]) -> None:
     for p in procs:
         try:
-            if os.name == "nt":
-                p.terminate()
-            else:
-                os.killpg(os.getpgid(p.pid), signal.SIGTERM)
+            os.killpg(os.getpgid(p.pid), signal.SIGTERM)
         except Exception:
             try:
                 p.terminate()

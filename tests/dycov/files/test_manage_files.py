@@ -118,6 +118,26 @@ def test_create_and_remove_dir(tmp_path):
     assert not d.exists()
 
 
+def test_create_dir_without_cleaning_keeps_what_the_directory_holds(tmp_path):
+    d = tmp_path / "dir"
+    d.mkdir()
+    (d / "kept.txt").write_text("x")
+
+    create_dir(d, clean_first=False)
+
+    assert (d / "kept.txt").exists()
+
+
+def test_create_dir_accepts_a_directory_created_after_it_looked(tmp_path, monkeypatch):
+    d = tmp_path / "dir"
+    d.mkdir()
+    monkeypatch.setattr(Path, "exists", lambda path: False)
+
+    create_dir(d)
+
+    assert d.is_dir()
+
+
 # ---------------------------------------------------------------------------
 # Directory helpers
 # ---------------------------------------------------------------------------

@@ -9,13 +9,12 @@
 #
 
 import logging
+import multiprocessing
 import operator
 import os
 import shutil
-import signal
 import subprocess
 import sys
-from multiprocessing import Pool
 from operator import attrgetter
 from pathlib import Path
 
@@ -32,7 +31,7 @@ from dycov.core.global_variables import (
 )
 from dycov.core.graceful_shutdown import terminate_all_children
 from dycov.files import manage_files
-from dycov.logging import dycov_logging
+from dycov.logging import dycov_logging, worker_initializer
 from dycov.model.pcs import Pcs
 from dycov.report import report
 from dycov.report.LatexReportException import LatexReportException
@@ -52,11 +51,6 @@ def _open_document(file: Path, is_testing: bool) -> None:
     if is_testing:
         return
 
-    if os.name == "nt":
-        dycov_logging.get_logger("Validation").info(f"Opening the report: {file}")
-        subprocess.run(["start", file], shell=True)
-        return
-
     if not (shutil.which("xdg-open") and os.environ.get("DISPLAY")):
         dycov_logging.get_logger("Validation").info(f"Report saved in: {file}")
         return
@@ -68,11 +62,6 @@ def _open_document(file: Path, is_testing: bool) -> None:
         dycov_logging.get_logger("Validation").warning(
             f"The report could not be opened ({exc}). Report saved in: {file}"
         )
-
-
-def _worker_initializer():
-    """Workers ignore SIGINT; main process coordinates shutdown."""
-    signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 
 def _validate_pcs(pcs_args) -> tuple:
@@ -96,6 +85,11 @@ def _validate_pcs(pcs_args) -> tuple:
         if not pcs.is_valid():
             dycov_logging.get_logger("Validation").error(f"{pcs.get_name()} is not a valid PCS")
             return pcs.get_producer_name(), pcs.get_name(), False, {}
+        if not pcs.declares_tests():
+            dycov_logging.get_logger("Validation").info(
+                f"{pcs.get_name()}: no test declared, nothing to validate"
+            )
+            return pcs.get_producer_name(), pcs.get_name(), summary_list, {}
 
         report_name, success, pcs_results = pcs.validate(summary_list)
         pcs_results["pcs"] = pcs
@@ -159,9 +153,9 @@ class Validation:
         self._parameters = parameters
         self._is_testing = False  # Flag to avoid opening the report in the tests
         self._dry_run = dry_run
+        self._summary: list = []
 
         # Environment Path
-        self._modelica_path = Path(config.get_value("Global", "modelica_path"))
         self._templates_path = Path(config.get_value("Global", "templates_path"))
         self._path_latex_files = config.get_value("Global", "latex_templates_path")
 
@@ -315,6 +309,11 @@ class Validation:
         dycov_logging.get_logger("Validation").debug(f"Sorted summary {summary_list}")
 
         try:
+            if not summary_list:
+                dycov_logging.get_logger("Validation").warning(
+                    "No test was run, so there is no report to generate"
+                )
+                return
             report.create_pdf(
                 summary_list,
                 report_results,
@@ -335,6 +334,7 @@ class Validation:
                 manage_files.remove_dir(self._parameters.get_working_dir() / "Latex")
 
             # Move output files to destination folder
+            dycov_logging.close_run_handler()
             manage_files.rename_path(
                 self._parameters.get_working_dir(),
                 self._parameters.get_output_dir(),
@@ -351,7 +351,7 @@ class Validation:
         """
         return Path(__file__).parent.parent
 
-    def _validate(self, use_parallel: bool = False, num_processes: int = 4) -> list:
+    def _validate(self, use_parallel: bool = False, num_processes: int = 4) -> tuple[list, dict]:
         summary_list = []
         report_results = {}
 
@@ -359,8 +359,11 @@ class Validation:
             dycov_logging.get_logger("Validation").info(
                 f"Validating PCS in parallel using {num_processes} processes."
             )
-            # Use an initializer so only the main process handles SIGINT
-            with Pool(processes=num_processes, initializer=_worker_initializer) as pool:
+            with multiprocessing.Pool(
+                processes=num_processes,
+                initializer=worker_initializer,
+                initargs=(dycov_logging.get_handler_settings(),),
+            ) as pool:
                 try:
                     results = pool.map(_validate_pcs, self._pcs_list)
                     pool.close()
@@ -378,6 +381,7 @@ class Validation:
                     )
                     # Propagate conventional exit code for SIGINT
                     raise SystemExit(130)
+
             # Collect results only if we reached here (no interrupt)
             for producer_name, pcs_name, summary, pcs_results in results:
                 summary_list.extend(summary)
@@ -416,6 +420,7 @@ class Validation:
         summary_list, report_results = self._validate(use_parallel, num_processes)
         # Create the pcs report
         sorted_summary_list = sorted(summary_list, key=attrgetter("id", "zone", "producer_name"))
+        self._summary = sorted_summary_list
         self.__create_report(sorted_summary_list, report_results)
 
         if self._parameters.get_output_dir().exists():
@@ -431,6 +436,17 @@ class Validation:
 
         compliance_list = list(map(operator.attrgetter("compliance"), sorted_summary_list))
         return compliance_list
+
+    def get_summary(self) -> list:
+        """Returns what the last validation produced, one Summary per test, in the order the
+        report presents them. The compliance list that validate() returns is its verdict column.
+
+        Returns
+        -------
+        list
+            Summary of each test of the last validation, empty before the first one.
+        """
+        return self._summary
 
     def set_testing(self, testing: bool) -> None:
         """Sets the testing flag to avoid opening the report.

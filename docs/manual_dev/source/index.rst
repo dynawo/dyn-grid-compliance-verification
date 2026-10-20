@@ -31,10 +31,26 @@ without changing the Python code.
 Overall project structure
 =========================
 
-At the highest level, the **Dynamic grid Compliance Verification** tool is divided into 5 directories:
+At the highest level, the **Dynamic grid Compliance Verification** repository
+holds these directories:
 
-.. figure:: figs_structure/main_structure.png
-    :scale: 80
+.. code-block:: text
+
+   dyn-grid-compliance-verification/
+   ├── attic/
+   ├── docs/
+   ├── examples/
+   ├── installers/
+   ├── scripts/
+   ├── src/
+   ├── tests/
+   ├── tests_integration/
+   ├── tools/
+   └── workbooks/
+
+* ``attic``
+    Code that has been retired but is kept for reference. It is not packaged, not
+    imported by the tool and not tested.
 
 * ``docs``
     The tool documentation. Contains the manuals (user, developer), written in
@@ -45,28 +61,42 @@ At the highest level, the **Dynamic grid Compliance Verification** tool is divid
     The ``docs`` directory also contains several other stand-alone documents written
     during the development of the tool, which are useful mostly for developers.
 
-* ``installers``
-    Contains the scripts and tooling used to build distribution artifacts, generate
-    container images, and prepare end-user installation packages for both Linux
-    (native and Docker) and Windows (WSL and Docker). This directory is not used
-    during normal DyCoV execution.
-
 * ``examples``
-    Contains ready-to-run examples for all supported workflows, organized by
-    workflow type:
+    Contains ready-to-run examples for all supported workflows. Their curves are not
+    versioned: a release publishes them as its ``dycov_examples.zip`` asset, and a clone
+    gets them with ``tools/scripts/fetch_example_curves.sh`` or by regenerating them.
+    They are organized by workflow type:
 
         * ``Model/`` — RMS Model Validation examples (Dynawo models and ProducerCurves).
         * ``Performance/`` — Electric Performance Verification examples (Dynawo models and ProducerCurves).
         * ``GFM/`` — Grid-Forming envelope generation examples.
 
+* ``installers``
+    Contains the scripts and tooling used to build the distribution artifacts of a
+    release: the prebuilt image, which runs natively on Linux and, on a Windows host,
+    through WSL or Docker Desktop, and the native Linux installer. This directory is
+    not used during normal DyCoV execution.
+
 * ``src``
     Contains the sources of the tool, which are "built" as a Python package using
     setuptools.  See how the build is configured in ``pyproject.toml``.
 
-
 * ``tests``
     Contains unit tests of the tool.
 
+* ``tests_integration``
+    Contains the end-to-end tests, which run complete verifications and therefore need
+    a Dynawo installation and far more time than the unit tests.
+
+* ``tools``
+    Stand-alone utilities for development: code-quality audits, PAR generation from a
+    spreadsheet, comparisons of the initialization against OpenLoadFlow, and similar
+    analyses. They are run by hand, and are not part of the installed package.
+
+* ``workbooks``
+    The blank Excel workbooks an installation is described in, one per standard
+    (``Producer_IEC.xlsx`` and ``Producer_WECC.xlsx``). ``dycov excel2inputs`` writes
+    every input file of a model from a filled-in copy; the user manual explains how.
 
 
 src structure
@@ -76,8 +106,30 @@ The source directory has been organized based on the logical division of interna
 that the application should perform:
 
 
-.. figure:: figs_structure/src_structure.png
-    :scale: 80
+.. code-block:: text
+
+   src/dycov/
+   ├── cli/
+   ├── configuration/
+   ├── core/
+   ├── curves/
+   ├── electrical/
+   ├── excel/
+   ├── files/
+   ├── gfm/
+   ├── logging/
+   ├── model/
+   ├── model_lib/
+   ├── report/
+   ├── sanity_checks/
+   ├── sigpro/
+   ├── templates/
+   ├── validate/
+   └── validation/
+
+* ``cli``
+    The command-line interface: argument parsers (including shell completion)
+    and one handler per subcommand.
 
 * ``configuration``
     Contains the code responsible for importing the configuration files and the classes
@@ -91,20 +143,28 @@ that the application should perform:
     files, and verifying them.
 
 * ``curves``
-    Code responsible for importing and management of the signals files.
-
-* ``dynawo``
-    Code responsible for launching the Dynawo simulator for running a given case.
+    Code responsible for importing and managing the signal files, and — under
+    ``curves/dynawo/`` — for preparing, launching and post-processing the
+    Dynawo simulations of a case.
 
 * ``electrical``
     Code for calculating some electrical values needed at runtime (such as the
     generator's Udim, Pmax, etc.) and, most importantly, the **initialization** values
-    for Dynawo simulations (see ``initialization_calcs.py`` and the technical note at
-    ``docs/initialization/initialization.pdf``).
+    for Dynawo simulations (see ``initialization_calcs.py``). The method behind them
+    is written up in a technical note that the repository keeps as LaTeX sources only:
+    run ``make doc`` under ``docs/initialization/`` to build its PDF.
+
+* ``excel``
+    The ``excel2inputs`` workbook reader that generates a model's input files
+    from the Excel templates under ``workbooks/``.
 
 * ``files``
     Code related to file management, creating new files and/or directories, moving files from one
     location to another, replacing placeholders in files, etc.
+
+* ``gfm``
+    The Grid-Forming envelope generation workflow: analytical calculators per
+    event type, outputs and functional verification (see :doc:`development/GFM_module`).
 
 * ``logging``
     Logger for message management.
@@ -141,12 +201,14 @@ that the application should perform:
     the grid model), for each PCS.  Several parameters of the PAR files, most of them
     concerning *initialization*, are templatized and instantiated at runtime using
     Jinja.
-    In addition, the subdir ``modelica_models/`` contains as Modelica dynamic models
-    that had to be built for some PCSs.
 
 * ``report``
     Code that manages and generates the final reports for the user. Uses Jinja to
     instantiate the ``*.tex`` templates and calls LaTeX for processing them into PDF.
+
+* ``sanity_checks``
+    Validation of the user's inputs and environment: files, parameters,
+    topologies and system commands, checked before a run starts.
 
 * ``sigpro``
     Code for signal processing on the provided reference curves. It performs conversion
@@ -165,8 +227,15 @@ that the application should perform:
     Contains the LaTeX templates for the reports corresponding to each *PCS* of the
     DTR document.  The templating system is Jinja.
 
+* ``validate``
+    Entry objects of a verification run: the parameters, the producer under
+    test and the top-level ``validation`` driver the CLI handlers invoke.
+
 * ``validation``
     Implementation of the compliance checks defined by each of the DTR document *PCSs*.
+    The set of curves each zone compares is declared once, in the
+    ``compared_curves.py`` registry.
+
 
 Flowchart
 =========
@@ -193,6 +262,7 @@ and assume more knowledge of Dynamic grid Compliance Verification.
    :caption: Task-oriented Developer Guides
 
    development/installation
+   development/pcs_description
    development/addpcs
    development/addmodel
    development/GFM_module

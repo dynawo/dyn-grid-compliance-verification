@@ -17,14 +17,14 @@ import pandas as pd
 from dycov.configuration.cfg import config
 from dycov.curves.dynawo.runtime._curves import create_curves
 from dycov.curves.dynawo.runtime._process import (
-    has_error_timeline,
+    find_timeline_error,
     run_dynawo_process,
     terminate_all_children,
 )
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs
 from dycov.files import manage_files
 
-DynawoResult = namedtuple("DynawoResult", "succeeded log has_timeline_error curves sim_time")
+DynawoResult = namedtuple("DynawoResult", "succeeded log timeline_error curves sim_time")
 
 
 class DynawoSimulator:
@@ -66,7 +66,7 @@ class DynawoSimulator:
             A named tuple containing:
             - bool: True if the simulation completed successfully.
             - str | None: Log output from stderr if an error occurred, otherwise None.
-            - bool: True if an error was found in the Dynamic timeline log.
+            - str | None: The error Dynawo reported in its log, if it reported one.
             - pd.DataFrame: Transformed and calculated curves, empty on failure.
             - float: The actual time taken for the simulation.
         """
@@ -85,7 +85,6 @@ class DynawoSimulator:
             run.generators,
             run.s_nom,
             run.s_nref,
-            run.f_nom,
             simulation_limit=max_sim_time,
         )
 
@@ -93,14 +92,14 @@ class DynawoSimulator:
         log = result.log
         succeeded = result.succeeded and not time_exceeds
 
-        if result.has_timeline_error:
+        if result.timeline_error:
             log_path = str(output_dir / jobs_output_dir / "logs/dynawo.log")
-            log = f"Simulation Fails, logs in {log_path}"
+            log = f"Simulation Fails: {result.timeline_error}, logs in {log_path}"
 
         return DynawoResult(
             succeeded=succeeded,
             log=log,
-            has_timeline_error=result.has_timeline_error,
+            timeline_error=result.timeline_error,
             curves=result.curves,
             sim_time=result.sim_time,
         )
@@ -117,7 +116,6 @@ class DynawoSimulator:
         generators: list,
         s_nom: float,
         s_nref: float,
-        f_nom: float,
         simulation_limit: float,
         save_file: bool = False,
     ) -> DynawoResult:
@@ -146,8 +144,6 @@ class DynawoSimulator:
             Nominal apparent power of the system.
         s_nref : float
             System-wide S base (SnRef).
-        f_nom : float
-            Nominal frequency of the system.
         simulation_limit : float
             Maximum time (in seconds) allowed for the simulation to run.
         save_file : bool, optional
@@ -160,7 +156,7 @@ class DynawoSimulator:
             A named tuple containing:
             - bool: True if the simulation completed successfully.
             - str | None: Log output from stderr if an error occurred, otherwise None.
-            - bool: True if an error was found in the Dynamic timeline log.
+            - str | None: The error Dynawo reported in its log, if it reported one.
             - pd.DataFrame: Transformed and calculated curves, empty on failure.
             - float: The actual time taken for the simulation.
         """
@@ -176,7 +172,6 @@ class DynawoSimulator:
             generators,
             s_nom,
             s_nref,
-            f_nom,
             save_file=save_file,
             simulation_limit=simulation_limit,
         )
@@ -201,7 +196,6 @@ class DynawoSimulator:
         generators: list,
         s_nom: float,
         s_nref: float,
-        f_nom: float,
         save_file: bool = True,
         simulation_limit: float | None = None,
     ) -> DynawoResult:
@@ -232,8 +226,6 @@ class DynawoSimulator:
             Nominal apparent power of the system.
         s_nref : float
             System-wide S base (SnRef).
-        f_nom : float
-            Nominal frequency of the system.
         save_file : bool, optional
             If True, the calculated curves DataFrame will be created and returned.
             Defaults to True.
@@ -247,7 +239,7 @@ class DynawoSimulator:
             A named tuple containing:
             - bool: True if the simulation completed successfully.
             - str | None: Log output from stderr if an error occurred, otherwise None.
-            - bool: True if an error was found in the Dynamic timeline log.
+            - str | None: The error Dynawo reported in its log, if it reported one.
             - pd.DataFrame: Transformed and calculated curves, empty on failure.
             - float: The actual time taken for the simulation.
         """
@@ -257,7 +249,7 @@ class DynawoSimulator:
         outcome = run_dynawo_process(launcher_dwo, jobs_filename, inputs_path, simulation_limit)
 
         log_file_path = dynawo_output_full_path / "logs/dynawo.log"
-        timeline_error = has_error_timeline(pcs_name, bm_name, oc_name, log_file_path)
+        timeline_error = find_timeline_error(log_file_path)
 
         succeeded = outcome.completed_successfully and not timeline_error
         log = outcome.stderr if not succeeded else None
@@ -269,7 +261,6 @@ class DynawoSimulator:
             generators,
             s_nom,
             s_nref,
-            f_nom,
             save_file,
             succeeded,
         )
@@ -277,7 +268,7 @@ class DynawoSimulator:
         return DynawoResult(
             succeeded=succeeded,
             log=log,
-            has_timeline_error=timeline_error,
+            timeline_error=timeline_error,
             curves=curves_calculated,
             sim_time=outcome.elapsed_seconds,
         )
@@ -289,10 +280,9 @@ class DynawoSimulator:
         generators: list,
         s_nom: float,
         s_nref: float,
-        f_nom: float,
         save_file: bool,
         succeeded: bool,
     ) -> pd.DataFrame:
         if not path.exists() or not succeeded or not save_file:
             return pd.DataFrame()
-        return create_curves(variable_translations, path, generators, s_nom, s_nref, f_nom)
+        return create_curves(variable_translations, path, generators, s_nom, s_nref)

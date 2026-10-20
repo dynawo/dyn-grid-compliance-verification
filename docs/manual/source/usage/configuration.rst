@@ -1,3 +1,5 @@
+.. _configuration:
+
 =============
 Configuration
 =============
@@ -79,6 +81,11 @@ Basic configuration
   Comma-separated list of PCSs to run for **RMS Model Validation of Battery
   Energy Storage Systems**. Leave empty to run all applicable PCSs.
 
+* ``gridforming_pcs``
+
+  Comma-separated list of PCSs to run for **GFM envelope generation**. Leave
+  empty to run all applicable PCSs.
+
 * ``file_log_level``
 
   Log level for the log file, as a numeric Python logging level: ``50``
@@ -99,6 +106,15 @@ Basic configuration
 
   Maximum number of parallel processes allowed (default: 4).
 
+Advanced configuration
+""""""""""""""""""""""
+
+* ``skip_voltage_droop_adjustment``
+
+  When ``true``, the voltage droop adjustment of the generator initialization
+  is skipped and the voltage droop parameters of the producer PAR file are
+  left as written (default: ``false``).
+
 
 Dynawo options
 ^^^^^^^^^^^^^^
@@ -107,6 +123,14 @@ Options controlling the Dynawo simulation, applicable to all execution modes.
 
 Basic configuration
 """""""""""""""""""
+
+* ``log_level``
+
+  How much Dynawo writes to its own log, next to the curves of every test:
+  ``DEBUG``, ``INFO``, ``WARN`` (the default) or ``ERROR``. ``INFO`` adds one
+  line per solver time step — megabytes per test, only useful when looking
+  into the solver itself. Running DyCoV with ``--debug`` asks Dynawo for
+  ``DEBUG`` whatever this says.
 
 * ``simulation_limit``
 
@@ -165,6 +189,11 @@ Besides ``config.ini`` and its profiles, the configuration directory holds a
 ``templates/`` tree (``templates/PCS/`` and ``templates/reports/``) where the
 packaged PCS definitions and LaTeX report templates can be overridden or
 extended. See the *Advanced PCS customization* tutorial for the workflow.
+
+A ``PCSDescription.ini`` placed there needs to carry only the sections and keys
+it changes; the rest keeps the packaged value. It is also the most specific
+file DyCoV reads, so a PCS section written there wins over the same section
+written in ``config.ini``.
 
 
 Modifying the Benchmarks of a PCS
@@ -360,8 +389,9 @@ The corresponding parameters follow the same naming convention but with the
 
 **For setpoint monitoring tests**
 
-Regardless of the nature of the reference signal, the maximum permissible
-errors on the tracked quantity (in pu, base: setpoint variation level) are:
+The maximum permissible errors on the tracked quantity (in pu, base: setpoint
+variation level) depend on the PCS, not on the nature of the reference
+signal. For PCS I16, whatever the reference curves are, they are:
 
 +--------+--------------------+
 | window | quantity tracked   |
@@ -377,6 +407,25 @@ errors on the tracked quantity (in pu, base: setpoint variation level) are:
 
 Configurable parameters: ``thr_reftrack_<metric>_<window>``. For example:
 ``thr_reftrack_mxe_before``, ``thr_reftrack_mae_after``.
+
+For PCS F16, whose reference curves are on-site measurements, they are:
+
++--------+--------------------+
+| window | quantity tracked   |
+|        +------+------+------+
+|        | MXE  | ME   | MAE  |
++========+======+======+======+
+| Before | 0.05 | 0.03 | 0.04 |
++--------+------+------+------+
+| During | 0.10 | 0.05 | 0.07 |
++--------+------+------+------+
+| After  | 0.05 | 0.03 | 0.04 |
++--------+------+------+------+
+
+Configurable parameters: ``thr_FT_reftrack_<metric>_<window>``. A PCS
+selects this family by naming it in its description,
+``setpoint_tracking_thresholds = FT``; a PCS that names none uses the
+``thr_reftrack_*`` family.
 
 
 Configuring graph appearance in reports

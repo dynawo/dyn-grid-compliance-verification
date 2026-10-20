@@ -3,10 +3,11 @@ Adding a new dynamic model
 ==========================
 
 DyCoV is built on top of Dynawo, which has a large library of dynamic models
-covering most power generation and storage technologies. However, DyCoV does
-not automatically support every model in Dynawo's library — when a new model
-is added to Dynawo, or when an existing one changes its parameter or variable
-names, DyCoV needs to be updated to recognize it.
+covering most power generation and storage technologies. Custom models are
+compiled with Dynawo directly. However, DyCoV does not automatically support
+every model in Dynawo's library — when a new model is added to Dynawo, or
+when an existing one changes its parameter or variable names, DyCoV needs
+to be updated to recognize it.
 
 This section explains what that update involves and how to do it.
 
@@ -23,7 +24,7 @@ and ``WPP_xWPRefPu`` for IEC models — but DyCoV refers to all of them
 generically as ``VoltageSetpointPu``.
 
 This mapping is maintained in a set of INI files located under
-``src/dycov/dynawo/dictionary/``:
+``src/dycov/curves/dynawo/dictionary/``:
 
 * ``Bus.ini``
 * ``Control_Modes.ini``
@@ -42,8 +43,13 @@ to the DyCoV generic keywords described below.
 Generic keywords by equipment type
 ------------------------------------
 
-The following sections list all the generic keywords that DyCoV uses for each
-equipment type, together with their meaning and when they are required.
+The following sections list the main generic keywords that DyCoV uses for each
+equipment type, together with their meaning and when they are required. The
+dictionary INI files are the authoritative, complete list; when in doubt, copy
+the section of an existing model of the same family.
+
+Every model section must also declare its ``family`` key (``WECC`` or
+``IEC``): it selects which set of control flags applies to the model.
 
 Bus
 ^^^
@@ -88,7 +94,7 @@ Control and frequency:
     *DYNModelOmegaRef* and/or for Electrical Performance Verification and
     Model Validation.
 
-* ``'NetworkFrequencyValue'``
+* ``'NetworkFrequencyReference'``
     Reference frequency value. Required when OmegaRef is a *SetPoint* or an
     *InfiniteBus*.
 
@@ -102,6 +108,14 @@ Control and frequency:
 * ``'MagnitudeControlledByAVRPu'``
     Voltage amplitude controlled by the AVR in per unit. Always required.
 
+
+Power Park
+^^^^^^^^^^
+
+The generic keywords for Power Park models are the same as for Synchronous
+Generators, with the same applicability conditions, plus the following
+converter-specific keys and model-family-specific control flags.
+
 Injector terminal (required for Electrical Performance Verification and Model Validation).
 The dictionary declares what the Dynawo model provides; the tool divides the powers by the
 terminal voltage and emits the currents as ``'ActiveCurrentInjTerminal'`` and
@@ -109,8 +123,9 @@ terminal voltage and emits the currents as ``'ActiveCurrentInjTerminal'`` and
 
 * ``'ActivePowerInjTerminal'`` — active power at the injector's LV terminal (pu).
 * ``'ReactivePowerInjTerminal'`` — reactive power at the injector's LV terminal (pu).
-* ``'VoltageInjTerminalRe'`` / ``'VoltageInjTerminalIm'`` — the terminal voltage (pu),
-  whose amplitude the tool emits as ``'VoltageInjTerminal'``.
+* ``'VoltageInjTerminal'`` — the amplitude of the terminal voltage (pu), when the model
+  provides it; otherwise ``'VoltageInjTerminalRe'`` / ``'VoltageInjTerminalIm'``, its
+  components, whose amplitude the tool emits under that same name.
 * ``'MaxCurrentAtConverter'`` — maximum current amplitude (pu). Required for
   Electrical Performance Verification.
 
@@ -118,14 +133,6 @@ Setpoints (required for Model Validation):
 
 * ``'ActivePowerSetpointPu'`` — active power setpoint (pu).
 * ``'ReactivePowerSetpointPu'`` — reactive power setpoint (pu).
-
-
-Power Park
-^^^^^^^^^^
-
-The generic keywords for Power Park models are the same as for Synchronous
-Generators, with the same applicability conditions, plus the following
-model-family-specific control flags.
 
 WECC family:
 
@@ -145,6 +152,10 @@ WECC family:
 
 * ``'PFlag'``
     Power reference flag: constant Pref (False) or speed-dependent (True).
+
+* ``'FreqFlag'``
+    Plant-level frequency control: governor response disabled (False) or
+    enabled (True). Plant models only.
 
 * ``'PfFlag'``
     Power factor flag: Q control (False) or PF control (True).
@@ -176,16 +187,6 @@ Initialization:
 * ``'ResistancePu'``, ``'ReactancePu'``, ``'SusceptancePu'``,
   ``'ConductancePu'``
   — R, X, half-B, half-G in per unit. Required for initialization.
-
-Measurements (always required):
-
-* ``'ActivePower'`` — active power on side 2 (pu).
-* ``'ReactivePower'`` — reactive power on side 2 (pu).
-
-Measurements (required for Model Validation):
-
-* ``'ActiveCurrent'`` — active current on side 2 (pu).
-* ``'ReactiveCurrent'`` — reactive current on side 2 (pu).
 
 
 Load
@@ -222,10 +223,10 @@ Initialization:
     Nominal apparent power in MVA. Required if the impedance values above are
     expressed in percent rather than per unit.
 
-* ``'ActivePower0'``, ``'ReactivePower0'``, ``'Voltage0'``, ``'Phase0'``
+* ``'ActivePower10'``, ``'ReactivePower10'``, ``'Voltage10'``, ``'Phase10'``
   — start values at terminal 1. Required for initialization.
 
-* ``'VoltageSetpoint'``
+* ``'Voltage20'``
     Voltage setpoint on side 2 in per unit. Required for initialization.
 
 * ``'Tap'``
@@ -236,7 +237,7 @@ Control Modes
 --------------
 
 The ``Control_Modes.ini`` file (located at
-``src/dycov/configuration/Control_Modes.ini``) defines all available control
+``src/dycov/curves/dynawo/dictionary/Control_Modes.ini``) defines all available control
 mode configurations. It is organized in three sections.
 
 The ``[Parameters]`` section defines which flags are relevant for each
@@ -246,7 +247,7 @@ family/zone combination:
 
    [Parameters]
    ControlMode_WECC_Zone3 = PfFlag,VFlag,QFlag,PFlag,FreqFlag,RefFlag
-   ControlMode_WECC_Zone1 = PfFlag,VFlag,QFlag
+   ControlMode_WECC_Zone1 = PfFlag,VFlag,QFlag,PFlag
    ControlMode_IEC_Zone3  = MqG,MwpqMode
    ControlMode_IEC_Zone1  = MqG
    VoltageDroop_WECC_Zone3 = RefFlag,VCompFlag
@@ -285,7 +286,7 @@ the list of available named configurations, following the naming convention
      - ``IECWPP_ReactivePowerControl_QReference``,
        ``IECWPP_Openloop_ReactivePowerControl_QReference``
    * - ``VoltageDroop_IEC_Zone3``
-     - ``IECWPP_Voltage_Droop``
+     - the six ``USetpoint_IEC_Zone3`` options
    * - ``USetpoint_IEC_Zone1``
      - ``IECWT_VoltageControl``
    * - ``QSetpoint_IEC_Zone1``
@@ -307,17 +308,23 @@ WECC plant configurations:
      - QFlag
      - RefFlag
      - VCompFlag
+     - PFlag
+     - FreqFlag
    * - ``WTG_Voltage_Droop``
      - —
      - —
      - —
      - True
      - False
+     - —
+     - —
    * - ``WTG_UControl_Local_Coordinated``
      - False
      - True
      - True
      - True
+     - —
+     - —
      - —
    * - ``WTG_QControl_Local_Coordinated``
      - False
@@ -325,11 +332,15 @@ WECC plant configurations:
      - True
      - False
      - —
+     - —
+     - —
    * - ``WTG_Only_UControl``
      - False
      - —
      - False
      - True
+     - —
+     - —
      - —
    * - ``WTG_Only_QControl``
      - False
@@ -337,18 +348,24 @@ WECC plant configurations:
      - False
      - False
      - —
+     - —
+     - —
    * - ``WTG_PControl``
      - —
      - —
      - —
      - —
      - —
+     - False
+     - True
    * - ``WTG_PControl_Oscillation``
      - —
      - —
      - —
      - —
      - —
+     - True
+     - True
 
 WECC turbine configurations:
 
@@ -394,9 +411,6 @@ IEC plant configurations:
    * - Name
      - MqG
      - MwpqMode
-   * - ``IECWPP_Voltage_Droop``
-     - 0
-     - 3
    * - ``IECWPP_ReactivePowerControl_UQStatic``
      - 1
      - 2
