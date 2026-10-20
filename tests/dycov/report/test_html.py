@@ -116,17 +116,17 @@ def test_plotly_figures_with_additional_traces():
 def test_plotly_figures_draw_the_frequency_and_its_reference_in_hz():
     figure_description = FigureDescription(
         name="fig_WRef",
-        variables=[{"type": "generator", "variable": "NetworkFrequencyPu"}],
+        variables="NetworkFrequencyPu",
         ylabel=r"$\omega$ (Hz)",
         in_hz=True,
     )
-    calculated_curves = pd.DataFrame({"time": [0, 1], "WT_GEN_NetworkFrequencyPu": [1.0, 0.98]})
-    reference_curves = pd.DataFrame({"time": [0, 1], "WT_GEN_NetworkFrequencyPu": [1.0, 0.99]})
+    calculated_curves = pd.DataFrame({"time": [0, 1], "NetworkFrequencyPu": [1.0, 0.98]})
+    reference_curves = pd.DataFrame({"time": [0, 1], "NetworkFrequencyPu": [1.0, 0.99]})
     fig = go.Figure()
 
     html._plotly_figures(
         fig,
-        "WT_GEN_NetworkFrequencyPu",
+        "NetworkFrequencyPu",
         figure_description,
         calculated_curves,
         reference_curves,

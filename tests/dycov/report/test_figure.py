@@ -425,7 +425,7 @@ def test_draw_response_characteristics_marks_reaction_rise_and_settling(renderer
 def _frequency_figure(*deviations: float) -> FigureDescription:
     return FigureDescription(
         name="fig_WRef",
-        variables=[{"type": "generator", "variable": "NetworkFrequencyPu"}],
+        variables="NetworkFrequencyPu",
         ylabel=r"$\omega$ (Hz)",
         frequency_bands=[FrequencyBand(upper=d, lower=d) for d in deviations or (1.0,)],
         in_hz=True,
@@ -433,7 +433,7 @@ def _frequency_figure(*deviations: float) -> FigureDescription:
 
 
 def _frequency_curve(values: list) -> dict:
-    return {"name": "WT_GEN_NetworkFrequencyPu", "curve": values, "color": "#4c72b0", "style": "-"}
+    return {"name": "NetworkFrequencyPu", "curve": values, "color": "#4c72b0", "style": "-"}
 
 
 def test_create_plot_draws_the_frequency_and_its_reference_in_hz(monkeypatch, tmp_path):
@@ -480,13 +480,13 @@ def test_draw_additional_curves_draws_every_frequency_band_of_a_figure(renderer)
 
 def test_draw_response_characteristics_marks_the_settling_of_a_figure_in_hz_in_hz(renderer):
     results = {
-        "calc_settling_tube": {"WT_GEN_NetworkFrequencyPu": (1.0099, 1.0101)},
+        "calc_settling_tube": {"NetworkFrequencyPu": (1.0099, 1.0101)},
         "calc_settling_time": 0.37,
         "sim_t_event_start": 20.0,
         "calc_ss_value": 1.01,
     }
 
-    draw_response_characteristics(renderer, "WT_GEN_NetworkFrequencyPu", results, 50.0)
+    draw_response_characteristics(renderer, "NetworkFrequencyPu", results, 50.0)
 
     assert renderer.marks == [
         ("hrect", pytest.approx((50.495, 50.505))),

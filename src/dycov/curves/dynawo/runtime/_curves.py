@@ -10,13 +10,13 @@
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from dycov.core.global_variables import ABS_TOLERANCE_FACTOR, VOLTAGE_DIP_THRESHOLD
+from dycov.curves import naming
 from dycov.logging import dycov_logging
 
 
@@ -98,23 +98,6 @@ def report_unserved_requests(
     dycov_logging.get_logger("DynawoSimulator").warning(
         f"Dynawo did not provide the requested curves: {requests}"
     )
-
-
-def get_network_frequency_curve(curves_translation: dict) -> None:
-    """Identify the network frequency curve in the curves translation and add it with a
-    standardized name if found.
-
-    Parameters
-    ----------
-    curves_translation : dict
-        A dictionary mapping translated column names to their corresponding curve data. This
-        function will search for any column that matches the frequency patterns and add it to the
-        dictionary with the key "NetworkFrequencyPu" if found.
-    """
-    frequency_column_pattern = re.compile(r".*_NetworkFrequencyPu$")
-    frequency_columns = list(filter(frequency_column_pattern.match, curves_translation.keys()))
-    if frequency_columns:
-        curves_translation["NetworkFrequencyPu"] = curves_translation[frequency_columns[0]]
 
 
 def prepare_complex_column(
@@ -265,7 +248,7 @@ def translate_curves(
                 variable_translations, df_curves_imported, curves_translation, column
             )
 
-    get_network_frequency_curve(curves_translation)
+    naming.get_network_frequency_curve(curves_translation)
     return pd.DataFrame(curves_translation)
 
 

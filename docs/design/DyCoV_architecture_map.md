@@ -111,6 +111,9 @@ names.
 `curves.csv` (`time` first col), combines complex `_re`/`_im` pairs, applies sign conventions + unit scaling.
 Frequencies stay in pu of `f_nom`, the unit producer curves arrive in and the checks (`freq_1`, the
 I16 ramp) are written in; only a figure declared `in_hz` (`fig_W`, `fig_WRef`) draws them in Hz.
+The network frequency is `NetworkFrequencyPu` on both sides: `create_curves` and `ImportedCurves`
+copy the first `*_NetworkFrequencyPu` under that name unless the curves already carry it
+(`naming.get_network_frequency_curve`), and `fig_WRef` reads that name and nothing else.
 Core PCC signals come from the `Measurements` pseudo-model columns (`Measurements_BUS_*`).
 Dynawo drops a request for a variable its model does not have without failing, so
 `report_unserved_requests` warns for every `.crv` request absent from `curves.csv`, naming the tool

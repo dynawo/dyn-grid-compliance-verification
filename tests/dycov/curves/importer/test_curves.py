@@ -135,6 +135,16 @@ def _overwrite_dict(curves_dir: Path, content: str) -> None:
     (curves_dir / "Producer" / _DICT_NAME).write_text(content)
 
 
+def _write_frequency_curves(curves_dir: Path, frequencies: dict) -> None:
+    _write_curves(curves_dir)
+    names = "".join(f"{name} = {name}\n" for name in frequencies)
+    _overwrite_dict(curves_dir, f"{_FILLED_METADATA}\n[Curves-Dictionary]\ntime = time\n{names}")
+    values = ";".join(str(value) for value in frequencies.values())
+    (curves_dir / "Producer" / f"{_CFG_OC_NAME}.csv").write_text(
+        f"time;{';'.join(frequencies)}\n0.0;{values}\n20.0;{values}\n"
+    )
+
+
 def _make_working_dir(tmp_path: Path) -> Path:
     working_oc_dir = tmp_path / "working"
     working_oc_dir.mkdir()
@@ -200,6 +210,55 @@ def test_obtain_reference_curve_without_event_start_uses_the_default(tmp_path, t
     assert start_time == pytest.approx(0.0)
     assert not curves_df.empty
     assert producer.is_field_measurements is False
+
+
+# ---------------------------------------------------------------------------
+# Network frequency
+# ---------------------------------------------------------------------------
+
+
+def test_reference_curves_name_the_network_frequency_after_the_unit_frequency(
+    tmp_path, tool_config
+):
+    """#489: a dictionary that only declares the frequency each unit measures, as the one the
+    tool scaffolds for a synchronous machine does, still carries the curve fig_WRef reads."""
+    ref_dir = tmp_path / "ReferenceCurves"
+    _write_frequency_curves(ref_dir, {"SM_GEN_NetworkFrequencyPu": 0.99})
+    imported_curves = ImportedCurves(DummyProducer())
+
+    _, curves_df = imported_curves.obtain_reference_curve(
+        _make_working_dir(tmp_path), "Producer", _PCS, _BM, _OC, ref_dir
+    )
+
+    assert list(curves_df["NetworkFrequencyPu"]) == pytest.approx([0.99, 0.99])
+
+
+def test_producer_curves_name_the_network_frequency_after_the_unit_frequency(
+    tmp_path, tool_config
+):
+    curves_dir = tmp_path / "ProducerCurves"
+    _write_frequency_curves(curves_dir, {"SM_GEN_NetworkFrequencyPu": 0.99})
+    imported_curves = ImportedCurves(DummyProducer(curves_path=curves_dir))
+
+    _, _, _, curves_df = imported_curves.obtain_simulated_curve(
+        _make_working_dir(tmp_path), "Producer", _PCS, _BM, _OC, None
+    )
+
+    assert list(curves_df["NetworkFrequencyPu"]) == pytest.approx([0.99, 0.99])
+
+
+def test_imported_curves_keep_the_network_frequency_they_declare(tmp_path, tool_config):
+    ref_dir = tmp_path / "ReferenceCurves"
+    _write_frequency_curves(
+        ref_dir, {"NetworkFrequencyPu": 1.0, "SM_GEN_NetworkFrequencyPu": 0.99}
+    )
+    imported_curves = ImportedCurves(DummyProducer())
+
+    _, curves_df = imported_curves.obtain_reference_curve(
+        _make_working_dir(tmp_path), "Producer", _PCS, _BM, _OC, ref_dir
+    )
+
+    assert list(curves_df["NetworkFrequencyPu"]) == pytest.approx([1.0, 1.0])
 
 
 # ---------------------------------------------------------------------------
