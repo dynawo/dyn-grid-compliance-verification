@@ -617,8 +617,7 @@ def _add_deripple_argument(parser: argparse.ArgumentParser) -> None:
         arg_type=float,
         default=5.0,
         help_msg="Cut-off frequency, in Hz, of the filter that removes the oscillation the"
-        " simulation adds to the curves. It must sit well below that oscillation, which the"
-        " examples show between 12 and 17 Hz."
+        " simulation adds to the curves. It must sit well below that oscillation."
         " Default: 5.0, 0 to keep the oscillation.",
     )
 
