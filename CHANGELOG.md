@@ -77,3 +77,5 @@ cover this upgrade on their own:
 
 - Islanding simulations run again: the `DYNModelOmegaRef` connectors are written with the names
   Dynawo 2.0.0 expects (#606).
+- The WECC examples simulate every test again when several run at once: their plant controller no
+  longer has a voltage deadband, on whose edge the WECCVoltageSource4 swell kept the solver (#626).
