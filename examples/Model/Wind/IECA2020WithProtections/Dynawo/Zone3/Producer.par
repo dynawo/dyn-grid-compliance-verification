@@ -185,23 +185,41 @@
     <!-- Base unit: 50 Hz -->
     <par type="DOUBLE" name="WPP_fUnderPu" value="0.9"/>
     <!-- Points par abscisse croissante, en tenant compte des points laiss&#233;s vides, qui gardent la valeur par d&#233;faut de Dynawo | Base unit: Un2 -->
-    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt11" value="1"/>
-    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt12" value="2"/>
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt11" value="1.1"/>
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt12" value="100"/>
     <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt21" value="1.5"/>
-    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt22" value="2"/>
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt21" value="1.1001"/>
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt22" value="30.1"/>
     <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt31" value="2"/>
-    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt32" value="2"/>
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt31" value="1.15"/>
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt32" value="30.1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt41" value="1.1501"/>
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt42" value="2.6"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt51" value="1.25"/>
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt52" value="2.6"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt61" value="1.2501"/>
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt62" value="0.2"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt71" value="1.3"/>
+    <par type="DOUBLE" name="WPP_TabletUoverUwtfilt72" value="0.2"/>
     <!-- Points par abscisse croissante, en tenant compte des points laiss&#233;s vides, qui gardent la valeur par d&#233;faut de Dynawo | Base unit: Un2 -->
     <par type="DOUBLE" name="WPP_TabletUunderUwtfilt11" value="0"/>
-    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt12" value="2"/>
+    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt12" value="0.25"/>
     <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt21" value="0.5"/>
-    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt22" value="2"/>
+    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt21" value="0.8499"/>
+    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt22" value="1.6"/>
     <!-- Base unit: Un2 -->
-    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt31" value="1"/>
-    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt32" value="2"/>
+    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt31" value="0.85"/>
+    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt32" value="30.1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt41" value="0.8999"/>
+    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt42" value="30.1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt51" value="0.9"/>
+    <par type="DOUBLE" name="WPP_TabletUunderUwtfilt52" value="100"/>
     <!-- Plant control -->
     <par type="BOOL" name="WPP_PPCLocal" value="false"/>
     <!-- LV Transformer -->

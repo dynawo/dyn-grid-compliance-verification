@@ -359,6 +359,17 @@ def copy_base_case_files(
     )
     for file in [producer_files.producer_dyd, producer_files.producer_par]:
         copy_file(file, target_path / (file.stem + file.suffix.lower()))
+    _copy_producer_tables(producer_files.producer_par.parent, target_path)
+
+
+def _copy_producer_tables(producer_path: Path, target_path: Path) -> None:
+    """Copy the table files of the producer model, which its PAR reaches by name.
+
+    A parameter such as the ride-through protection's ``lhvrt_TablesFile`` names a file, and
+    Dynawo looks for it next to the inputs, so it travels with the DYD and the PAR.
+    """
+    for file in sorted(producer_path.glob("*.[tT][xX][tT]")):
+        copy_file(file, target_path / (file.stem + file.suffix.lower()))
 
 
 def _copy_curve_files_by_name(

@@ -197,6 +197,15 @@
     <par type="DOUBLE" name="WTG3_P4" value="1"/>
     <!-- Base unit: wn = 2*pi*50 rd/s -->
     <par type="DOUBLE" name="WTG3_Spd4" value="1"/>
+    <!-- LHVRT -->
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="lhvrt_UOverPu" value="1.1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="lhvrt_UUnderPu" value="0.9"/>
+    <par type="DOUBLE" name="lhvrt_tLagAction" value="0"/>
+    <par type="DOUBLE" name="lhvrt_tUFilt" value="0.001"/>
+    <par type="STRING" name="lhvrt_TabletUoverUfilt" value="hvrt"/>
+    <par type="STRING" name="lhvrt_TabletUunderUfilt" value="lvrt"/>
     <!-- Plant control -->
     <par type="BOOL" name="WTG3_PPCLocal" value="false"/>
     <!-- LV Transformer -->
@@ -205,6 +214,8 @@
     <par type="DOUBLE" name="WTG3_XLvTrPu" value="0.06"/>
     <!-- General -->
     <par type="DOUBLE" name="WTG3_SNom" value="90.0"/>
+    <par type="STRING" name="lhvrt_TablesFile" value="LHVRT.txt"/>
+    <par type="BOOL" name="lhvrt_TablesOnFile" value="true"/>
   </set>
 
   <set id="Main_Xfmr">

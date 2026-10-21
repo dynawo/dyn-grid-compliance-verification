@@ -78,7 +78,14 @@ The curves themselves are not committed — they ship as the `dycov_examples.zip
 script packs from this working tree — but the dictionaries whose event it brought up to date are,
 and the build script refuses to run with a dirty working tree, so commit those before tagging.
 
-### 2. Create and push the tag
+### 2. Close the changelog entry
+
+Rename `## Unreleased` in [../CHANGELOG.md](../CHANGELOG.md) to the version being released with
+its date, leave a fresh empty `## Unreleased` above it, and commit. The build runs from the
+tagged commit, so this has to be done before the tag exists: otherwise the artifacts ship a
+changelog that does not name its own version.
+
+### 3. Create and push the tag
 
 ```bash
 git tag v0.9.3
@@ -88,7 +95,7 @@ git push origin v0.9.3
 The build script refuses to run unless HEAD is exactly on the tag and the working tree is
 clean.
 
-### 3. Run the build script from the repository root
+### 4. Run the build script from the repository root
 
 ```bash
 ./installers/prepare_release.sh VERSION DYNAWO_DIR [--dry-run]
@@ -112,7 +119,7 @@ that it reads the same without a network.
 | Step | Action |
 | :--- | :--- |
 | 0 | Verifies the Git state (tag exists, HEAD on the tag, clean tree), that the examples hold their curves and nothing else that Git ignores, and that every expected installer file is present. |
-| 1 | Zips `DYNAWO_DIR` into `Dynawo_omc_v1.8.0.zip` and places it in the output directory. |
+| 1 | Zips `DYNAWO_DIR` into `Dynawo_omc_v2.0.0.zip` and places it in the output directory. |
 | 1b | Zips the examples into `dycov_examples.zip`: the tracked tree from Git, so no local artifact reaches the asset, and the curves from the working tree, which Git does not carry. |
 | 2 | Copies `linux_install.sh` to the output directory, pinning `TARGET_BRANCH` to the tag and setting `DYNAWO_SHA256SUM` and `EXAMPLES_SHA256SUM` to the checksums of the zips from Steps 1 and 1b. |
 | 3 | Builds the user manual (`docs/manual`) in a temporary `uv` virtualenv: HTML and PDF. |
@@ -145,7 +152,7 @@ to the GitHub release:
 | `import_image.sh` | Method 4 (Linux Docker) |
 | `run_dycov_docker.sh` | Method 4 (Linux Docker) |
 | `linux_install.sh` | Method 3 (Linux Native) |
-| `Dynawo_omc_v1.8.0.zip` | Method 3 (Linux Native, downloaded automatically by `linux_install.sh`) |
+| `Dynawo_omc_v2.0.0.zip` | Method 3 (Linux Native, downloaded automatically by `linux_install.sh`) |
 | `dycov_examples.zip` | Method 3 (Linux Native, downloaded automatically by `linux_install.sh`); also what a developer fetches with `tools/scripts/fetch_example_curves.sh` |
 
 ---
@@ -153,7 +160,7 @@ to the GitHub release:
 ## Post-Release Checklist
 
 1. **Create the GitHub release** from the tag and upload all nine files from `release_VERSION/`.
-2. Verify that `linux_install.sh` can download `Dynawo_omc_v1.8.0.zip` and `dycov_examples.zip`
+2. Verify that `linux_install.sh` can download `Dynawo_omc_v2.0.0.zip` and `dycov_examples.zip`
    from the new release URL before announcing the release publicly. Without the second one the
    installation stops: the examples have no other source.
 3. Note that `import_image.sh` and `run_dycov_docker.sh` lose their exec bit when downloaded

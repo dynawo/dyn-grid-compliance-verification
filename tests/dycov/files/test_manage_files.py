@@ -18,6 +18,7 @@ import pandas as pd
 
 from dycov.files.manage_files import (
     _copy_curve_files_by_name,
+    _copy_producer_tables,
     check_output_dir,
     clone_as_subdirectory,
     copy_base_curves_files,
@@ -191,6 +192,33 @@ def test_clone_as_subdirectory(tmp_path):
 
     assert res.exists()
     assert (res / "a.txt").exists()
+
+
+def test_copy_producer_tables(tmp_path):
+    producer = tmp_path / "Zone1"
+    producer.mkdir()
+    (producer / "Producer.par").write_text("the par")
+    (producer / "LHVRT.txt").write_text("the curves")
+    (producer / "notes.md").write_text("not an input")
+    target = tmp_path / "working"
+    target.mkdir()
+
+    _copy_producer_tables(producer, target)
+
+    assert (target / "LHVRT.txt").read_text() == "the curves"
+    assert sorted(p.name for p in target.iterdir()) == ["LHVRT.txt"]
+
+
+def test_copy_producer_tables_lowercases_the_extension(tmp_path):
+    producer = tmp_path / "Zone1"
+    producer.mkdir()
+    (producer / "LHVRT.TXT").write_text("the curves")
+    target = tmp_path / "working"
+    target.mkdir()
+
+    _copy_producer_tables(producer, target)
+
+    assert (target / "LHVRT.txt").read_text() == "the curves"
 
 
 # ---------------------------------------------------------------------------
