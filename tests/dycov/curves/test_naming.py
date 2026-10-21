@@ -72,3 +72,33 @@ def test_rename_columns_for_output_zone3_unchanged():
     renamed = naming.rename_columns_for_output(curves, 3)
 
     assert list(renamed.columns) == ["time", "BusPDR_BUS_ActivePower"]
+
+
+def test_get_network_frequency_curve_names_the_frequency_the_first_unit_measures():
+    curves = {
+        "time": [0.0],
+        "G1_GEN_NetworkFrequencyPu": [0.99],
+        "G2_GEN_NetworkFrequencyPu": [0.98],
+    }
+
+    naming.get_network_frequency_curve(curves)
+
+    assert curves["NetworkFrequencyPu"] == [0.99]
+
+
+def test_get_network_frequency_curve_keeps_the_network_frequency_the_curves_carry():
+    curves = pd.DataFrame(
+        {"time": [0.0], "NetworkFrequencyPu": [1.0], "G1_GEN_NetworkFrequencyPu": [0.99]}
+    )
+
+    naming.get_network_frequency_curve(curves)
+
+    assert list(curves["NetworkFrequencyPu"]) == [1.0]
+
+
+def test_get_network_frequency_curve_without_a_frequency_adds_nothing():
+    curves = pd.DataFrame({"time": [0.0], "BusPDR_BUS_ActivePower": [0.1]})
+
+    naming.get_network_frequency_curve(curves)
+
+    assert list(curves.columns) == ["time", "BusPDR_BUS_ActivePower"]

@@ -14,6 +14,7 @@ from typing import Optional
 import pandas as pd
 
 from dycov.configuration.cfg import config
+from dycov.curves import naming
 from dycov.curves.curves import ProducerCurves, get_cfg_oc_name
 from dycov.curves.importer.importer import CurvesImporter
 from dycov.curves.voltage_dip import measure_voltage_dip
@@ -117,6 +118,7 @@ class ImportedCurves(ProducerCurves):
             return has_imported_curves, sim_t_event_start, fault_duration, df_imported_curves
 
         has_imported_curves = True
+        naming.get_network_frequency_curve(df_imported_curves)
         if not is_reference:
             self._generators = self.__get_generators(df_imported_curves)
             self._gens = _get_generators_ini(self._generators, df_imported_curves)

@@ -186,6 +186,16 @@ def test_frequency_figure_draws_every_declared_band(monkeypatch):
     }
 
 
+def test_wref_figure_reads_the_network_frequency_curve(monkeypatch):
+    """#489: NetworkFrequencyPu is the name the simulated and the reference curves share, so the
+    reference is drawn beside the simulated frequency."""
+    bm = _make_benchmark(monkeypatch, DummyProducer(zone=3), {"fig_WRef": [_PCS_BENCHMARK]})
+
+    figures = bm.get_figures_description()
+
+    assert [figure.variables for figure in figures] == ["NetworkFrequencyPu"]
+
+
 def test_figures_read_the_voltages_then_the_powers_then_the_currents(monkeypatch):
     """#553: the power at InternalNode1 sits under the controlled power it is checked against,
     and the figure of the currents with the currents it draws, as the PDF lays them out."""

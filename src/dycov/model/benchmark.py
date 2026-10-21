@@ -537,7 +537,7 @@ class Benchmark:
         self._figures_description.append(
             FigureDescription(
                 name="fig_WRef",
-                variables=[{"type": "generator", "variable": "NetworkFrequencyPu"}],
+                variables="NetworkFrequencyPu",
                 ylabel=r"$\omega$ (Hz)",
                 frequency_bands=frequency_bands,
                 in_hz=True,

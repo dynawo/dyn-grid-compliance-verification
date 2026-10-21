@@ -16,6 +16,9 @@ model is named ``InternalNode1`` (called "Node1" in the DTR). The converter-outp
 node of the Zone 1 unit model, between the unit and its transformer, is named
 ``InternalNode2`` (called "Node2" in the DTR); the injector-terminal curves are
 measured there.
+
+The network frequency is named ``NetworkFrequencyPu`` in every curve set the tool compares,
+simulated or imported, so the figure that draws it finds it on both sides.
 """
 
 import pandas as pd
@@ -26,6 +29,8 @@ ZONE1_BUS_PREFIX = "InternalNode1_BUS_"
 ZONE1_BUS_LABEL = "InternalNode1"
 ZONE1_INJECTOR_NODE_LABEL = "InternalNode2"
 PDR_BUS_LABEL = "PDR Bus"
+
+NETWORK_FREQUENCY = "NetworkFrequencyPu"
 
 
 def get_bus_label(zone: int) -> str:
@@ -103,3 +108,20 @@ def rename_columns_for_output(curves: pd.DataFrame, zone: int) -> pd.DataFrame:
     if zone != 1:
         return curves
     return curves.rename(columns={col: to_output_name(col, zone) for col in curves.columns})
+
+
+def get_network_frequency_curve(curves: dict | pd.DataFrame) -> None:
+    """Name the network frequency NetworkFrequencyPu after the first frequency a unit measures,
+    unless the curves already carry it under that name.
+
+    Parameters
+    ----------
+    curves: dict | DataFrame
+        Curves by name, which gain the NetworkFrequencyPu curve when one of them is a
+        ``*_NetworkFrequencyPu``
+    """
+    if NETWORK_FREQUENCY in curves:
+        return
+    unit_frequencies = [name for name in curves.keys() if name.endswith(f"_{NETWORK_FREQUENCY}")]
+    if unit_frequencies:
+        curves[NETWORK_FREQUENCY] = curves[unit_frequencies[0]]
