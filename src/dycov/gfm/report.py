@@ -60,6 +60,9 @@ _LATEX_TEXT = str.maketrans(
         "°": r"\ensuremath{^\circ}",
     }
 )
+# The first pass writes the table of contents and the second sets it, which moves the pages it
+# lists: with a test per page the contents span several pages, so a third pass numbers them right
+_PDFLATEX_PASSES = 3
 _NOTICES = {
     Compliance.WithoutProducerCurves: (
         "No producer curves for this test, or they miss one of the currents."
@@ -120,9 +123,8 @@ def create_pdf(pcs_reports: list[PcsReport], parameters: GFMParameters) -> None:
     ).dump(str(latex_path / REPORT_NAME))
 
     report_name = REPORT_NAME.replace(".tex", "")
-    # The second run resolves the table of contents
-    report.run_pdflatex(latex_path, report_name)
-    proc = report.run_pdflatex(latex_path, report_name)
+    for _ in range(_PDFLATEX_PASSES):
+        proc = report.run_pdflatex(latex_path, report_name)
     if logger.getEffectiveLevel() != logging.DEBUG:
         report.clean_latex_outputs(latex_path)
 

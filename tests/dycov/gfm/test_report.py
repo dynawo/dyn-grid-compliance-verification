@@ -146,7 +146,7 @@ def test_create_pdf_renders_every_test_of_every_pcs(monkeypatch, tmp_path):
     latex_path = tmp_path / "working" / "Latex"
     main = (latex_path / "report.tex").read_text()
     section = (latex_path / "Producer.report.RTE-IGFM1.tex").read_text()
-    assert compiled == ["report", "report"]
+    assert compiled == ["report", "report", "report"]
     assert (tmp_path / "Results" / "Reports" / "report.pdf").exists()
     assert r"\input{Producer.report.RTE-IGFM1}" in main
     assert "Producer.report.RTE-IGFM2" not in main
