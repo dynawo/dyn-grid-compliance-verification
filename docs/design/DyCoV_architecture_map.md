@@ -37,6 +37,22 @@ All extend `FileVariables` (`io/file_variables.py`); fill template placeholders 
 Templates live in `src/dycov/model_lib/`; DyCoV **copies templates and fills placeholders** — it does NOT
 build network structure dynamically.
 
+**Dynawo version coupling** (DyCoV targets 2.0.0): DyCoV writes model names Dynawo owns in two
+places — the dictionaries (`curves/dynawo/dictionary/*.ini`, every parameter and variable DyCoV
+reads or writes) and `files/omega_file.py` (the `DYNModelOmegaRef` connectors, `omega_grp_<n>_` /
+`omegaRef_grp_<n>_` / `running_grp_<n>_`: 2.0.0 drops the `_value` suffix and keeps the `_` that
+marks the array index, as Dynawo's own examples spell them). The rest of the names are the
+producer's, in its DYD and PAR, and a model written for an older Dynawo is migrated with the
+scripts Dynawo ships (`sbin/updateXML`), which are also the authoritative list of what a build
+changed. The WECC voltage ride-through protection is producer data like any other: Dynawo gives
+its eight `lhvrt_*` parameters no default, so the unit's set declares them, from the
+`Protection de tension` block of the workbook. Dynawo keeps that protection in a submodel of its
+own, so its parameters take the `lhvrt_` prefix and not the model's — which is what
+`[Block-Prefixes]` of `excel/dictionary/excel_names.ini` says and `excel/par/control.py` applies.
+Its two capability curves are points of that same sheet: `excel/protection.py` writes them as the
+table file `lhvrt_TablesFile` names, next to the PAR, and `manage_files._copy_producer_tables`
+copies the producer's table files into the working directory with its DYD and PAR.
+
 **Config value definitions** (any multiplier-based `PCSDescription.ini` value): resolved data-driven,
 not per-key. `value_registry.unit_characteristics(producer, u_dim)` is the single registry of base
 magnitudes (`Pmax`/`PmaxInjection`/`PmaxConsumption`/`Qmax`/`Qmin`/`Snom`/`Udim`/`Unom=1.0`/`line_XPu`,
