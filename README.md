@@ -4,6 +4,7 @@
 
 - Repository: <https://github.com/dynawo/dyn-grid-compliance-verification>
 - Documentation: in this repository, under [docs/](docs/README.md)
+- Changes between releases: [CHANGELOG.md](CHANGELOG.md)
 
 DyCoV is an engineering-oriented framework designed to support grid connection
 studies through automated dynamic simulations and compliance checks.  

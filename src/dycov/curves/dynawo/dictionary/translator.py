@@ -103,6 +103,24 @@ class Translator:
     _control_modes: configparser.ConfigParser
     _family_map: dict
 
+    def get_family(self, lib: str) -> str:
+        """
+        Determines the family a model belongs to.
+
+        Parameters
+        ----------
+        lib: str
+            Model class, as the DYD names it.
+
+        Returns
+        -------
+        str
+            The family the dictionary gives the model, or an empty string if it gives none.
+        """
+        if lib in self._family_map:
+            return self._family_map[lib]["family"]
+        return ""
+
     def get_generator_family(self, generator: GenParams) -> str:
         """
         Determines the family of a generator based on its library.
@@ -118,10 +136,7 @@ class Translator:
             The generator family. Returns an empty string
             if the family or type is not found in the `FAMILY_LEVEL_MAP`.
         """
-        if generator.lib in self._family_map:
-            family = self._family_map[generator.lib]["family"]
-            return family
-        return ""
+        return self.get_family(generator.lib)
 
     def get_generator_parameters(
         self, generator: GenParams, control_mode: str, zone: int

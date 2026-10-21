@@ -19,7 +19,7 @@ from dycov.excel import par
 
 
 def test_converter_par_set_prefix_control_snom(zone1, named):
-    control = [{"name": "Kqp", "type": "DOUBLE", "value": "1"}]
+    control = [{"name": "photovoltaics_Kqp", "type": "DOUBLE", "value": "1"}]
 
     par_id, params = par.converter_par_set(
         "PV_Array",
@@ -32,7 +32,7 @@ def test_converter_par_set_prefix_control_snom(zone1, named):
 
     values = named(params)
     assert par_id == "PV_Array"
-    assert values["photovoltaics_Kqp"] == "1"  # control param, prefixed, value verbatim
+    assert values["photovoltaics_Kqp"] == "1"  # control param, carried over verbatim
     assert values["photovoltaics_ConverterLVControl"] == "true"
     assert values["photovoltaics_SNom"] == pytest.approx(100.0)
     # With LV control the unit's own branch is zeroed: the external block is its transformer.
@@ -137,7 +137,7 @@ def test_converter_par_set_zeroes_the_unit_branch_under_lv_control(zone1, named)
     assert named(plant)["photovoltaics_XLvTrPu"] == pytest.approx(0.05)
 
 
-def test_converter_par_set_names_the_transformer_as_each_family_does(zone1, named):
+def test_converter_par_set_takes_the_transformer_names_from_the_dictionary(zone1, named):
     zone1.update({"ConverterLVControl": "False", "Z_cc_TG": "0.05"})
 
     _id, unit = par.converter_par_set(
@@ -147,12 +147,10 @@ def test_converter_par_set_names_the_transformer_as_each_family_does(zone1, name
         "Wind_Turbine", "WPP_", [], zone1, "90", "IECWPP4BCurrentSource2020", plant_model=True
     )
 
-    # The IEC unit has no LV-transformer branch: it takes the impedance on the series one.
-    assert named(unit)["WT_XesPu"] == pytest.approx(0.05)
-    assert "WT_XLvTrPu" not in named(unit)
+    assert named(unit)["WT_XLvTrPu"] == pytest.approx(0.05)
     assert named(plant)["WPP_XLvTrPu"] == pytest.approx(0.05)
     # Both declare a shunt the workbook does not describe: a transformer with no shunt branch.
-    assert named(unit)["WT_GesPu"] == 0
+    assert named(unit)["WT_GLvTrPu"] == 0
     assert named(plant)["WPP_BLvTrPu"] == 0
 
 
