@@ -217,11 +217,12 @@ matter of taste:
 
 Run `--help` on any of them for what it does. Four things are worth knowing before using it:
 
-*   **The oscillation goes.** A reference curve should not carry the oscillation of the
-    simulation that produced it, so the script de-ripples with a 5 Hz cut-off, and says so in
-    its own `--help`. Only a sustained oscillation is filtered; the response to the event, which
-    dies out, stays as simulated. The conditions whose model oscillates then report
-    Non-compliant, which is what the criterion says about them.
+*   **The simulation stays.** A reference curve is the simulation that produced it, reduced to
+    the samples that carry its shape and given the noise of a measurement, with nothing filtered
+    out. On the examples the de-ripple of the anonymizer only ever caught the response of a
+    model — the three steps in which an IEC turbine answers a fault, the current a storage unit
+    swings at the bottom of a dip — never an oscillation of the solver, so the script turns it
+    off and says so in its own `--help`.
 *   **Nothing is deduced.** The producer of a curve directory is the producer of the example its
     curves come from, named in `models.sh`; what no model states — the apparent power, the power
     levels of the F16 tests — is in `example_inputs.ini`. Both are data, not logic.
