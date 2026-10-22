@@ -134,7 +134,7 @@ def test_create_pdf_renders_every_test_of_every_pcs(monkeypatch, tmp_path):
     assert "Dynawo~" not in main.split(r"\begin{document}")[0].split("lhead")[-1]
     assert "step_response_characteristics" not in main
     assert r"\input{Producer.report.PCS_RTE-I18z1.S_VolAngStep1.OC3}" in section
-    assert r"\section{Results for PCS RTE-I18 Zone 1 (Producer)}" in section
+    assert r"\section{Results for PCS I18 (Producer)}" in section
     assert (latex_path / "Producer.report.PCS_RTE-I18z1.S_VolAngStep1.OC2.tex").exists()
 
 

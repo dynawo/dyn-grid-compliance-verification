@@ -42,9 +42,9 @@ from dycov.report import report
 from dycov.report.LatexReportException import LatexReportException
 from dycov.validate.parameters import ValidationParameters
 
-# The kind of unit whose Grid Forming PCS the Zone 1 units of a model validation are given: the
-# DTR Fiche I18 covers storage units, and not power park modules
-_GRID_FORMING_UNITS = {MODEL_VALIDATION_BESS: "BESS"}
+# The kind of unit whose Grid Forming PCS a performance verification runs: the DTR Fiche I18
+# covers storage units, and neither power park modules nor synchronous machines
+_GRID_FORMING_UNITS = {ELECTRIC_PERFORMANCE_BESS: "BESS"}
 
 
 def _open_document(file: Path, is_testing: bool) -> None:
@@ -128,9 +128,9 @@ def _check_grid_forming_pcs(pcs: Pcs, parameters: GFMParameters) -> tuple:
     Parameters
     ----------
     pcs : Pcs
-        The Grid Forming PCS of a Zone 1 unit.
+        The Grid Forming PCS of a producer.
     parameters : GFMParameters
-        The parameters the tests of the unit are checked with.
+        The parameters the tests of the producer are checked with.
 
     Returns
     -------
@@ -216,6 +216,7 @@ class Validation:
         self._path_latex_files = config.get_value("Global", "latex_templates_path")
 
         self.__initialize_working_environment()
+        self._checks_grid_forming_curves = self.__checks_grid_forming_curves()
         self._validation_pcs = self.__get_validation_pcs()
         self._grid_forming_pcs = self.__get_grid_forming_pcs()
         self._grid_forming_parameters: dict[str, GFMParameters] = {}
@@ -284,7 +285,7 @@ class Validation:
             log_message, config_key, template_path = sim_type_mapping[sim_type]
             dycov_logging.get_logger("Validation").info(log_message)
             template_paths = [template_path]
-            if sim_type in _GRID_FORMING_UNITS:
+            if self._checks_grid_forming_curves:
                 template_paths.append(f"gfm/{_GRID_FORMING_UNITS[sim_type]}")
             self.__populate_validation_pcs(validation_pcs, config_key, template_paths)
         else:
@@ -323,6 +324,32 @@ class Validation:
                     )
                 )
 
+    def __checks_grid_forming_curves(self) -> bool:
+        """Whether the run checks the curves of the Grid Forming tests of the DTR Fiche I18: a
+        performance verification of a storage given its curves. DyCoV does not simulate those
+        tests, so a run on a model leaves them out.
+
+        Returns
+        -------
+        bool
+            True if the Grid Forming PCS are run.
+        """
+        logger = dycov_logging.get_logger("Validation")
+        if self._parameters.get_sim_type() not in _GRID_FORMING_UNITS:
+            if self._parameters.get_gfm_envelopes_path() is not None:
+                logger.warning(
+                    "The Grid Forming envelopes given are not used: the DTR Fiche I18 covers "
+                    "the performance of storage units only"
+                )
+            return False
+        if self._parameters.is_dynawo_model_valid():
+            logger.info(
+                "The Grid Forming tests of the DTR Fiche I18 are checked on the curves of the "
+                "producer (-c), DyCoV does not simulate them"
+            )
+            return False
+        return True
+
     def __get_grid_forming_pcs(self) -> set:
         """Determines which of the PCS to validate are Grid Forming PCS, whose tests are checked
         against envelopes instead of being simulated.
@@ -332,15 +359,10 @@ class Validation:
         set
             The names of the Grid Forming PCS to validate.
         """
-        gfm_unit = _GRID_FORMING_UNITS.get(self._parameters.get_sim_type())
-        if gfm_unit is None:
-            if self._parameters.get_gfm_envelopes_path() is not None:
-                dycov_logging.get_logger("Validation").warning(
-                    "The Grid Forming envelopes given are not used: the DTR Fiche I18 covers "
-                    "storage units only"
-                )
+        if not self._checks_grid_forming_curves:
             return set()
 
+        gfm_unit = _GRID_FORMING_UNITS[self._parameters.get_sim_type()]
         gfm_templates = self._templates_path / "gfm" / gfm_unit
         templates_paths = (Path(__file__).resolve().parent.parent, config.get_config_dir())
         return {
@@ -361,30 +383,30 @@ class Validation:
         return self._grid_forming_parameters[producer_name]
 
     def __get_grid_forming_parameters(self, producer_name: str) -> GFMParameters:
-        """The parameters the Grid Forming tests of a Zone 1 unit are checked with: its INI file
-        describes it, its curves are among the reference curves, and its envelopes are read
-        from the directory given, when there is one, instead of being generated.
+        """The parameters the Grid Forming tests of a producer are checked with: its INI file
+        describes the unit, its curves are those given, and its envelopes are read from the
+        directory given, when there is one, instead of being generated.
 
         Parameters
         ----------
         producer_name : str
-            Name of the Zone 1 unit.
+            Name of the producer, that of its INI file and of the directory of its curves.
 
         Returns
         -------
         GFMParameters
-            The parameters of the Grid Forming tests of the unit.
+            The parameters of the Grid Forming tests of the producer.
         """
         producer = self._parameters.get_producer()
-        producer_ini = producer.get_producer_ini(1, producer_name)
+        producer_ini = producer.get_producer_ini(0, producer_name)
         if producer_ini is None:
-            raise FileNotFoundError(f"The Zone 1 unit {producer_name} has no INI file")
+            raise FileNotFoundError(f"The producer {producer_name} has no INI file")
 
         envelopes = self.__get_envelopes_path(producer_name)
         parameters = GFMParameters(
             self._parameters,
-            GFMProducer(producer_ini, _GRID_FORMING_UNITS[self._parameters.get_sim_type()]),
-            producer_curves=producer.get_reference_curves_path(),
+            GFMProducer(producer_ini),
+            producer_curves=producer.get_producer_curves_path(),
             envelopes=envelopes,
         )
         logger = dycov_logging.get_logger("Validation")
@@ -398,8 +420,8 @@ class Validation:
         return parameters
 
     def __get_envelopes_path(self, producer_name: str) -> Optional[Path]:
-        """The directory of the envelopes of a Zone 1 unit: the subdirectory named after it, or
-        else the whole directory given, which then serves every unit."""
+        """The directory of the envelopes of a producer: the subdirectory named after it, or
+        else the whole directory given, which then serves every producer."""
         envelopes = self._parameters.get_gfm_envelopes_path()
         if envelopes is None:
             return None
@@ -430,12 +452,7 @@ class Validation:
                 for producer_name in producers_in_zone:
                     # Extend pcs_list with PCSs ending with the zone suffix
                     pcs_list.extend(
-                        (
-                            self.__get_pcs_parameters(pcs_name, producer_name),
-                            pcs_name,
-                            producer_name,
-                            self._path_latex_files,
-                        )
+                        (self._parameters, pcs_name, producer_name, self._path_latex_files)
                         for pcs_name in self._validation_pcs
                         if pcs_name.endswith(f"z{zone}")
                     )
@@ -443,7 +460,12 @@ class Validation:
             # For other simulation types, use all producer files
             for producer_name in all_producer_files:
                 pcs_list.extend(
-                    (self._parameters, pcs_name, producer_name, self._path_latex_files)
+                    (
+                        self.__get_pcs_parameters(pcs_name, producer_name),
+                        pcs_name,
+                        producer_name,
+                        self._path_latex_files,
+                    )
                     for pcs_name in self._validation_pcs
                 )
         return pcs_list

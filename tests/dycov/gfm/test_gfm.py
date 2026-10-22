@@ -27,6 +27,7 @@ from dycov.model.compliance import Compliance
 _PCS, _BM, _OC = "PCS_RTE-I18z1", "S_VolAngStep1", "OC2"
 _TEST = f"{_PCS}.{_BM}.{_OC}"
 _UNIT = """[DEFAULT]
+generator_type = BESS
 p_max_injection = 100
 p_max_consumption = 100
 q_max = 30
@@ -69,7 +70,7 @@ def _parameters(tmp_path, unit_text, **kwargs):
     tmp_path.mkdir(parents=True, exist_ok=True)
     ini = tmp_path / "Producer.ini"
     ini.write_text(unit_text)
-    return GFMParameters(_Run(tmp_path), GFMProducer(ini, generator_type="BESS"), **kwargs)
+    return GFMParameters(_Run(tmp_path), GFMProducer(ini), **kwargs)
 
 
 def _generate(parameters, working_path):

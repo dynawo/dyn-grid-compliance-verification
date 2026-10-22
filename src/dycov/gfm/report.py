@@ -10,10 +10,10 @@
 """Report of the Grid Forming tests.
 
 Every test gets a page with its parameters and its envelopes. 'dycov generate_gfm_envelopes'
-writes a PDF of the envelopes alone, while a model validation adds to its report a section for
-the Grid Forming PCS of each Zone 1 unit, whose pages also show the checks of the DTR Fiche I18
-of the producer curves and their verdict. Both are built on the main template and the LaTeX
-machinery of the verification reports.
+writes a PDF of the envelopes alone, while a performance verification adds to its report a
+section for the Grid Forming PCS of each producer, whose pages also show the checks of the DTR
+Fiche I18 of the producer curves and their verdict. Both are built on the main template and the
+LaTeX machinery of the verification reports.
 """
 
 import logging
@@ -140,7 +140,7 @@ def prepare_pcs_report(
     sim_type_str: str
         Directory of the templates of the kind of unit, e.g. 'gfm/BESS'
     outputs_by_producer: bool
-        Whether the output of the run keeps a directory by producer, as a model validation does
+        Whether the output of the run keeps a directory by producer, as a verification does
 
     Returns
     -------

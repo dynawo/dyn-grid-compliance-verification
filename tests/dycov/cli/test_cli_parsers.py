@@ -48,7 +48,7 @@ def test_completion_script_covers_every_command(parser):
         ("validate", "--curves", shtab.DIRECTORY),
         ("validate", "--excel", shtab.FILE),
         ("validate", "--output", shtab.DIRECTORY),
-        ("validate", "--gfm-envelopes", shtab.DIRECTORY),
+        ("performance", "--gfm-envelopes", shtab.DIRECTORY),
         ("performance", "--launcher", shtab.FILE),
         ("generate_gfm_envelopes", "--producer_ini", shtab.FILE),
         ("anonymize", "--results", shtab.DIRECTORY),

@@ -51,11 +51,12 @@ the envelopes, by invoking the appropriate calculator or by reading back those
 of a previous generation, checks the producer curves against them when they
 are given, and calls the output functions to save the results.
 
-The model validation of a storage (``validate/validation.py``) runs the same
-pipeline for the Zone 1 units: the Grid Forming PCS of ``gfm/BESS`` join the
-PCS of ``model/BESS``, and ``_check_grid_forming_pcs`` generates them instead
-of simulating them, with a ``GFMParameters`` by unit that names its reference
-curves and, when ``-g`` is given, the directory of its envelopes.
+The performance verification of a storage given its curves
+(``validate/validation.py``) runs the same pipeline for every producer: the
+Grid Forming PCS of ``gfm/BESS`` join the PCS of ``performance/BESS``, and
+``_check_grid_forming_pcs`` generates them instead of simulating them, with a
+``GFMParameters`` by producer that names its curves and, when ``-g`` is given,
+the directory of its envelopes.
 
 Parameter and data management
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -63,13 +64,13 @@ Parameter and data management
 ``parameters.py`` defines the ``GFMParameters`` class, which reads all
 configuration settings for a given run — grid conditions, producer
 characteristics, and event definitions. It holds the run the tests belong to,
-an envelope generation or a model validation, whose working and output
+an envelope generation or a performance verification, whose working and output
 directories they use, rather than creating directories of its own.
 
 ``producer.py`` defines the ``GFMProducer`` class, which parses the
 producer's INI file to extract the GFM unit's specific parameters. It reads
-the INI file it is given, so a model validation hands it the INI file of each
-Zone 1 unit.
+the INI file it is given, so a performance verification hands it the INI file
+of each producer.
 
 Core logic: the calculator module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

@@ -8,7 +8,6 @@
 
 import configparser
 from pathlib import Path
-from typing import Optional
 
 from dycov.model.producer import Producer
 
@@ -19,7 +18,7 @@ _GENERATOR_TYPES = ("PPM", "BESS")
 class GFMProducer(Producer):
     """Represents a producer parsed from an INI configuration file."""
 
-    def __init__(self, producer_ini: Path, generator_type: Optional[str] = None) -> None:
+    def __init__(self, producer_ini: Path) -> None:
         """
         Initializes the GFMProducer with the given configuration file.
 
@@ -27,9 +26,6 @@ class GFMProducer(Producer):
         ----------
         producer_ini : Path
             The file path to the producer's INI configuration.
-        generator_type : Optional[str], optional
-            The kind of unit, when it is known from elsewhere, as a model validation knows it
-            from the model. Defaults to None, in which case the INI file declares it.
 
         Raises
         ------
@@ -41,7 +37,7 @@ class GFMProducer(Producer):
         super().__init__(None, producer_ini)
         self._producer_ini = producer_ini
         self._config = self.__read_producer_ini()
-        self._generator_type = generator_type or self.__read_generator_type()
+        self._generator_type = self.__read_generator_type()
 
     def get_producer_path(self) -> Path:
         """

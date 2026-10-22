@@ -20,10 +20,10 @@ This workflow produces **analytical envelopes** that characterize
 the admissible dynamic response of a Grid‑Forming unit
 for specific disturbance families.
 
-The envelope generation is independent from the electrical performance
-verification. The RMS model validation of a storage unit, on the other hand,
-checks the curves of its Zone 1 units against these envelopes, the tests of
-the DTR Fiche I18 (see [section 11](#11-checking-the-curves-of-a-storage-unit)).
+The envelope generation is independent from the RMS model validation. The
+electrical performance verification of a storage unit, on the other hand,
+checks the curves of its Grid Forming tests against these envelopes, the tests
+of the DTR Fiche I18 (see [section 11](#11-checking-the-curves-of-a-storage-unit)).
 
 ---
 
@@ -364,31 +364,35 @@ After GFM analysis, you may:
 
 ## 11. Checking the curves of a storage unit
 
-The model validation of a storage, `dycov validate`, gives its Zone 1 units
-the tests of the DTR Fiche I18 along with those of the other fiches, as
-`PCS_RTE-I18z1`. They are not simulated: the curves of each test, among the
-reference curves of the unit (`ReferenceCurves/<unit>/PCS_RTE-I18z1.<scenario>.<OC>.csv`
-and its `.dict`), are checked against the envelopes of the test and the damping
-criterion of the fiche. The envelopes come from one of two places:
+The performance verification of a storage given its curves, `dycov performance
+-c`, runs the tests of the DTR Fiche I18 along with those of the other fiches,
+as `PCS_RTE-I18z1`. They are not simulated, and a run on a Dynawo model leaves
+them out: the curves of each test, among the curves of the producer
+(`ProducerCurves/<producer>/PCS_RTE-I18z1.<scenario>.<OC>.csv` and its `.dict`),
+are checked against the envelopes of the test and the damping criterion of the
+fiche. The fiche tests a single converter, the PGU, so the `Producer.ini`
+describes it. The envelopes come from one of two places:
 
 * the output of `dycov generate_gfm_envelopes`, given with `-g`, as the fiche
-  has RTE send them to the producer. It holds a subdirectory per Zone 1 unit,
-  named after it, or a single output that serves every unit:
+  has RTE send them to the producer. It holds a subdirectory per producer,
+  named after it, or a single output that serves every producer:
 
   ```bash
-  dycov generate_gfm_envelopes -i Dynawo/Zone1/Producer.ini -o Envelopes
-  dycov validate -m Dynawo ReferenceCurves -g Envelopes
+  dycov generate_gfm_envelopes -i ProducerCurves/Producer.ini -o Envelopes
+  dycov performance -c ProducerCurves -g Envelopes
   ```
 
-* or else the `[GFM Parameters]` of the INI file of the unit, which the model
-  validation generates them from. The same INI file serves both commands.
+* or else the `[GFM Parameters]` of the INI file of the producer, which the
+  performance verification generates them from. The same INI file serves both
+  commands.
 
-A unit that declares no `[GFM Parameters]`, and whose envelopes are not given,
-has its tests reported as missing the envelopes. The report of the validation
-lists every test in its summary, and the tests whose curves were judged have a
-page with the figure of the envelopes and the curve, and the checks with their
-verdict. The criteria are described in the user manual, under *Grid Forming
-tests in the model validation*.
+A producer that declares no `[GFM Parameters]`, and whose envelopes are not
+given, has its tests reported as missing the envelopes; `-p PCS_RTE-I18z1`
+limits the run to the Grid Forming tests. The report lists every test in its
+summary, and the tests whose curves were judged have a page with the figure of
+the envelopes and the curve, and the checks with their verdict. The criteria
+are described in the user manual, under *Grid Forming tests in the performance
+verification*.
 
 ---
 

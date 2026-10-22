@@ -126,13 +126,13 @@ park module), organized by disturbance scenario and operating condition:
   including internally derived values. Intended for full traceability.
 * **results.json** — the current the envelopes bound, whether they are for EMT
   simulations, the duration of the event and the parameters of the test, which
-  the model validation reads back when it is given the envelopes.
+  the performance verification reads back when it is given the envelopes.
 
-In the model validation of a storage unit, the Grid Forming tests of each
-Zone 1 unit are under ``Results/<unit>/PCS_RTE-I18z1/``, laid out alike; their
-CSV file and figures also carry the filtered curve of the unit, and their
-``results.json`` the verdict of the checks (see :ref:`Grid Forming tests in the
-model validation <gfm_model_validation>`).
+In the performance verification of a storage unit, the Grid Forming tests of
+each producer are under ``Results/<producer>/PCS_RTE-I18z1/``, laid out alike;
+their CSV file and figures also carry the filtered curve of the producer, and
+their ``results.json`` the verdict of the checks (see :ref:`Grid Forming tests
+in the performance verification <gfm_performance>`).
 
 
 Report interpretation

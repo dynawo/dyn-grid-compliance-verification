@@ -8,7 +8,7 @@ which arrive with a release or with a regeneration. See curves_invariants.py.
 
 from tests.dycov.utils import PERFORMANCE, execute_tool_summary
 
-from tests_integration.curves_invariants import assert_run_is_sound
+from tests_integration.curves_invariants import I18_TESTS, assert_run_is_sound
 
 SM_CURVES = PERFORMANCE / "ProducerCurves" / "SM"
 PPM_CURVES = PERFORMANCE / "ProducerCurves" / "PPM"
@@ -51,6 +51,7 @@ BESS_TESTS = [
     "PCS_RTE-I7.GridVoltageSwell.QMinConsumption",
     "PCS_RTE-I10.Islanding.DeltaP10DeltaQ4Injection",
     "PCS_RTE-I10.Islanding.DeltaP10DeltaQ4Consumption",
+    *I18_TESTS,
 ]
 
 

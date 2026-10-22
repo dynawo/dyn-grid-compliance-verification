@@ -64,10 +64,7 @@ plant-level control. For the precise definition of these zones, refer to
 PCS I16 in the RTE DTR. The ``Zone1/`` model is what the PCS of zone 1
 (``PCS_RTE-I16z1``) validate: a run limited with ``-p`` to a PCS of zone 3
 (``PCS_RTE-I16z3``, or the tests declared for ``PCS_RTE-F16z3``) accepts a
-directory with ``Zone3/`` alone. For a storage, the INI file of a Zone 1 unit
-may also carry the ``[GFM Parameters]`` that the envelopes of its Grid Forming
-tests (``PCS_RTE-I18z1``) are generated from (see :ref:`GFM Producer Input
-<gfm_producer_input>`).
+directory with ``Zone3/`` alone.
 
 .. note::
    The name *PDR* always refers to the real connection point of the complete
@@ -104,13 +101,13 @@ GFM Producer Input (.ini file)
 The ``dycov generate_gfm_envelopes`` command takes a dedicated ``.ini`` file that
 describes the Grid-Forming unit. It must contain a ``[DEFAULT]`` section for
 nominal and operational parameters, and a ``[GFM Parameters]`` section for
-the core GFM control constants. The INI file of a Zone 1 unit of a model
-validation can be that file: given the same ``[GFM Parameters]``, the model
-validation of a storage generates the envelopes of the unit from it (see
-:ref:`Grid Forming tests in the model validation <gfm_model_validation>`). Its
-maximum consumption, ``p_max_consumption``, then gives the lowest active power
-of the unit, which the INI file of an envelope generation declares as a
-negative ``p_min_injection``.
+the core GFM control constants. The INI file of a producer of a performance
+verification can be that file: given the same ``[GFM Parameters]``, the
+performance verification of a storage generates the envelopes of the producer
+from it (see :ref:`Grid Forming tests in the performance verification
+<gfm_performance>`). Its maximum consumption, ``p_max_consumption``, then gives
+the lowest active power of the unit, which the INI file of an envelope
+generation declares as a negative ``p_min_injection``.
 
 The ``generator_type`` of the ``[DEFAULT]`` section, ``BESS`` or ``PPM``, says
 what the unit is, and with it which tests it is given: a storage unit gets
@@ -293,11 +290,6 @@ Each test case (Operating Condition) requires a curve file and an associated
 DICT file. The example above shows a PCS with two Benchmarks: Benchmark1 has
 two Operating Conditions and Benchmark2 has one.
 
-For a storage, the directory of each Zone 1 unit also holds the curves of its
-Grid Forming tests (``PCS_RTE-I18z1.<scenario>.<OC>``), the currents and the
-voltage at its PGU terminals that are checked against envelopes (see
-:ref:`Grid Forming tests in the model validation <gfm_model_validation>`).
-
 Accepted curve file formats:
 
 * **COMTRADE** — all versions up to C37.111-2013 are accepted, either as a
@@ -376,6 +368,12 @@ distinction. A single ``Producer.ini`` covers the entire case:
        │   ├── PCS_RTE-I*.csv
        │   └── PCS_RTE-I*.dict
        └── Producer.ini
+
+For a storage, the directory of a producer may also hold the curves of its
+Grid Forming tests (``PCS_RTE-I18z1.<scenario>.<OC>``), the currents and the
+voltage at the PGU terminals that are checked against envelopes; its
+``Producer.ini`` then describes the PGU (see :ref:`Grid Forming tests in the
+performance verification <gfm_performance>`).
 
 
 .. _topologies:

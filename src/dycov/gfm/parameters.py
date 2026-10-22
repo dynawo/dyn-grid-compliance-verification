@@ -36,8 +36,8 @@ class GFMParameters:
         ----------
         run : Parameters
             The parameters of the run the tests belong to, which owns their working and output
-            directories and the selection of PCS: an envelope generation, or the model
-            validation of the unit.
+            directories and the selection of PCS: an envelope generation, or the performance
+            verification of the producer.
         producer : GFMProducer
             The unit the tests are for.
         emt : bool, optional
@@ -268,7 +268,7 @@ class GFMParameters:
         float
             The minimum active power in pu.
         """
-        # The INI file of a model validation declares the consumption of a storage unit as
+        # The INI file of a verification declares the consumption of a storage unit as
         # p_max_consumption, that of an envelope generation as a negative p_min_injection
         producer_config = self._producer.get_config()
         if producer_config.has_option("DEFAULT", "p_max_consumption"):

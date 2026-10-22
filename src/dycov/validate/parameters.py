@@ -43,8 +43,8 @@ class ValidationParameters(Parameters):
     producer_workbook: Path
         Workbook the producer inputs were generated from.
     gfm_envelopes: Path
-        Directory of the envelopes the Grid Forming tests of the Zone 1 units are checked
-        against, written by 'dycov generate_gfm_envelopes'.
+        Directory of the envelopes the curves of the Grid Forming tests are checked against,
+        written by 'dycov generate_gfm_envelopes'.
     """
 
     def __init__(
@@ -95,7 +95,7 @@ class ValidationParameters(Parameters):
         Returns
         -------
         Path
-            Directory of the envelopes, or None when they are generated from the Zone 1 units.
+            Directory of the envelopes, or None when they are generated from the producers.
         """
         return self._gfm_envelopes
 

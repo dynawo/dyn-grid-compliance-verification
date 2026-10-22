@@ -121,9 +121,6 @@ def handle_validate_command(
         Path to the Dynawo launcher.
     """
     dycov_logging.get_logger("CommandHandlers").info("Handling 'validate' command.")
-    if args.gfm_envelopes and not Path(args.gfm_envelopes).is_dir():
-        parser.error(f"Grid Forming envelopes not found: {args.gfm_envelopes}")
-        return 1
     if args.excel:
         return _verify_from_workbook(parser, args, dwo_launcher, MODEL_VALIDATION)
     if args.model and args.curves:
@@ -165,7 +162,6 @@ def handle_validate_command(
         only_dtr=args.only_dtr,
         testing=args.testing,
         verification_type=MODEL_VALIDATION,
-        gfm_envelopes=args.gfm_envelopes,
     )
 
     if result_code == -1:
@@ -296,6 +292,9 @@ def handle_performance_command(
         Path to the Dynawo launcher.
     """
     dycov_logging.get_logger("CommandHandlers").info("Handling 'performance' command.")
+    if args.gfm_envelopes and not Path(args.gfm_envelopes).is_dir():
+        parser.error(f"Grid Forming envelopes not found: {args.gfm_envelopes}")
+        return 1
     if args.excel:
         return _verify_from_workbook(parser, args, dwo_launcher, ELECTRIC_PERFORMANCE)
 
@@ -337,6 +336,7 @@ def handle_performance_command(
         only_dtr=args.only_dtr,
         testing=args.testing,
         verification_type=ELECTRIC_PERFORMANCE,
+        gfm_envelopes=args.gfm_envelopes,
     )
 
     if result_code == -1:
@@ -512,7 +512,7 @@ def _run_verification(
     producer_workbook: Optional[Path]
         Workbook the producer inputs were generated from, if applicable.
     gfm_envelopes: Optional[Path]
-        Directory of the Grid Forming envelopes to check the Zone 1 units against, if given.
+        Directory of the Grid Forming envelopes to check the producer curves against, if given.
 
     Returns
     -------

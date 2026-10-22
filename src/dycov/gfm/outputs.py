@@ -566,8 +566,8 @@ def save_ini_dump(
 def save_results(path: Path, envelopes: Envelopes, curves_check: Any = None) -> None:
     """
     Exports what describes the envelopes of a test to a JSON file, with the compliance of its
-    producer curves when they are checked. A model validation given the envelopes reads the
-    description back.
+    producer curves when they are checked. A performance verification given the envelopes reads
+    the description back.
 
     Parameters
     ----------

@@ -429,10 +429,10 @@ def _add_gfm_envelopes_argument(parser: argparse.ArgumentParser) -> None:
         "--gfm-envelopes",
         arg_type=Path,
         help_msg=(
-            "Path to the output of 'dycov generate_gfm_envelopes', whose envelopes the Grid "
-            "Forming tests of the DTR Fiche I18 are checked against instead of being generated "
-            "from the Zone 1 INI files: a subdirectory per Zone 1 unit, named after it, or one "
-            "output for all of them."
+            "Path to the output of 'dycov generate_gfm_envelopes', whose envelopes the curves "
+            "of the Grid Forming tests of the DTR Fiche I18 are checked against instead of "
+            "being generated from the INI files of the producers: a subdirectory per producer, "
+            "named after it, or one output for all of them."
         ),
         completion=shtab.DIRECTORY,
     )
@@ -702,12 +702,11 @@ def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:
         # One line per way of calling it: the inputs exclude each other, which argparse cannot
         # express on its own.
         usage=(
-            "dycov validate -e EXCEL            [-h] [-l LAUNCHER] [-g GFM_ENVELOPES]"
-            " [-o OUTPUT] [-p PCS] [-od]\n"
-            "       dycov validate -m MODEL  reference [-h] [-l LAUNCHER] [-g GFM_ENVELOPES]"
-            " [-o OUTPUT] [-p PCS] [-od]\n"
-            "       dycov validate -c CURVES reference [-h] [-l LAUNCHER] [-g GFM_ENVELOPES]"
-            " [-o OUTPUT] [-p PCS] [-od]"
+            "dycov validate -e EXCEL            [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]\n"
+            "       dycov validate -m MODEL  reference [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS]"
+            " [-od]\n"
+            "       dycov validate -c CURVES reference [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS]"
+            " [-od]"
         ),
     )
     _add_launcher_argument(validate)
@@ -723,7 +722,6 @@ def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:
         ),
     )
     _add_reference_argument(validate, nargs="?")
-    _add_gfm_envelopes_argument(validate)
     _add_output_argument(validate)
     _add_pcs_argument(validate)
     _add_only_dtr_argument(validate)
@@ -748,7 +746,8 @@ def _add_performance_subparser(subparsers: argparse._SubParsersAction) -> None:
             "dycov performance -e EXCEL  [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]\n"
             "       dycov performance -m MODEL  [-c CURVES] [-h] [-l LAUNCHER] [-o OUTPUT]"
             " [-p PCS] [-od]\n"
-            "       dycov performance -c CURVES [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]"
+            "       dycov performance -c CURVES [-h] [-l LAUNCHER] [-g GFM_ENVELOPES] [-o OUTPUT]"
+            " [-p PCS] [-od]"
         ),
     )
     _add_launcher_argument(performance)
@@ -763,6 +762,7 @@ def _add_performance_subparser(subparsers: argparse._SubParsersAction) -> None:
         as_option=True,
         explain=("The model is generated from it, so neither the model nor the curves are given."),
     )
+    _add_gfm_envelopes_argument(performance)
     _add_output_argument(performance)
     _add_pcs_argument(performance)
     _add_only_dtr_argument(performance)

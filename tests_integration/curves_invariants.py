@@ -36,8 +36,8 @@ UNDELIVERED = (
     Compliance.WithoutEnvelopes,
 )
 
-# The Grid Forming tests of the DTR Fiche I18, which the Zone 1 unit of a storage is given: the
-# examples deliver neither their envelopes nor the parameters to generate them.
+# The Grid Forming tests of the DTR Fiche I18, which the performance of a storage given its
+# curves checks: the examples deliver neither their envelopes nor the parameters to generate them.
 I18_TESTS = [
     f"PCS_RTE-I18z1.{scenario}.OC{oc}"
     for scenarios, operating_conditions in (

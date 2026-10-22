@@ -78,15 +78,6 @@ def test_the_unit_is_the_ini_file_given_whatever_lies_next_to_it(monkeypatch, tm
     assert producer.get_sim_type_str() == "gfm/BESS"
 
 
-def test_a_generator_type_given_needs_none_in_the_ini_file(monkeypatch, tmp_path):
-    from dycov.gfm.producer import GFMProducer
-
-    _patch_config(monkeypatch)
-    ini = _write_ini(tmp_path, body="[DEFAULT]\np_max_injection = 100\n")
-
-    assert GFMProducer(ini, generator_type="BESS").get_sim_type_str() == "gfm/BESS"
-
-
 def test_set_zone_is_noop(monkeypatch, tmp_path):
     from dycov.gfm.producer import GFMProducer
 

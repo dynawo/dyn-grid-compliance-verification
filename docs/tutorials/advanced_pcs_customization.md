@@ -91,7 +91,7 @@ The relevant substructure is:
 
 The `gfm/` category has a technology level as well, because the DTR Fiche I18
 applies to storage alone: `gfm/BESS` holds its PCS, `PCS_RTE-I18z1`, which the
-model validation of a storage also runs, and `gfm/PPM` the tests agreed before
+performance verification of a storage also runs, and `gfm/PPM` the tests agreed before
 the fiche. Its reports are under `templates/reports/gfm/<technology>/<PCSName>/`.
 
 Conceptually:
