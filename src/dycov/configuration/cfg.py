@@ -394,6 +394,34 @@ class Config:
             )
             return default
 
+    def get_threshold(self, section: str, key: str, default: float) -> float | None:
+        """Gets the limit of a check, which the configuration may leave empty.
+
+        A revision of the DTR may ask for a value and check nothing against it. It writes
+        ``none`` as the limit, and the check then reports the value without a verdict. An
+        empty value says nothing, because the layer below answers for it.
+
+        Parameters
+        ----------
+        section: str
+            Section header.
+        key: str
+            Key within the section.
+        default: float
+            Default value to return if the key is not found.
+
+        Returns
+        -------
+        float | None
+            The limit of the check, or None when the configuration gives it as ``none``.
+        """
+        value = self._get_config_value(section, key)
+        if value is None:
+            return default
+        if value.strip().lower() == "none":
+            return None
+        return self.get_float(section, key, default)
+
     def get_boolean(self, section: str, key: str, default: bool = False) -> bool:
         """Gets a boolean value for a given key and section.
 
@@ -416,7 +444,7 @@ class Config:
             return default
         return value.lower() == "true"
 
-    def find_option(self, section: str, key: str, suffix: str) -> str | None:
+    def find_option(self, section: str, key: str, *suffixes: str) -> str | None:
         """Names the key the section defines for a suffix: ``<key>_<suffix>`` wins over ``<key>``.
 
         Parameters
@@ -425,8 +453,9 @@ class Config:
             Section header.
         key: str
             Plain key within the section.
-        suffix: str
-            Suffix of the specific key, e.g. the voltage level of the producer.
+        suffixes: str
+            Suffixes of the specific keys, in the order they win, e.g. the category of the
+            producer and then its voltage level.
 
         Returns
         -------
@@ -434,7 +463,7 @@ class Config:
             The suffixed key if the section defines it, else the plain key if it defines that,
             else None.
         """
-        for candidate in (f"{key}_{suffix}", key):
+        for candidate in (*(f"{key}_{suffix}" for suffix in suffixes), key):
             if self.has_option(section, candidate):
                 return candidate
         return None
