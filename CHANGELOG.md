@@ -73,6 +73,36 @@ cover this upgrade on their own:
 - none of them writes the capability-curve file, which has to be supplied by hand whichever route
   is taken.
 
+### The values of the DTR of 15/02/2024
+
+DyCoV says which revision of the DTR it implements: the one of 15/02/2024, which carries revision
+3.3 of article 8.3.3. A later revision enters the tool as a delta over that one, and
+`docs/design/DTR_revisions.md` says how. Nothing of that mechanism is in this release.
+
+Several values did not match that revision, or any other one. They are corrected, so a test that
+reads one of them may now give another verdict:
+
+- The voltage profiles of the fiches I6, I7 and I16 zone 3 recover at the instants of the DTR.
+  The profile of a dip at HTB2 held 1.15 s where the DTR gives 1.50 s, the dip of a storage unit
+  in consumption held 2.15 s, and the dip at HTB3 of a synchronous unit held 1.30 s.
+- The two voltage tables of the fiche I16 zone 3 take their levels from the description of the
+  test, so the profile a report draws is the profile the simulation applies. They held the levels
+  of another technology.
+- The reports of the fiche I16 zone 1 state the voltage of the test as Un. Zone 1 has no Udim:
+  the DTR fixes the dimensioning voltage at the connection point, which is the point of zone 3.
+- The reports of the fiche I16 zone 1 of a storage unit state a negative power for the four tests
+  in which Table 1 gives one, so the report and the simulation agree.
+
+The time limits of the checks of the fiches are options of `[GridCode]`, as the error
+thresholds already were. A limit of `none` makes a check report its value and give no verdict.
+A key may also name the category A, B, C or D of the unit, which the tool reads from the
+connection voltage and the maximum power at injection; the DTR of 15/02/2024 selects every
+gabarit by the voltage level, so no shipped PCS writes one. A user who has to validate against
+another revision changes a value in the configuration instead of waiting for a release.
+
+One value belongs to no revision: the residual voltage of a gabarit of a type D is 1e-3 and not
+the 0.00 of the DTR, because not every model converges with a voltage of exactly zero.
+
 ### Fixed
 
 - Islanding simulations run again: the `DYNModelOmegaRef` connectors are written with the names

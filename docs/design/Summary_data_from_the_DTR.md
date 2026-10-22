@@ -1,3 +1,18 @@
+# Which revision these values come from
+
+The values below are those of the DTR of 15/02/2024, the base revision of the tool. The
+articles it carries, for the chapters this document quotes:
+
+| Article | Version |
+|---|---|
+| 5.1.1, the categories of a unit | 1.3 |
+| 5.1.4, the categories of a storage unit | 1.1 |
+| 8.3.1, 8.3.2 and 8.3.4, the cahiers des charges | 2.1 |
+| 8.3.3, the fiches I and F | 3.3 |
+
+A later revision changes some of them. `DTR_revisions.md` says how the tool
+carries the difference, and which revisions it has to carry.
+
 
 # Common acronyms
 
