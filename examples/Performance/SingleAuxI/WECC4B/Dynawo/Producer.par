@@ -19,7 +19,7 @@
     <!-- Base unit: Un_PDR ou SnZone3 -->
     <par type="DOUBLE" name="WTG4B_EMinPu" value="-0.5"/>
     <!-- Base unit: Un_PDR ou SnZone3 -->
-    <par type="DOUBLE" name="WTG4B_DbdPu" value="0.0001"/>
+    <par type="DOUBLE" name="WTG4B_DbdPu" value="0"/>
     <!-- Base unit: SnZone3 -->
     <par type="DOUBLE" name="WTG4B_QMaxREPCPu" value="0.8"/>
     <!-- Base unit: SnZone3 -->

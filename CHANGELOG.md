@@ -68,8 +68,8 @@ cover this upgrade on their own:
 - asked to migrate from 1.8.0 to 2.0.0 the updater reports no patch files at all, because every
   migration that matters here is numbered `1.8.0.x` and so belongs to 1.8.0;
 - the chain that does contain them — `--origin 1.7.0 --version 1.8.0` — stops with a `NameError`
-  in the script that adds the protection's parameters (ticket 4202), before the rest of the chain
-  has run;
+  in the script that adds the protection's parameters (Dynawo issue 4278), before the rest of the
+  chain has run;
 - none of them writes the capability-curve file, which has to be supplied by hand whichever route
   is taken.
 
@@ -77,3 +77,5 @@ cover this upgrade on their own:
 
 - Islanding simulations run again: the `DYNModelOmegaRef` connectors are written with the names
   Dynawo 2.0.0 expects (#606).
+- The WECC examples simulate every test again when several run at once: their plant controller no
+  longer has a voltage deadband, on whose edge the WECCVoltageSource4 swell kept the solver (#626).
