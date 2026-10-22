@@ -30,6 +30,7 @@ GRID_CODE_FLOATS = {
     ("GridCode", "HTB2_Scc"): 1500.0,
     ("GridCode", "HTB3_Scc"): 7000.0,
     ("GridCode", "Udim_225kV"): 235.0,
+    ("GridCode", "category_voltage_threshold"): 110.0,
 }
 
 HTB_LISTS = {
@@ -39,6 +40,9 @@ HTB_LISTS = {
     "HTB1_External_Udims": [],
     "HTB2_External_Udims": [],
     "HTB3_External_Udims": [],
+    "category_thresholds": ["1", "18", "75"],
+    "category_thresholds_high_voltage": ["1", "18", "30"],
+    "category_storage_thresholds_high_voltage": ["1", "18", "50"],
 }
 
 
@@ -93,3 +97,37 @@ def test_calculate_line_xpu_known_level(generator_variables):
 def test_calculate_line_xpu_raises_for_unknown_level(generator_variables):
     with pytest.raises(ValueError, match="33"):
         generator_variables.calculate_line_xpu("a", -0.1, 100.0, 33, 100.0)
+
+
+@pytest.mark.parametrize(
+    "u_nom, p_max, category",
+    [
+        (90, 0.5, "A"),
+        (90, 1.0, "B"),
+        (90, 18.0, "C"),
+        (90, 74.9, "C"),
+        (90, 75.0, "D"),
+        (225, 18.0, "C"),
+        (225, 29.9, "C"),
+        (225, 30.0, "D"),
+        (400, 30.0, "D"),
+    ],
+)
+def test_get_generator_category_of_a_production_unit(generator_variables, u_nom, p_max, category):
+    """Above 110 kV a production unit is type D from 30 MW, and below it from 75 MW."""
+    assert generator_variables.get_generator_category(u_nom, p_max, False) == category
+
+
+@pytest.mark.parametrize(
+    "u_nom, p_max, category",
+    [
+        (90, 74.9, "C"),
+        (90, 75.0, "D"),
+        (225, 18.0, "C"),
+        (225, 49.9, "C"),
+        (225, 50.0, "D"),
+    ],
+)
+def test_get_generator_category_of_a_storage_unit(generator_variables, u_nom, p_max, category):
+    """Above 110 kV a storage unit is type D from 50 MW, by its own table of the DTR."""
+    assert generator_variables.get_generator_category(u_nom, p_max, True) == category

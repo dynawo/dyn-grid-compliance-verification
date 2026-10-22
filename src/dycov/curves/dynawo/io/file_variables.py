@@ -8,6 +8,7 @@
 #     demiguelm@aia.es
 #
 from dycov.configuration.cfg import config
+from dycov.core.global_variables import ELECTRIC_PERFORMANCE_BESS, MODEL_VALIDATION_BESS
 from dycov.curves.curves import ProducerCurves
 from dycov.electrical.generator_variables import generator_variables
 
@@ -67,7 +68,17 @@ class FileVariables:
         value = self._dynawo_curves.obtain_value(value_definition, origin=(section, key))
         return str(value)
 
-    def __get_value_from_section(self, section: str, key: str, generator_type: str) -> str:
+    def __get_generator_category(self) -> str:
+        """Gets the category of the producer, which the DTR gives by voltage and power."""
+        producer = self._dynawo_curves.get_producer()
+        s_nref = config.get_float("Dynawo", "s_nref", 100.0)
+        return generator_variables.get_generator_category(
+            producer.u_nom,
+            producer.p_max_injection_pu * s_nref,
+            producer.get_sim_type() in (ELECTRIC_PERFORMANCE_BESS, MODEL_VALIDATION_BESS),
+        )
+
+    def __get_value_from_section(self, section: str, key: str, *suffixes: str) -> str:
         """
         Retrieves a value from a specific configuration section, considering generator type.
 
@@ -80,15 +91,15 @@ class FileVariables:
             The configuration section to search within.
         key: str
             The key of the variable to retrieve.
-        generator_type: str
-            The type of the generator, used for type-specific keys.
+        suffixes: str
+            Suffixes of the specific keys, in the order they win.
 
         Returns
         -------
         str
             The obtained value if found, otherwise None.
         """
-        option = config.find_option(section, key, generator_type)
+        option = config.find_option(section, key, *suffixes)
         if option is None:
             return None
         return self.__obtain_value(config.get_value(section, option), section, option)
@@ -111,7 +122,8 @@ class FileVariables:
         str
             The obtained value if found, otherwise None.
         """
-        # Determine the generator type based on the nominal voltage
+        # A key may name the category of the unit, and if it does not, its voltage level.
+        category = self.__get_generator_category()
         generator_type = generator_variables.get_generator_type(
             self._dynawo_curves.get_producer().u_nom
         )
@@ -126,7 +138,7 @@ class FileVariables:
 
         # Search for the key in defined sections, considering generator type
         for section in sections:
-            value = self.__get_value_from_section(section, key, generator_type)
+            value = self.__get_value_from_section(section, key, category, generator_type)
             if value:
                 return value
         # As a last resort, check the global 'Dynawo' section

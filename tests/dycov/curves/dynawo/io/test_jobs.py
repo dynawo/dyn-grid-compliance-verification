@@ -10,16 +10,21 @@
 
 import pytest
 
+# Minimal stub classes to allow integration-style testing without mocks
+from dycov.core.global_variables import ELECTRIC_PERFORMANCE_PPM
 from dycov.curves.curves import ProducerCurves
 from dycov.curves.dynawo.io.jobs import JobsFile
 
 
-# Minimal stub classes to allow integration-style testing without mocks
 class DummyProducer:
     def __init__(self, dyd_name="producer.dyd", raise_on_dyd=False):
         self._dyd_name = dyd_name
         self._raise_on_dyd = raise_on_dyd
         self.u_nom = 400.0
+        self.p_max_injection_pu = 0.75
+
+    def get_sim_type(self):
+        return ELECTRIC_PERFORMANCE_PPM
 
     def get_producer_dyd(self):
         if self._raise_on_dyd:
