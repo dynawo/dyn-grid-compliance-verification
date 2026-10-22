@@ -236,7 +236,7 @@ class PerformanceValidator(Validator):
 
         if compliance_list.contains_key(["time_5P_85U", "time_10P_85U"], self._validations):
             compliance_values["time_85u"] = common.get_txu(
-                0.85,
+                config.get_float("GridCode", "recovery_voltage", 0.85),
                 self.__curve_list("time"),
                 self.__curve_list(bus_pdr_voltage),
                 t_event_start,
@@ -244,7 +244,7 @@ class PerformanceValidator(Validator):
 
         if compliance_list.contains_key(["time_10Pfloor_85U"], self._validations):
             compliance_values["time_85u"] = common.get_txu(
-                0.85,
+                config.get_float("GridCode", "recovery_voltage", 0.85),
                 self.__curve_list("time"),
                 self.__curve_list(bus_pdr_voltage),
                 t_event_start,
@@ -512,7 +512,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_5u"],
                 "time_5U",
-                10.0,
+                config.get_threshold("GridCode", "thr_time_5U", 10.0),
             )
 
         if compliance_list.contains_key(["time_10U"], self._validations):
@@ -520,7 +520,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_10u"],
                 "time_10U",
-                5.0,
+                config.get_threshold("GridCode", "thr_time_10U", 5.0),
             )
 
         if compliance_list.contains_key(["time_5P"], self._validations):
@@ -528,7 +528,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_5p"],
                 "time_5P",
-                10.0,
+                config.get_threshold("GridCode", "thr_time_5P", 10.0),
             )
 
         if compliance_list.contains_key(["time_10P"], self._validations):
@@ -536,7 +536,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_10p"],
                 "time_10P",
-                5.0,
+                config.get_threshold("GridCode", "thr_time_10P", 5.0),
             )
 
         if compliance_list.contains_key(["time_5P_clear"], self._validations):
@@ -545,7 +545,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_5p"] - (t_event_end - t_event_start),
                 "time_5P_clear",
-                10.0,
+                config.get_threshold("GridCode", "thr_time_5P_clear", 10.0),
             )
 
         if compliance_list.contains_key(["time_10P_clear"], self._validations):
@@ -554,7 +554,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_10p"] - (t_event_end - t_event_start),
                 "time_10P_clear",
-                5.0,
+                config.get_threshold("GridCode", "thr_time_10P_clear", 5.0),
             )
 
     def __check_composed_times(
@@ -570,7 +570,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_5p"] - compliance_values["time_85u"],
                 "time_5P_85U",
-                10.0,
+                config.get_threshold("GridCode", "thr_time_5P_85U", 10.0),
             )
 
         if compliance_list.contains_key(["time_10P_85U"], self._validations):
@@ -580,7 +580,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_10p"] - compliance_values["time_85u"],
                 "time_10P_85U",
-                5.0,
+                config.get_threshold("GridCode", "thr_time_10P_85U", 5.0),
             )
 
         if compliance_list.contains_key(["time_10Pfloor_85U"], self._validations):
@@ -590,7 +590,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_10pfloor"] - compliance_values["time_85u"],
                 "time_10Pfloor_85U",
-                2.0,
+                config.get_threshold("GridCode", "thr_time_10Pfloor_85U", 2.0),
             )
 
         if compliance_list.contains_key(["time_10Pfloor_clear"], self._validations):
@@ -600,7 +600,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_10pfloor"] - (t_event_end - t_event_start),
                 "time_10Pfloor_clear",
-                2.0,
+                config.get_threshold("GridCode", "thr_time_10Pfloor_clear", 2.0),
             )
 
         if compliance_list.contains_key(["time_85U_10P"], self._validations):
@@ -610,7 +610,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_10p"] - compliance_values["time_85u"],
                 "time_85U_10P",
-                5.0,
+                config.get_threshold("GridCode", "thr_time_85U_10P", 5.0),
             )
 
     def __check_times(

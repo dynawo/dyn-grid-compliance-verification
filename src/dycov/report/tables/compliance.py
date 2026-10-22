@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+from dycov.configuration.cfg import config
 from dycov.report import printable
 
 
@@ -22,54 +23,88 @@ def _non_compliant_time_note(footnote_defined: bool) -> tuple:
     return "\\footnotemark[\\value{footnote}]", True
 
 
+def _limit(check: str, default: float) -> str:
+    """The comparison a row states, which is empty when the check carries no verdict."""
+    threshold = config.get_threshold("GridCode", f"thr_{check}", default)
+    return "" if threshold is None else f" < {threshold:g} s"
+
+
 def _add_simple_times(results: dict, compliance_map: list):
     if "time_5U" in results:
         time_5U = printable.format_value(results, "time_5U", apply_formatter=True)
         check = printable.format_value(results, "time_5U_check")
-        compliance_map.append(["$T_{5U} < 10 s$", time_5U, check])
+        compliance_map.append([f"$T_{{5U}}{_limit('time_5U', 10.0)}$", time_5U, check])
     if "time_10U" in results:
         time_10U = printable.format_value(results, "time_10U", apply_formatter=True)
         check = printable.format_value(results, "time_10U_check")
-        compliance_map.append(["$T_{10U} < 5 s$", time_10U, check])
+        compliance_map.append([f"$T_{{10U}}{_limit('time_10U', 5.0)}$", time_10U, check])
     if "time_5P" in results and not ("time_5P_85U" in results or "time_5P_clear" in results):
         time_5P = printable.format_value(results, "time_5P", apply_formatter=True)
         check = printable.format_value(results, "time_5P_check")
-        compliance_map.append(["$T_{5P} < 10 s$", time_5P, check])
+        compliance_map.append([f"$T_{{5P}}{_limit('time_5P', 10.0)}$", time_5P, check])
     if "time_5P_clear" in results:
         time_5P_clear = printable.format_value(results, "time_5P_clear", apply_formatter=True)
         check = printable.format_value(results, "time_5P_clear_check")
-        compliance_map.append(["$T_{5P}  - T_{clear} < 10 s$", time_5P_clear, check])
+        compliance_map.append(
+            [
+                f"$T_{{5P}}  - T_{{clear}}{_limit('time_5P_clear', 10.0)}$",
+                time_5P_clear,
+                check,
+            ]
+        )
     if "time_10P" in results and not ("time_10P_85U" in results or "time_10P_clear" in results):
         time_10P = printable.format_value(results, "time_10P", apply_formatter=True)
         check = printable.format_value(results, "time_10P_check")
-        compliance_map.append(["$T_{10P} < 5 s$", time_10P, check])
+        compliance_map.append([f"$T_{{10P}}{_limit('time_10P', 5.0)}$", time_10P, check])
     if "time_10P_clear" in results:
         time_10P_clear = printable.format_value(results, "time_10P_clear", apply_formatter=True)
         check = printable.format_value(results, "time_10P_clear_check")
-        compliance_map.append(["$T_{10P}  - T_{clear} < 5 s$", time_10P_clear, check])
+        compliance_map.append(
+            [
+                f"$T_{{10P}}  - T_{{clear}}{_limit('time_10P_clear', 5.0)}$",
+                time_10P_clear,
+                check,
+            ]
+        )
     if "time_10Pfloor_clear" in results:
         time_10Pfloor_clear = printable.format_value(
             results, "time_10Pfloor_clear", apply_formatter=True
         )
         check = printable.format_value(results, "time_10Pfloor_clear_check")
-        compliance_map.append(["$T_{10P_{floor}} - T_{clear} < 2 s$", time_10Pfloor_clear, check])
+        compliance_map.append(
+            [
+                f"$T_{{10P_{{floor}}}} - T_{{clear}}{_limit('time_10Pfloor_clear', 2.0)}$",
+                time_10Pfloor_clear,
+                check,
+            ]
+        )
 
 
 def _add_composed_times(results: dict, compliance_map: list):
     if "time_5P_85U" in results:
         time_5P_85U = printable.format_value(results, "time_5P_85U", apply_formatter=True)
         check = printable.format_value(results, "time_5P_85U_check")
-        compliance_map.append(["$T_{5P}  - T_{85U} < 10 s$", time_5P_85U, check])
+        compliance_map.append(
+            [f"$T_{{5P}}  - T_{{85U}}{_limit('time_5P_85U', 10.0)}$", time_5P_85U, check]
+        )
     if "time_10P_85U" in results:
         time_10P_85U = printable.format_value(results, "time_10P_85U", apply_formatter=True)
         check = printable.format_value(results, "time_10P_85U_check")
-        compliance_map.append(["$T_{10P}  - T_{85U} < 5 s$", time_10P_85U, check])
+        compliance_map.append(
+            [f"$T_{{10P}}  - T_{{85U}}{_limit('time_10P_85U', 5.0)}$", time_10P_85U, check]
+        )
     if "time_10Pfloor_85U" in results:
         time_10Pfloor_85U = printable.format_value(
             results, "time_10Pfloor_85U", apply_formatter=True
         )
         check = printable.format_value(results, "time_10Pfloor_85U_check")
-        compliance_map.append(["$T_{10P_{floor}} - T_{85U} < 2 s$", time_10Pfloor_85U, check])
+        compliance_map.append(
+            [
+                f"$T_{{10P_{{floor}}}} - T_{{85U}}{_limit('time_10Pfloor_85U', 2.0)}$",
+                time_10Pfloor_85U,
+                check,
+            ]
+        )
 
 
 def _add_times(results: dict, compliance_map: list):

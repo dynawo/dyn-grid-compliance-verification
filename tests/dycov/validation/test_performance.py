@@ -47,6 +47,9 @@ class DummyConfig:
     def get_float(self, section: str, key: str, default: float) -> float:
         return self._overrides.get(key, default)
 
+    def get_threshold(self, section: str, key: str, default: float) -> float | None:
+        return self.get_float(section, key, default)
+
 
 class RecordingConfig(DummyConfig):
     """DummyConfig that records every (section, key) requested."""
