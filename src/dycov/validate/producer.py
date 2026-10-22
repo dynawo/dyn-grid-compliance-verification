@@ -21,6 +21,7 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_BESS,
     MODEL_VALIDATION_PPM,
 )
+from dycov.electrical.generator_variables import generator_variables
 from dycov.files import model_parameters
 from dycov.files.producer_ini_file import MAGNITUDE_KEYS, RETIRED_SUFFIX
 from dycov.logging import dycov_logging
@@ -632,6 +633,20 @@ class ModelProducer(Producer):
             True if has a reference curves directory, False otherwise
         """
         return self._has_reference_curves_path
+
+    def get_category(self) -> str:
+        """Gets the category of the unit, as the DTR defines it.
+
+        Returns
+        -------
+        str
+            Category of the unit: A, B, C or D
+        """
+        return generator_variables.get_generator_category(
+            self.u_nom,
+            self.p_max_injection_pu * self._s_nref,
+            self._sim_type in (ELECTRIC_PERFORMANCE_BESS, MODEL_VALIDATION_BESS),
+        )
 
     def get_sim_type_str(self) -> str:
         """Gets a string according to the type of validation executed.

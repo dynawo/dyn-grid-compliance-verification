@@ -27,6 +27,9 @@ class DummyProducer:
     def get_sim_type(self):
         return ELECTRIC_PERFORMANCE_PPM
 
+    def get_category(self):
+        return "D"
+
 
 class DummyParameters:
     def __init__(self):
@@ -36,6 +39,9 @@ class DummyParameters:
 
     def get_sim_type(self):
         return self.producer.get_sim_type()
+
+    def get_category(self):
+        return self.producer.get_category()
 
     def get_producer(self):
         return self.producer

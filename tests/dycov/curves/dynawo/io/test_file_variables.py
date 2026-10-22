@@ -25,6 +25,9 @@ class DummyProducer:
     def get_sim_type(self):
         return ELECTRIC_PERFORMANCE_PPM
 
+    def get_category(self):
+        return "D"
+
 
 class DummyProducerCurves(ProducerCurves):
     def __init__(self, producer):
@@ -47,9 +50,6 @@ class DummyGeneratorVariables:
 
     def get_generator_type(self, u_nom):
         return self._generator_type
-
-    def get_generator_category(self, u_nom, p_max, is_storage):
-        return "D"
 
 
 class DummyConfig:

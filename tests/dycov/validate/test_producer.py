@@ -78,6 +78,25 @@ def _producer_with_model(*generators: GenParams) -> ModelProducer:
     return producer
 
 
+def test_the_producer_gives_the_category_of_its_unit(monkeypatch):
+    """The DTR of 15/02/2024 makes every unit above 110 kV a type D."""
+    producer = _producer_reading(monkeypatch, _PRODUCER_INI)
+
+    assert producer.get_category() == "D"
+
+
+def test_the_category_of_a_unit_below_110_kv_follows_its_power(monkeypatch):
+    ini = _PRODUCER_INI.replace("u_nom = 225", "u_nom = 90")
+
+    assert _producer_reading(monkeypatch, ini).get_category() == "D"
+    assert (
+        _producer_reading(
+            monkeypatch, ini.replace("p_max_injection = 80", "p_max_injection = 20")
+        ).get_category()
+        == "C"
+    )
+
+
 def test_s_nom_pu_is_snom_over_snref():
     producer = ModelProducer.__new__(ModelProducer)
     producer.s_nom = 180.0

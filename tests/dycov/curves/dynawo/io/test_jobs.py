@@ -36,6 +36,9 @@ class DummyProducer:
 
         return DydFile(self._dyd_name)
 
+    def get_category(self):
+        return "D"
+
 
 class DummyParameters:
     def __init__(self, producer):

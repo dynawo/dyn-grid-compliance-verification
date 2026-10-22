@@ -33,6 +33,9 @@ class DummyProducer:
     def get_sim_type(self):
         return ELECTRIC_PERFORMANCE_PPM
 
+    def get_category(self):
+        return "D"
+
 
 class DummyProducerCurves(ProducerCurves):
     """Minimal stub to satisfy the DydFile constructor."""
