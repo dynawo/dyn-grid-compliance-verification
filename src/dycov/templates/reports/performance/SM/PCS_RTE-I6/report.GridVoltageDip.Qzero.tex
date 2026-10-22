@@ -40,39 +40,44 @@
 
     For generator units of classes B and C:
     \begin{center}
-        \begin{tabular}{lcc}
+        \begin{tabular}{lc}
             \toprule
-            \textbf{variable} & \textbf{for HTB1} & \textbf{other Volt Levels} \\
+            \textbf{variable} & \textbf{all Volt Levels} \\
             \midrule
-            $U_{initial}$     & 1.0 pu            & 1.0 pu                     \\
-            $T_{0}$           & (free)            & (free)                     \\
-            $U_{fault}$       & 0.05 pu           & 0.05 pu                    \\
-            $T_{clear}$       & $T_{0}$ + 250 ms  & $T_{0}$ + 150 ms           \\
-            $U_{clear}$       & 0.7 pu            & 0.7 pu                     \\
-            $T_{rec1 }$       & $T_{0}$ + 750 ms  & $T_{0}$ + 700 ms           \\
-            $T_{rec2 }$       & $T_{0}$ + 1550 ms & $T_{0}$ + 1500 ms          \\
-            $U_{rec2}$        & 0.9 pu            & 0.9 pu                     \\
+            $U_{initial}$     & 1.0 pu                   \\
+            $T_{0}$           & (free)                   \\
+            $U_{fault}$       & 0.05 pu                  \\
+            $T_{clear}$       & $T_{0}$ + 150 ms         \\
+            $U_{clear}$       & 0.7 pu                   \\
+            $T_{rec1}$        & $T_{0}$ + 700 ms         \\
+            $T_{rec2}$        & $T_{0}$ + 1500 ms        \\
+            $U_{rec2}$        & 0.9 pu                   \\
             \bottomrule
         \end{tabular}
     \end{center}
 
     For generator units of class D:
     \begin{center}
-        \begin{tabular}{lcc}
+        \begin{tabular}{lc}
             \toprule
-            \textbf{variable} & \textbf{for HTB2} & \textbf{other Volt Levels} \\
+            \textbf{variable} & \textbf{all Volt Levels} \\
             \midrule
-            $U_{initial}$     & 1.0 pu            & 1.0 pu                     \\
-            $T_{0}$           & (free)            & (free)                     \\
-            $U_{fault}$       & 0.00 pu           & 0.00 pu                    \\
-            $T_{clear}$       & $T_{0}$ + 250 ms  & $T_{0}$ + 150 ms           \\
-            $U_{clear}$       & 0.5 pu            & 0.5 pu                     \\
-            $T_{rec1 }$       & $T_{0}$ + 750 ms  & $T_{0}$ + 700 ms           \\
-            $T_{rec2 }$       & $T_{0}$ + 1400 ms & $T_{0}$ + 1350 ms          \\
-            $U_{rec2}$        & 0.9 pu            & 0.9 pu                     \\
+            $U_{initial}$     & 1.0 pu                   \\
+            $T_{0}$           & (free)                   \\
+            $U_{fault}$       & 0.00 pu                  \\
+            $T_{clear}$       & $T_{0}$ + 150 ms         \\
+            $U_{clear}$       & 0.5 pu                   \\
+            $T_{rec1}$        & $T_{0}$ + 700 ms         \\
+            $T_{rec2}$        & $T_{0}$ + 1350 ms        \\
+            $U_{rec2}$        & 0.9 pu                   \\
             \bottomrule
         \end{tabular}
     \end{center}
+
+    The DTR gives two particular cases, in which the dip lasts 200 or 250 ms instead of
+    150 ms: HTB1 for the classes B and C, HTB2 for the class D. The plateau then lasts
+    500 or 450 ms, so $T_{rec1}$ and $T_{rec2}$ keep the values of the tables. This tool
+    simulates the dip of 150 ms.
 
     \begin{description}
         \item Initial conditions used at the PDR bus:
