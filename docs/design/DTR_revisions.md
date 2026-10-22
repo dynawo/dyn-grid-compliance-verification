@@ -72,14 +72,15 @@ is structural and not a consequence of the order the files were read in.
 
 ## What the tool already gives a delta
 
-Three mechanisms are in the tool, and no shipped PCS uses any of them. They are there so that a
-delta carries data alone:
+Three mechanisms are in the tool so that a delta carries data alone:
 
 * **A key may name the category of the unit.** `find_option` reads `<key>_<category>` first,
   `<key>_<level>` next, and `<key>` last. `get_generator_category` gives the category from the
   connection voltage and the maximum power at injection, with the powers that separate A from B,
-  B from C and C from D as options of `[GridCode]`. The DTR of 15/02/2024 selects every gabarit
-  by the voltage level, so it writes no key with a category.
+  B from C and C from D as options of `[GridCode]`. The gabarits of the base are written this
+  way: the plain key holds what the DTR gives to the types B and C, and the `_D` key what it
+  gives to the type D. The level suffix is left for the one value the DTR does give by level,
+  the clearing time of the fault of the fiches I4, I5 and I16 zone 3.
 * **A limit may be withdrawn.** `get_threshold` reads `none` as "no limit", and the check then
   reports its value and gives no verdict. The report drops the comparison from the row of that
   check. A revision that keeps an indicator and withdraws its criterion writes one word.
@@ -118,6 +119,29 @@ The order of the layers, from the highest precedence to the lowest, is then:
 
 The configuration of the user wins over a revision. A user who changes a value takes the
 responsibility for it, as with every other option.
+
+## How a revision redefines the categories
+
+The DTR redefines the categories about as often as it moves a gabarit, and the gabarit follows
+the category, so a redefinition changes which profile a unit is tested against. Every revision so
+far writes the same table: three powers that separate A from B, B from C and C from D, one set
+below a connection voltage and another above it, and a set of its own for a storage unit. That is
+the shape of the options, so a redefinition writes values:
+
+| Revision | What it says | What it writes |
+|---|---|---|
+| 2024-02-15 | every unit above 110 kV is type D, whatever its power | `category_thresholds_high_voltage = 0,0,0` |
+| 2025-08-01 | a unit above 110 kV is type D from 30 MW | `category_thresholds_high_voltage = 1,18,30` |
+| 2025-10-13 | the category of a storage unit stops reading the installed power | nothing: see below |
+
+One criterion of the base is outside that shape. The table of a storage unit makes a unit of 18 to
+50 MW above 110 kV type D when the **installed power of the installation** is above 50 MW, and
+type C when it is below. DyCoV reads no installed power, so it gives that unit the type C. The
+revision of 13/10/2025 drops the clause and writes type C for every one of them, so the tool
+already answers as that revision does, and the base is an approximation in that one band.
+
+A revision that adds a criterion of this kind — one the tool has no input for — is not a delta.
+It is work on the tool, and the producer has to declare the new input first.
 
 ## What a delta may carry
 
@@ -235,7 +259,7 @@ The delta of 2025-08-01 writes:
 
 | What | Where |
 |---|---|
-| The category of a unit selects the dip gabarit | the `category_*` keys in `revision.ini`, and the keys of the gabarit of every dip |
+| A unit above 110 kV is type D from 30 MW, not from any power | `category_thresholds_high_voltage = 1,18,30` in its `revision.ini` |
 
 The delta of 2025-10-13 writes:
 
@@ -244,8 +268,7 @@ The delta of 2025-10-13 writes:
 | The fiches I6 and I7 start at Un | `pdr_U` of the dip and of the swell |
 | The fiche I7 gives one operating point, at Q = 0 | the list of operating conditions, one description, one report |
 | The fiche I5 adds the impedant fault | the list of operating conditions, one description, one report |
-| The reaction time carries no verdict | `thr_reaction_time` in `revision.ini` |
-| The category of a storage unit drops the installed power | `category_storage_thresholds_high_voltage` |
+| The reaction time carries no verdict | `thr_reaction_time = none` in `revision.ini` |
 
 The delta of 2026-05-04 is not compared yet, beyond the five points above, which it keeps as
 2025-10-13 writes them.
