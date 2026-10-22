@@ -41,7 +41,7 @@ HTB_LISTS = {
     "HTB2_External_Udims": [],
     "HTB3_External_Udims": [],
     "category_thresholds": ["1", "18", "75"],
-    "category_thresholds_high_voltage": ["1", "18", "30"],
+    "category_thresholds_high_voltage": ["0", "0", "0"],
     "category_storage_thresholds_high_voltage": ["1", "18", "50"],
 }
 
@@ -107,15 +107,24 @@ def test_calculate_line_xpu_raises_for_unknown_level(generator_variables):
         (90, 18.0, "C"),
         (90, 74.9, "C"),
         (90, 75.0, "D"),
-        (225, 18.0, "C"),
-        (225, 29.9, "C"),
-        (225, 30.0, "D"),
-        (400, 30.0, "D"),
+        (225, 0.5, "D"),
+        (225, 18.0, "D"),
+        (400, 1.0, "D"),
     ],
 )
 def test_get_generator_category_of_a_production_unit(generator_variables, u_nom, p_max, category):
-    """Above 110 kV a production unit is type D from 30 MW, and below it from 75 MW."""
+    """Above 110 kV a production unit is type D whatever its power, and below it from 75 MW."""
     assert generator_variables.get_generator_category(u_nom, p_max, False) == category
+
+
+def test_a_revision_moves_the_category_by_moving_a_threshold(generator_variables, monkeypatch):
+    """A revision that gives the type D a floor of 30 MW writes the powers and nothing else."""
+    assert generator_variables.get_generator_category(225, 18.0, False) == "D"
+
+    monkeypatch.setitem(HTB_LISTS, "category_thresholds_high_voltage", ["1", "18", "30"])
+
+    assert generator_variables.get_generator_category(225, 18.0, False) == "C"
+    assert generator_variables.get_generator_category(225, 30.0, False) == "D"
 
 
 @pytest.mark.parametrize(

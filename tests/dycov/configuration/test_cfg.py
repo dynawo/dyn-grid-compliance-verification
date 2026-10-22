@@ -130,11 +130,13 @@ def test_find_option_prefers_the_first_suffix_the_section_defines(tmp_path, empt
     user_config = empty_parsers[1]
     user_config.add_section("test_section")
     user_config.set("test_section", "u_fault", "0.05")
-    user_config.set("test_section", "u_fault_HTB3", "0.00")
+    user_config.set("test_section", "u_fault_D", "1e-3")
+    user_config.set("test_section", "fault_duration_HTB1", "0.150")
     cfg = Config(tmp_path, *empty_parsers)
 
-    assert cfg.find_option("test_section", "u_fault", "D", "HTB3") == "u_fault_HTB3"
-    assert cfg.find_option("test_section", "u_fault", "D", "HTB1") == "u_fault"
+    assert cfg.find_option("test_section", "u_fault", "D", "HTB1") == "u_fault_D"
+    assert cfg.find_option("test_section", "u_fault", "B", "HTB1") == "u_fault"
+    assert cfg.find_option("test_section", "fault_duration", "D", "HTB1") == "fault_duration_HTB1"
     assert cfg.find_option("test_section", "u_clear", "D", "HTB3") is None
 
 
