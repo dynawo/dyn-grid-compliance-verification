@@ -8,9 +8,14 @@
 #     demiguelm@aia.es
 #
 
+import logging
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
+from dycov.model.benchmark import Summary
+from dycov.model.compliance import Compliance
 from dycov.report import report
 from dycov.report.curve_classification import is_setpoint
 from dycov.report.types import FigureDescription
@@ -374,3 +379,75 @@ def test_an_unstable_test_is_labelled_with_a_latex_command_in_red():
 
     assert label == r"\textcolor{red}{unstable}"
     assert "\t" not in label
+
+
+class _SummaryProducer:
+    def is_dynawo_model(self):
+        return True
+
+    def get_producer_path(self):
+        return Path("examples/Model/Wind/IECA2015/Dynawo")
+
+    def has_reference_curves_path(self):
+        return True
+
+    def get_reference_path(self):
+        return Path("examples/Model/Wind/IECA2015/ReferenceCurves")
+
+
+class _SummaryParameters:
+    def __init__(self, workbook=None):
+        self._workbook = workbook
+
+    def get_producer(self):
+        return _SummaryProducer()
+
+    def get_launcher_dwo(self):
+        return Path("dynawo.sh")
+
+    def get_producer_workbook(self):
+        return self._workbook
+
+
+def _logged_summary(caplog) -> str:
+    [summary] = [record.getMessage() for record in caplog.records if record.name == "DyCoV.Report"]
+    return summary
+
+
+def test_the_summary_names_the_model_and_the_outcome_of_every_test(monkeypatch, caplog):
+    monkeypatch.setattr(report.manage_files, "get_dynawo_version", lambda launcher: "2.0.0")
+    tests = [
+        Summary(
+            producer_name="Producer",
+            id=1,
+            zone=3,
+            pcs="PCS_RTE-I16z3",
+            benchmark="USetPointStep",
+            operating_condition="AReactance",
+            compliance=Compliance.Simulated,
+            report_name="report",
+        )
+    ]
+
+    with caplog.at_level(logging.INFO, logger="DyCoV"):
+        report.log_summary(tests, _SummaryParameters())
+
+    summary = _logged_summary(caplog)
+    assert "***Dynawo version: 2.0.0***" in summary
+    assert "***Model dir: examples/Model/Wind/IECA2015/Dynawo***" in summary
+    assert "***Reference curves dir: examples/Model/Wind/IECA2015/ReferenceCurves***" in summary
+    [row] = [line for line in summary.splitlines() if "PCS_RTE-" in line]
+    assert row.split()[1:4] == ["PCS_RTE-I16z3", "USetPointStep", "AReactance"]
+    assert row[20 + 15 + 25 + 40 :].strip() == "Simulated"
+
+
+def test_the_summary_of_a_workbook_names_the_workbook_alone(monkeypatch, caplog):
+    monkeypatch.setattr(report.manage_files, "get_dynawo_version", lambda launcher: "2.0.0")
+
+    with caplog.at_level(logging.INFO, logger="DyCoV"):
+        report.log_summary([], _SummaryParameters(workbook=Path("Producer.xlsx")))
+
+    summary = _logged_summary(caplog)
+    assert "***Workbook: Producer.xlsx***" in summary
+    assert "Model dir" not in summary
+    assert "Reference curves dir" not in summary

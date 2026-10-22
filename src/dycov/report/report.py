@@ -14,7 +14,7 @@ import shutil
 import signal
 import subprocess
 import time
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
@@ -615,23 +615,65 @@ def _create_full_tex(
     return _pcs_replace(working_path, pcs_results, report_name, producer)
 
 
-def _summary_log(
-    summary_list: list,
-    timestamp: str,
-    dynawo_version: str,
-    model_template: str,
-    reference_template: str,
-    model_is_workbook: bool = False,
-) -> None:
-    header_txt = f"\n\n\nSummary Report\n==============\n\n***Run on: {timestamp}***\n"
-    header_txt += f"***Dycov version: {version} commit: {commit_id}***\n"
-    if dynawo_version:
-        header_txt += f"***Dynawo version: {dynawo_version}***\n"
-    if model_template:
-        label = "Workbook" if model_is_workbook else "Model dir"
-        header_txt += f"***{label}: {model_template}***\n"
-    if reference_template:
-        header_txt += f"***Reference curves dir: {reference_template}***\n"
+@dataclass(frozen=True)
+class _RunDescription:
+    """What a run ran on, as the summary of the log and the one of the report state it."""
+
+    timestamp: str
+    dynawo_version: str | None
+    model_label: str
+    model_template: str
+    reference_template: str | None
+
+    def lines(self) -> list:
+        lines = [
+            f"Run on: {self.timestamp}",
+            f"Dycov version: {version} commit: {commit_id}",
+        ]
+        if self.dynawo_version:
+            lines.append(f"Dynawo version: {self.dynawo_version}")
+        lines.append(f"{self.model_label}: {self.model_template}")
+        if self.reference_template:
+            lines.append(f"Reference curves dir: {self.reference_template}")
+        return lines
+
+
+def _latex_escaped(text: str) -> str:
+    return text.replace("\\", "\\textbackslash")
+
+
+def _describe_run(parameters: ValidationParameters) -> _RunDescription:
+    timestamp = time.strftime("%Y-%m-%d %H:%M %Z", time.localtime(time.time()))
+    producer = parameters.get_producer()
+    dynawo_version = None
+    if producer.is_dynawo_model():
+        dynawo_version = _latex_escaped(
+            str(manage_files.get_dynawo_version(parameters.get_launcher_dwo()))
+        )
+
+    workbook = parameters.get_producer_workbook()
+    if workbook:
+        # The model and its reference curves were generated into a directory that is removed
+        # when the run ends, so the input worth naming is the workbook they came from.
+        return _RunDescription(
+            timestamp, dynawo_version, "Workbook", _latex_escaped(str(workbook)), None
+        )
+
+    reference_template = None
+    if producer.has_reference_curves_path():
+        reference_template = _latex_escaped(str(producer.get_reference_path()))
+    return _RunDescription(
+        timestamp,
+        dynawo_version,
+        "Model dir",
+        _latex_escaped(str(producer.get_producer_path())),
+        reference_template,
+    )
+
+
+def _summary_log(summary_list: list, run: _RunDescription) -> None:
+    header_txt = "\n\n\nSummary Report\n==============\n\n"
+    header_txt += "".join(f"***{line}***\n" for line in run.lines())
 
     header_txt += (
         "\n\n"
@@ -715,6 +757,19 @@ def prepare_pcs_report(
     )
 
 
+def log_summary(sorted_summary: list, parameters: ValidationParameters) -> None:
+    """Logs the summary of the run, the one the report opens with, without the report.
+
+    Parameters
+    ----------
+    sorted_summary: list
+        Sorted list of the overall test results per pcs
+    parameters: ValidationParameters
+        Validation parameters
+    """
+    _summary_log(sorted_summary, _describe_run(parameters))
+
+
 def create_pdf(
     sorted_summary: list,
     report_results: dict,
@@ -751,46 +806,9 @@ def create_pdf(
 
     reports = _get_reports(sorted_summary, report_results, working_path)
 
-    summary_description = ""
-    now = time.time()
-    timestamp = time.strftime("%Y-%m-%d %H:%M %Z", time.localtime(now))
-    summary_description += f"Run on: {timestamp} \\\\"
-    summary_description += f"Dycov version: {version} commit: {commit_id} \\\\"
-
-    producer = parameters.get_producer()
-    dynawo_version = None
-    if producer.is_dynawo_model():
-        dynawo_version = str(
-            manage_files.get_dynawo_version(parameters.get_launcher_dwo())
-        ).replace("\\", "\\textbackslash")
-        summary_description += f"Dynawo version: {dynawo_version} \\\\"
-
-    workbook = parameters.get_producer_workbook()
-    if workbook:
-        # The model and its reference curves were generated into a directory that is removed
-        # when the run ends, so the input worth naming is the workbook they came from.
-        model_template = str(workbook).replace("\\", "\\textbackslash")
-        reference_template = None
-        summary_description += f"Workbook: {model_template} \\\\"
-    else:
-        model_template = str(producer.get_producer_path()).replace("\\", "\\textbackslash")
-        summary_description += f"Model dir: {model_template} \\\\"
-
-        reference_template = None
-        if producer.has_reference_curves_path():
-            reference_template = str(producer.get_reference_path()).replace(
-                "\\", "\\textbackslash"
-            )
-            summary_description += f"Reference curves dir: {reference_template} \\\\"
-
-    _summary_log(
-        sorted_summary,
-        timestamp,
-        dynawo_version,
-        model_template,
-        reference_template,
-        model_is_workbook=bool(workbook),
-    )
+    run = _describe_run(parameters)
+    summary_description = "".join(f"{line} \\\\" for line in run.lines())
+    _summary_log(sorted_summary, run)
     summary_map = summary.create_map(sorted_summary)
 
     # Extracting zones from the PCS data in the summary to identify the relevant "common" files
@@ -812,8 +830,8 @@ def create_pdf(
             "summary_description": summary_description.replace("_", r"\_"),
             "summaryReport": summary_map,
             "reports": reports,
-            "verificationtype": _get_verification_type(producer.get_sim_type()),
-            "modeltype": _get_model_type(producer.get_sim_type()),
+            "verificationtype": _get_verification_type(parameters.get_sim_type()),
+            "modeltype": _get_model_type(parameters.get_sim_type()),
         }
     ).dump(str(working_path / REPORT_NAME))
 
