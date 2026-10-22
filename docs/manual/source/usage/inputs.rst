@@ -64,7 +64,10 @@ plant-level control. For the precise definition of these zones, refer to
 PCS I16 in the RTE DTR. The ``Zone1/`` model is what the PCS of zone 1
 (``PCS_RTE-I16z1``) validate: a run limited with ``-p`` to a PCS of zone 3
 (``PCS_RTE-I16z3``, or the tests declared for ``PCS_RTE-F16z3``) accepts a
-directory with ``Zone3/`` alone.
+directory with ``Zone3/`` alone. For a storage, the INI file of a Zone 1 unit
+may also carry the ``[GFM Parameters]`` that the envelopes of its Grid Forming
+tests (``PCS_RTE-I18z1``) are generated from (see :ref:`GFM Producer Input
+<gfm_producer_input>`).
 
 .. note::
    The name *PDR* always refers to the real connection point of the complete
@@ -101,7 +104,13 @@ GFM Producer Input (.ini file)
 The ``dycov generate_gfm_envelopes`` command takes a dedicated ``.ini`` file that
 describes the Grid-Forming unit. It must contain a ``[DEFAULT]`` section for
 nominal and operational parameters, and a ``[GFM Parameters]`` section for
-the core GFM control constants.
+the core GFM control constants. The INI file of a Zone 1 unit of a model
+validation can be that file: given the same ``[GFM Parameters]``, the model
+validation of a storage generates the envelopes of the unit from it (see
+:ref:`Grid Forming tests in the model validation <gfm_model_validation>`). Its
+maximum consumption, ``p_max_consumption``, then gives the lowest active power
+of the unit, which the INI file of an envelope generation declares as a
+negative ``p_min_injection``.
 
 The ``generator_type`` of the ``[DEFAULT]`` section, ``BESS`` or ``PPM``, says
 what the unit is, and with it which tests it is given: a storage unit gets
@@ -139,6 +148,9 @@ A typical file looks like this:
    # Optional: short-duration maximum current (in pu of Snom), which bounds
    # every envelope as the DTR Fiche I18 requires
    Imax = 1.2
+   # Optional: the curves of the unit come from EMT simulations, so its
+   # envelopes are for them (false when absent)
+   emt = false
 
 For **Hybrid mode** (combining overdamped and underdamped envelopes), the
 ``[GFM Parameters]`` section should instead define separate damping and
@@ -280,6 +292,11 @@ The reference curves directory follows this structure:
 Each test case (Operating Condition) requires a curve file and an associated
 DICT file. The example above shows a PCS with two Benchmarks: Benchmark1 has
 two Operating Conditions and Benchmark2 has one.
+
+For a storage, the directory of each Zone 1 unit also holds the curves of its
+Grid Forming tests (``PCS_RTE-I18z1.<scenario>.<OC>``), the currents and the
+voltage at its PGU terminals that are checked against envelopes (see
+:ref:`Grid Forming tests in the model validation <gfm_model_validation>`).
 
 Accepted curve file formats:
 

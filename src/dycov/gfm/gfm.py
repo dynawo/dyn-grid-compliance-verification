@@ -16,9 +16,11 @@ from dycov.gfm import constants
 from dycov.gfm.calculators import calculator_factory
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.outputs import (
+    Envelopes,
     plot_results,
-    save_compliance_results,
+    read_envelopes,
     save_ini_dump,
+    save_results,
     save_results_to_csv,
 )
 from dycov.gfm.parameters import GFMParameters
@@ -67,6 +69,110 @@ class GridForming:
             given, their compliance and checks.
         """
         parameters.set_section(pcs_name, bm_name, oc_name)
+        title = f"{pcs_name}.{bm_name}.{oc_name}"
+
+        envelopes = self._obtain_envelopes(working_path, parameters, pcs_name, title)
+        if envelopes is None:
+            return GFMTestReport(
+                producer_name=producer_name,
+                pcs=pcs_name,
+                benchmark=bm_name,
+                operating_condition=oc_name,
+                magnitude="",
+                parameters=[],
+                compliance=Compliance.WithoutEnvelopes,
+                envelope=None,
+                modes=[],
+            )
+
+        curves_check = self._check_producer_curves(
+            working_path, parameters, producer_name, title, envelopes
+        )
+        producer_signal = curves_check.signal if curves_check else None
+
+        self._export_csv(working_path, title, envelopes, producer_signal)
+        save_results(working_path / "results.json", envelopes, curves_check)
+        self._plot(working_path, title, envelopes, producer_signal)
+
+        return GFMTestReport(
+            producer_name=producer_name,
+            pcs=pcs_name,
+            benchmark=bm_name,
+            operating_condition=oc_name,
+            magnitude=envelopes.magnitude,
+            parameters=envelopes.parameters,
+            compliance=curves_check.compliance if curves_check else None,
+            envelope=curves_check.envelope if curves_check else None,
+            modes=curves_check.modes if curves_check else [],
+        )
+
+    def _obtain_envelopes(
+        self, working_path: Path, parameters: GFMParameters, pcs_name: str, title: str
+    ) -> Optional[Envelopes]:
+        """
+        Obtains the envelopes of the test: read from the directory of envelopes given, or else
+        calculated from the parameters of the unit.
+
+        Parameters
+        ----------
+        working_path : Path
+            The directory path for intermediate and final outputs.
+        parameters : GFMParameters
+            The parsed parameter configuration object.
+        pcs_name : str
+            The name of the PCS.
+        title : str
+            The name of the test.
+
+        Returns
+        -------
+        Optional[Envelopes]
+            The envelopes of the test, None when the directory given lacks them or when the unit
+            declares no parameters to calculate them.
+        """
+        envelopes_path = parameters.get_envelopes_path()
+        if envelopes_path is None:
+            if not parameters.declares_unit_parameters():
+                return None
+            return self._calculate_test_envelopes(working_path, parameters, pcs_name, title)
+
+        test_path = envelopes_path.joinpath(*title.split("."))
+        try:
+            envelopes = read_envelopes(test_path, title)
+        except (OSError, ValueError, KeyError) as e:
+            LOGGER.error(f"The envelopes in '{test_path}' cannot be read. {e}")
+            return None
+        if envelopes is None:
+            LOGGER.warning(f"No envelopes for the test in '{test_path}'")
+        return envelopes
+
+    def _calculate_test_envelopes(
+        self, working_path: Path, parameters: GFMParameters, pcs_name: str, title: str
+    ) -> Envelopes:
+        """
+        Calculates the envelopes of the test from the parameters of the unit.
+
+        Parameters
+        ----------
+        working_path : Path
+            The directory path for intermediate and final outputs.
+        parameters : GFMParameters
+            The parsed parameter configuration object.
+        pcs_name : str
+            The name of the PCS.
+        title : str
+            The name of the test.
+
+        Returns
+        -------
+        Envelopes
+            The envelopes of the test.
+
+        Raises
+        ------
+        ValueError
+            If the unit declares neither the standard nor the hybrid parameters.
+        """
         x_eff = parameters.get_effective_reactance()
 
         calculator_name = parameters.get_calculator_name()
@@ -83,7 +189,6 @@ class GridForming:
         upper_envelope = np.array([])
         lower_envelope = np.array([])
         extra_envelopes = None
-        title = f"{pcs_name}.{bm_name}.{oc_name}"
 
         # Branch execution based on the presence of hybrid parameters (overdamped vs
         # underdamped limits)
@@ -151,6 +256,14 @@ class GridForming:
             magnitude_name, pcc_signal, upper_envelope, lower_envelope = self._calculate_envelopes(
                 calculator, time_array, event_time, d_val, h_val, x_eff
             )
+            producer = parameters.get_producer()
+            producer_config = producer.get_config() if producer else None
+            save_ini_dump(
+                path=working_path / f"{title}_ini_dump.txt",
+                parameters=parameters,
+                producer_config=producer_config,
+                calculator=calculator,
+            )
 
         else:
             error_msg = (
@@ -172,69 +285,19 @@ class GridForming:
         is_inconsistent = getattr(calculator, "_is_inconsistent", False)
         disclaimer_msg = getattr(calculator, "_disclaimer_message", None)
 
-        curves_check = self._check_producer_curves(
-            working_path,
-            parameters,
-            producer_name,
-            title,
-            magnitude_name,
-            time_array,
-            event_time,
-            calculator.get_event_duration(),
-            lower_envelope,
-            upper_envelope,
-        )
-        producer_signal = curves_check.signal if curves_check else None
-
-        self._export_csv(
-            working_path,
-            title,
-            magnitude_name,
-            time_array,
-            pcc_signal,
-            lower_envelope,
-            upper_envelope,
-            extra_envelopes=extra_envelopes,
-            producer_signal=producer_signal,
-        )
-
-        if not hybrid_params:
-            producer = parameters.get_producer()
-            producer_config = producer.get_config() if producer else None
-            save_ini_dump(
-                path=working_path / f"{title}_ini_dump.txt",
-                parameters=parameters,
-                producer_config=producer_config,
-                calculator=calculator,
-            )
-
-        params_info = self._get_params_plot_info(parameters, params_list, calculator)
-        self._plot(
-            working_path,
-            title,
-            magnitude_name,
-            time_array,
-            event_time,
-            pcc_signal,
-            lower_envelope,
-            upper_envelope,
-            params_info,
-            is_inconsistent,
-            disclaimer_msg,
-            extra_envelopes=extra_envelopes,
-            producer_signal=producer_signal,
-        )
-
-        return GFMTestReport(
-            producer_name=producer_name,
-            pcs=pcs_name,
-            benchmark=bm_name,
-            operating_condition=oc_name,
+        return Envelopes(
             magnitude=magnitude_name,
-            parameters=params_info,
-            compliance=curves_check.compliance if curves_check else None,
-            envelope=curves_check.envelope if curves_check else None,
-            modes=curves_check.modes if curves_check else [],
+            emt=parameters.is_emt(),
+            time=time_array,
+            event_time=event_time,
+            event_duration=calculator.get_event_duration(),
+            response=pcc_signal,
+            lower=lower_envelope,
+            upper=upper_envelope,
+            extra=extra_envelopes,
+            parameters=self._get_params_plot_info(parameters, params_list, calculator),
+            # An empty warning is shown with the default message of the figure
+            disclaimer=(disclaimer_msg or "") if is_inconsistent else None,
         )
 
     def _check_producer_curves(
@@ -243,12 +306,7 @@ class GridForming:
         parameters: GFMParameters,
         producer_name: str,
         title: str,
-        magnitude_name: str,
-        time_array: np.ndarray,
-        event_time: float,
-        event_duration: float,
-        lower_envelope: np.ndarray,
-        upper_envelope: np.ndarray,
+        envelopes: Envelopes,
     ) -> Optional[curves_compliance.CurvesCheck]:
         """
         Checks the producer curves of the test against its envelopes, when they are given.
@@ -263,18 +321,8 @@ class GridForming:
             The name of the producer, that of the directory holding its curves.
         title : str
             The name of the test.
-        magnitude_name : str
-            The magnitude the envelopes bound.
-        time_array : np.ndarray
-            The simulation time vector.
-        event_time : float
-            The timestamp of the grid event.
-        event_duration : float
-            How long the grid event lasts.
-        lower_envelope : np.ndarray
-            The calculated lower boundary array.
-        upper_envelope : np.ndarray
-            The calculated upper boundary array.
+        envelopes : Envelopes
+            The envelopes of the test.
 
         Returns
         -------
@@ -286,24 +334,21 @@ class GridForming:
             return None
 
         try:
-            curves_check = curves_compliance.check(
+            return curves_compliance.check(
                 curves_path / producer_name,
                 working_path,
                 title,
-                magnitude_name,
-                time_array,
-                event_time,
-                event_duration,
-                lower_envelope,
-                upper_envelope,
+                envelopes.magnitude,
+                envelopes.time,
+                envelopes.event_time,
+                envelopes.event_duration,
+                envelopes.lower,
+                envelopes.upper,
             )
         except (OSError, ValueError, configparser.Error) as e:
             # The envelopes are still delivered: only the producer curves cannot be judged
             LOGGER.error(f"The producer curves of {title} cannot be checked. {e}")
-            curves_check = curves_compliance.CurvesCheck(Compliance.InvalidTest, None, None, [])
-
-        save_compliance_results(working_path / "results.json", curves_check)
-        return curves_check
+            return curves_compliance.CurvesCheck(Compliance.InvalidTest, None, None, [])
 
     def _get_time(self, calculator_name: str) -> tuple[np.ndarray, float]:
         """
@@ -377,16 +422,11 @@ class GridForming:
         self,
         csv_path: Path,
         title: str,
-        magnitude_name: str,
-        time_array: np.ndarray,
-        pcc_signal: np.ndarray,
-        lower_envelope: np.ndarray,
-        upper_envelope: np.ndarray,
-        extra_envelopes: dict = None,
+        envelopes: Envelopes,
         producer_signal: np.ndarray = None,
     ) -> None:
         """
-        Exports generated signals to a CSV file.
+        Exports the envelopes to a CSV file.
 
         Parameters
         ----------
@@ -394,29 +434,19 @@ class GridForming:
             The directory path to save the CSV.
         title : str
             The file name for the CSV (without extension).
-        magnitude_name : str
-            The descriptive name of the physical magnitude.
-        time_array : np.ndarray
-            The time array vector.
-        pcc_signal : np.ndarray
-            The main signal value array.
-        lower_envelope : np.ndarray
-            The computed lower limit array.
-        upper_envelope : np.ndarray
-            The computed upper limit array.
-        extra_envelopes : dict, optional
-            Additional debugging envelopes to append.
+        envelopes : Envelopes
+            The envelopes of the test.
         producer_signal : np.ndarray, optional
             The filtered producer curve on the same time values.
         """
         save_results_to_csv(
             path=csv_path / f"{title}.csv",
-            magnitude=magnitude_name,
-            time_array=time_array,
-            pcc_signal=pcc_signal,
-            lower_envelope=lower_envelope,
-            upper_envelope=upper_envelope,
-            extra_envelopes=extra_envelopes,
+            magnitude=envelopes.magnitude,
+            time_array=envelopes.time,
+            pcc_signal=envelopes.response,
+            lower_envelope=envelopes.lower,
+            upper_envelope=envelopes.upper,
+            extra_envelopes=envelopes.extra,
             producer_signal=producer_signal,
         )
 
@@ -503,16 +533,7 @@ class GridForming:
         self,
         png_path: Path,
         title: str,
-        magnitude_name: str,
-        time_array: np.ndarray,
-        event_time: float,
-        pcc_signal: np.ndarray,
-        lower_envelope: np.ndarray,
-        upper_envelope: np.ndarray,
-        params_info: list[str],
-        is_inconsistent: bool = False,
-        disclaimer_msg: str = None,
-        extra_envelopes: dict = None,
+        envelopes: Envelopes,
         producer_signal: np.ndarray = None,
     ) -> None:
         """
@@ -524,43 +545,25 @@ class GridForming:
             The directory path to save the visual plots.
         title : str
             The title of the plot and filename.
-        magnitude_name : str
-            The physical magnitude measured (e.g., P, Iq).
-        time_array : np.ndarray
-            The simulation time vector.
-        event_time : float
-            The timestamp when the grid event happens.
-        pcc_signal : np.ndarray
-            The primary physical signal array.
-        lower_envelope : np.ndarray
-            The calculated lower boundary array.
-        upper_envelope : np.ndarray
-            The calculated upper boundary array.
-        params_info : list[str]
-            The parameters to print on the plot, one 'name = value' line each.
-        is_inconsistent : bool, optional
-            Whether to display a warning flag on the plot.
-        disclaimer_msg : str, optional
-            A custom text to display if inconsistencies exist.
-        extra_envelopes : dict, optional
-            Extra boundary arrays for UI rendering.
+        envelopes : Envelopes
+            The envelopes of the test.
         producer_signal : np.ndarray, optional
             The filtered producer curve on the same time values.
         """
         plot_results(
             path=png_path / f"{title}.png",
             title=title,
-            magnitude=magnitude_name,
-            time_array=time_array,
-            event_time=event_time,
+            magnitude=envelopes.magnitude,
+            time_array=envelopes.time,
+            event_time=envelopes.event_time,
             shift_time=0,
-            pcc_signal=pcc_signal,
-            lower_envelope=lower_envelope,
-            upper_envelope=upper_envelope,
+            pcc_signal=envelopes.response,
+            lower_envelope=envelopes.lower,
+            upper_envelope=envelopes.upper,
             output_format="png&html",
-            params_list=params_info,
-            show_disclaimer=is_inconsistent,
-            disclaimer_message=disclaimer_msg,
-            extra_envelopes=extra_envelopes,
+            params_list=envelopes.parameters,
+            show_disclaimer=envelopes.disclaimer is not None,
+            disclaimer_message=envelopes.disclaimer or None,
+            extra_envelopes=envelopes.extra,
             producer_signal=producer_signal,
         )

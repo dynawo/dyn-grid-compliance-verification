@@ -36,6 +36,7 @@ def test_to_str_all_members_unique_and_non_empty():
         ("SimulationTimeOut", "Simulation time out"),
         ("NotApplicableTest", "Not applicable test"),
         ("VoltageCurveMissing", "Missing the simulated voltage curve"),
+        ("WithoutEnvelopes", "Missing the envelopes"),
     ],
 )
 def test_to_str_values(member, expected):

@@ -1,0 +1,35 @@
+% Custom macros common to all reports:
+{{ producercommand }}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% The document starts here
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    \section{Results for PCS RTE-I18 Zone 1 ({{ producer }})}
+
+    DTR Fiche I18 (Grid Forming), for non-synchronous storage units of type C and D. Each test
+    starts from the operating points OC1 to OC5 (OC1 to OC7 for test 2), and its envelopes bound
+    a current at the PGU terminals:
+    \begin{itemize}
+        \item Test 1 (\texttt{S\_VolAngStep}): the phase of the voltage at the infinite bus jumps
+        by \(\Delta\theta_{grid} = \pm 0.3\,(x_{eff} + x_{grid})\) and
+        \(\pm 0.6\,(x_{eff} + x_{grid})\) rad, with a grid of short-circuit ratio 2, 10 and 20.
+        The envelopes bound the active current \(I_p\).
+        \item Test 2 (\texttt{S\_VolAmpStep}): the amplitude of the voltage at the infinite bus
+        steps by \(\Delta u_G = \pm 0.15\,(x_{eff} + x_{grid})\)~pu, with a grid of
+        short-circuit ratio 2, 10 and 20. The envelopes bound the reactive current \(I_q\).
+        \item Test 3 (\texttt{S\_SCRup}, \texttt{S\_SCRdown}): the impedance of the grid switches
+        from a short-circuit ratio of 2 to one of 20, and back. The envelopes bound the active
+        current \(I_p\).
+        \item Test 4 (\texttt{S\_Rocof}): the frequency of the infinite bus ramps from 49.5~Hz at
+        +0.5~Hz/s during 3~s and at +2~Hz/s during 500~ms, and from 50.5~Hz at the opposite
+        rates, with a grid of short-circuit ratio 2, 10 and 20. The envelopes bound the active
+        current \(I_p\).
+    \end{itemize}
+    Test 5, the faults, is for information only in the fiche: it has no envelope.
+
+    \BLOCK{for subReport in subReports}
+    {{subReport}}
+    \newpage
+    \BLOCK{endfor}

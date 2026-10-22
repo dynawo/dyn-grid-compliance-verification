@@ -415,6 +415,29 @@ def _add_reference_argument(
     )
 
 
+def _add_gfm_envelopes_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--gfm-envelopes' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
+    _add_argument(
+        parser,
+        "-g",
+        "--gfm-envelopes",
+        arg_type=Path,
+        help_msg=(
+            "Path to the output of 'dycov generate_gfm_envelopes', whose envelopes the Grid "
+            "Forming tests of the DTR Fiche I18 are checked against instead of being generated "
+            "from the Zone 1 INI files: a subdirectory per Zone 1 unit, named after it, or one "
+            "output for all of them."
+        ),
+        completion=shtab.DIRECTORY,
+    )
+
+
 def _add_pcs_argument(parser: argparse.ArgumentParser) -> None:
     """Adds the '--pcs' argument to the given parser.
 
@@ -658,13 +681,6 @@ def _add_generate_gfm_envelopes_subparser(subparsers: argparse._SubParsersAction
         help="create all the envelopes based on the description of the different test cases",
     )
     _add_ini_argument(envelops, is_required=True)
-    _add_curves_argument(
-        envelops,
-        explain=(
-            "When given, the curves of the producer, one subdirectory per producer INI file, "
-            "are checked against the envelopes and the damping criterion of the DTR."
-        ),
-    )
     _add_emt_argument(envelops)
     _add_output_argument(envelops)
     _add_pcs_argument(envelops)
@@ -687,11 +703,12 @@ def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:
         # One line per way of calling it: the inputs exclude each other, which argparse cannot
         # express on its own.
         usage=(
-            "dycov validate -e EXCEL            [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]\n"
-            "       dycov validate -m MODEL  reference [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS]"
-            " [-od]\n"
-            "       dycov validate -c CURVES reference [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS]"
-            " [-od]"
+            "dycov validate -e EXCEL            [-h] [-l LAUNCHER] [-g GFM_ENVELOPES]"
+            " [-o OUTPUT] [-p PCS] [-od]\n"
+            "       dycov validate -m MODEL  reference [-h] [-l LAUNCHER] [-g GFM_ENVELOPES]"
+            " [-o OUTPUT] [-p PCS] [-od]\n"
+            "       dycov validate -c CURVES reference [-h] [-l LAUNCHER] [-g GFM_ENVELOPES]"
+            " [-o OUTPUT] [-p PCS] [-od]"
         ),
     )
     _add_launcher_argument(validate)
@@ -707,6 +724,7 @@ def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:
         ),
     )
     _add_reference_argument(validate, nargs="?")
+    _add_gfm_envelopes_argument(validate)
     _add_output_argument(validate)
     _add_pcs_argument(validate)
     _add_only_dtr_argument(validate)

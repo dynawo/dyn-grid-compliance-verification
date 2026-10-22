@@ -17,11 +17,13 @@ from typing import Optional
 
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
+from dycov.core.parameters import Parameters
 from dycov.curves import anonymizer
 from dycov.excel import generator as excel_generator
 from dycov.files import producer_ini_migration
 from dycov.gfm.generator import GFMGeneration
 from dycov.gfm.parameters import GFMParameters
+from dycov.gfm.producer import GFMProducer
 from dycov.gfm.verification.functional_tests import compare_csv_directories
 from dycov.logging import dycov_logging
 from dycov.validate.parameters import ValidationParameters
@@ -86,7 +88,6 @@ def handle_generate_gfm_envelopes_command(
     result_code = _generate_gfm_envelopes(
         output_dir=output_dir,
         producer_ini=producer_ini,
-        producer_curves=args.curves,
         emt=emt,
         user_pcs=args.pcs,
         only_dtr=args.only_dtr,
@@ -120,6 +121,9 @@ def handle_validate_command(
         Path to the Dynawo launcher.
     """
     dycov_logging.get_logger("CommandHandlers").info("Handling 'validate' command.")
+    if args.gfm_envelopes and not Path(args.gfm_envelopes).is_dir():
+        parser.error(f"Grid Forming envelopes not found: {args.gfm_envelopes}")
+        return 1
     if args.excel:
         return _verify_from_workbook(parser, args, dwo_launcher, MODEL_VALIDATION)
     if args.model and args.curves:
@@ -161,6 +165,7 @@ def handle_validate_command(
         only_dtr=args.only_dtr,
         testing=args.testing,
         verification_type=MODEL_VALIDATION,
+        gfm_envelopes=args.gfm_envelopes,
     )
 
     if result_code == -1:
@@ -265,6 +270,7 @@ def _verify_from_workbook(
             testing=args.testing,
             verification_type=verification_type,
             producer_workbook=workbook,
+            gfm_envelopes=getattr(args, "gfm_envelopes", None),
         )
 
     if result_code == -1:
@@ -476,6 +482,7 @@ def _run_verification(
     testing: bool,
     verification_type: int,
     producer_workbook: Optional[Path] = None,
+    gfm_envelopes: Optional[Path] = None,
 ) -> int:
     """Initializes and runs a model validation or performance verification.
 
@@ -502,6 +509,10 @@ def _run_verification(
         If True, run in testing mode.
     verification_type: int
         Type of verification (MODEL_VALIDATION or ELECTRIC_PERFORMANCE).
+    producer_workbook: Optional[Path]
+        Workbook the producer inputs were generated from, if applicable.
+    gfm_envelopes: Optional[Path]
+        Directory of the Grid Forming envelopes to check the Zone 1 units against, if given.
 
     Returns
     -------
@@ -523,6 +534,7 @@ def _run_verification(
             only_dtr=only_dtr,
             verification_type=verification_type,
             producer_workbook=producer_workbook,
+            gfm_envelopes=gfm_envelopes,
         )
     except ValueError as e:
         dycov_logging.get_logger("CommandHandlers").error(f"{e}")
@@ -591,7 +603,6 @@ def _run_verification(
 def _generate_gfm_envelopes(
     output_dir: Path,
     producer_ini: Path,
-    producer_curves: Optional[Path],
     emt: bool,
     user_pcs: bool,
     only_dtr: bool,
@@ -599,14 +610,8 @@ def _generate_gfm_envelopes(
 ):
     dycov_logging.get_logger("CommandHandlers").info("Running generation of envelopes")
     try:
-        params = GFMParameters(
-            producer_ini=producer_ini,
-            selected_pcs=user_pcs,
-            output_dir=output_dir,
-            only_dtr=only_dtr,
-            emt=emt,
-            producer_curves=producer_curves,
-        )
+        run = Parameters(None, user_pcs, output_dir, only_dtr)
+        params = GFMParameters(run, GFMProducer(producer_ini), emt=emt)
 
         # Determine if the parameters are valid.
         if not params.is_valid():
@@ -661,7 +666,7 @@ def _generate_gfm_envelopes(
                 return 1
 
         # SUCCESS: always delete the temporary directory
-        params.cleanup_working_dir()
+        run.cleanup_working_dir()
         return 0
 
     except Exception as e:
@@ -671,7 +676,7 @@ def _generate_gfm_envelopes(
             dycov_logging.get_logger("CommandHandlers").error(f"Error during generation: {e}")
         # Keep artifacts in DEBUG for diagnostics; otherwise, delete
         try:
-            params.cleanup_working_dir(preserve_on_debug=True)
+            run.cleanup_working_dir(preserve_on_debug=True)
         except Exception:
             pass
         return 1

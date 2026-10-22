@@ -25,14 +25,30 @@ from dycov.model.compliance import Compliance
 # A test that was verified and said so, whichever way.
 VERDICTS = (Compliance.Compliant, Compliance.NonCompliant)
 
-# A test that could not be verified because a curve it needs is not delivered. This is a
-# statement about the dictionaries and the curves on disk, not about what they contain.
+# A test that could not be verified because a curve it needs, or the envelopes it is checked
+# against, are not delivered. This is a statement about the dictionaries, the curves and the INI
+# files on disk, not about what they contain.
 UNDELIVERED = (
     Compliance.WithoutCurves,
     Compliance.WithoutReferenceCurves,
     Compliance.WithoutProducerCurves,
     Compliance.VoltageCurveMissing,
+    Compliance.WithoutEnvelopes,
 )
+
+# The Grid Forming tests of the DTR Fiche I18, which the Zone 1 unit of a storage is given: the
+# examples deliver neither their envelopes nor the parameters to generate them.
+I18_TESTS = [
+    f"PCS_RTE-I18z1.{scenario}.OC{oc}"
+    for scenarios, operating_conditions in (
+        ([f"S_VolAngStep{n}" for n in range(1, 13)], 5),
+        ([f"S_VolAmpStep{n}" for n in range(1, 7)], 7),
+        (["S_SCRup1", "S_SCRdown1"], 5),
+        ([f"S_Rocof{n}" for n in range(1, 13)], 5),
+    )
+    for scenario in scenarios
+    for oc in range(1, operating_conditions + 1)
+]
 
 
 def test_ids(summaries: list) -> list:

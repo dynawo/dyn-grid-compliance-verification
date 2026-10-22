@@ -20,9 +20,10 @@ This workflow produces **analytical envelopes** that characterize
 the admissible dynamic response of a Grid‑Forming unit
 for specific disturbance families.
 
-The GFM workflow is independent from:
-- RMS model validation,
-- electrical performance verification.
+The envelope generation is independent from the electrical performance
+verification. The RMS model validation of a storage unit, on the other hand,
+checks the curves of its Zone 1 units against these envelopes, the tests of
+the DTR Fiche I18 (see [section 11](#11-checking-the-curves-of-a-storage-unit)).
 
 ---
 
@@ -100,9 +101,11 @@ section of `Producer.ini`:
 
 | Parameter | Description |
 |-----------|-------------|
+| `generator_type` | Kind of unit, `BESS` (the DTR Fiche I18) or `PPM` (the tests agreed before it) |
 | `u_nom` | Nominal voltage at the PDR bus (kV). Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore) |
 | `p_max_injection` | Maximum active power injection (MW) |
 | `p_min_injection` | Minimum active power injection (MW, negative for absorption) |
+| `p_max_consumption` | Maximum consumption (MW), as the INI file of a model validation declares it; when present, it gives the minimum active power instead of `p_min_injection` |
 | `q_max` | Maximum reactive power (MVar) |
 | `q_min` | Minimum reactive power (MVar) |
 
@@ -142,13 +145,15 @@ The remaining parameters are defined inside the `[GFM Parameters]` section.
 |-----------|-------------|
 | `save_all_envelopes` | If `true`, the CSV output includes all intermediate envelopes (individual overdamped and underdamped traces) in addition to the final merged envelope |
 | `emt_delay` | Time shift (s) applied to the envelopes when running in EMT mode (`-e`); defaults to 0.02 when absent |
+| `emt` | If `true`, the curves of the unit come from EMT simulations and its envelopes are always for them, as the model validation generates them; defaults to `false` |
 
 > **Note**
 > `RatioMin` and `RatioMax` — the bounds applied to parameter variations for
 > the sensitivity analysis — are **not** read from `Producer.ini`. They belong
-> to the tool's PCS configuration (most `PCS_RTE-IGFMx` templates define their
-> own values; when a template does not, both bounds default to 1.0) and can be
-> overridden through the tool configuration like any other PCS option.
+> to the tool's PCS configuration (the settings of each test of
+> `PCS_RTE-I18z1`, and most `PCS_RTE-IGFMx` templates, define their own values;
+> when a template does not, both bounds default to 1.0) and can be overridden
+> through the tool configuration like any other PCS option.
 
 ---
 
@@ -239,8 +244,9 @@ dycov generate_gfm_envelopes -i Producer.ini -e
 
 In EMT mode, the envelopes and the PCC signal are shifted in time by the
 `emt_delay` value (in seconds) defined in `[GFM Parameters]`, to account for
-the initial response of an EMT simulation. Without `-e`, `emt_delay` has no
-effect.
+the initial response of an EMT simulation. Without EMT mode, `emt_delay` has
+no effect. A unit may also declare `emt = true` in `[GFM Parameters]`, which
+puts every generation of its envelopes in EMT mode.
 
 ---
 
@@ -259,18 +265,22 @@ A typical structure is:
 
 ```text
 Results/
-└── PCS_RTE-IGFMx/
+├── Reports/
+│   └── report.pdf
+└── <PCS>/
     └── S_<Scenario>/
         └── OC<k>/
             ├── *.csv
             ├── *.png
             ├── *.html
-            └── *_ini_dump.txt   (only for hybrid cases)
+            ├── *_ini_dump.txt
+            └── results.json
 ```
 
 Where:
 
-- `PCS_RTE-IGFMx` identifies the GFM PCS family.
+- `<PCS>` identifies the GFM PCS: `PCS_RTE-I18z1` for a storage unit,
+  `PCS_RTE-IGFM1` to `4` for a power park module.
 - `S_<Scenario>` identifies the disturbance scenario
   (e.g. voltage angle step, voltage amplitude step, SCR variation, RoCoF).
 - `OC<k>` identifies a specific operating condition for that scenario.
@@ -290,12 +300,17 @@ For each combination of PCS, scenario and operating condition, DyCoV generates:
   be shown.
 - **HTML file** providing an interactive visualization of the same content.
 
-For **hybrid GFM cases only**, DyCoV also generates:
-
 - **INI dump file (`*_ini_dump.txt`)** containing the exact set of input
   parameters used for that calculation, including internally derived values
-  such as the damping ratio $\varepsilon$. Intended for full traceability
-  when hybrid configurations are used.
+  such as the damping ratio $\varepsilon$, one for each damping regime in
+  Hybrid mode. Intended for full traceability.
+- **`results.json`** describing the envelopes: the current they bound,
+  whether they are for EMT simulations, the duration of the event and the
+  parameters of the test. The model validation reads it back, with the CSV
+  file, when it is given the envelopes.
+
+The **PDF report** in `Reports/` gathers every test, with a page per test: its
+parameters, its envelope figure and a link to the HTML one.
 
 ---
 
@@ -344,6 +359,36 @@ After GFM analysis, you may:
   - [RMS model validation](rms_model_validation.md)
   - [electrical performance verification](electrical_performance_verification.md)
 
+
+---
+
+## 11. Checking the curves of a storage unit
+
+The model validation of a storage, `dycov validate`, gives its Zone 1 units
+the tests of the DTR Fiche I18 along with those of the other fiches, as
+`PCS_RTE-I18z1`. They are not simulated: the curves of each test, among the
+reference curves of the unit (`ReferenceCurves/<unit>/PCS_RTE-I18z1.<scenario>.<OC>.csv`
+and its `.dict`), are checked against the envelopes of the test and the damping
+criterion of the fiche. The envelopes come from one of two places:
+
+* the output of `dycov generate_gfm_envelopes`, given with `-g`, as the fiche
+  has RTE send them to the producer. It holds a subdirectory per Zone 1 unit,
+  named after it, or a single output that serves every unit:
+
+  ```bash
+  dycov generate_gfm_envelopes -i Dynawo/Zone1/Producer.ini -o Envelopes
+  dycov validate -m Dynawo ReferenceCurves -g Envelopes
+  ```
+
+* or else the `[GFM Parameters]` of the INI file of the unit, which the model
+  validation generates them from. The same INI file serves both commands.
+
+A unit that declares no `[GFM Parameters]`, and whose envelopes are not given,
+has its tests reported as missing the envelopes. The report of the validation
+lists every test in its summary, and the tests whose curves were judged have a
+page with the figure of the envelopes and the curve, and the checks with their
+verdict. The criteria are described in the user manual, under *Grid Forming
+tests in the model validation*.
 
 ---
 

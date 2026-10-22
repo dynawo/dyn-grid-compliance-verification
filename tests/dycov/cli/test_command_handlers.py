@@ -34,10 +34,11 @@ def _performance_args(model=None, curves=None, excel=None):
     return args
 
 
-def _validate_args(model=None, curves=None, reference=None, excel=None):
+def _validate_args(model=None, curves=None, reference=None, excel=None, gfm_envelopes=None):
     args = _performance_args(model=model, curves=curves)
     args.reference = reference
     args.excel = excel
+    args.gfm_envelopes = gfm_envelopes
     return args
 
 
@@ -107,6 +108,30 @@ def test_validate_with_model_and_reference_passes_both(mocker):
     assert kwargs["producer_model"] == Path("Dynawo")
     assert kwargs["reference_curves"] == Path("ReferenceCurves")
     assert kwargs["verification_type"] == MODEL_VALIDATION
+
+
+def test_validate_passes_the_grid_forming_envelopes(mocker, tmp_path):
+    run_verification = mocker.patch("dycov.cli.command_handlers._run_verification", return_value=0)
+    parser = MagicMock()
+    args = _validate_args(model="Dynawo", reference="ReferenceCurves", gfm_envelopes=tmp_path)
+
+    result = handle_validate_command(parser, args, _LAUNCHER)
+
+    assert result == 0
+    assert run_verification.call_args.kwargs["gfm_envelopes"] == tmp_path
+
+
+def test_validate_refuses_grid_forming_envelopes_that_do_not_exist(mocker, tmp_path):
+    run_verification = mocker.patch("dycov.cli.command_handlers._run_verification")
+    parser = MagicMock()
+    args = _validate_args(
+        model="Dynawo", reference="ReferenceCurves", gfm_envelopes=tmp_path / "absent"
+    )
+
+    handle_validate_command(parser, args, _LAUNCHER)
+
+    assert "envelopes" in parser.error.call_args.args[0]
+    run_verification.assert_not_called()
 
 
 def test_validate_refuses_a_model_and_curves_together(mocker):

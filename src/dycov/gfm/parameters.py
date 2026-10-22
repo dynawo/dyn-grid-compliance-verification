@@ -17,41 +17,44 @@ from dycov.files import value_registry
 from dycov.gfm.producer import GFMProducer
 
 
-class GFMParameters(Parameters):
-    """Configuration entity to define and manage GFM model validation parameters."""
+class GFMParameters:
+    """What the Grid Forming tests of a unit are generated or checked with: the unit, the PCS
+    description of the test at hand and the run the tests belong to."""
 
     def __init__(
         self,
-        producer_ini: Path,
-        selected_pcs: str,
-        output_dir: Path,
-        only_dtr: bool,
-        emt: bool,
+        run: Parameters,
+        producer: GFMProducer,
+        emt: bool = False,
         producer_curves: Optional[Path] = None,
+        envelopes: Optional[Path] = None,
     ) -> None:
         """
-        Initializes the parameters object with producer configuration and runtime options.
+        Initializes the parameters of the tests of a unit.
 
         Parameters
         ----------
-        producer_ini : Path
-            Path to the producer's INI configuration file.
-        selected_pcs : str
-            The specific PCS to evaluate.
-        output_dir : Path
-            The directory path for saving outputs.
-        only_dtr : bool
-            Flag indicating if only DTR evaluation is required.
-        emt : bool
-            Flag to enable EMT simulation mode.
+        run : Parameters
+            The parameters of the run the tests belong to, which owns their working and output
+            directories and the selection of PCS: an envelope generation, or the model
+            validation of the unit.
+        producer : GFMProducer
+            The unit the tests are for.
+        emt : bool, optional
+            Whether the envelopes are for EMT simulations, whatever the INI file of the unit
+            declares. Defaults to False.
         producer_curves : Optional[Path], optional
-            Directory of the producer curves to check against the envelopes. Defaults to None,
-            in which case only the envelopes are generated.
+            Directory of the producer curves to check against the envelopes, one subdirectory
+            per unit. Defaults to None, in which case only the envelopes are generated.
+        envelopes : Optional[Path], optional
+            Directory the envelopes of the unit are read from, as 'dycov generate_gfm_envelopes'
+            writes them, instead of being generated. Defaults to None.
         """
-        super().__init__(None, selected_pcs, output_dir, only_dtr)
+        self._run = run
+        self._producer = producer
         self._emt = emt
-        self._producer = GFMProducer(producer_ini)
         self._producer_curves = producer_curves
+        self._envelopes = envelopes
 
     def set_section(self, pcs_name: str, bm_name: str, oc_name: str) -> None:
         """
@@ -72,6 +75,61 @@ class GFMParameters(Parameters):
         self._oc_section = f"{pcs_name}.{bm_name}.{oc_name}"
         self._eval_sections = (self._oc_section, self._bm_section, self._pcs_section)
 
+    def get_working_dir(self) -> Path:
+        """
+        Retrieves the working directory of the run.
+
+        Returns
+        -------
+        Path
+            The working directory.
+        """
+        return self._run.get_working_dir()
+
+    def get_output_dir(self) -> Path:
+        """
+        Retrieves the output directory of the run.
+
+        Returns
+        -------
+        Path
+            The output directory.
+        """
+        return self._run.get_output_dir()
+
+    def get_selected_pcs(self) -> str:
+        """
+        Retrieves the PCS the run is limited to.
+
+        Returns
+        -------
+        str
+            The PCS name, None when the run is not limited to one.
+        """
+        return self._run.get_selected_pcs()
+
+    def get_only_dtr(self) -> bool:
+        """
+        Returns whether the run uses only the PCS of the DTR.
+
+        Returns
+        -------
+        bool
+            True if the PCS of the user are left out.
+        """
+        return self._run.get_only_dtr()
+
+    def get_producer(self) -> GFMProducer:
+        """
+        Retrieves the unit the tests are for.
+
+        Returns
+        -------
+        GFMProducer
+            The unit.
+        """
+        return self._producer
+
     def is_valid(self) -> bool:
         """
         Checks if the associated producer is a valid GFM model.
@@ -85,14 +143,40 @@ class GFMParameters(Parameters):
 
     def is_emt(self) -> bool:
         """
-        Returns whether EMT simulation mode is active.
+        Returns whether the envelopes are for EMT simulations: when the run asks for it, or when
+        the INI file of the unit declares that its curves come from them.
 
         Returns
         -------
         bool
             True if EMT mode is enabled.
         """
-        return self._emt
+        return self._emt or self._producer.get_config().getboolean(
+            "GFM Parameters", "emt", fallback=False
+        )
+
+    def declares_unit_parameters(self) -> bool:
+        """
+        Checks whether the INI file of the unit declares the parameters its envelopes are
+        generated from.
+
+        Returns
+        -------
+        bool
+            True if the INI file has a [GFM Parameters] section.
+        """
+        return self._producer.get_config().has_section("GFM Parameters")
+
+    def get_envelopes_path(self) -> Optional[Path]:
+        """
+        Retrieves the directory the envelopes of the unit are read from.
+
+        Returns
+        -------
+        Optional[Path]
+            The directory of the envelopes, or None when they are generated.
+        """
+        return self._envelopes
 
     def get_producer_curves_path(self) -> Optional[Path]:
         """
@@ -176,17 +260,22 @@ class GFMParameters(Parameters):
 
     def get_min_active_power(self) -> float:
         """
-        Retrieves the minimum active power injection.
+        Retrieves the minimum active power, the opposite of the maximum consumption for a storage
+        unit whose INI file declares it.
 
         Returns
         -------
         float
             The minimum active power in pu.
         """
-        return (
-            float(self._producer._config.get("DEFAULT", "p_min_injection"))
-            / self.get_nominal_apparent_power()
-        )
+        # The INI file of a model validation declares the consumption of a storage unit as
+        # p_max_consumption, that of an envelope generation as a negative p_min_injection
+        producer_config = self._producer.get_config()
+        if producer_config.has_option("DEFAULT", "p_max_consumption"):
+            p_min = -producer_config.getfloat("DEFAULT", "p_max_consumption")
+        else:
+            p_min = producer_config.getfloat("DEFAULT", "p_min_injection")
+        return p_min / self.get_nominal_apparent_power()
 
     def get_max_active_power(self) -> float:
         """

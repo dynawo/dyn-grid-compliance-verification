@@ -408,7 +408,9 @@ class ModelProducer(Producer):
         parameter_checks.check_internal_line(self.intline)
         parameter_checks.check_generators(self.generators)
 
-    def __get_file_by_pattern(self, pattern) -> Path:
+    def __get_file_by_pattern(self, pattern, zone: int = None) -> Path:
+        if zone is None:
+            zone = self._zone
         if self._producer_model_path is not None:
             producer_path = self._producer_model_path
         elif self._producer_curves_path is not None:
@@ -417,11 +419,11 @@ class ModelProducer(Producer):
             dycov_logging.get_logger("Producer").error("No producer model has been defined")
             return None
 
-        if self._zone == 0:
+        if zone == 0:
             path = producer_path
-        elif self._zone == 1:
+        elif zone == 1:
             path = producer_path / "Zone1"
-        elif self._zone == 3:
+        elif zone == 3:
             path = producer_path / "Zone3"
         for file in path.resolve().iterdir():
             if pattern.match(str(file)):
@@ -703,6 +705,23 @@ class ModelProducer(Producer):
         else:
             pattern_par = re.compile(rf".*.{self._filename}.[pP][aA][rR]")
         return self.__get_file_by_pattern(pattern_par)
+
+    def get_producer_ini(self, zone: int, filename: str) -> Path:
+        """Gets the INI file of a unit of the producer.
+
+        Parameters
+        ----------
+        zone: int
+            Zone of the unit
+        filename: str
+            Name of the files of the unit
+
+        Returns
+        -------
+        Path
+            Path to the INI file of the unit, None when it does not exist
+        """
+        return self.__get_file_by_pattern(re.compile(rf".*.{filename}.[iI][nN][iI]"), zone)
 
     def get_producer_curves_path(self) -> Path:
         """Gets the Producer Curves Directory.

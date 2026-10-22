@@ -48,6 +48,7 @@ def test_completion_script_covers_every_command(parser):
         ("validate", "--curves", shtab.DIRECTORY),
         ("validate", "--excel", shtab.FILE),
         ("validate", "--output", shtab.DIRECTORY),
+        ("validate", "--gfm-envelopes", shtab.DIRECTORY),
         ("performance", "--launcher", shtab.FILE),
         ("generate_gfm_envelopes", "--producer_ini", shtab.FILE),
         ("anonymize", "--results", shtab.DIRECTORY),
@@ -75,3 +76,8 @@ def test_print_completion_writes_the_script_and_exits(parser, capsys):
 
     assert exit_info.value.code == 0
     assert "complete -F _shtab_dycov dycov" in capsys.readouterr().out
+
+
+def test_envelope_generation_no_longer_takes_producer_curves(parser):
+    with pytest.raises(SystemExit):
+        parser.parse_args(["generate_gfm_envelopes", "-i", "Producer.ini", "-c", "Curves"])

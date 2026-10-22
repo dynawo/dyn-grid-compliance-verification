@@ -116,6 +116,7 @@ class DummyParameters(ValidationParameters):
         self._producer = DummyProducer(sim_type)
         self._working_dir = Path(tempfile.mkdtemp())
         self._verification_type = verification_type
+        self._gfm_envelopes = None
 
     def get_launcher_dwo(self):
         return self._launcher_dwo

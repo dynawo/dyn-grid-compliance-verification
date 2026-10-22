@@ -167,18 +167,32 @@ in Zone 1 reference-curve dictionaries.
 `dycov generate_gfm_envelopes` is analytical, no Dynawo: `GFMGeneration` (`generator.py`) runs
 `Pcs.generate` → `Benchmark.generate` → `OperatingCondition.generate` → `GridForming.generate`
 (`gfm.py`), whose calculator (`calculators/`, named by the benchmark `calculator` key) returns the
-`Ip`/`Iq` envelopes. The producer INI declares `generator_type` (`gfm/producer.py`), which picks
-the PCS tree: `templates/PCS/gfm/BESS` holds the DTR Fiche I18 matrix (IGFM1–4, OCs in pu of the
-converter rating), `gfm/PPM` the four PCS agreed before the fiche. A declared `Imax` bounds every
-envelope (`gfm.py`). SCRmin/med/max and the curve
-checks are in the `[GFM]` config section. With `-c`, `verification/curves_compliance.py` reads
-the producer curves through `CurvesImporter` (Zone 1 naming), filters them at the `[GFM]` cutoff
+`Ip`/`Iq` envelopes. The producer INI declares `generator_type` (`gfm/producer.py`, which reads
+exactly the INI it is given), which picks the PCS tree: `templates/PCS/gfm/BESS` holds the DTR
+Fiche I18 as one Zone 1 PCS, `PCS_RTE-I18z1` (its scenarios inherit the settings of their test
+from the `*Test` aliases of `config_aliases.ini`, OCs in pu of the converter rating), `gfm/PPM`
+the four PCS agreed before the fiche. A declared `Imax` bounds every envelope (`gfm.py`).
+`GFMParameters` holds the run (`Parameters` of the CLI, or the `ValidationParameters`), whose
+working and output dirs it uses. Every OC writes `results.json`, the description of its envelopes
+(magnitude, EMT, event duration, figure parameters) that `outputs.read_envelopes` reads back with
+the CSV. `gfm/report.py` writes a page per test (`templates/reports/gfm/report.GFMTest.tex`) and a
+section by PCS (`templates/reports/gfm/<tech>/<PCS>`, `prepare_pcs_report`); `create_pdf` compiles
+the envelope PDF on the main `report.tex` (`gridforming` drops the Dynawo header and the
+step-response appendix). `report.compile_pdf` runs pdflatex three times for both reports: with a
+page per test the contents span several pages, and only a third pass numbers them right.
+
+**I18 in the model validation**: `Validation` (`validate/validation.py`) adds the PCS of `gfm/BESS`
+to those of `model/BESS` for a storage (`_GRID_FORMING_UNITS`), and gives each Zone 1 unit a
+`GFMParameters` of its own: its Zone 1 INI (`ModelProducer.get_producer_ini`, `[GFM Parameters]`
+with an optional `emt`, Pmin from `p_max_consumption`), the reference curves as producer curves,
+and the envelopes of `-g` (`<dir>/<unit>/` or `<dir>`). `_validate_pcs` sends a GFM PCS to
+`_check_grid_forming_pcs`, which generates instead of simulating, turns each `GFMTestReport` into a
+`Summary` and writes the section for the tests with `show_report()`. Without envelopes nor
+`[GFM Parameters]` a test is `Compliance.WithoutEnvelopes`. `verification/curves_compliance.py`
+reads the curves through `CurvesImporter` (Zone 1 naming), filters them at the `[GFM]` cutoff
 (30 Hz) per `signal_windows.filter_windows`, checks the envelope and the damping of every mode
-(`sigpro/matrix_pencil.py`), and `results.json` records the verdict. Each OC returns a
-`GFMTestReport` up to the generator, and `gfm/report.py` writes `Reports/report.pdf` with the
-LaTeX machinery of `report/report.py`: the main `report.tex` (`gridforming` drops the Dynawo
-header and the step-response appendix), a section by PCS (`templates/reports/gfm/<tech>/<PCS>`)
-and the shared test page `templates/reports/gfm/report.GFMTest.tex`.
+(`sigpro/matrix_pencil.py`), and `results.json` adds the verdict. `report.create_pdf` inputs
+`commonz1`/`commonz3` only when they were copied, which a run of I18 alone does not.
 
 ## Logging (`logging/`)
 

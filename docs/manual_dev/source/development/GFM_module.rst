@@ -46,19 +46,30 @@ run, prepares the task list, and dispatches them — either sequentially or in
 parallel using Python's ``multiprocessing`` library.
 
 ``gfm.py`` contains the ``GridForming`` class, which handles a *single*
-simulation case. It coordinates the process for one specific event by loading
-parameters, invoking the appropriate calculator, and calling the output
-functions to save the results.
+simulation case. It coordinates the process for one specific event: it obtains
+the envelopes, by invoking the appropriate calculator or by reading back those
+of a previous generation, checks the producer curves against them when they
+are given, and calls the output functions to save the results.
+
+The model validation of a storage (``validate/validation.py``) runs the same
+pipeline for the Zone 1 units: the Grid Forming PCS of ``gfm/BESS`` join the
+PCS of ``model/BESS``, and ``_check_grid_forming_pcs`` generates them instead
+of simulating them, with a ``GFMParameters`` by unit that names its reference
+curves and, when ``-g`` is given, the directory of its envelopes.
 
 Parameter and data management
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 ``parameters.py`` defines the ``GFMParameters`` class, which reads all
 configuration settings for a given run — grid conditions, producer
-characteristics, and event definitions.
+characteristics, and event definitions. It holds the run the tests belong to,
+an envelope generation or a model validation, whose working and output
+directories they use, rather than creating directories of its own.
 
 ``producer.py`` defines the ``GFMProducer`` class, which parses the
-producer's INI file to extract the GFM unit's specific parameters.
+producer's INI file to extract the GFM unit's specific parameters. It reads
+the INI file it is given, so a model validation hands it the INI file of each
+Zone 1 unit.
 
 Core logic: the calculator module
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -110,10 +121,19 @@ Output and visualization
 ``outputs.py`` handles all file I/O. It saves data to CSV and generates both
 PNG and HTML figures. A notable feature is intelligent signal trimming, which
 removes unnecessary steady-state portions from the plots to keep them focused
-on the transient of interest.
+on the transient of interest. Next to the CSV file, ``results.json``
+describes the envelopes (the current they bound, EMT or RMS, the duration of
+the event and the parameters of the test), which ``read_envelopes`` reads
+back with the CSV file when a model validation is given the envelopes.
 
-The ``verification/`` subpackage (``functional_tests.py``) compares a run's
-envelopes against verified baseline CSVs; it backs the ``-t`` flag of
+``report.py`` writes the page of each test and the section of each PCS:
+``create_pdf`` compiles the report of an envelope generation, and
+``prepare_pcs_report`` adds a section to the report of a model validation.
+
+The ``verification/`` subpackage holds ``curves_compliance.py``, which checks
+the producer curves of a test against its envelopes and the damping criterion
+of the DTR Fiche I18, and ``functional_tests.py``, which compares a run's
+envelopes against verified baseline CSVs; the latter backs the ``-t`` flag of
 ``dycov generate_gfm_envelopes``.
 
 

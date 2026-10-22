@@ -92,7 +92,8 @@ validating a generation unit prior to grid connection.
 Additionally:
 
 - **Grid‑Forming (GFM) envelope calculation** — computes analytical bounds
-  for GFM unit responses (optional workflow)
+  for GFM unit responses (optional workflow), which the model validation of a
+  storage checks the curves of its Zone 1 units against (DTR Fiche I18)
 
 The following terms are used throughout the documentation:
 
@@ -317,6 +318,11 @@ This will:
 - CSV files with envelope data
 - Static PNG plots
 - Interactive HTML plots for detailed inspection
+- A PDF report with a page per test
+
+The model validation of a storage (`dycov validate`) checks the curves of its
+Zone 1 units against these envelopes, given with `-g`, or else generated from
+the `[GFM Parameters]` of their INI files.
 
 ---
 

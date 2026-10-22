@@ -40,6 +40,11 @@ class ValidationParameters(Parameters):
     verification_type: int
         0 if it is an electrical performance verification.
         10 if it is a model validation.
+    producer_workbook: Path
+        Workbook the producer inputs were generated from.
+    gfm_envelopes: Path
+        Directory of the envelopes the Grid Forming tests of the Zone 1 units are checked
+        against, written by 'dycov generate_gfm_envelopes'.
     """
 
     def __init__(
@@ -53,6 +58,7 @@ class ValidationParameters(Parameters):
         only_dtr: bool,
         verification_type: int,
         producer_workbook: Path = None,
+        gfm_envelopes: Path = None,
     ):
         # Inputs parameters
         super().__init__(launcher_dwo, selected_pcs, output_dir, only_dtr)
@@ -66,6 +72,7 @@ class ValidationParameters(Parameters):
             zone1_required=_requires_zone1(selected_pcs),
         )
         self._producer_workbook = producer_workbook
+        self._gfm_envelopes = gfm_envelopes
 
     def get_sim_type(self) -> int:
         """Get the executed validation type.
@@ -81,6 +88,16 @@ class ValidationParameters(Parameters):
             * 12: Model validation for Storage Model.
         """
         return self._producer.get_sim_type()
+
+    def get_gfm_envelopes_path(self) -> Path:
+        """Get the directory of the Grid Forming envelopes, when it is given.
+
+        Returns
+        -------
+        Path
+            Directory of the envelopes, or None when they are generated from the Zone 1 units.
+        """
+        return self._gfm_envelopes
 
     def is_dynawo_model_valid(self) -> bool:
         """Checks if the Dynawo model is valid.

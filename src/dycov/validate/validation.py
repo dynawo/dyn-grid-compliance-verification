@@ -17,6 +17,7 @@ import subprocess
 import sys
 from operator import attrgetter
 from pathlib import Path
+from typing import Optional
 
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import (
@@ -31,11 +32,19 @@ from dycov.core.global_variables import (
 )
 from dycov.core.graceful_shutdown import terminate_all_children
 from dycov.files import manage_files
+from dycov.gfm import report as gfm_report
+from dycov.gfm.parameters import GFMParameters
+from dycov.gfm.producer import GFMProducer
 from dycov.logging import dycov_logging, worker_initializer
+from dycov.model.benchmark import Summary
 from dycov.model.pcs import Pcs
 from dycov.report import report
 from dycov.report.LatexReportException import LatexReportException
 from dycov.validate.parameters import ValidationParameters
+
+# The kind of unit whose Grid Forming PCS the Zone 1 units of a model validation are given: the
+# DTR Fiche I18 covers storage units, and not power park modules
+_GRID_FORMING_UNITS = {MODEL_VALIDATION_BESS: "BESS"}
 
 
 def _open_document(file: Path, is_testing: bool) -> None:
@@ -90,6 +99,8 @@ def _validate_pcs(pcs_args) -> tuple:
                 f"{pcs.get_name()}: no test declared, nothing to validate"
             )
             return pcs.get_producer_name(), pcs.get_name(), summary_list, {}
+        if parameters.get_producer().is_gfm():
+            return _check_grid_forming_pcs(pcs, parameters)
 
         report_name, success, pcs_results = pcs.validate(summary_list)
         pcs_results["pcs"] = pcs
@@ -108,6 +119,51 @@ def _validate_pcs(pcs_args) -> tuple:
                 f"Aborted execution for {pcs.get_name()}. {e}"
             )
         return pcs.get_producer_name(), pcs.get_name(), summary_list, {}
+
+
+def _check_grid_forming_pcs(pcs: Pcs, parameters: GFMParameters) -> tuple:
+    """Checks the producer curves of every Grid Forming test of the PCS against its envelopes,
+    instead of simulating the test, and writes the section of the PCS in the report.
+
+    Parameters
+    ----------
+    pcs : Pcs
+        The Grid Forming PCS of a Zone 1 unit.
+    parameters : GFMParameters
+        The parameters the tests of the unit are checked with.
+
+    Returns
+    -------
+    tuple
+        A tuple containing producer name, PCS name, summary list, and PCS results.
+    """
+    tests = pcs.generate()
+    summary_list = [
+        Summary(
+            producer_name=test.producer_name,
+            id=pcs.get_id(),
+            zone=pcs.get_zone(),
+            pcs=test.pcs,
+            benchmark=test.benchmark,
+            operating_condition=test.operating_condition,
+            compliance=test.compliance,
+            report_name=pcs.get_report_name(),
+        )
+        for test in tests
+    ]
+    gfm_report.prepare_pcs_report(
+        gfm_report.PcsReport(
+            pcs.get_producer_name(),
+            pcs.get_name(),
+            pcs.get_report_name(),
+            [test for test in tests if test.compliance.show_report()],
+        ),
+        parameters.get_working_dir() / "Latex",
+        parameters.get_producer().get_sim_type_str(),
+        outputs_by_producer=True,
+    )
+    pcs_results = {"producer": pcs.get_producer_name(), "report_name": pcs.get_report_name()}
+    return pcs.get_producer_name(), pcs.get_name(), summary_list, pcs_results
 
 
 def _prepare_report_pcs(
@@ -161,6 +217,8 @@ class Validation:
 
         self.__initialize_working_environment()
         self._validation_pcs = self.__get_validation_pcs()
+        self._grid_forming_pcs = self.__get_grid_forming_pcs()
+        self._grid_forming_parameters: dict[str, GFMParameters] = {}
         self._pcs_list = self.__prepare_pcs_list()
 
     def __initialize_working_environment(self) -> None:
@@ -225,14 +283,17 @@ class Validation:
         if sim_type in sim_type_mapping:
             log_message, config_key, template_path = sim_type_mapping[sim_type]
             dycov_logging.get_logger("Validation").info(log_message)
-            self.__populate_validation_pcs(validation_pcs, config_key, template_path)
+            template_paths = [template_path]
+            if sim_type in _GRID_FORMING_UNITS:
+                template_paths.append(f"gfm/{_GRID_FORMING_UNITS[sim_type]}")
+            self.__populate_validation_pcs(validation_pcs, config_key, template_paths)
         else:
             dycov_logging.get_logger("Validation").info(f"Unknown simulation type: {sim_type}")
 
         return sorted(list(validation_pcs))
 
     def __populate_validation_pcs(
-        self, validation_pcs: set, validation_key: str, validation_path: str
+        self, validation_pcs: set, validation_key: str, validation_paths: list[str]
     ) -> None:
         """Populates the set of PCS to validate from configuration and template directories.
 
@@ -242,22 +303,108 @@ class Validation:
             The set to populate with PCS names.
         validation_key : str
             The configuration key for validation PCS.
-        validation_path : str
-            The relative path to the validation templates.
+        validation_paths : list[str]
+            The relative paths to the validation templates.
         """
         tool_path = Path(__file__).resolve().parent.parent
         if not validation_pcs:
             validation_pcs.update(config.get_list("Global", validation_key))
         if not validation_pcs:
-            if not self._parameters.get_only_dtr():
+            for validation_path in validation_paths:
+                if not self._parameters.get_only_dtr():
+                    validation_pcs.update(
+                        manage_files.list_directories(
+                            config.get_config_dir() / self._templates_path / validation_path
+                        )
+                    )
                 validation_pcs.update(
                     manage_files.list_directories(
-                        config.get_config_dir() / self._templates_path / validation_path
+                        tool_path / self._templates_path / validation_path
                     )
                 )
-            validation_pcs.update(
-                manage_files.list_directories(tool_path / self._templates_path / validation_path)
+
+    def __get_grid_forming_pcs(self) -> set:
+        """Determines which of the PCS to validate are Grid Forming PCS, whose tests are checked
+        against envelopes instead of being simulated.
+
+        Returns
+        -------
+        set
+            The names of the Grid Forming PCS to validate.
+        """
+        gfm_unit = _GRID_FORMING_UNITS.get(self._parameters.get_sim_type())
+        if gfm_unit is None:
+            if self._parameters.get_gfm_envelopes_path() is not None:
+                dycov_logging.get_logger("Validation").warning(
+                    "The Grid Forming envelopes given are not used: the DTR Fiche I18 covers "
+                    "storage units only"
+                )
+            return set()
+
+        gfm_templates = self._templates_path / "gfm" / gfm_unit
+        templates_paths = (Path(__file__).resolve().parent.parent, config.get_config_dir())
+        return {
+            pcs_name
+            for pcs_name in self._validation_pcs
+            if any((path / gfm_templates / pcs_name).is_dir() for path in templates_paths)
+        }
+
+    def __get_pcs_parameters(self, pcs_name: str, producer_name: str):
+        """The parameters a PCS of a unit is validated with: those of the Grid Forming tests of
+        the unit for a Grid Forming PCS, those of the validation otherwise."""
+        if pcs_name not in self._grid_forming_pcs:
+            return self._parameters
+        if producer_name not in self._grid_forming_parameters:
+            self._grid_forming_parameters[producer_name] = self.__get_grid_forming_parameters(
+                producer_name
             )
+        return self._grid_forming_parameters[producer_name]
+
+    def __get_grid_forming_parameters(self, producer_name: str) -> GFMParameters:
+        """The parameters the Grid Forming tests of a Zone 1 unit are checked with: its INI file
+        describes it, its curves are among the reference curves, and its envelopes are read
+        from the directory given, when there is one, instead of being generated.
+
+        Parameters
+        ----------
+        producer_name : str
+            Name of the Zone 1 unit.
+
+        Returns
+        -------
+        GFMParameters
+            The parameters of the Grid Forming tests of the unit.
+        """
+        producer = self._parameters.get_producer()
+        producer_ini = producer.get_producer_ini(1, producer_name)
+        if producer_ini is None:
+            raise FileNotFoundError(f"The Zone 1 unit {producer_name} has no INI file")
+
+        envelopes = self.__get_envelopes_path(producer_name)
+        parameters = GFMParameters(
+            self._parameters,
+            GFMProducer(producer_ini, _GRID_FORMING_UNITS[self._parameters.get_sim_type()]),
+            producer_curves=producer.get_reference_curves_path(),
+            envelopes=envelopes,
+        )
+        logger = dycov_logging.get_logger("Validation")
+        if envelopes is not None:
+            logger.info(f"The Grid Forming envelopes of {producer_name} are read from {envelopes}")
+        elif not parameters.declares_unit_parameters():
+            logger.warning(
+                f"{producer_ini} declares no [GFM Parameters] and no Grid Forming envelopes are "
+                f"given, so the Grid Forming tests of {producer_name} cannot be checked"
+            )
+        return parameters
+
+    def __get_envelopes_path(self, producer_name: str) -> Optional[Path]:
+        """The directory of the envelopes of a Zone 1 unit: the subdirectory named after it, or
+        else the whole directory given, which then serves every unit."""
+        envelopes = self._parameters.get_gfm_envelopes_path()
+        if envelopes is None:
+            return None
+        unit_envelopes = envelopes / producer_name
+        return unit_envelopes if unit_envelopes.is_dir() else envelopes
 
     def __prepare_pcs_list(self) -> list:
         """Prepares the list of PCS and their associated producers for validation.
@@ -283,7 +430,12 @@ class Validation:
                 for producer_name in producers_in_zone:
                     # Extend pcs_list with PCSs ending with the zone suffix
                     pcs_list.extend(
-                        (self._parameters, pcs_name, producer_name, self._path_latex_files)
+                        (
+                            self.__get_pcs_parameters(pcs_name, producer_name),
+                            pcs_name,
+                            producer_name,
+                            self._path_latex_files,
+                        )
                         for pcs_name in self._validation_pcs
                         if pcs_name.endswith(f"z{zone}")
                     )

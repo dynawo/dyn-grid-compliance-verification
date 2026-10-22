@@ -4,6 +4,7 @@ import pytest
 from tests.dycov.utils import MODEL, execute_tool
 
 from dycov.model.compliance import Compliance
+from tests_integration.curves_invariants import I18_TESTS
 
 RESOURCES = Path(__file__).resolve().parent / "resources"
 
@@ -105,6 +106,7 @@ def test_model_validation_bess_dynawo_model():
         Compliance.Compliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250msConsumption
         Compliance.Compliant,  # PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Injection
         Compliance.Compliant,  # PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Consumption
+        *[Compliance.WithoutEnvelopes] * len(I18_TESTS),  # PCS_RTE-I18z1, without envelopes
         Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.ConsumptionPmax
         Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.ConsumptionP50
         Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.InjectionP50

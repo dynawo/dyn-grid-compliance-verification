@@ -55,19 +55,31 @@ _ROCOFS = {
     for index, scr in enumerate((2, 10, 20))
     for number, profile in enumerate(_PROFILES, start=1)
 }
-_OPERATING_CONDITIONS = {
-    "PCS_RTE-IGFM1": 5,
-    "PCS_RTE-IGFM2": 7,
-    "PCS_RTE-IGFM3": 5,
-    "PCS_RTE-IGFM4": 5,
+# The tests of the fiche: the scenarios of each, the settings they inherit and their number of
+# operating conditions
+_I18_TESTS = {
+    "PhaseJumpTest": (list(_PHASE_JUMPS), "PhaseJump", 5),
+    "AmplitudeStepTest": (list(_AMPLITUDE_STEPS), "AmplitudeStep", 7),
+    "SCRJumpTest": (["S_SCRup1", "S_SCRdown1"], "SCRJump", 5),
+    "RoCoFTest": (list(_ROCOFS), "RoCoF", 5),
 }
+_I18 = "PCS_RTE-I18z1"
+_PPM_PCS = ["PCS_RTE-IGFM1", "PCS_RTE-IGFM2", "PCS_RTE-IGFM3", "PCS_RTE-IGFM4"]
+
+
+def _parser(path: Path) -> configparser.ConfigParser:
+    parser = configparser.ConfigParser(interpolation=None)
+    parser.optionxform = str
+    parser.read(path, encoding="utf-8")
+    return parser
 
 
 def _description(technology: str, pcs: str) -> configparser.ConfigParser:
-    parser = configparser.ConfigParser(interpolation=None)
-    parser.optionxform = str
-    parser.read(_GFM_TEMPLATES / technology / pcs / "PCSDescription.ini", encoding="utf-8")
-    return parser
+    return _parser(_GFM_TEMPLATES / technology / pcs / "PCSDescription.ini")
+
+
+def _aliases() -> configparser.ConfigParser:
+    return _parser(_GFM_TEMPLATES / "BESS" / "config_aliases.ini")
 
 
 def _benchmarks(parser: configparser.ConfigParser, pcs: str) -> list[str]:
@@ -84,63 +96,81 @@ def _times_total_reactance(definition: str, scr: float) -> float:
     return float(multiplier) * (_XEFF + 1 / scr)
 
 
-@pytest.mark.parametrize("technology", ["PPM", "BESS"])
-def test_each_technology_ships_the_four_gfm_pcs(technology):
-    shipped = sorted(path.name for path in (_GFM_TEMPLATES / technology).glob("PCS_*"))
+def test_a_bess_is_given_the_fiche_as_one_pcs_of_zone_1():
+    shipped = sorted(path.name for path in (_GFM_TEMPLATES / "BESS").glob("PCS_*"))
+    parser = _description("BESS", _I18)
 
-    assert shipped == sorted(_OPERATING_CONDITIONS)
+    assert shipped == [_I18]
+    assert parser.getint(_I18, "zone") == 1
+    assert parser.getint(_I18, "id") == 18
 
 
-@pytest.mark.parametrize("pcs", sorted(_OPERATING_CONDITIONS))
-def test_i18_operating_conditions(pcs):
-    parser = _description("BESS", pcs)
-    expected = ",".join(f"OC{i}" for i in range(1, _OPERATING_CONDITIONS[pcs] + 1))
+def test_a_ppm_keeps_the_four_pcs_agreed_before_the_fiche():
+    shipped = sorted(path.name for path in (_GFM_TEMPLATES / "PPM").glob("PCS_*"))
 
-    for benchmark in _benchmarks(parser, pcs):
-        assert parser.get("PCS-OperatingConditions", f"{pcs}.{benchmark}") == expected
+    assert shipped == _PPM_PCS
+
+
+def test_i18_scenarios_inherit_the_settings_of_their_test():
+    parser = _description("BESS", _I18)
+    aliases = _aliases()
+
+    assert _benchmarks(parser, _I18) == [
+        scenario for scenarios, _, _ in _I18_TESTS.values() for scenario in scenarios
+    ]
+    for alias, (scenarios, calculator, _) in _I18_TESTS.items():
+        assert aliases.get(alias, "calculator") == calculator
+        for scenario in scenarios:
+            assert parser.get(f"{_I18}.{scenario}", "inherit") == alias
+
+
+def test_i18_operating_conditions():
+    parser = _description("BESS", _I18)
+
+    for scenarios, _, operating_conditions in _I18_TESTS.values():
+        expected = ",".join(f"OC{i}" for i in range(1, operating_conditions + 1))
+        for scenario in scenarios:
+            assert parser.get("PCS-OperatingConditions", f"{_I18}.{scenario}") == expected
 
 
 def test_i18_phase_jumps():
-    parser = _description("BESS", "PCS_RTE-IGFM1")
+    parser = _description("BESS", _I18)
 
-    assert _benchmarks(parser, "PCS_RTE-IGFM1") == list(_PHASE_JUMPS)
     for benchmark, (degrees, scr) in _PHASE_JUMPS.items():
-        section = f"PCS_RTE-IGFM1.{benchmark}"
+        section = f"{_I18}.{benchmark}"
         jump = _times_total_reactance(parser.get(section, "DeltaPhase"), _scr(parser, section))
         assert _scr(parser, section) == scr
         assert math.degrees(jump) == pytest.approx(degrees, abs=0.01)
 
 
 def test_i18_amplitude_steps():
-    parser = _description("BESS", "PCS_RTE-IGFM2")
+    parser = _description("BESS", _I18)
 
-    assert _benchmarks(parser, "PCS_RTE-IGFM2") == list(_AMPLITUDE_STEPS)
     for benchmark, (step, scr) in _AMPLITUDE_STEPS.items():
-        section = f"PCS_RTE-IGFM2.{benchmark}"
+        section = f"{_I18}.{benchmark}"
         definition = parser.get(section, "VoltageStepAtGrid")
         assert _scr(parser, section) == scr
         assert _times_total_reactance(definition, scr) == pytest.approx(step, abs=0.001)
 
 
 def test_i18_scr_jumps():
-    parser = _description("BESS", "PCS_RTE-IGFM3")
+    parser = _description("BESS", _I18)
     jumps = {
         benchmark: (
-            parser.getfloat(f"PCS_RTE-IGFM3.{benchmark}", "SCRinitial"),
-            parser.getfloat(f"PCS_RTE-IGFM3.{benchmark}", "SCRfinal"),
+            parser.getfloat(f"{_I18}.{benchmark}", "SCRinitial"),
+            parser.getfloat(f"{_I18}.{benchmark}", "SCRfinal"),
         )
-        for benchmark in _benchmarks(parser, "PCS_RTE-IGFM3")
+        for benchmark in _I18_TESTS["SCRJumpTest"][0]
     }
 
     assert jumps == {"S_SCRup1": (2, 20), "S_SCRdown1": (20, 2)}
 
 
 def test_i18_rocofs():
-    parser = _description("BESS", "PCS_RTE-IGFM4")
+    parser = _description("BESS", _I18)
 
-    assert _benchmarks(parser, "PCS_RTE-IGFM4") == list(_ROCOFS)
     for benchmark, (frequency, rocof, duration, scr) in _ROCOFS.items():
-        section = f"PCS_RTE-IGFM4.{benchmark}"
+        section = f"{_I18}.{benchmark}"
         assert parser.getfloat(section, "Frequency0") == frequency
         assert parser.getfloat(section, "RoCoF") == rocof
         assert parser.getfloat(section, "RoCoFDuration") == duration
@@ -148,12 +178,11 @@ def test_i18_rocofs():
 
 
 def test_i18_operating_points_are_given_in_pu_of_the_converter_rating():
-    aliases = configparser.ConfigParser(interpolation=None)
-    aliases.optionxform = str
-    aliases.read(_GFM_TEMPLATES / "BESS" / "config_aliases.ini", encoding="utf-8")
+    aliases = _aliases()
     points = {
         section: (aliases.get(section, "P0"), aliases.get(section, "Q0"))
         for section in aliases.sections()
+        if section.startswith("PlantOC")
     }
 
     assert points == {

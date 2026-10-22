@@ -130,6 +130,32 @@ def run_pdflatex(working_path: Path, report_name_noext: str):
         _ReportProcRegistry.discard(proc)
 
 
+# The first pass writes the table of contents and the second sets it, which moves the pages it
+# lists: when the contents span several pages, as they do with a page per test, a third pass
+# numbers them right
+_PDFLATEX_PASSES = 3
+
+
+def compile_pdf(working_path: Path):
+    """Compiles the main report in the working path, as many times as its table of contents
+    needs.
+
+    Parameters
+    ----------
+    working_path: Path
+        Directory where the report is compiled
+
+    Returns
+    -------
+    object
+        The outcome of the last pdflatex run, with its return code and its standard error
+    """
+    report_name = REPORT_NAME.replace(".tex", "")
+    for _ in range(_PDFLATEX_PASSES):
+        proc = run_pdflatex(working_path, report_name)
+    return proc
+
+
 def _get_verification_type(sim_type: int) -> str:
     if sim_type > MODEL_VALIDATION:
         return "Model Validation"
@@ -803,14 +829,15 @@ def create_pdf(
     summary_map = summary.create_map(sorted_summary)
 
     # Extracting zones from the PCS data in the summary to identify the relevant "common" files
-    # that will be included in the final LaTeX output.
+    # that will be included in the final LaTeX output. The Grid Forming PCS of zone 1 bring none,
+    # so a run of those alone has no common file of its zone.
     zones = set(summary_item.zone for summary_item in sorted_summary)
     commonz1_include = ""
     commonz3_include = ""
-    if 1 in zones:
+    if 1 in zones and (working_path / "commonz1.tex").exists():
         commonz1_include = "\\input{{commonz1}}"
 
-    if 3 in zones:
+    if 3 in zones and (working_path / "commonz3.tex").exists():
         commonz3_include = "\\input{{commonz3}}"
 
     oc_template = get_template(working_path, REPORT_NAME)
@@ -830,9 +857,7 @@ def create_pdf(
         dycov_logging.get_logger("Report").info("Dry run enabled - skipping PDF generation.")
         return
 
-    report_name_ = REPORT_NAME.replace(".tex", "")
-    proc = run_pdflatex(working_path, report_name_)
-    proc = run_pdflatex(working_path, report_name_)
+    proc = compile_pdf(working_path)
 
     if dycov_logging.get_logger("Report").getEffectiveLevel() != logging.DEBUG:
         clean_latex_outputs(working_path)

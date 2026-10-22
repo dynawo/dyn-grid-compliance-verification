@@ -29,6 +29,10 @@ to the DTR's PCS structure. The following tests are currently implemented:
   BESS)**: PCS F16, the second phase of PCS I16, on Zone 3 only, with the
   tests the producer recorded during the commissioning of the installation.
 
+* **Grid Forming (BESS)**: PCS I18, on Zone 1, whose curves are checked
+  against envelopes instead of being simulated: phase jump, amplitude step of
+  the grid voltage, short-circuit ratio jump and frequency variation.
+
 * **Electrical performance (Power Park Modules)**: PCSs I2, I5, I6, I7, and I10.
 
 * **Electrical performance (Battery Energy Storage Systems)**: PCSs I2, I5, I6,
@@ -395,6 +399,20 @@ declaration step by step; every key it can carry is described in
 activate in :ref:`Compliance tests <compliance-tests>`. The ``Wind/IECB2015`` and
 ``BESS/WECC`` examples carry such declarations, invented for the example,
 with records anonymized from the tool's own simulations.
+
+
+PCS I18
+^^^^^^^
+
+PCS I18 checks the Grid Forming capability of a storage unit of type C or D
+at its PGU terminals, the Node 1 of the Zone 1. Its tests are not simulated
+with Dynawo: the producer delivers the curves of each test among the reference
+curves of the Zone 1 unit, and DyCoV checks them against the envelopes of the
+test and the damping criterion of the fiche. The envelopes are the output of
+``dycov generate_gfm_envelopes`` given with ``-g``, or are generated from the
+``[GFM Parameters]`` of the INI file of the unit. The tests, their envelopes
+and their criteria are described in :ref:`Grid Forming tests in the model
+validation <gfm_model_validation>`.
 
 
 Electrical performance verification  (Power Park Modules)

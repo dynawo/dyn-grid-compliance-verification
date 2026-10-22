@@ -98,19 +98,23 @@ GFM Envelope Generation Results
 ---------------------------------
 
 GFM analysis produces a different set of outputs, since no simulation is
-involved. Results are written directly under ``Results/PCS_RTE-IGFMx/``,
-organized by disturbance scenario and operating condition:
+involved. Results are written directly under ``Results/<PCS>/`` (the
+``PCS_RTE-I18z1`` of a storage unit, the ``PCS_RTE-IGFM1`` to ``4`` of a power
+park module), organized by disturbance scenario and operating condition:
 
 .. code-block:: text
 
    Results/
-   └── PCS_RTE-IGFMx/
+   ├── Reports/
+   │   └── report.pdf
+   └── <PCS>/
        └── S_<Scenario>/
            └── OC<k>/
                ├── *.csv      (envelope time series)
                ├── *.png      (static figure)
                ├── *.html     (interactive figure)
-               └── *_ini_dump.txt  (Hybrid mode only)
+               ├── *_ini_dump.txt
+               └── results.json  (description of the envelopes)
 
 * **CSV files** — the numerical time series of the upper and lower admissible
   envelopes. When ``save_all_envelopes = true``, the file also includes the
@@ -118,9 +122,17 @@ organized by disturbance scenario and operating condition:
 * **PNG figures** — static visualizations of the envelopes alongside the PCC
   signal.
 * **HTML files** — interactive versions of the same figures.
-* **INI dump** (Hybrid mode only) — the exact set of input parameters used for
-  the calculation, including internally derived values. Intended for full
-  traceability.
+* **INI dump** — the exact set of input parameters used for the calculation,
+  including internally derived values. Intended for full traceability.
+* **results.json** — the current the envelopes bound, whether they are for EMT
+  simulations, the duration of the event and the parameters of the test, which
+  the model validation reads back when it is given the envelopes.
+
+In the model validation of a storage unit, the Grid Forming tests of each
+Zone 1 unit are under ``Results/<unit>/PCS_RTE-I18z1/``, laid out alike; their
+CSV file and figures also carry the filtered curve of the unit, and their
+``results.json`` the verdict of the checks (see :ref:`Grid Forming tests in the
+model validation <gfm_model_validation>`).
 
 
 Report interpretation

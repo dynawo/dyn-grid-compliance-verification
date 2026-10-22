@@ -61,7 +61,8 @@ Each PCS has its own ``PCSDescription.ini`` file, located under
 ``src/dycov/templates/PCS/<workflow>/<technology>/<PCSName>/``. The ``gfm``
 workflow has a ``BESS`` and a ``PPM`` technology too, because the DTR Fiche I18
 applies to storage alone: the ``generator_type`` of the GFM producer picks the
-tree. This file
+tree, and the model validation of a storage runs the Zone 1 PCS of
+``gfm/BESS`` along with those of ``model/BESS``. This file
 defines the complete structure of the PCS — its benchmarks, operating
 conditions, validation tests, and report curves.
 
@@ -482,7 +483,8 @@ GFM section
 * ``SCRmin``, ``SCRmed``, ``SCRmax`` — the short-circuit ratios of the DTR
   Fiche I18 (2, 10 and 20), which the GFM PCS name in their ``SCR`` keys.
 
-The checks of the producer curves given to ``generate_gfm_envelopes -c``:
+The checks the model validation of a storage applies to the curves of its
+Grid Forming tests (``PCS_RTE-I18z1``):
 
 * ``cutoff`` — low-pass filter cut-off frequency (Hz) of those curves, 30 Hz
   as the DTR asks for Grid Forming units, apart from the ``[GridCode]`` one.

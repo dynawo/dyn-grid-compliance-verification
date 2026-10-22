@@ -163,6 +163,16 @@ class Pcs:
         """
         return self._report_name
 
+    def get_id(self) -> int:
+        """Get the id of the PCS, which sorts the report.
+
+        Returns
+        -------
+        int
+            Id of the PCS
+        """
+        return self._id
+
     def get_zone(self) -> int:
         """Get the zone of the PCS.
 

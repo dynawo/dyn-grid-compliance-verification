@@ -5,7 +5,8 @@ made up of 3 directories:
 * **model/PPM**: DyCoV Model Validation tests (Power Parks)
 * **performance/PPM**: Electric Performance tests (Power Parks)
 * **performance/SM**: Electric Performance tests (Synchronous Machines)
-* **gfm/BESS**: Grid Forming tests of the DTR Fiche I18 (Storage units)
+* **gfm/BESS**: Grid Forming tests of the DTR Fiche I18 (Storage units), as one Zone 1 PCS that
+  the model validation of a storage runs as well
 * **gfm/PPM**: Grid Forming tests agreed before the Fiche I18 (Power Parks)
 
 # Modify an existing PCS

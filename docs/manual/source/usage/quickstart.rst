@@ -34,6 +34,13 @@ You would use the command ``dycov validate``:
 
 .. include:: helps/validate.rst
 
+The Zone 1 units of a storage are given the Grid Forming tests of the DTR
+Fiche I18 as well, which are not simulated: their curves, among the reference
+curves, are checked against envelopes, read from the output of ``dycov
+generate_gfm_envelopes`` given with ``-g`` or else generated from the INI file
+of the unit (see :ref:`Grid Forming tests in the model validation
+<gfm_model_validation>`).
+
 .. note::
    If you installed DyCoV natively on Linux, make sure the virtual
    environment is active before running any command:
@@ -94,10 +101,9 @@ You would use the command ``dycov generate_gfm_envelopes``:
 .. include:: helps/generate_gfm_envelopes.rst
 
 The output consists of CSV files with the envelope data, static PNG figures,
-interactive HTML plots, and a PDF report that gathers every test. Given the
-curves of the producer (``-c``), it also checks them against the envelopes and
-the damping criterion of the DTR Fiche I18, and the report gives the verdict of
-each test.
+interactive HTML plots, and a PDF report that gathers every test. The model
+validation of a storage unit checks its curves against these envelopes, and
+gives the verdict of each test.
 
 .. seealso::
    For a detailed description of the supported disturbance cases, input

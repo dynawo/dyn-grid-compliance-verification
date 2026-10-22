@@ -9,7 +9,6 @@
 import logging
 import multiprocessing
 import sys
-from collections import Counter
 from pathlib import Path
 
 from dycov.configuration.cfg import config
@@ -18,7 +17,6 @@ from dycov.gfm import report
 from dycov.gfm.parameters import GFMParameters
 from dycov.gfm.report import PcsReport
 from dycov.logging import dycov_logging, worker_initializer
-from dycov.model.compliance import Compliance
 from dycov.model.pcs import Pcs
 
 
@@ -189,18 +187,11 @@ class GFMGeneration:
                 initargs=(dycov_logging.get_handler_settings(),),
             ) as pool:
                 pcs_reports = pool.map(_generate_pcs, self._pcs_list)
+                pool.close()
+                pool.join()
         else:
             dycov_logging.get_logger("GFMGeneration").info("Generating envelopes sequentially.")
             pcs_reports = [_generate_pcs(pcs_tuple) for pcs_tuple in self._pcs_list]
-
-        self.__log_compliance_summary(
-            [
-                test.compliance
-                for pcs_report in pcs_reports
-                for test in pcs_report.tests
-                if test.compliance is not None
-            ]
-        )
 
         try:
             # The report reads the figures from the working directory, before it is moved
@@ -214,20 +205,3 @@ class GFMGeneration:
                     pcs_name,
                 )
             manage_files.remove_dir(self._parameters.get_working_dir())
-
-    def __log_compliance_summary(self, compliances: list[Compliance]) -> None:
-        """
-        Logs how many tests reach each compliance, when producer curves were checked.
-
-        Parameters
-        ----------
-        compliances : list[Compliance]
-            Compliance of the producer curves of every test.
-        """
-        if not compliances:
-            return
-        counts = Counter(compliance.to_str() for compliance in compliances)
-        dycov_logging.get_logger("GFMGeneration").info(
-            f"Producer curves checked in {len(compliances)} tests: "
-            + ", ".join(f"{count} {label}" for label, count in sorted(counts.items()))
-        )

@@ -7,17 +7,20 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-"""PDF report of a Grid Forming run, written at the end of 'dycov generate_gfm_envelopes'.
+"""Report of the Grid Forming tests.
 
-Every test gets a page with its parameters and its envelopes and, when the producer curves were
-checked, the checks of the DTR Fiche I18 and their verdict. The report is built on the main
-template and the LaTeX machinery of the verification reports.
+Every test gets a page with its parameters and its envelopes. 'dycov generate_gfm_envelopes'
+writes a PDF of the envelopes alone, while a model validation adds to its report a section for
+the Grid Forming PCS of each Zone 1 unit, whose pages also show the checks of the DTR Fiche I18
+of the producer curves and their verdict. Both are built on the main template and the LaTeX
+machinery of the verification reports.
 """
 
 import logging
 import time
 from collections import namedtuple
 from pathlib import Path
+from typing import Optional
 
 from dycov._build_info import commit_id, version
 from dycov.configuration.cfg import config
@@ -25,7 +28,6 @@ from dycov.core.global_variables import REPORT_NAME
 from dycov.files import manage_files
 from dycov.gfm.parameters import GFMParameters
 from dycov.logging import dycov_logging
-from dycov.model.compliance import Compliance
 from dycov.report import printable, report
 from dycov.report.LatexReportException import LatexReportException
 from dycov.report.tables import summary
@@ -60,19 +62,10 @@ _LATEX_TEXT = str.maketrans(
         "°": r"\ensuremath{^\circ}",
     }
 )
-# The first pass writes the table of contents and the second sets it, which moves the pages it
-# lists: with a test per page the contents span several pages, so a third pass numbers them right
-_PDFLATEX_PASSES = 3
-_NOTICES = {
-    Compliance.WithoutProducerCurves: (
-        "No producer curves for this test, or they miss one of the currents."
-    ),
-    Compliance.InvalidTest: "The producer curves of this test cannot be read.",
-}
 
 
 def create_pdf(pcs_reports: list[PcsReport], parameters: GFMParameters) -> None:
-    """Creates the report of every test generated, in the Reports directory of the output.
+    """Creates the report of the envelopes generated, in the Reports directory of the output.
 
     Parameters
     ----------
@@ -90,22 +83,19 @@ def create_pdf(pcs_reports: list[PcsReport], parameters: GFMParameters) -> None:
     latex_path = parameters.get_working_dir() / "Latex"
     manage_files.create_dir(latex_path)
     path_latex_files = Path(config.get_value("Global", "latex_templates_path"))
-    _copy_common_templates(path_latex_files, latex_path)
+    tool_latex_path = Path(__file__).resolve().parent.parent / path_latex_files
+    manage_files.copy_file(tool_latex_path / REPORT_NAME, latex_path)
 
     sim_type_str = parameters.get_producer().get_sim_type_str()
     reports = []
     tests = []
     for pcs_report in pcs_reports:
-        if not pcs_report.tests:
-            continue
-        if not pcs_report.report_name:
-            logger.warning(f"{pcs_report.pcs} declares no report_name, it is left out of the PDF")
-            continue
-        report.copy_pcs_latex_files(
-            path_latex_files, sim_type_str, pcs_report.pcs, pcs_report.producer_name, latex_path
+        pcs_input = prepare_pcs_report(
+            pcs_report, latex_path, sim_type_str, outputs_by_producer=False
         )
-        reports.append(_write_pcs_report(pcs_report, latex_path))
-        tests += pcs_report.tests
+        if pcs_input:
+            reports.append(pcs_input)
+            tests += pcs_report.tests
 
     if not tests:
         logger.warning("No test was generated, so there is no report to create")
@@ -115,16 +105,14 @@ def create_pdf(pcs_reports: list[PcsReport], parameters: GFMParameters) -> None:
         {
             "gridforming": True,
             "summary_description": _summary_description(parameters).replace("_", r"\_"),
-            "summaryReport": _summary_rows(tests, parameters),
+            "summaryReport": _summary_rows(tests),
             "reports": reports,
             "verificationtype": "Grid Forming Verification",
             "modeltype": _MODEL_TYPES.get(sim_type_str, ""),
         }
     ).dump(str(latex_path / REPORT_NAME))
 
-    report_name = REPORT_NAME.replace(".tex", "")
-    for _ in range(_PDFLATEX_PASSES):
-        proc = report.run_pdflatex(latex_path, report_name)
+    proc = report.compile_pdf(latex_path)
     if logger.getEffectiveLevel() != logging.DEBUG:
         report.clean_latex_outputs(latex_path)
 
@@ -137,17 +125,54 @@ def create_pdf(pcs_reports: list[PcsReport], parameters: GFMParameters) -> None:
     logger.info(f"PDF report done in {reports_path}")
 
 
-def _copy_common_templates(path_latex_files: Path, latex_path: Path) -> None:
-    """Copies the main template and the page of a test, the user's one winning over the tool's."""
+def prepare_pcs_report(
+    pcs_report: PcsReport, latex_path: Path, sim_type_str: str, outputs_by_producer: bool
+) -> Optional[str]:
+    """Writes the section of a PCS, and the page of each of its tests, where the report is
+    compiled.
+
+    Parameters
+    ----------
+    pcs_report: PcsReport
+        The tests of the PCS the section shows
+    latex_path: Path
+        Directory where the report is compiled, inside the working directory of the run
+    sim_type_str: str
+        Directory of the templates of the kind of unit, e.g. 'gfm/BESS'
+    outputs_by_producer: bool
+        Whether the output of the run keeps a directory by producer, as a model validation does
+
+    Returns
+    -------
+    Optional[str]
+        The input of the section in the main report, None when it shows no test
+    """
+    if not pcs_report.tests:
+        return None
+    if not pcs_report.report_name:
+        dycov_logging.get_logger("GFMReport").warning(
+            f"{pcs_report.pcs} declares no report_name, it is left out of the PDF"
+        )
+        return None
+
+    path_latex_files = Path(config.get_value("Global", "latex_templates_path"))
+    _copy_test_template(path_latex_files, latex_path)
+    report.copy_pcs_latex_files(
+        path_latex_files, sim_type_str, pcs_report.pcs, pcs_report.producer_name, latex_path
+    )
+    return _write_pcs_report(pcs_report, latex_path, outputs_by_producer)
+
+
+def _copy_test_template(path_latex_files: Path, latex_path: Path) -> None:
+    """Copies the page of a test, the user's one winning over the tool's."""
     tool_path = Path(__file__).resolve().parent.parent / path_latex_files
-    manage_files.copy_file(tool_path / REPORT_NAME, latex_path)
     for templates_path in (tool_path, config.get_config_dir() / path_latex_files):
         test_template = templates_path / "gfm" / _TEST_TEMPLATE
         if test_template.exists():
             manage_files.copy_file(test_template, latex_path)
 
 
-def _write_pcs_report(pcs_report: PcsReport, latex_path: Path) -> str:
+def _write_pcs_report(pcs_report: PcsReport, latex_path: Path, outputs_by_producer: bool) -> str:
     """Renders the page of every test of the PCS and its section, and returns the input of the
     section in the main report."""
     prefix = pcs_report.producer_name.replace("_", "")
@@ -155,13 +180,16 @@ def _write_pcs_report(pcs_report: PcsReport, latex_path: Path) -> str:
     subreports = []
     for test in pcs_report.tests:
         test_report = f"{prefix}.report.{_test_name(test)}.tex"
-        test_template.stream(_test_map(test)).dump(str(latex_path / test_report))
+        test_template.stream(_test_map(test, outputs_by_producer)).dump(
+            str(latex_path / test_report)
+        )
         subreports.append(f"\\input{{{test_report.replace('.tex', '')}}}")
 
     pcs_template = f"{prefix}.{pcs_report.report_name}"
     report.get_template(latex_path, pcs_template).stream(
         {
             "producercommand": f"\\renewcommand{{\\Producer}}{{{pcs_report.producer_name}}}",
+            "producer": pcs_report.producer_name.replace("_", r"\_"),
             "subReports": subreports,
         }
     ).dump(str(latex_path / pcs_template))
@@ -172,10 +200,12 @@ def _test_name(test: GFMTestReport) -> str:
     return f"{test.pcs}.{test.benchmark}.{test.operating_condition}"
 
 
-def _test_map(test: GFMTestReport) -> dict:
+def _test_map(test: GFMTestReport, outputs_by_producer: bool) -> dict:
     """The values the page of a test shows."""
     test_path = Path(test.pcs) / test.benchmark / test.operating_condition
-    html_figure = (test_path / f"{_test_name(test)}.html").as_posix()
+    html_figure = test_path / f"{_test_name(test)}.html"
+    if outputs_by_producer:
+        html_figure = Path(test.producer_name) / html_figure
     return {
         # Escaped rather than detokenized, as the table of contents reads it back
         "testname": f"{test.benchmark}.{test.operating_condition}".replace("_", r"\_"),
@@ -184,15 +214,9 @@ def _test_map(test: GFMTestReport) -> dict:
         "figure": (
             Path("..") / test.producer_name / test_path / f"{_test_name(test)}.png"
         ).as_posix(),
-        # From the Reports directory of the output, which drops the producer level
-        "link": f"\\href{{run:../{html_figure}}}{{html figures}}",
+        # From the Reports directory of the output
+        "link": f"\\href{{run:../{html_figure.as_posix()}}}{{html figures}}",
         "checked": test.compliance is not None,
-        "notices": _NOTICES.get(test.compliance, ""),
-        "waterMarkText": (
-            r"\SetWatermarkText{INVALID}"
-            if test.compliance in _NOTICES
-            else r"\SetWatermarkText{}"
-        ),
         "envelope": _envelope_row(test),
         "modes": _mode_rows(test),
         "cutoff": config.get_float("GFM", "cutoff", 30.0),
@@ -246,18 +270,12 @@ def _summary_description(parameters: GFMParameters) -> str:
     description = f"Run on: {timestamp} \\\\"
     description += f"Dycov version: {version} commit: {commit_id} \\\\"
     description += f"Producer dir: {parameters.get_producer().get_producer_path()} \\\\"
-    curves_path = parameters.get_producer_curves_path()
-    if curves_path is not None:
-        description += f"Producer curves dir: {curves_path} \\\\"
     envelopes = "EMT" if parameters.is_emt() else "RMS"
     return description + f"Envelopes for {envelopes} simulations \\\\"
 
 
-def _summary_rows(tests: list[GFMTestReport], parameters: GFMParameters) -> list[list[str]]:
-    if parameters.get_producer_curves_path() is not None:
-        return summary.create_map(tests)
-
-    # Without producer curves the run delivers envelopes only, and gives no verdict
+def _summary_rows(tests: list[GFMTestReport]) -> list[list[str]]:
+    # The run delivers envelopes, and gives no verdict
     return [
         [
             text.replace("_", r"\_")

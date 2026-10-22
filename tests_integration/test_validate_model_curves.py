@@ -9,7 +9,7 @@ See curves_invariants.py.
 
 from tests.dycov.utils import MODEL, execute_tool_summary
 
-from tests_integration.curves_invariants import assert_run_is_sound
+from tests_integration.curves_invariants import I18_TESTS, assert_run_is_sound
 
 PPM_PRODUCER_CURVES = MODEL / "ProducerCurves" / "PPM"
 PPM_REFERENCE_CURVES = MODEL / "Wind" / "IECB2015" / "ReferenceCurves"
@@ -98,6 +98,7 @@ BESS_TESTS = [
     "PCS_RTE-I16z3.GridFreqRamp.W500mHz250msConsumption",
     "PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Injection",
     "PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Consumption",
+    *I18_TESTS,
     "PCS_RTE-F16z3.PSetPointStep.ConsumptionPmax",
     "PCS_RTE-F16z3.PSetPointStep.ConsumptionP50",
     "PCS_RTE-F16z3.PSetPointStep.InjectionP50",

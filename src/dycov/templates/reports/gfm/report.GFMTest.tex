@@ -2,7 +2,8 @@
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Grid Forming test %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-    {{ waterMarkText }}
+    % The watermark that a page before may have set does not apply to this one
+    \SetWatermarkText{}
 
     \subsection{Test \texttt{%
 {{ testname }}%
@@ -38,11 +39,6 @@
     \BLOCK{if checked}
     \subsubsection*{Compliance checks}
 
-    \BLOCK{if notices}
-    \noindent\textcolor{red}{%
-{{ notices }}%
-}
-    \BLOCK{else}
     \noindent The producer curve, low-pass filtered at {{ cutoff }}~Hz, must stay inside the
     envelopes, with a tolerance of {{ tolerance }}~pu:
     \begin{center}
@@ -75,7 +71,6 @@
     \end{center}
     \BLOCK{else}
     no oscillation in the band.
-    \BLOCK{endif}
     \BLOCK{endif}
 
     \noindent Result: {{ compliance }}
