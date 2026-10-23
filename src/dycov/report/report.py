@@ -630,6 +630,7 @@ class _RunDescription:
     """What a run ran on, as the summary of the log and the one of the report state it."""
 
     timestamp: str
+    dtr_revision: str
     dynawo_version: str | None
     model_label: str
     model_template: str
@@ -639,6 +640,7 @@ class _RunDescription:
         lines = [
             f"Run on: {self.timestamp}",
             f"Dycov version: {version} commit: {commit_id}",
+            f"DTR revision: {self.dtr_revision}",
         ]
         if self.dynawo_version:
             lines.append(f"Dynawo version: {self.dynawo_version}")
@@ -654,6 +656,7 @@ def _latex_escaped(text: str) -> str:
 
 def _describe_run(parameters: ValidationParameters) -> _RunDescription:
     timestamp = time.strftime("%Y-%m-%d %H:%M %Z", time.localtime(time.time()))
+    dtr_revision = config.get_value("DTR", "current")
     producer = parameters.get_producer()
     dynawo_version = None
     if producer.is_dynawo_model():
@@ -666,7 +669,12 @@ def _describe_run(parameters: ValidationParameters) -> _RunDescription:
         # The model and its reference curves were generated into a directory that is removed
         # when the run ends, so the input worth naming is the workbook they came from.
         return _RunDescription(
-            timestamp, dynawo_version, "Workbook", _latex_escaped(str(workbook)), None
+            timestamp,
+            dtr_revision,
+            dynawo_version,
+            "Workbook",
+            _latex_escaped(str(workbook)),
+            None,
         )
 
     reference_template = None
@@ -674,6 +682,7 @@ def _describe_run(parameters: ValidationParameters) -> _RunDescription:
         reference_template = _latex_escaped(str(producer.get_reference_path()))
     return _RunDescription(
         timestamp,
+        dtr_revision,
         dynawo_version,
         "Model dir",
         _latex_escaped(str(producer.get_producer_path())),
