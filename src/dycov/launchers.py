@@ -94,6 +94,8 @@ class DycovCLI:
         self.initializer.init(args.user_config, dynawo_launcher_path, args.debug)
         self.logger.debug("DycovInitializer completed initialization.")
 
+        self._select_dtr_revision(parser, args)
+
         # Dispatch the command to the appropriate handler function.
         return self._dispatch_command(parser, args, dynawo_launcher_path)
 
@@ -111,6 +113,27 @@ class DycovCLI:
 
         config.set_value("Global", "parallel_pcs_validation", "false")
         config.set_value("Global", "parallel_num_processes", "1")
+
+    def _select_dtr_revision(self, parser, args) -> None:
+        """Fixes the revision of the DTR the run validates against, and stops if it is unknown.
+
+        A verdict only means something against the revision it was measured with, so the tool
+        never falls back to another one in silence.
+        """
+        from dycov.configuration.cfg import config
+
+        if getattr(args, "dtr", None):
+            config.set_value("DTR", "current", args.dtr)
+
+        revision = config.get_value("DTR", "current")
+        available = [value.strip() for value in config.get_list("DTR", "available")]
+        if revision not in available:
+            parser.error(
+                f"The tool does not implement the DTR revision {revision}. "
+                f"It implements {', '.join(available)}."
+            )
+
+        self.logger.info(f"Validating against the DTR revision {revision}.")
 
     def _dispatch_command(self, parser, args, dynawo_launcher_path: Optional[Path]) -> int:
         """Dispatches the parsed command to its respective handler function.
