@@ -133,6 +133,7 @@ class DycovCLI:
                 f"It implements {', '.join(available)}."
             )
 
+        config.load_dtr_delta_config(revision)
         self.logger.info(f"Validating against the DTR revision {revision}.")
 
     def _dispatch_command(self, parser, args, dynawo_launcher_path: Optional[Path]) -> int:

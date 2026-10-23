@@ -216,6 +216,15 @@ def _copy_pcs_latex_files(
             latex_tool_path, working_path, pcs_results["producer"].replace("_", "")
         )
 
+    latex_delta_path = manage_files.dtr_delta_path(latex_tool_path)
+    if latex_delta_path is not None:
+        dycov_logging.get_logger("Report").debug(
+            f"{pcs.get_name()}: DTR delta LaTeX path:{latex_delta_path}"
+        )
+        manage_files.copy_latex_files(
+            latex_delta_path, working_path, pcs_results["producer"].replace("_", "")
+        )
+
     if not (latex_tool_path.exists() or latex_user_path.exists()):
         dycov_logging.get_logger("Report").error(f"{pcs.get_name()}: Latex Template do not exist")
         return

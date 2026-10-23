@@ -24,9 +24,10 @@ class Config:
     Configuration is loaded with the following priority:
     1. User Performance Checking Sheet (PCS) description
     2. User configuration
-    3. PCS description of the selected DTR revision
+    3. Delta of this PCS for the selected DTR revision
     4. PCS description shipped with the tool
-    5. Default configuration
+    5. Rest of the delta of the selected DTR revision
+    6. Default configuration
 
     The three PCS layers describe one PCS at a time, and load_pcs_config rebuilds them
     every time a PCS is prepared. The user configuration outlives them, because it also
@@ -42,38 +43,48 @@ class Config:
         Parser for the user-specific configuration.
     _pcs_user_config: configparser.ConfigParser
         Parser for the PCS description written by the user.
-    _pcs_dtr_config: configparser.ConfigParser
-        Parser for the PCS description of the selected DTR revision.
+    _pcs_dtr_delta_config: configparser.ConfigParser
+        Parser for the delta of this PCS: what the selected revision of the DTR writes
+        differently from the description shipped with the tool.
     _pcs_default_config: configparser.ConfigParser
         Parser for the PCS description shipped with the tool.
+    _dtr_delta_config: configparser.ConfigParser
+        Parser for the rest of the delta: what the selected revision of the DTR writes
+        outside any PCS.
     _pcs_user_files: list[str]
         Path of the user PCS description in preparation, used to locate an option in its
         source file when reporting errors.
-    _pcs_dtr_files: list[str]
-        Path of the DTR revision description in preparation, used to locate an option in
-        its source file when reporting errors.
+    _pcs_dtr_delta_files: list[str]
+        Path of the delta of the PCS in preparation, used to locate an option in its
+        source file when reporting errors.
     _pcs_default_files: list[str]
         Path of the shipped PCS description in preparation, used to locate an option in
         its source file when reporting errors.
+    _dtr_delta_files: list[str]
+        Path of the delta file in use, used to locate an option in its source file when
+        reporting errors.
     """
 
     _config_dir: Path
     _default_config: configparser.ConfigParser
     _user_config: configparser.ConfigParser
     _pcs_user_config: configparser.ConfigParser
-    _pcs_dtr_config: configparser.ConfigParser
+    _pcs_dtr_delta_config: configparser.ConfigParser
     _pcs_default_config: configparser.ConfigParser
+    _dtr_delta_config: configparser.ConfigParser
     _pcs_user_files: list[str] = field(default_factory=list)
-    _pcs_dtr_files: list[str] = field(default_factory=list)
+    _pcs_dtr_delta_files: list[str] = field(default_factory=list)
     _pcs_default_files: list[str] = field(default_factory=list)
+    _dtr_delta_files: list[str] = field(default_factory=list)
 
     def _layers(self) -> tuple[configparser.ConfigParser, ...]:
         """Configuration parsers, from the highest precedence to the lowest."""
         return (
             self._pcs_user_config,
             self._user_config,
-            self._pcs_dtr_config,
+            self._pcs_dtr_delta_config,
             self._pcs_default_config,
+            self._dtr_delta_config,
             self._default_config,
         )
 
@@ -102,9 +113,10 @@ class Config:
         The priority defined in the configuration is:
           1. User Performance Checking Sheet (PCS) description
           2. User config
-          3. PCS description of the selected DTR revision
+          3. Delta of this PCS for the selected DTR revision
           4. PCS description shipped with the tool
-          5. Default config
+          5. Rest of the delta of the selected DTR revision
+          6. Default config
 
         Parameters
         ----------
@@ -144,11 +156,29 @@ class Config:
             )
             raise
 
+    def load_dtr_delta_config(self, revision: str) -> None:
+        """Loads the sections the selected revision of the DTR writes outside any PCS.
+
+        They come as one file per article of the DTR, so that a reader sees which article
+        changed. A revision that writes none has no file, and the layer is then empty.
+
+        Parameters
+        ----------
+        revision: str
+            Revision of the DTR, as the date of the edition that carries it (YYYYMMDD).
+        """
+        self._dtr_delta_config.clear()
+        self._dtr_delta_files.clear()
+        for path in _dtr_delta_paths(revision):
+            dycov_logging.get_logger("Cfg").info("Loading DTR delta from: %s", path)
+            self._dtr_delta_config.read(path, encoding="utf-8")
+            self._dtr_delta_files.append(str(path))
+
     def load_pcs_config(
         self,
         pcs_path: Optional[Path],
         user_pcs_path: Optional[Path] = None,
-        dtr_pcs_path: Optional[Path] = None,
+        pcs_dtr_delta_path: Optional[Path] = None,
     ) -> None:
         """Rebuild the Performance Checking Sheet (PCS) description layers from the files
         of a single PCS, discarding whatever a previously prepared PCS had left.
@@ -168,11 +198,13 @@ class Config:
             Path to the PCS description shipped with the tool.
         user_pcs_path: Optional[Path]
             Path to the PCS description written by the user.
-        dtr_pcs_path: Optional[Path]
-            Path to the PCS description of the selected DTR revision.
+        pcs_dtr_delta_path: Optional[Path]
+            Path to the delta of this PCS for the selected DTR revision.
         """
         self._load_pcs_layer(self._pcs_user_config, self._pcs_user_files, user_pcs_path)
-        self._load_pcs_layer(self._pcs_dtr_config, self._pcs_dtr_files, dtr_pcs_path)
+        self._load_pcs_layer(
+            self._pcs_dtr_delta_config, self._pcs_dtr_delta_files, pcs_dtr_delta_path
+        )
         self._load_pcs_layer(self._pcs_default_config, self._pcs_default_files, pcs_path)
 
     def _load_pcs_layer(
@@ -254,8 +286,9 @@ class Config:
         return [
             *(Path(pcs_file) for pcs_file in self._pcs_user_files),
             _user_config_path(self._config_dir),
-            *(Path(pcs_file) for pcs_file in self._pcs_dtr_files),
+            *(Path(pcs_file) for pcs_file in self._pcs_dtr_delta_files),
             *(Path(pcs_file) for pcs_file in self._pcs_default_files),
+            *(Path(dtr_delta_file) for dtr_delta_file in self._dtr_delta_files),
             _default_config_path(),
         ]
 
@@ -303,11 +336,14 @@ class Config:
         if self._has_valid_option(self._user_config, section, key):
             return self._user_config
 
-        if self._has_valid_option(self._pcs_dtr_config, section, key):
+        if self._has_valid_option(self._pcs_dtr_delta_config, section, key):
             return self._user_config
 
         if self._has_valid_option(self._pcs_default_config, section, key):
             return self._pcs_default_config
+
+        if self._has_valid_option(self._dtr_delta_config, section, key):
+            return self._user_config
 
         if self._has_valid_option(self._default_config, section, key):
             return self._default_config
@@ -472,6 +508,10 @@ class Config:
         """Gets a list of string values for a given key and section.
         Values are assumed to be comma-separated in the configuration file.
 
+        The word ``none`` means a list with nothing in it, which an empty value cannot say:
+        a layer writing an empty value leaves the layer below to answer. A revision of the
+        DTR that withdraws a fiche, or a test of a fiche, writes that word.
+
         Parameters
         ----------
         section: str
@@ -485,7 +525,7 @@ class Config:
             A list of strings if the key exists, an empty list otherwise.
         """
         value = self._get_config_value(section, key)
-        if value is None:
+        if value is None or value.strip().lower() == "none":
             return []
         return value.split(",")
 
@@ -557,6 +597,18 @@ def _user_config_path(config_dir: Path) -> Path:
     return config_dir / "config.ini"
 
 
+def _dtr_delta_paths(revision: str) -> list[Path]:
+    """Files a revision of the DTR writes outside any PCS, one per article it changes.
+
+    A revision keeps its whole delta in one directory of its own, which mirrors the shipped
+    templates: the descriptions of the PCS it changes, the reports, and these files, named
+    ``revision_art_<article>.ini`` after the article of the DTR they come from.
+    """
+    package = Path(__file__).resolve().parent.parent
+    directory = package / "templates" / "revisions" / revision
+    return sorted(directory.glob("revision_art_*.ini"))
+
+
 def _default_config_path() -> Path:
     """Path of the default configuration file shipped with the package."""
     return Path(__file__).resolve().parent / "defaultConfig.ini"
@@ -600,8 +652,9 @@ def _get_instance() -> Config:
     default_config = _new_parser()
     user_config = _new_parser()
     pcs_user_config = _new_parser()
-    pcs_dtr_config = _new_parser()
+    pcs_dtr_delta_config = _new_parser()
     pcs_default_config = _new_parser()
+    dtr_delta_config = _new_parser()
 
     # Load default configuration from the package
     default_config_path = _default_config_path()
@@ -635,8 +688,9 @@ def _get_instance() -> Config:
         default_config,
         user_config,
         pcs_user_config,
-        pcs_dtr_config,
+        pcs_dtr_delta_config,
         pcs_default_config,
+        dtr_delta_config,
     )
 
 

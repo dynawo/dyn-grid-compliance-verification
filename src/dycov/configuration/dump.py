@@ -34,8 +34,9 @@ def _layers_by_source(config) -> Tuple[Tuple[str, object], ...]:
     return (
         ("pcs-user", config._pcs_user_config),
         ("user", config._user_config),
-        ("dtr", config._pcs_dtr_config),
+        ("pcs-dtr-delta", config._pcs_dtr_delta_config),
         ("pcs", config._pcs_default_config),
+        ("dtr-delta", config._dtr_delta_config),
         ("default", config._default_config),
     )
 
@@ -45,7 +46,7 @@ def _pcs_layers_by_source(config) -> Tuple[Tuple[str, object], ...]:
     return tuple(
         (source, parser)
         for source, parser in _layers_by_source(config)
-        if source in ("pcs-user", "dtr", "pcs")
+        if source in ("pcs-user", "pcs-dtr-delta", "pcs")
     )
 
 

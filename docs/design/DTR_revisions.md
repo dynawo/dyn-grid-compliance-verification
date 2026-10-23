@@ -68,20 +68,43 @@ The issue #551 holds this part.
 
 ## Where a delta lives
 
-A delta of a PCS sits beside the description of that PCS, named after the date of the full DTR.
-A PCS a revision does not touch has no file at all, and its revision layer is then empty rather
-than whatever the previous PCS loaded. The issue #550 holds this part.
+A revision keeps its whole delta in one directory of its own, which **mirrors**
+`src/dycov/templates/`. A reader of that directory sees everything the revision changed, and
+nothing else. The issue #550 holds this part.
 
 ```
-<PCS dir>/PCSDescription.ini                     the base, with the whole description
-<PCS dir>/PCSDescription.<YYYYMMDD>.ini          what that revision writes differently
-<PCS dir>/<benchmark>/Table*.<YYYYMMDD>.txt      the voltage tables that revision changes
-src/dycov/configuration/revision.<YYYYMMDD>.ini  the sections that belong to no PCS
+src/dycov/templates/PCS/<kind>/<PCS>/...                 the base, the whole catalogue
+src/dycov/templates/reports/<kind>/<PCS>/...             the base, the whole report
+
+src/dycov/templates/revisions/<YYYYMMDD>/
+    PCS/<kind>/<PCS>/PCSDescription.ini                  what that revision writes differently
+    PCS/<kind>/<PCS>/<benchmark>/Table*.txt              the voltage tables it changes
+    reports/<kind>/<PCS>/report.*.tex                    the templates it changes or adds
+    revision_art_5_1_1.ini                               what belongs to no PCS,
+    revision_art_8_3_3.ini                               one file per article
 ```
+
+The mirror is the whole rule: the tool takes any path under `templates/` and inserts
+`revisions/<YYYYMMDD>` after it, so a subtree added later needs no new code. The files that
+mirror nothing are the `revision_art_*.ini`, which hold the sections of a revision that belong
+to no PCS, such as the thresholds of `[GridCode]`. There is one per article of the DTR the
+revision changes, so that a reader sees which article moved: the categories of a unit come from
+the article 5.1.1, and the criteria of a fiche from the article 8.3.3.
 
 A file holds what changes, and not the whole description, because the base answers for the rest.
 The PCS configuration splits into two parsers, the base and the revision, so that the precedence
-is structural and not a consequence of the order the files were read in.
+is structural and not a consequence of the order the files were read in. A file the revision does
+write replaces the shipped one of the same name, because the delta is copied after it.
+
+**A fiche a revision adds** has no shipped description at all: its directory exists only under
+the revision, and the delta layer then holds its whole description. The tool looks for the PCS
+of a run in both trees, so such a fiche is found, loaded and simulated like any other.
+
+**A fiche a revision withdraws** keeps its shipped description, and the delta writes `none` in
+place of its list of benchmarks. A PCS that declares no benchmark is skipped, which is the path
+a declared-tests fiche already takes. The word is needed because an empty value says nothing: a
+layer that writes one leaves the layer below to answer. The same word withdraws one test of a
+fiche, in the list of its operating conditions.
 
 ## What the tool already gives a delta
 
@@ -101,36 +124,37 @@ Three mechanisms are in the tool so that a delta carries data alone:
   of benchmarks and of operating conditions, the time limits and the error thresholds are all
   read from the configuration.
 
-## What the tool has to do next
+## How a revision reaches a run
 
-`Config` already holds the layer, between the configuration of the user and the shipped PCS
-description. `load_pcs_config` takes a `dtr_pcs_path` and nobody passes one yet. The work is:
+The run fixes its revision before anything else reads a value, and every layer then follows.
 
-1. Read `[DTR]` and `--dtr`, and stop when the revision is not among the available ones
-   (#551).
-2. Give `load_pcs_config` the delta file of the PCS in preparation, when the revision has one
-   (#550).
-3. Read the `revision.<YYYYMMDD>.ini` files into a layer of their own, below the shipped PCS
-   description and above the default configuration. A PCS says more than a revision, and a
-   revision says more than a default (#550).
-4. Resolve the path of a voltage table and of a report template through the revision first, and
-   through the shipped file when the revision gives none (#550).
-5. Write the revision in the report and in `results.json`, because a verdict without its
-   revision cannot be read. Mark a PCS whose criteria the user configuration overrode as invalid
-   for certification, and name the keys that were changed: a report measured with altered
-   criteria must not read as a conformity check (#552).
+1. The run reads `[DTR]` and `--dtr`, and stops when the revision is not among the available
+   ones (#551).
+2. It reads the `revision_art_*.ini` of that revision into a layer of its own, below the
+   shipped PCS description and above the default configuration. A PCS says more than a
+   revision, and a revision says more than a default.
+3. Each PCS in preparation loads, beside its shipped description, the one the revision writes
+   for it, into a layer of its own.
+4. The files of a PCS are copied into the working directory from the shipped tree first and
+   from the delta after it, so a voltage table or a report template the revision rewrites
+   replaces the shipped one, and one it adds arrives with no counterpart.
 
 The order of the layers, from the highest precedence to the lowest, is then:
 
 1. the PCS description of the user,
 2. the configuration of the user,
-3. the PCS description of the selected revision,
+3. the delta of the PCS for the selected revision,
 4. the PCS description shipped with the tool,
-5. the `revision.<YYYYMMDD>.ini` of the selected revision,
+5. the `revision_art_*.ini` of the selected revision,
 6. the default configuration.
 
 The configuration of the user wins over a revision. A user who changes a value takes the
 responsibility for it, as with every other option.
+
+One step is left, and the issue #552 holds it: write the revision in the report and in
+`results.json`, because a verdict without its revision cannot be read, and mark a PCS whose
+criteria the user configuration overrode as invalid for certification, naming the keys that
+were changed. A report measured with altered criteria must not read as a conformity check.
 
 ## How a revision redefines the categories
 
@@ -281,7 +305,7 @@ The delta of `20250801` writes:
 
 | What | Where |
 |---|---|
-| A unit above 110 kV is type D from 30 MW, not from any power | `category_thresholds_high_voltage = 1,18,30` in its `revision.<YYYYMMDD>.ini` |
+| A unit above 110 kV is type D from 30 MW, not from any power | `category_thresholds_high_voltage = 1,18,30` in its `revision_art_5_1_1.ini` |
 
 The delta of `20251013` writes:
 
@@ -290,7 +314,7 @@ The delta of `20251013` writes:
 | The fiches I6 and I7 start at Un | `pdr_U` of the dip and of the swell |
 | The fiche I7 gives one operating point, at Q = 0 | the list of operating conditions, one description, one report |
 | The fiche I5 adds the impedant fault | the list of operating conditions, one description, one report |
-| The reaction time carries no verdict | `thr_reaction_time = none` in `revision.<YYYYMMDD>.ini` |
+| The reaction time carries no verdict | `thr_reaction_time = none` in `revision_art_8_3_3.ini` |
 
 The delta of `20260723` is not compared yet. It carries the five points above, because its
 revision keeps them, and it writes them itself: a delta is measured against the base.

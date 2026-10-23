@@ -530,3 +530,40 @@ def test_check_output_dir_no_overwrite(tmp_path):
         res = check_output_dir(d)
 
     assert res is True
+
+
+def _given_revision(monkeypatch, revision):
+    """Config is frozen, so the double replaces the method on the class."""
+    from dycov.configuration.cfg import Config
+
+    values = {("Global", "templates_path"): "templates/PCS", ("DTR", "current"): revision}
+    monkeypatch.setattr(Config, "get_value", lambda self, section, key: values[(section, key)])
+
+
+def test_the_delta_of_a_revision_mirrors_the_templates(monkeypatch, tmp_path):
+    from dycov.files import manage_files
+
+    _given_revision(monkeypatch, "20250801")
+    shipped = tmp_path / "templates" / "reports" / "PPM" / "PCS_RTE-I6"
+    delta = tmp_path / "templates" / "revisions" / "20250801" / "reports" / "PPM" / "PCS_RTE-I6"
+    delta.mkdir(parents=True)
+
+    assert manage_files.dtr_delta_path(shipped) == delta
+
+
+def test_a_revision_that_writes_no_delta_of_a_directory_has_none(monkeypatch, tmp_path):
+    from dycov.files import manage_files
+
+    _given_revision(monkeypatch, "20250801")
+
+    assert (
+        manage_files.dtr_delta_path(tmp_path / "templates" / "PCS" / "SM" / "PCS_RTE-I6") is None
+    )
+
+
+def test_a_path_outside_the_templates_has_no_delta(monkeypatch, tmp_path):
+    from dycov.files import manage_files
+
+    _given_revision(monkeypatch, "20250801")
+
+    assert manage_files.dtr_delta_path(tmp_path / "model_lib" / "Omega") is None

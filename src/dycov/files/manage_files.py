@@ -19,6 +19,7 @@ from typing import Iterable, Set
 import pandas as pd
 
 import dycov
+from dycov.configuration.cfg import config
 from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.logging import dycov_logging
 
@@ -327,6 +328,34 @@ def clone_as_subdirectory(source_path: Path, name: str) -> Path:
     return created_path
 
 
+def dtr_delta_path(path: Path) -> Path:
+    """The same directory inside the delta of the selected revision of the DTR, if it has one.
+
+    A revision keeps its whole delta in a directory of its own, which mirrors the shipped
+    templates, so the delta of ``templates/<kind>/<rest>`` is
+    ``templates/revisions/<revision>/<kind>/<rest>``.
+
+    Parameters
+    ----------
+    path : Path
+        Directory of the shipped templates.
+
+    Returns
+    -------
+    Path
+        The directory of the delta, or None when the revision does not write one.
+    """
+    templates = Path(config.get_value("Global", "templates_path")).parts[0]
+    parts = path.parts
+    if templates not in parts:
+        return None
+
+    index = parts.index(templates)
+    revision = config.get_value("DTR", "current")
+    delta = Path(*parts[:index], templates, "revisions", revision, *parts[index + 1 :])
+    return delta if delta.is_dir() else None
+
+
 def copy_base_case_files(
     model_files: ModelFiles, producer_files: ProducerFiles, target_path: Path
 ) -> None:
@@ -357,6 +386,7 @@ def copy_base_case_files(
     copy_from_path(
         model_files.model_path.parent.parent, target_path, extra_excludes=exclude_patterns
     )
+    _copy_pcs_delta_files(model_files, target_path, exclude_patterns)
     for file in [producer_files.producer_dyd, producer_files.producer_par]:
         copy_file(file, target_path / (file.stem + file.suffix.lower()))
     _copy_producer_tables(producer_files.producer_par.parent, target_path)
@@ -471,6 +501,24 @@ def copy_base_curves_files(source_path: Path, target_path: Path, prefix_name: st
             "The supplied curves set has not been updated"
         )
         return False
+
+
+def _copy_pcs_delta_files(
+    model_files: "ModelFiles", target_path: Path, exclude_patterns: list
+) -> None:
+    """Copies what the selected revision of the DTR writes differently for this PCS.
+
+    It runs after the shipped files, so a file of the revision replaces the shipped one of
+    the same name, such as a voltage table whose levels the revision moved.
+    """
+    delta_path = dtr_delta_path(model_files.pcs_path)
+    if delta_path is None:
+        return
+
+    copy_from_path(delta_path, target_path, extra_excludes=exclude_patterns)
+    benchmark_path = delta_path / model_files.benchmark
+    if benchmark_path.exists():
+        copy_from_path(benchmark_path, target_path, extra_excludes=exclude_patterns)
 
 
 def copy_latex_files(source: Path, target: Path, prefix_name: str) -> None:

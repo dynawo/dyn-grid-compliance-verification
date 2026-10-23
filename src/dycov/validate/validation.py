@@ -259,6 +259,9 @@ class Validation:
             validation_pcs.update(
                 manage_files.list_directories(tool_path / self._templates_path / validation_path)
             )
+            delta_path = manage_files.dtr_delta_path(tool_path / self._templates_path)
+            if delta_path is not None:
+                validation_pcs.update(manage_files.list_directories(delta_path / validation_path))
 
     def __prepare_pcs_list(self) -> list:
         """Prepares the list of PCS and their associated producers for validation.

@@ -32,8 +32,8 @@ _ZONE_3_DESCRIPTION = (
 
 @pytest.fixture
 def empty_parsers():
-    """The five configuration layers, in the order the Config constructor takes them."""
-    return (_new_parser(), _new_parser(), _new_parser(), _new_parser(), _new_parser())
+    """The six configuration layers, in the order the Config constructor takes them."""
+    return tuple(_new_parser() for _ in range(6))
 
 
 @pytest.fixture
@@ -41,8 +41,9 @@ def config_with_priority(tmp_path):
     default_config = configparser.ConfigParser()
     user_config = configparser.ConfigParser()
     pcs_user_config = configparser.ConfigParser()
-    pcs_dtr_config = configparser.ConfigParser()
+    pcs_dtr_delta_config = configparser.ConfigParser()
     pcs_config = configparser.ConfigParser()
+    dtr_delta_config = configparser.ConfigParser()
 
     default_config.add_section("section")
     default_config.set("section", "key", "default_value")
@@ -55,7 +56,13 @@ def config_with_priority(tmp_path):
     default_config.set("section", "default_only", "default_only_value")
 
     return Config(
-        tmp_path, default_config, user_config, pcs_user_config, pcs_dtr_config, pcs_config
+        tmp_path,
+        default_config,
+        user_config,
+        pcs_user_config,
+        pcs_dtr_delta_config,
+        pcs_config,
+        dtr_delta_config,
     )
 
 
@@ -69,15 +76,20 @@ def test_get_value_priority_order(config_with_priority):
 
 
 def test_load_pcs_config_updates_parser(tmp_path, empty_parsers):
-    default_config, user_config, pcs_user_config, pcs_dtr_config, pcs_config = empty_parsers
+    (
+        default_config,
+        user_config,
+        pcs_user_config,
+        pcs_dtr_delta_config,
+        pcs_config,
+        dtr_delta_config,
+    ) = empty_parsers
 
     pcs_file = tmp_path / "pcs.ini"
     with pcs_file.open("w") as f:
         f.write("[pcs_section]\nfoo=bar\n")
 
-    cfg = Config(
-        tmp_path, default_config, user_config, pcs_user_config, pcs_dtr_config, pcs_config
-    )
+    cfg = Config(tmp_path, *empty_parsers)
     assert not pcs_config.has_section("pcs_section")
     cfg.load_pcs_config(pcs_file)
     assert pcs_config.has_section("pcs_section")
@@ -141,7 +153,7 @@ def test_find_option_prefers_the_first_suffix_the_section_defines(tmp_path, empt
 
 
 def test_get_options_gathers_the_keys_of_every_layer(tmp_path, empty_parsers):
-    default_config, user_config, _, _, pcs_config = empty_parsers
+    default_config, user_config, _, _, pcs_config, _ = empty_parsers
     user_config.add_section("opt_section")
     user_config.set("opt_section", "foo", "1")
     user_config.set("opt_section", "bar", "2")
@@ -347,45 +359,45 @@ def test_the_dtr_revision_overrides_the_shipped_pcs_description(tmp_path, empty_
     tool_file = tmp_path / "tool" / "PCSDescription.ini"
     tool_file.parent.mkdir()
     tool_file.write_text("[PCS.Model]\npdr_U = Udim\npdr_Q = 0.0\n")
-    revision_file = tmp_path / "revision" / "PCSDescription.ini"
-    revision_file.parent.mkdir()
-    revision_file.write_text("[PCS.Model]\npdr_Q = 0.1\n")
+    dtr_delta_file = tmp_path / "revision" / "PCSDescription.ini"
+    dtr_delta_file.parent.mkdir()
+    dtr_delta_file.write_text("[PCS.Model]\npdr_Q = 0.1\n")
     cfg = Config(tmp_path, *empty_parsers)
 
-    cfg.load_pcs_config(tool_file, None, revision_file)
+    cfg.load_pcs_config(tool_file, None, dtr_delta_file)
 
     assert cfg.get_value("PCS.Model", "pdr_Q") == "0.1"
     assert cfg.get_value("PCS.Model", "pdr_U") == "Udim"
-    assert str(revision_file) in cfg.describe_option("PCS.Model", "pdr_Q")
+    assert str(dtr_delta_file) in cfg.describe_option("PCS.Model", "pdr_Q")
 
 
 def test_the_user_config_overrides_the_dtr_revision(tmp_path, empty_parsers):
     user_config = empty_parsers[1]
     user_config.read_string("[PCS.Model]\npdr_Q = 0.3\n")
-    revision_file = tmp_path / "revision" / "PCSDescription.ini"
-    revision_file.parent.mkdir()
-    revision_file.write_text("[PCS.Model]\npdr_Q = 0.1\n")
+    dtr_delta_file = tmp_path / "revision" / "PCSDescription.ini"
+    dtr_delta_file.parent.mkdir()
+    dtr_delta_file.write_text("[PCS.Model]\npdr_Q = 0.1\n")
     cfg = Config(tmp_path, *empty_parsers)
 
-    cfg.load_pcs_config(None, None, revision_file)
+    cfg.load_pcs_config(None, None, dtr_delta_file)
 
     assert cfg.get_value("PCS.Model", "pdr_Q") == "0.3"
 
 
 def test_set_value_overrides_a_dtr_revision_value_in_the_user_config(tmp_path, empty_parsers):
     user_config = empty_parsers[1]
-    pcs_dtr_config = empty_parsers[3]
-    revision_file = tmp_path / "revision" / "PCSDescription.ini"
-    revision_file.parent.mkdir()
-    revision_file.write_text("[PCS.Model]\npdr_Q = 0.1\n")
+    pcs_dtr_delta_config = empty_parsers[3]
+    dtr_delta_file = tmp_path / "revision" / "PCSDescription.ini"
+    dtr_delta_file.parent.mkdir()
+    dtr_delta_file.write_text("[PCS.Model]\npdr_Q = 0.1\n")
     cfg = Config(tmp_path, *empty_parsers)
-    cfg.load_pcs_config(None, None, revision_file)
+    cfg.load_pcs_config(None, None, dtr_delta_file)
 
     cfg.set_value("PCS.Model", "pdr_Q", "0.2")
 
     assert cfg.get_value("PCS.Model", "pdr_Q") == "0.2"
     assert user_config.get("PCS.Model", "pdr_Q") == "0.2"
-    assert pcs_dtr_config.get("PCS.Model", "pdr_Q") == "0.1"
+    assert pcs_dtr_delta_config.get("PCS.Model", "pdr_Q") == "0.1"
 
 
 def test_set_value_overrides_a_shipped_pcs_value_in_its_own_layer(tmp_path, empty_parsers):
@@ -415,3 +427,28 @@ def test_set_value_overrides_a_user_pcs_value_in_its_own_layer(tmp_path, empty_p
 
     assert pcs_user_config.get("PCS.Model", "pdr_Q") == "0.2"
     assert not user_config.has_option("PCS.Model", "pdr_Q")
+
+
+def test_the_word_none_withdraws_a_list(tmp_path, empty_parsers):
+    """An empty value lets the layer below answer; a revision writes "none" instead."""
+    pcs_dtr_delta_config = empty_parsers[3]
+    pcs_default_config = empty_parsers[4]
+    pcs_default_config.add_section("PCS-Benchmarks")
+    pcs_default_config.set("PCS-Benchmarks", "PCS_RTE-I5", "ThreePhaseFault")
+    pcs_dtr_delta_config.add_section("PCS-Benchmarks")
+    pcs_dtr_delta_config.set("PCS-Benchmarks", "PCS_RTE-I5", "none")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.get_list("PCS-Benchmarks", "PCS_RTE-I5") == []
+
+
+def test_an_empty_list_in_a_delta_leaves_the_shipped_one_answering(tmp_path, empty_parsers):
+    pcs_dtr_delta_config = empty_parsers[3]
+    pcs_default_config = empty_parsers[4]
+    pcs_default_config.add_section("PCS-Benchmarks")
+    pcs_default_config.set("PCS-Benchmarks", "PCS_RTE-I5", "ThreePhaseFault")
+    pcs_dtr_delta_config.add_section("PCS-Benchmarks")
+    pcs_dtr_delta_config.set("PCS-Benchmarks", "PCS_RTE-I5", "")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.get_list("PCS-Benchmarks", "PCS_RTE-I5") == ["ThreePhaseFault"]
