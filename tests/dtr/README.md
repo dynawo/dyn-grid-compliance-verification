@@ -10,5 +10,10 @@ revision, so a test that said nothing would answer for a different DTR at every 
 Every revision after the base has a file of its own, `test_revision_<YYYYMMDD>.py`, which
 reads the base and the revision one after the other and shows the difference itself.
 
+`test_delta_is_complete.py` answers for every delta the tool ships, whichever revision wrote
+it. It reads the files and asserts what a delta must hold: that the tool implements the
+revision, that the delta describes a PCS that exists, and that every test the delta changes
+carries its report template, because a template states the conditions of its test in its prose.
+
 Run them alone with `pytest tests/dtr`. The CI runs them with the rest, because
 `pytest.ini` points at `tests`.
