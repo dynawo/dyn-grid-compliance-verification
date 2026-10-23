@@ -160,6 +160,12 @@ move is a rename within one filesystem. Alongside the inputs
 it holds the post-processed `curves_calculated.csv`, `curves_reference.csv` and `results.json`, and at its
 root the `dycov_run.log` of the execution.
 
+`--curves-only` (`validate`, `performance`; `Parameters.is_curves_only`) stops each test once
+`has_required_curves` has written its curves: `Benchmark` gives it the outcome of the simulation
+(`Compliance.Simulated` or a failure) without running the checks, and `Validation` logs the summary
+(`report.log_summary`) without the figures or the PDF. The tree is the same minus `results.json` and the
+report, which is all the anonymizer needs; the curve regeneration of the examples runs this way.
+
 Output naming (`curves/naming.py`): internals use `BusPDR_BUS_*` everywhere, but Zone 1
 outputs (saved CSVs, report/figure labels) rename the bus to `InternalNode1` — PDR is
 reserved for the real connection point (issue #275). The importer accepts both namings

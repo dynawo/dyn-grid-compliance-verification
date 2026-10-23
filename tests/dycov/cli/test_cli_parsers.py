@@ -69,6 +69,18 @@ def test_positional_arguments_complete_paths(parser):
     assert excel.complete == shtab.FILE
 
 
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["validate", "-m", "Dynawo", "ReferenceCurves"],
+        ["performance", "-m", "Dynawo"],
+    ],
+)
+def test_curves_only_is_off_unless_asked_for(parser, arguments):
+    assert parser.parse_args(arguments).curves_only is False
+    assert parser.parse_args([*arguments, "--curves-only"]).curves_only is True
+
+
 def test_print_completion_writes_the_script_and_exits(parser, capsys):
     with pytest.raises(SystemExit) as exit_info:
         parser.parse_args(["--print-completion", "bash"])
