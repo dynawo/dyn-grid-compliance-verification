@@ -139,3 +139,17 @@ def test_create_map_missing_keys():
     assert "Frequency remains within [49, 51] Hz" in labels
     assert "Unit remains stable (rotor stability)" not in labels
     assert "Aux not disconnected by protections" not in labels
+
+
+def test_create_map_stability_row_names_the_rotor_angle():
+    results = {"stabilized": True, "stabilized_rotor_angle": True}
+    table = create_map(results)
+    labels = [row[0] for row in table]
+    assert "Unit remains stable (rotor stability)" in labels
+
+
+def test_create_map_stability_row_names_the_settled_magnitudes():
+    results = {"stabilized": True, "stabilized_rotor_angle": False}
+    table = create_map(results)
+    labels = [row[0] for row in table]
+    assert "Unit remains stable (P, Q and V settle)" in labels

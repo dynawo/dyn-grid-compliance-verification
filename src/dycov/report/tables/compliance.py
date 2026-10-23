@@ -135,9 +135,12 @@ def create_map(results: dict) -> list:
         )
     if "stabilized" in results:
         stabilized = printable.format_value(results, "stabilized")
-        compliance_map.append(
-            ["Unit remains stable (rotor stability)", "\\textemdash", stabilized]
+        measured = (
+            "P, Q and V settle"
+            if results.get("stabilized_rotor_angle") is False
+            else "rotor stability"
         )
+        compliance_map.append([f"Unit remains stable ({measured})", "\\textemdash", stabilized])
     if "no_disconnection_load" in results:
         no_disconnection_load = printable.format_value(results, "no_disconnection_load")
         compliance_map.append(

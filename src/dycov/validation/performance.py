@@ -707,6 +707,7 @@ class PerformanceValidator(Validator):
                 stabilized = is_stable.p and is_stable.q and is_stable.v
 
             results["stabilized"] = stabilized
+            results["stabilized_rotor_angle"] = not is_ppm
             results["compliance"] &= stabilized
 
         if compliance_list.contains_key(["imax_reac"], self._validations):
@@ -812,6 +813,8 @@ class PerformanceValidator(Validator):
                 'no_disconnection_load': bool,  # No load disconnection (if applicable)
                 'static_diff': float,  # Static difference (if applicable)
                 'stabilized': bool,  # Stabilization status (if applicable)
+                'stabilized_rotor_angle': bool,  # The rotor angle took part in the
+                    stabilization status (if applicable)
                 'imax_reac': float,  # Maximum reactive current (if applicable)
                 'imax_reac_check': bool,  # Maximum reactive current check status (if applicable)
                 'AVR_5_check': bool,  # Plant-level voltage regulation 5% check status
