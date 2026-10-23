@@ -52,6 +52,7 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
     _add_debug_argument(main_parser)
     _add_diagnostic_argument(main_parser)
     _add_user_config_argument(main_parser)
+    _add_dtr_argument(main_parser)
 
     # Set up subparsers for different commands
     subparsers = main_parser.add_subparsers(dest="command", help="Available commands")
@@ -143,6 +144,20 @@ def _add_user_config_argument(parser: argparse.ArgumentParser) -> None:
         arg_type=Path,
         default=None,
         completion=shtab.FILE,
+    )
+
+
+def _add_dtr_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--dtr' argument to select the revision of the DTR a run validates against."""
+    _add_argument(
+        parser,
+        "--dtr",
+        arg_type=str,
+        default=None,
+        help_msg=(
+            "Revision of the DTR to validate against, as the date of the edition that carries "
+            "it (YYYYMMDD). Overrides the revision of the configuration for this execution."
+        ),
     )
 
 

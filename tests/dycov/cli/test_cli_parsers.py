@@ -87,3 +87,8 @@ def test_print_completion_writes_the_script_and_exits(parser, capsys):
 
     assert exit_info.value.code == 0
     assert "complete -F _shtab_dycov dycov" in capsys.readouterr().out
+
+
+def test_the_dtr_option_is_global_and_empty_by_default(parser):
+    assert parser.parse_args(["performance"]).dtr is None
+    assert parser.parse_args(["--dtr", "20240215", "performance"]).dtr == "20240215"
