@@ -261,7 +261,7 @@ def test_run_common_tests_of_a_stable_power_park_module():
         stable_theta,
         first_stable_pos_theta,
         pass_pi,
-    ) = validator._PerformanceValidator__run_common_tests(THR_SS_TOL, is_ppm=True)
+    ) = validator._PerformanceValidator__run_common_tests(THR_SS_TOL, is_non_synchronous=True)
 
     assert (steady_p, steady_q, steady_v) == (True, True, True)
     assert (first_steady_pos_p, first_steady_pos_q, first_steady_pos_v) == (3, 0, 3)
@@ -279,7 +279,7 @@ def test_run_common_tests_of_a_power_park_module_still_moving_at_the_end(monkeyp
     validator = _make_validator(calculated=_make_pdr_curves())
 
     steady_p, first_steady_pos_p, steady_q, _, steady_v, _, _, _, _ = (
-        validator._PerformanceValidator__run_common_tests(THR_SS_TOL, is_ppm=True)
+        validator._PerformanceValidator__run_common_tests(THR_SS_TOL, is_non_synchronous=True)
     )
 
     assert (steady_p, steady_q, steady_v) == (False, True, True)
@@ -298,7 +298,7 @@ def test_run_common_tests_warns_about_every_curve_without_a_steady_state(monkeyp
     )
 
     steady_p, _, steady_q, _, steady_v, _, _, _, _ = (
-        validator._PerformanceValidator__run_common_tests(THR_SS_TOL, is_ppm=True)
+        validator._PerformanceValidator__run_common_tests(THR_SS_TOL, is_non_synchronous=True)
     )
 
     assert (steady_p, steady_q, steady_v) == (False, False, False)
@@ -315,7 +315,7 @@ def test_run_common_tests_of_a_synchronous_machine_checks_the_internal_angle():
     )
 
     _, _, _, _, _, _, stable_theta, first_stable_pos_theta, pass_pi = (
-        validator._PerformanceValidator__run_common_tests(THR_SS_TOL, is_ppm=False)
+        validator._PerformanceValidator__run_common_tests(THR_SS_TOL, is_non_synchronous=False)
     )
 
     assert stable_theta is True
