@@ -21,7 +21,7 @@ their design.
 
 ## The base and the deltas
 
-The **base** is the first revision the tool implemented, the DTR of 2024-02-15, and it holds
+The **base** is the first revision the tool implemented, the DTR of `20240215`, and it holds
 the whole catalogue: every PCS, with its values and its reports. The base does not move: a
 revision that arrives is added, and nothing that already works is rewritten.
 
@@ -34,9 +34,18 @@ revision in date order, and runs. Nothing else in the tool knows which revision 
 
 ## The name of a revision
 
-A revision is named by the date of the full DTR, as `YYYY-MM-DD`. The articles inside carry
-their own version numbers, and several editions may carry the same version of an article. The
-date is the name a user reads on the document RTE publishes, and it orders the revisions.
+A revision is named after the edition of the DTR that carries it, as `YYYYMMDD`: the date
+RTE prints on the document it publishes. The articles inside carry their own version numbers,
+and several editions may carry the same version of an article.
+
+That name is not the day the article takes force, and the two may be months apart. RTE publishes
+an article on its own first, and consolidates it into a full edition later. Article 8.3.3 v3.6
+takes force on 04/05/2026, and the first full edition that carries it is `20260723`: RTE
+published no full DTR between 13/01/2026 and 23/07/2026. The three older revisions the tool
+carries do coincide, because their edition came out the same day as their article.
+
+So a user who holds a PTF reads the table of *Which revisions the tool needs*: it gives, for each
+revision, the dates of the PTF it answers for.
 
 `Summary_data_from_the_DTR.md` holds, for each revision, the version of each article the values
 come from.
@@ -48,7 +57,7 @@ The issue #551 holds this part.
 * The `[DTR]` section declares `current`, the revision a run uses, and `available`, the
   revisions the tool implements. The configuration the tool ships gives `current` the newest
   revision, so a run that says nothing validates against the norm in force.
-* `--dtr <date>` overrides `current` for one execution, so the same producer runs against two
+* `--dtr <YYYYMMDD>` overrides `current` for one execution, so the same producer runs against two
   revisions one after the other. The curves do not change; only the criteria do.
 * A run that asks for a revision that is not in `available` stops with an error. The tool never
   falls back to another norm in silence.
@@ -60,10 +69,10 @@ A PCS a revision does not touch has no file at all, and its revision layer is th
 than whatever the previous PCS loaded. The issue #550 holds this part.
 
 ```
-<PCS dir>/PCSDescription.ini                  the base, which holds the whole description
-<PCS dir>/PCSDescription.<YYYY-MM-DD>.ini     what that revision writes differently
-<PCS dir>/<benchmark>/Table*.<YYYY-MM-DD>.txt the voltage tables that revision changes
-src/dycov/configuration/revision.<YYYY-MM-DD>.ini   the sections that belong to no PCS
+<PCS dir>/PCSDescription.ini                     the base, with the whole description
+<PCS dir>/PCSDescription.<YYYYMMDD>.ini          what that revision writes differently
+<PCS dir>/<benchmark>/Table*.<YYYYMMDD>.txt      the voltage tables that revision changes
+src/dycov/configuration/revision.<YYYYMMDD>.ini  the sections that belong to no PCS
 ```
 
 A file holds what changes, and not the whole description, because the base answers for the rest.
@@ -98,7 +107,7 @@ description. `load_pcs_config` takes a `dtr_pcs_path` and nobody passes one yet.
 2. Give `load_pcs_config` the delta files of the PCS in preparation, when the revision has them.
    `configparser.read` takes several paths and the last one wins, so a chain of deltas needs no
    other mechanism (#550).
-3. Read the `revision.<date>.ini` files into a layer of their own, below the shipped PCS
+3. Read the `revision.<YYYYMMDD>.ini` files into a layer of their own, below the shipped PCS
    description and above the default configuration. A PCS says more than a revision, and a
    revision says more than a default (#550).
 4. Resolve the path of a voltage table and of a report template through the revision first, and
@@ -114,7 +123,7 @@ The order of the layers, from the highest precedence to the lowest, is then:
 2. the configuration of the user,
 3. the PCS description of the selected revision,
 4. the PCS description shipped with the tool,
-5. the `revision.ini` of the selected revision,
+5. the `revision.<YYYYMMDD>.ini` of the selected revision,
 6. the default configuration.
 
 The configuration of the user wins over a revision. A user who changes a value takes the
@@ -130,9 +139,9 @@ the shape of the options, so a redefinition writes values:
 
 | Revision | What it says | What it writes |
 |---|---|---|
-| 2024-02-15 | every unit above 110 kV is type D, whatever its power | `category_thresholds_high_voltage = 0,0,0` |
-| 2025-08-01 | a unit above 110 kV is type D from 30 MW | `category_thresholds_high_voltage = 1,18,30` |
-| 2025-10-13 | the category of a storage unit stops reading the installed power | nothing: see below |
+| `20240215` | every unit above 110 kV is type D, whatever its power | `category_thresholds_high_voltage = 0,0,0` |
+| `20250801` | a unit above 110 kV is type D from 30 MW | `category_thresholds_high_voltage = 1,18,30` |
+| `20251013` | the category of a storage unit stops reading the installed power | nothing: see below |
 
 One criterion of the base is outside that shape. The table of a storage unit makes a unit of 18 to
 50 MW above 110 kV type D when the **installed power of the installation** is above 50 MW, and
@@ -227,24 +236,24 @@ file it already has. That migration belongs to the day the deltas arrive.
 
 ## Which revisions the tool needs
 
-RTE asks for every revision from the first one the tool implemented, which is article 8.3.3 v3.3,
-of 2024-02-15. The reason is the PTF: a client signs it months or years before it sends the
-fiches, so in the coming months most projects carry a PTF dated before 2026-05-04, the day
+RTE asks for every revision from the first one the tool implemented, which is article 8.3.3
+v3.3, of 15/02/2024. The reason is the PTF: a client signs it months or years before it sends
+the fiches, so in the coming months most projects carry a PTF dated before 04/05/2026, the day
 article 8.3.3 v3.6 took force.
 
-So the tool ships the base of 2024-02-15 and carries three deltas:
+So the tool ships the base of `20240215` and carries three deltas:
 
-| Revision | Article 8.3.3 | For a PTF signed |
-|---|---|---|
-| 2024-02-15, the base | 3.3 | from 15/02/2024 to 31/07/2025 |
-| 2025-08-01 | 3.4 | from 01/08/2025 to 12/10/2025 |
-| 2025-10-13 | 3.5 | from 13/10/2025 to 03/05/2026 |
-| 2026-05-04 | 3.6 | from 04/05/2026 |
+| Revision | Article 8.3.3 | Article 5.1.1 | For a PTF signed |
+|---|---|---|---|
+| `20240215`, the base | 3.3 | 1.3, from 15/02/2024 | from 15/02/2024 to 31/07/2025 |
+| `20250801` | 3.4 | 1.4, from 01/08/2025 | from 01/08/2025 to 12/10/2025 |
+| `20251013` | 3.5 | from 13/10/2025, with no version number | from 13/10/2025 to 03/05/2026 |
+| `20260723` | 3.6 | the same text as `20251013` | from 04/05/2026 |
 
-The edition of the DTR of 2026-10-08, the newest one, still carries article 8.3.3 v3.6, so the
-delta of 2026-05-04 covers every PTF from that day.
+The edition of the DTR of `20261008`, the newest one, still carries article 8.3.3 v3.6, so the
+delta of `20260723` covers every PTF from 04/05/2026.
 
-The tool needs no revision before 2024-02-15. The fiche I16 does not exist before that date, and
+The tool needs no revision before `20240215`. The fiche I16 does not exist before that date, and
 no PTF in hand carries an earlier one. So the base does not move backwards: every revision that
 arrives is added in front of it, and nothing that already works is measured again.
 
@@ -255,23 +264,23 @@ because every delta describes what its revision changed over the one before it. 
 holds what the revisions of 2025 changed, fiche by fiche. The tables below hold what is measured
 so far, which covers the fiches the tool implements and not the fiches those revisions add.
 
-The delta of 2025-08-01 writes:
+The delta of `20250801` writes:
 
 | What | Where |
 |---|---|
-| A unit above 110 kV is type D from 30 MW, not from any power | `category_thresholds_high_voltage = 1,18,30` in its `revision.ini` |
+| A unit above 110 kV is type D from 30 MW, not from any power | `category_thresholds_high_voltage = 1,18,30` in its `revision.<YYYYMMDD>.ini` |
 
-The delta of 2025-10-13 writes:
+The delta of `20251013` writes:
 
 | What | Where |
 |---|---|
 | The fiches I6 and I7 start at Un | `pdr_U` of the dip and of the swell |
 | The fiche I7 gives one operating point, at Q = 0 | the list of operating conditions, one description, one report |
 | The fiche I5 adds the impedant fault | the list of operating conditions, one description, one report |
-| The reaction time carries no verdict | `thr_reaction_time = none` in `revision.ini` |
+| The reaction time carries no verdict | `thr_reaction_time = none` in `revision.<YYYYMMDD>.ini` |
 
-The delta of 2026-05-04 is not compared yet, beyond the five points above, which it keeps as
-2025-10-13 writes them.
+The delta of `20260723` is not compared yet, beyond the five points above, which it keeps as
+`20251013` writes them.
 
 Two fiches of those revisions are not in the tool at all: I17 and F17, on the damping of
 oscillations, which 3.5 adds. A fiche that appears is not a delta of a value; it is a PCS of its

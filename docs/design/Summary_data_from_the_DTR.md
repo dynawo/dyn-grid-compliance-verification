@@ -1,7 +1,7 @@
 # Which revision these values come from
 
-The values below are those of the DTR of 15/02/2024, the base revision of the tool. The
-articles it carries, for the chapters this document quotes:
+The values below are those of the DTR of 15/02/2024, which the tool names `20240215` and
+takes as its base revision. The articles it carries, for the chapters this document quotes:
 
 | Article | Version |
 |---|---|
