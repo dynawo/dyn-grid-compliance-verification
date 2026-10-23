@@ -22,7 +22,12 @@ from dycov.files import manage_files
 from dycov.logging import dycov_logging
 from dycov.model.compliance import Compliance
 from dycov.model.operating_condition import OperatingCondition
-from dycov.model.parameters import CurvesAvailability, CurvesCheckResult, SimulationError
+from dycov.model.parameters import (
+    CurvesAvailability,
+    CurvesCheckResult,
+    SimulationError,
+    SimulationResult,
+)
 from dycov.model.producer import Producer
 from dycov.report.types import (
     DynamicBand,
@@ -82,6 +87,12 @@ def _compliance_for_missing_curves(availability: CurvesAvailability) -> Complian
             return Compliance.WithoutReferenceCurves
         case _:
             return Compliance.WithoutCurves
+
+
+def _compliance_for_simulation(simulation: SimulationResult) -> Compliance:
+    if simulation.success and simulation.has_simulated_curves:
+        return Compliance.Simulated
+    return Compliance.FailedSimulation
 
 
 class Benchmark:
@@ -796,6 +807,10 @@ class Benchmark:
             results = {**_FAILED_RESULTS}
         elif sim.time_exceeds:
             compliance = Compliance.SimulationTimeOut
+            results = {**_FAILED_RESULTS}
+        elif self._parameters.is_curves_only():
+            compliance = _compliance_for_simulation(sim)
+            op_cond_success = compliance == Compliance.Simulated
             results = {**_FAILED_RESULTS}
         elif curves_result.availability == CurvesAvailability.ALL:
             op_cond_success, results, compliance = self.__validate(
