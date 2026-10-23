@@ -19,6 +19,7 @@ from typing import Iterable, Set
 import pandas as pd
 
 import dycov
+from dycov.configuration import cfg
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.logging import dycov_logging
@@ -345,13 +346,16 @@ def dtr_delta_path(path: Path) -> Path:
     Path
         The directory of the delta, or None when the revision does not write one.
     """
+    revision = config.get_value("DTR", "current")
+    if cfg.is_base_revision(revision):
+        return None
+
     templates = Path(config.get_value("Global", "templates_path")).parts[0]
     parts = path.parts
     if templates not in parts:
         return None
 
     index = parts.index(templates)
-    revision = config.get_value("DTR", "current")
     delta = Path(*parts[:index], templates, "revisions", revision, *parts[index + 1 :])
     return delta if delta.is_dir() else None
 
