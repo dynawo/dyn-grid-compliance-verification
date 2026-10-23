@@ -219,9 +219,18 @@ not a delta: it is work on the tool.
 
 ## What belongs to no revision
 
-The residual voltage of a gabarit of a type D is 0.00 in the DTR, and 1e-3 in the tool. It is a
-guard: not every model converges with a voltage of exactly zero. It holds for every revision, so
-no delta takes it away, and the description of each PCS that writes it says so.
+Two choices of the tool answer to no revision. They hold whatever revision applies, so no delta
+takes them away.
+
+**The residual voltage of a gabarit of a type D** is 0.00 in the DTR, and 1e-3 in the tool. It is
+a guard: not every model converges with a voltage of exactly zero. The description of each PCS
+that writes it says so.
+
+**The frequency ramp runs in zone 3.** Table 1 of the fiche I16 puts it in zone 1, as the case of
+a ramp of +500 mHz at 2 Hz/s on the AC source, and a zone 1 model cannot run it. The tool runs it
+as `GridFreqRamp` of `PCS_RTE-I16z3`, with the same magnitude and the same slope, so the curves it
+compares are those of the PDR and not those of the node 1. Every revision of the DTR so far
+places the test in zone 1, and the tool will keep it in zone 3.
 
 ## What stays in the code
 
