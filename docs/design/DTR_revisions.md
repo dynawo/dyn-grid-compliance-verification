@@ -306,6 +306,18 @@ The tool needs no revision before `20240215`. The fiche I16 does not exist befor
 no PTF in hand carries an earlier one. So the base does not move backwards: every revision that
 arrives is added in front of it, and nothing that already works is measured again.
 
+## The tests of a revision
+
+A delta carries data, so what proves it is a test that reads the catalogue and states
+what the DTR says. These tests live in `tests/dtr`, apart from the unit tests, and the
+CI runs them with the rest.
+
+Every revision brings a file of its own, `test_revision_<YYYYMMDD>.py`. It reads the base
+and the revision one after the other, so the table of each test shows the difference
+itself: the category a unit takes, the tests a fiche is made of, the value an option
+holds. A test selects its revision with the fixture `revision`, and the fixture
+`description` then reads the delta of the PCS the test names.
+
 ## The deltas to write
 
 The second phase writes the loader and then the three deltas, one branch each. Every delta
