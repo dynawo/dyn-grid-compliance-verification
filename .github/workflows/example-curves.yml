@@ -51,13 +51,22 @@ jobs:
             what="This push"
           fi
 
-          git fetch --quiet --filter=blob:none --no-tags origin \
-            "+refs/heads/$reference:refs/remotes/origin/reference" $head_spec
+          if ! git fetch --quiet --filter=blob:none --no-tags origin \
+            "+refs/heads/$reference:refs/remotes/origin/reference"; then
+            echo "::error::$reference could not be fetched, so this check could not run."
+            exit 1
+          fi
 
-          base=refs/remotes/origin/reference
-          [ -n "$head_spec" ] && head=refs/remotes/origin/compared || head="$GITHUB_SHA"
+          # The ref of a pull request may not exist yet when the run starts, and the
+          # checkout already holds its head, so a fetch that fails is no answer about
+          # the history.
+          head="$GITHUB_SHA"
+          if [ -n "$head_spec" ] && git fetch --quiet --filter=blob:none --no-tags origin \
+            "$head_spec" 2>/dev/null; then
+            head=refs/remotes/origin/compared
+          fi
 
-          git merge-base "$base" "$head" > /dev/null 2>&1 && exit 0
+          git merge-base refs/remotes/origin/reference "$head" > /dev/null 2>&1 && exit 0
 
           echo "::error::$what shares no commit with $reference. It was built on the repository as it was before its history was rewritten to drop the example curves, so the copy it came from is stale: delete it and clone the repository again. Work in progress travels with git format-patch beforehand and git am afterwards. Taking this as it is would restore the whole old history, and the 6.5 GB that came with it."
           exit 1
