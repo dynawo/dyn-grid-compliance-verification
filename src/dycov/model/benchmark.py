@@ -51,6 +51,7 @@ class Summary:
     operating_condition: str
     compliance: Compliance
     report_name: str
+    altered_criteria: tuple[str, ...] = ()
 
 
 _FAILED_RESULTS: dict = {"compliance": False, "curves": None}
@@ -65,6 +66,11 @@ _FREQUENCY_BANDS = {
     "freq_200": FrequencyBand(upper=0.2, lower=0.2, color="#55a868"),
     "freq_250": FrequencyBand(upper=0.25, lower=0.25, color="#c44e52"),
 }
+
+
+def _altered_criteria() -> tuple[str, ...]:
+    """The options of the DTR the configuration of the user changed, as it names them."""
+    return tuple(f"{key} of [{section}]" for section, key in config.overridden_norm_options())
 
 
 def _compliance_for_simulation_error(error: SimulationError) -> Compliance:
@@ -918,6 +924,7 @@ class Benchmark:
                     operating_condition=op_cond.get_name(),
                     compliance=compliance,
                     report_name=self._report_name,
+                    altered_criteria=_altered_criteria(),
                 )
             )
             pcs_results[

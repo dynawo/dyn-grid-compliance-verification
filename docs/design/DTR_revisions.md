@@ -151,10 +151,23 @@ The order of the layers, from the highest precedence to the lowest, is then:
 The configuration of the user wins over a revision. A user who changes a value takes the
 responsibility for it, as with every other option.
 
-One step is left, and the issue #552 holds it: write the revision in the report and in
-`results.json`, because a verdict without its revision cannot be read, and mark a PCS whose
-criteria the user configuration overrode as invalid for certification, naming the keys that
-were changed. A report measured with altered criteria must not read as a conformity check.
+## What a run says about its revision
+
+A verdict without its revision cannot be read, so the run states it: the header of the report
+and of the summary of the log give `DTR revision: <YYYYMMDD>`, and every `results.json` carries
+it as `dtr_revision`.
+
+The configuration of the user outranks a revision, so a run may be measured with values the
+norm does not give. The tool keeps validating and keeps the verdict those values produce, and
+the summary marks the PCS it happened to: a note names every option that was changed and says
+the result is not a conformity check. The mark is per PCS, because an override may reach only
+one of them.
+
+Which options belong to the norm is not a judgement. They are the ones the shipped description
+of the PCS and the delta of the revision define, plus the sections of the default configuration
+that hold what the DTR fixes and not how the tool runs: `[GridCode]`, the lists of benchmarks
+and of operating conditions, and the lists of validations. A log level or a setting of the
+solver marks nothing.
 
 ## How a revision redefines the categories
 

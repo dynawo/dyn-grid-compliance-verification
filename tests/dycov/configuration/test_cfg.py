@@ -452,3 +452,65 @@ def test_an_empty_list_in_a_delta_leaves_the_shipped_one_answering(tmp_path, emp
     cfg = Config(tmp_path, *empty_parsers)
 
     assert cfg.get_list("PCS-Benchmarks", "PCS_RTE-I5") == ["ThreePhaseFault"]
+
+
+def test_a_threshold_of_the_norm_the_user_changed_is_named(tmp_path, empty_parsers):
+    user_config = empty_parsers[1]
+    default_config = empty_parsers[0]
+    default_config.add_section("GridCode")
+    default_config.set("GridCode", "thr_P_mxe_before", "0.05")
+    user_config.add_section("GridCode")
+    user_config.set("GridCode", "thr_P_mxe_before", "0.5")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.overridden_norm_options() == [("GridCode", "thr_P_mxe_before")]
+
+
+def test_a_value_of_a_pcs_the_user_changed_is_named(tmp_path, empty_parsers):
+    pcs_user_config = empty_parsers[2]
+    pcs_default_config = empty_parsers[4]
+    pcs_default_config.add_section("PCS_RTE-I6.GridVoltageDip.Qzero.Model")
+    pcs_default_config.set("PCS_RTE-I6.GridVoltageDip.Qzero.Model", "u_fault", "0.05")
+    pcs_user_config.add_section("PCS_RTE-I6.GridVoltageDip.Qzero.Model")
+    pcs_user_config.set("PCS_RTE-I6.GridVoltageDip.Qzero.Model", "u_fault", "0.2")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.overridden_norm_options() == [("PCS_RTE-I6.GridVoltageDip.Qzero.Model", "u_fault")]
+
+
+def test_how_the_tool_runs_is_not_a_criterion_of_the_norm(tmp_path, empty_parsers):
+    """A log level or a solver setting is the user's business, and marks no verdict."""
+    default_config = empty_parsers[0]
+    user_config = empty_parsers[1]
+    for section, key, value in (
+        ("Global", "console_log_level", "20"),
+        ("Dynawo", "simulation_limit", "30"),
+    ):
+        default_config.add_section(section)
+        default_config.set(section, key, value)
+        user_config.add_section(section)
+        user_config.set(section, key, "99")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.overridden_norm_options() == []
+
+
+def test_an_option_only_the_user_defines_overrides_nothing(tmp_path, empty_parsers):
+    user_config = empty_parsers[1]
+    user_config.add_section("GridCode")
+    user_config.set("GridCode", "thr_of_its_own", "1.0")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.overridden_norm_options() == []
+
+
+def test_an_option_the_delta_of_the_revision_fixes_is_of_the_norm(tmp_path, empty_parsers):
+    user_config = empty_parsers[1]
+    dtr_delta_config = empty_parsers[5]
+    dtr_delta_config.add_section("GridCode")
+    dtr_delta_config.set("GridCode", "category_thresholds_high_voltage", "1,18,30")
+    user_config.add_section("GridCode")
+    user_config.set("GridCode", "category_thresholds_high_voltage", "1,18,99")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.overridden_norm_options() == [("GridCode", "category_thresholds_high_voltage")]

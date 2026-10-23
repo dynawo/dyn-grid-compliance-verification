@@ -16,6 +16,16 @@ from typing import Optional
 
 from dycov.logging import dycov_logging
 
+_NORM_SECTIONS = (
+    "GridCode",
+    "PCS-Benchmarks",
+    "PCS-OperatingConditions",
+    "Performance-Validations",
+    "Model-Validations",
+)
+"""Sections of the default configuration that hold what the DTR fixes, and not how the tool
+runs. Every section of a PCS description holds the norm, whatever its name."""
+
 
 @dataclass(frozen=True)
 class Config:
@@ -503,6 +513,44 @@ class Config:
             if self.has_option(section, candidate):
                 return candidate
         return None
+
+    def overridden_norm_options(self) -> list[tuple[str, str]]:
+        """Options the DTR fixes that the configuration of the user changed.
+
+        A verdict measured with them is not a conformity check, so the report says so and
+        names them. Which options belong to the norm is not a judgement: they are the ones
+        the shipped catalogue of the PCS, the delta of the selected revision, and the
+        sections of the norm of the default configuration define.
+
+        Returns
+        -------
+        list[tuple[str, str]]
+            The section and the key of every option, sorted.
+        """
+        overridden = set()
+        for user_layer in (self._pcs_user_config, self._user_config):
+            for section in user_layer.sections():
+                for key in user_layer.options(section):
+                    if not self._has_valid_option(user_layer, section, key):
+                        continue
+                    if self._is_norm_option(section, key):
+                        overridden.add((section, key))
+
+        return sorted(overridden)
+
+    def _is_norm_option(self, section: str, key: str) -> bool:
+        """Internal helper that tells whether the DTR fixes an option."""
+        for layer in (self._pcs_dtr_delta_config, self._pcs_default_config):
+            if self._has_valid_option(layer, section, key):
+                return True
+
+        if section not in _NORM_SECTIONS and not section.startswith("PCS_RTE-"):
+            return False
+
+        return any(
+            self._has_valid_option(layer, section, key)
+            for layer in (self._dtr_delta_config, self._default_config)
+        )
 
     def get_list(self, section: str, key: str) -> list:
         """Gets a list of string values for a given key and section.
