@@ -26,11 +26,15 @@ the whole catalogue: every PCS, with its values and its reports. The base does n
 revision that arrives is added, and nothing that already works is rewritten.
 
 A **delta** is one other revision. It holds the options and the lists that revision writes
-differently from the one before it, and nothing else. A delta reads as the DTR announces its
-own changes, and a reader of one sees what that revision changed.
+differently **from the base**, and nothing else. It is not written against the revision before
+it, so a reader of one delta sees the whole distance from the base to that revision.
 
-A run names one revision. The tool reads the base, applies every delta from the base up to that
-revision in date order, and runs. Nothing else in the tool knows which revision it works on.
+A run names one revision. The tool reads the base, applies the delta of that revision, and runs.
+It reads one delta and never a chain. Nothing else in the tool knows which revision it works on.
+
+Two things follow. A delta stands on its own, so the deltas may be written in any order, and by
+different people. And a value that two revisions change carries its own value in each delta,
+which is a repetition the tool accepts in exchange for a delta that can be read alone.
 
 ## The name of a revision
 
@@ -104,9 +108,8 @@ description. `load_pcs_config` takes a `dtr_pcs_path` and nobody passes one yet.
 
 1. Read `[DTR]` and `--dtr`, and stop when the revision is not among the available ones
    (#551).
-2. Give `load_pcs_config` the delta files of the PCS in preparation, when the revision has them.
-   `configparser.read` takes several paths and the last one wins, so a chain of deltas needs no
-   other mechanism (#550).
+2. Give `load_pcs_config` the delta file of the PCS in preparation, when the revision has one
+   (#550).
 3. Read the `revision.<YYYYMMDD>.ini` files into a layer of their own, below the shipped PCS
    description and above the default configuration. A PCS says more than a revision, and a
    revision says more than a default (#550).
@@ -268,10 +271,11 @@ arrives is added in front of it, and nothing that already works is measured agai
 
 ## The deltas to write
 
-The second phase writes the loader and then the three deltas, one branch each, oldest first,
-because every delta describes what its revision changed over the one before it. The issue #616
-holds what the revisions of 2025 changed, fiche by fiche. The tables below hold what is measured
-so far, which covers the fiches the tool implements and not the fiches those revisions add.
+The second phase writes the loader and then the three deltas, one branch each. Every delta
+describes what its revision changed over the base, so their order does not matter and two of
+them may be written at the same time. The issue #616 holds what the revisions of 2025 changed,
+fiche by fiche. The tables below hold what is measured so far, which covers the fiches the tool
+implements and not the fiches those revisions add.
 
 The delta of `20250801` writes:
 
@@ -288,8 +292,8 @@ The delta of `20251013` writes:
 | The fiche I5 adds the impedant fault | the list of operating conditions, one description, one report |
 | The reaction time carries no verdict | `thr_reaction_time = none` in `revision.<YYYYMMDD>.ini` |
 
-The delta of `20260723` is not compared yet, beyond the five points above, which it keeps as
-`20251013` writes them.
+The delta of `20260723` is not compared yet. It carries the five points above, because its
+revision keeps them, and it writes them itself: a delta is measured against the base.
 
 Two fiches of those revisions are not in the tool at all: I17 and F17, on the damping of
 oscillations, which 3.5 adds. A fiche that appears is not a delta of a value; it is a PCS of its
