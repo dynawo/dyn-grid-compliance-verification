@@ -52,6 +52,10 @@ _MEAN_ABSOLUTE_ERROR_VALIDATIONS = {
 }
 
 
+_REACTION_TIME_THRESHOLD = 0.10
+"""Relative deviation the DTR of the base gives the reaction time of a fiche I16 or F16."""
+
+
 class ModelValidator(Validator):
     def __init__(
         self,
@@ -427,18 +431,29 @@ class ModelValidator(Validator):
                 check_results["calc_reaction_time"] = compliance_values["calc_reaction_time"]
                 check_results["ref_reaction_time"] = compliance_values["ref_reaction_time"]
 
-                thr_reaction_time = config.get_float("GridCode", "thr_reaction_time", 0.10)
-                check_results["reaction_time_thr"] = thr_reaction_time * 100
-
-                check_results["reaction_time_error"], check_results["reaction_time_check"] = (
-                    common.check_time(
-                        compliance_values["calc_reaction_time"],
-                        compliance_values["ref_reaction_time"],
-                        thr_reaction_time,
-                    )
+                thr_reaction_time = config.get_threshold(
+                    "GridCode", "thr_reaction_time", _REACTION_TIME_THRESHOLD
                 )
-
-                check_results["compliance"] &= check_results["reaction_time_check"]
+                # The deviation is reported whatever the criterion, so a revision that
+                # withdrew the limit still measures it against the scale of the base.
+                scale = (
+                    _REACTION_TIME_THRESHOLD if thr_reaction_time is None else thr_reaction_time
+                )
+                error, within = common.check_time(
+                    compliance_values["calc_reaction_time"],
+                    compliance_values["ref_reaction_time"],
+                    scale,
+                )
+                check_results["reaction_time_error"] = error
+                if thr_reaction_time is None:
+                    # The revision keeps the indicator and withdraws its criterion, so the
+                    # report states the time and its deviation and gives no verdict. No
+                    # threshold is written, because there is none to print.
+                    check_results["reaction_time_check"] = None
+                else:
+                    check_results["reaction_time_thr"] = thr_reaction_time * 100
+                    check_results["reaction_time_check"] = within
+                    check_results["compliance"] &= within
             else:
                 check_results["reaction_time_check"] = "N/A"
                 check_results["compliance"] = False

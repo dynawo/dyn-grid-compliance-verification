@@ -41,6 +41,11 @@ class DummyConfig:
     def get_float(self, section: str, key: str, default: float) -> float:
         return self._values.get(key, default)
 
+    def get_threshold(self, section: str, key: str, default: float) -> float | None:
+        """The word "none" withdraws a limit: the check reports its value and gives no verdict."""
+        value = self._values.get(key, default)
+        return None if value == "none" else value
+
     def get_value(self, section: str, key: str, default=None):
         return self._values.get(key, default)
 
@@ -619,6 +624,25 @@ def test_check_times_outside_the_reaction_time_threshold_fails():
     assert check_results["reaction_time_check"] is False
     assert check_results["reaction_time_error"] == pytest.approx(100.0)
     assert check_results["compliance"] is False
+
+
+def test_check_times_reports_the_reaction_time_when_its_limit_is_withdrawn(monkeypatch):
+    """A revision of the DTR may keep an indicator and take its criterion away."""
+    monkeypatch.setattr(f"{MODEL_MODULE}.config", DummyConfig(thr_reaction_time="none"))
+    validator = _make_validator(validations=["reaction_time"])
+    check_results = {"compliance": True}
+    compliance_values = {
+        "calc_reaction_time": 2.0,
+        "ref_reaction_time": 1.0,
+        "calc_reaction_target": {"BusPDR_BUS_ActivePower": 0.1},
+    }
+
+    validator._ModelValidator__check_times(check_results, compliance_values)
+
+    assert "reaction_time_thr" not in check_results
+    assert check_results["reaction_time_check"] is None
+    assert check_results["reaction_time_error"] == pytest.approx(100.0)
+    assert check_results["compliance"] is True
 
 
 def test_check_times_overshoots_inside_the_tolerance_band_match():
