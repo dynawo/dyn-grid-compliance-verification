@@ -12,6 +12,7 @@ import copy
 from pathlib import Path
 from typing import Union
 
+from dycov.configuration import cfg
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.core.parameters import Parameters
@@ -111,6 +112,9 @@ class Pcs:
         layer stays empty.
         """
         revision = config.get_value("DTR", "current")
+        if cfg.is_base_revision(revision):
+            return None
+
         templates_path = (
             self._templates_path.parent / "revisions" / revision / self._templates_path.name
         )

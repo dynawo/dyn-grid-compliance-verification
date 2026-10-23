@@ -603,6 +603,15 @@ class Config:
         return list(options)
 
 
+def is_base_revision(revision: str) -> bool:
+    """Whether a revision of the DTR is the one the shipped catalogue holds.
+
+    The base needs no delta, so nothing looks for one: a directory under
+    ``templates/revisions`` named after it would be read by nobody.
+    """
+    return revision == config.get_value("DTR", "base", "")
+
+
 def _new_parser() -> configparser.ConfigParser:
     """A parser that reads DyCoV configuration files, preserving the case of the keys."""
     parser = configparser.ConfigParser(inline_comment_prefixes=("#",))
@@ -650,8 +659,12 @@ def _dtr_delta_paths(revision: str) -> list[Path]:
 
     A revision keeps its whole delta in one directory of its own, which mirrors the shipped
     templates: the descriptions of the PCS it changes, the reports, and these files, named
-    ``revision_art_<article>.ini`` after the article of the DTR they come from.
+    ``revision_art_<article>.ini`` after the article of the DTR they come from. The base
+    revision is the catalogue itself, so it has none.
     """
+    if is_base_revision(revision):
+        return []
+
     package = Path(__file__).resolve().parent.parent
     directory = package / "templates" / "revisions" / revision
     return sorted(directory.glob("revision_art_*.ini"))
