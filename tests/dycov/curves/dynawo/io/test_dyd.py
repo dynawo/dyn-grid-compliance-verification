@@ -10,6 +10,7 @@
 
 import pytest
 
+from dycov.core.global_variables import ELECTRIC_PERFORMANCE_PPM
 from dycov.curves.curves import ProducerCurves
 from dycov.curves.dynawo.io.dyd import DydFile
 from dycov.files import replace_placeholders
@@ -27,6 +28,13 @@ class DummyProducer:
     def __init__(self, generators):
         self.generators = generators
         self.u_nom = 1.0
+        self.p_max_injection_pu = 0.75
+
+    def get_sim_type(self):
+        return ELECTRIC_PERFORMANCE_PPM
+
+    def get_category(self):
+        return "D"
 
 
 class DummyProducerCurves(ProducerCurves):

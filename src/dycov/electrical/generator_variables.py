@@ -7,6 +7,8 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+import bisect
+
 from dycov.configuration.cfg import config
 
 
@@ -109,6 +111,36 @@ class GeneratorVariables:
             Generator type (HTB1, HTB2 or HTB3)
         """
         return self.__get_generator_type(u_nom).upper()
+
+    def get_generator_category(self, u_nom: float, p_max: float, is_storage: bool) -> str:
+        """Gets the category of the unit, as the DTR defines it.
+
+        The arrêté of 9 June 2020 categorises a production unit, and article 5.1.4 §5.2.3 a
+        storage one. Both read the connection voltage and the maximum power at injection.
+
+        Parameters
+        ----------
+        u_nom: float
+            Nominal voltage of the PDR, in kV
+        p_max: float
+            Maximum power at injection of the unit, in MW
+        is_storage: bool
+            True when the unit stores energy, which the DTR categorises with its own table
+
+        Returns
+        -------
+        str
+            Category of the unit: A, B, C or D
+
+        """
+        if u_nom < config.get_float("GridCode", "category_voltage_threshold", 110.0):
+            key = "category_thresholds"
+        elif is_storage:
+            key = "category_storage_thresholds_high_voltage"
+        else:
+            key = "category_thresholds_high_voltage"
+        thresholds = [float(power) for power in config.get_list("GridCode", key)]
+        return "ABCD"[bisect.bisect_right(thresholds, p_max)]
 
     def get_generator_u_dim(self, u_nom: float) -> float:
         """Gets the generator sizing voltage (Udim) by its nominal voltage.

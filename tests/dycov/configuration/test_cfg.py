@@ -114,6 +114,32 @@ def test_get_int_float_with_invalid_value(tmp_path, empty_parsers):
     assert cfg.get_float("bad_section", "not_a_float", 0.0) == 0.0
 
 
+def test_get_threshold_reads_the_limit_of_a_check(tmp_path, empty_parsers):
+    user_config = empty_parsers[1]
+    user_config.add_section("GridCode")
+    user_config.set("GridCode", "thr_given", "2.5")
+    user_config.set("GridCode", "thr_informative", "none")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.get_threshold("GridCode", "thr_given", 5.0) == 2.5
+    assert cfg.get_threshold("GridCode", "thr_informative", 5.0) is None
+    assert cfg.get_threshold("GridCode", "thr_absent", 5.0) == 5.0
+
+
+def test_find_option_prefers_the_first_suffix_the_section_defines(tmp_path, empty_parsers):
+    user_config = empty_parsers[1]
+    user_config.add_section("test_section")
+    user_config.set("test_section", "u_fault", "0.05")
+    user_config.set("test_section", "u_fault_D", "1e-3")
+    user_config.set("test_section", "fault_duration_HTB1", "0.150")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.find_option("test_section", "u_fault", "D", "HTB1") == "u_fault_D"
+    assert cfg.find_option("test_section", "u_fault", "B", "HTB1") == "u_fault"
+    assert cfg.find_option("test_section", "fault_duration", "D", "HTB1") == "fault_duration_HTB1"
+    assert cfg.find_option("test_section", "u_clear", "D", "HTB3") is None
+
+
 def test_get_options_gathers_the_keys_of_every_layer(tmp_path, empty_parsers):
     default_config, user_config, _, _, pcs_config = empty_parsers
     user_config.add_section("opt_section")

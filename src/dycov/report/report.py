@@ -277,6 +277,7 @@ def _pcs_replace(
 
     subst_dict = {
         "producercommand": f"\\renewcommand{{\\Producer}}{{{pcs_results['producer']}}}",
+        "category": producer.get_category(),
     }
     subreports = []
     for (

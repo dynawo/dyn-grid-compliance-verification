@@ -1,17 +1,30 @@
 
 =========================================
 
-Fiche X
+Fiche I16
 
 Detailed description of all Tests
 
 =========================================
 
 
+# Which revision this document comes from
+
+This document comes from the draft of the fiche, before the DTR gave it a number. The DTR of
+15/02/2024, which the tool names `20240215`, is the first that carries it as the fiche I16 of
+the article 8.3.3, in the revision 3.3 of that article. The questions below are those the draft
+left open.
+
+The tool implements the fiche as `PCS_RTE-I16z1` and `PCS_RTE-I16z3`, one for each of the
+two levels this document calls unit level and park level.
+`Summary_data_from_the_DTR.md` gives the values of the base revision, and
+`DTR_revisions.md` says how the tool carries a later revision.
+
+
 # Introduction
 
 This document will spell out the detailed specifications of the tests performed
-within `FicheX`, which is focused on **RMS-model validation** (in the context of
+within the fiche I16, which is focused on **RMS-model validation** (in the context of
 dynamic performance testing of generation units and power farms).
 
 Most of the tests are derived from IEC Standards `IEC 61400-27-2` and `IEC
@@ -19,13 +32,13 @@ Most of the tests are derived from IEC Standards `IEC 61400-27-2` and `IEC
 
 Tests are to be executed at two different levels:
 
-  1. Park-level tests (a.k.a. "Zone 3" in the DTR Fiche X)
-  2. Unit-level tests (a.k.a. "Zone 1" in the DTR Fiche X, individual wind turbines)
+  1. Park-level tests (a.k.a. "Zone 3" in the DTR fiche I16)
+  2. Unit-level tests (a.k.a. "Zone 1" in the DTR fiche I16, individual wind turbines)
        - Unit-level plus any Q-compensation equipment at the PDR, if present
          (a.k.a. "Zone 1*")
 
 
-Preliminary plan in the DRAFT FicheX:
+Preliminary plan in the draft of the fiche:
 
    1. Park-level tests: like those in Fiches: 
       - I2: stability test
@@ -44,12 +57,12 @@ Preliminary plan in the DRAFT FicheX:
 
 > For validation of Power Park models, the IEC standard (Section 8) only
 > requires three tests (dyn response to P/Q or V control setpoint). But the
-> DRAFT FicheX talks about several others. Why? What is going to be included in
+> draft of the fiche talks about several others. Why? What is going to be included in
 > the DTR?
 
 > For validation of WT-unit models, the IEC standard (Section 7) lists many
 > (sections 7.2--7.8) and that list seems to be different than the tests listed
-> in the DRAFT FicheX.  Which tests are going to go in the final FicheX?
+> in the draft of the fiche.  Which tests are going to go in the final fiche?
 
 
 

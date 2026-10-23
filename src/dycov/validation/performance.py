@@ -14,9 +14,7 @@ from lxml import etree
 
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import (
-    ELECTRIC_PERFORMANCE_PPM,
     ELECTRIC_PERFORMANCE_SM,
-    MODEL_VALIDATION_PPM,
 )
 from dycov.core.validator import Validator
 from dycov.curves.manager import CurvesManager
@@ -98,7 +96,7 @@ class PerformanceValidator(Validator):
     def __run_common_tests(
         self,
         thr_ss_tol: float,
-        is_ppm: bool,
+        is_non_synchronous: bool,
     ) -> tuple[bool, int, bool, int, bool, int, bool, int, bool]:
         bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
         # Run stabilization test
@@ -123,7 +121,7 @@ class PerformanceValidator(Validator):
         stable_theta = False
         first_stable_pos_theta = 0
         pass_pi = False
-        if not is_ppm:
+        if not is_non_synchronous:
             stable_theta, first_stable_pos_theta, pass_pi = self._check_theta_stability(thr_ss_tol)
 
         if not steady_p:
@@ -236,7 +234,7 @@ class PerformanceValidator(Validator):
 
         if compliance_list.contains_key(["time_5P_85U", "time_10P_85U"], self._validations):
             compliance_values["time_85u"] = common.get_txu(
-                0.85,
+                config.get_float("GridCode", "recovery_voltage", 0.85),
                 self.__curve_list("time"),
                 self.__curve_list(bus_pdr_voltage),
                 t_event_start,
@@ -244,7 +242,7 @@ class PerformanceValidator(Validator):
 
         if compliance_list.contains_key(["time_10Pfloor_85U"], self._validations):
             compliance_values["time_85u"] = common.get_txu(
-                0.85,
+                config.get_float("GridCode", "recovery_voltage", 0.85),
                 self.__curve_list("time"),
                 self.__curve_list(bus_pdr_voltage),
                 t_event_start,
@@ -512,7 +510,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_5u"],
                 "time_5U",
-                10.0,
+                config.get_threshold("GridCode", "thr_time_5U", 10.0),
             )
 
         if compliance_list.contains_key(["time_10U"], self._validations):
@@ -520,7 +518,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_10u"],
                 "time_10U",
-                5.0,
+                config.get_threshold("GridCode", "thr_time_10U", 5.0),
             )
 
         if compliance_list.contains_key(["time_5P"], self._validations):
@@ -528,7 +526,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_5p"],
                 "time_5P",
-                10.0,
+                config.get_threshold("GridCode", "thr_time_5P", 10.0),
             )
 
         if compliance_list.contains_key(["time_10P"], self._validations):
@@ -536,7 +534,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_10p"],
                 "time_10P",
-                5.0,
+                config.get_threshold("GridCode", "thr_time_10P", 5.0),
             )
 
         if compliance_list.contains_key(["time_5P_clear"], self._validations):
@@ -545,7 +543,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_5p"] - (t_event_end - t_event_start),
                 "time_5P_clear",
-                10.0,
+                config.get_threshold("GridCode", "thr_time_5P_clear", 10.0),
             )
 
         if compliance_list.contains_key(["time_10P_clear"], self._validations):
@@ -554,7 +552,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_10p"] - (t_event_end - t_event_start),
                 "time_10P_clear",
-                5.0,
+                config.get_threshold("GridCode", "thr_time_10P_clear", 5.0),
             )
 
     def __check_composed_times(
@@ -570,7 +568,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_5p"] - compliance_values["time_85u"],
                 "time_5P_85U",
-                10.0,
+                config.get_threshold("GridCode", "thr_time_5P_85U", 10.0),
             )
 
         if compliance_list.contains_key(["time_10P_85U"], self._validations):
@@ -580,7 +578,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_10p"] - compliance_values["time_85u"],
                 "time_10P_85U",
-                5.0,
+                config.get_threshold("GridCode", "thr_time_10P_85U", 5.0),
             )
 
         if compliance_list.contains_key(["time_10Pfloor_85U"], self._validations):
@@ -590,7 +588,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_10pfloor"] - compliance_values["time_85u"],
                 "time_10Pfloor_85U",
-                2.0,
+                config.get_threshold("GridCode", "thr_time_10Pfloor_85U", 2.0),
             )
 
         if compliance_list.contains_key(["time_10Pfloor_clear"], self._validations):
@@ -600,7 +598,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_10pfloor"] - (t_event_end - t_event_start),
                 "time_10Pfloor_clear",
-                2.0,
+                config.get_threshold("GridCode", "thr_time_10Pfloor_clear", 2.0),
             )
 
         if compliance_list.contains_key(["time_85U_10P"], self._validations):
@@ -610,7 +608,7 @@ class PerformanceValidator(Validator):
                 results,
                 compliance_values["time_10p"] - compliance_values["time_85u"],
                 "time_85U_10P",
-                5.0,
+                config.get_threshold("GridCode", "thr_time_85U_10P", 5.0),
             )
 
     def __check_times(
@@ -682,7 +680,7 @@ class PerformanceValidator(Validator):
         self,
         results: dict,
         is_stable: Stability,
-        is_ppm: bool,
+        is_non_synchronous: bool,
         compliance_values: dict,
     ):
         if compliance_list.contains_key(["static_diff"], self._validations):
@@ -695,7 +693,7 @@ class PerformanceValidator(Validator):
             )
 
         if compliance_list.contains_key(["stabilized"], self._validations):
-            if not is_ppm:
+            if not is_non_synchronous:
                 stabilized = (
                     is_stable.p
                     and is_stable.q
@@ -707,6 +705,7 @@ class PerformanceValidator(Validator):
                 stabilized = is_stable.p and is_stable.q and is_stable.v
 
             results["stabilized"] = stabilized
+            results["stabilized_rotor_angle"] = not is_non_synchronous
             results["compliance"] &= stabilized
 
         if compliance_list.contains_key(["imax_reac"], self._validations):
@@ -732,14 +731,14 @@ class PerformanceValidator(Validator):
         is_stable: Stability,
         t_event_start: float,
         t_event_end: float,
-        is_ppm: bool,
+        is_non_synchronous: bool,
         compliance_values: dict,
     ):
         results = self.__create_results(t_event_start, compliance_values)
 
         self.__check_times(results, t_event_start, t_event_end, compliance_values)
         self.__check_disconnections(results, simulation_path, has_dynamic_model)
-        self.__check_others(results, is_stable, is_ppm, compliance_values)
+        self.__check_others(results, is_stable, is_non_synchronous, compliance_values)
 
         for key in [
             "calc_reaction_time",
@@ -812,6 +811,8 @@ class PerformanceValidator(Validator):
                 'no_disconnection_load': bool,  # No load disconnection (if applicable)
                 'static_diff': float,  # Static difference (if applicable)
                 'stabilized': bool,  # Stabilization status (if applicable)
+                'stabilized_rotor_angle': bool,  # The rotor angle took part in the
+                    stabilization status (if applicable)
                 'imax_reac': float,  # Maximum reactive current (if applicable)
                 'imax_reac_check': bool,  # Maximum reactive current check status (if applicable)
                 'AVR_5_check': bool,  # Plant-level voltage regulation 5% check status
@@ -835,8 +836,7 @@ class PerformanceValidator(Validator):
             pass_pi,
         ) = self.__run_common_tests(
             self._thr_ss_tol,
-            self.get_sim_type() == ELECTRIC_PERFORMANCE_PPM
-            or self.get_sim_type() == MODEL_VALIDATION_PPM,
+            self.get_sim_type() != ELECTRIC_PERFORMANCE_SM,
         )
 
         t_event = event_params["start_time"]
@@ -856,8 +856,7 @@ class PerformanceValidator(Validator):
             Stability(steady_p, steady_q, steady_v, stable_theta, pass_pi),
             t_event,
             time_clear,
-            self.get_sim_type() == ELECTRIC_PERFORMANCE_PPM
-            or self.get_sim_type() == MODEL_VALIDATION_PPM,
+            self.get_sim_type() != ELECTRIC_PERFORMANCE_SM,
             validation_values,
         )
 

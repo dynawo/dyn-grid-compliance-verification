@@ -13,7 +13,7 @@
     \subsection{Transient fault in injection:High-impedance fault ($V=0.5Un, 800ms$)}
 
     Checks for compliant behavior of the generating unit under a grid scenario where there
-    is a transient three-phase impedant fault with a voltage dip of 0.5 $U_{dim}$.
+    is a transient three-phase impedant fault with a voltage dip of 0.5 $U_{n}$.
 
     \GridCircuitZoneFault
 
@@ -22,7 +22,7 @@
         \begin{itemize}
             \item $P = P_\text{max\_injection\_unite}$
             \item $Q = 0$
-            \item $U = U_\text{dim}$
+            \item $U = U_{n}$
             \item $SCR = 3$
             \item $T_\text{clear} = 800ms$
         \end{itemize}
@@ -60,7 +60,7 @@
         \scriptsize
         \begin{tabular}{@{}lccccccccc@{}}
             \toprule
-            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} \\
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Post-event} \\
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
@@ -80,7 +80,7 @@
         \scriptsize
         \begin{tabular}{@{}lccccccccc@{}}
             \toprule
-            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} \\
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Post-event} \\
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
@@ -96,7 +96,7 @@
         \scriptsize
         \begin{tabular}{@{}lcccccccccc@{}}
             \toprule
-            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} & \\
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Post-event} & \\
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.      \\
             \midrule
