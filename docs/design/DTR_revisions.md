@@ -236,12 +236,9 @@ changes the data alone, and it needs a template only when the test says somethin
 ends a class of defect of its own: a report that states one value while the simulation uses
 another.
 
-One file does not follow this rule yet. `figures.json` lists the figures of every PCS, so that the
-report finds a file for a figure the run did not produce. It is one shipped file: a revision that
-adds a test adds figures the file does not list, and the report of a failed test then misses a
-file. Two ways out: give it the treatment of the templates, one file per revision, or build it
-from the descriptions and the templates, which already say which tests exist and which figures
-they draw. The second one ends the duplication.
+A figure asks for nothing of a revision either. A test that did not run draws no figure, and the
+template then takes a placeholder in its place, decided as the report is built. So a revision that
+adds a test adds no figure to declare anywhere.
 
 ## What a delta cannot do
 
