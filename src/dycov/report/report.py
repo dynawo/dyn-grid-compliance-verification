@@ -50,7 +50,6 @@ from dycov.report.tables import (
     thresholds,
 )
 from dycov.report.types import FigureDescription
-from dycov.templates.reports.create_figures import create_figures
 from dycov.validate.parameters import ValidationParameters
 from dycov.validate.producer import ModelProducer
 from dycov.validation import compared_curves
@@ -228,19 +227,6 @@ def _copy_pcs_latex_files(
     if not (latex_tool_path.exists() or latex_user_path.exists()):
         dycov_logging.get_logger("Report").error(f"{pcs.get_name()}: Latex Template do not exist")
         return
-
-
-def _create_pcs_figures(
-    pcs_results: dict,
-    working_path: Path,
-):
-    pcs = pcs_results["pcs"]
-    create_figures(
-        working_path,
-        pcs_results["producer"],
-        pcs.get_name(),
-        pcs_results["sim_type"],
-    )
 
 
 def _build_notice_block(color: str, title: str, items: list) -> str:
@@ -761,11 +747,6 @@ def prepare_pcs_report(
         pcs_results,
         parameters,
         path_latex_files,
-        working_path,
-    )
-
-    _create_pcs_figures(
-        pcs_results,
         working_path,
     )
 
