@@ -59,12 +59,14 @@ class _Parameters:
         gfm_parameters=_GFM_PARAMETERS,
         envelopes=None,
         dynawo_model=False,
+        selected_pcs=None,
     ):
         self._producer = _Producer(tmp_path, sim_type, gfm_parameters)
         self._working_dir = tmp_path / "working"
         self._output_dir = tmp_path / "Results"
         self._envelopes = envelopes
         self._dynawo_model = dynawo_model
+        self._selected_pcs = selected_pcs
 
     def get_producer(self):
         return self._producer
@@ -73,7 +75,7 @@ class _Parameters:
         return self._producer.get_sim_type()
 
     def get_selected_pcs(self):
-        return None
+        return self._selected_pcs
 
     def get_only_dtr(self):
         # The PCS of the user's configuration directory stay out of the tests
@@ -113,6 +115,28 @@ def test_a_storage_given_its_model_is_not_given_the_grid_forming_pcs(tmp_path):
     pcs_list = _pcs_list(_Parameters(tmp_path, ELECTRIC_PERFORMANCE_BESS, dynawo_model=True))
 
     assert not any(pcs == _I18 for pcs, _, _ in pcs_list)
+
+
+def test_a_storage_given_its_curves_and_the_grid_forming_pcs_alone_is_given_that_pcs(tmp_path):
+    parameters = _Parameters(tmp_path, ELECTRIC_PERFORMANCE_BESS, selected_pcs=_I18)
+
+    assert [pcs for pcs, _, _ in _pcs_list(parameters)] == [_I18]
+
+
+def test_a_storage_given_its_model_and_the_grid_forming_pcs_alone_is_given_none(tmp_path, caplog):
+    parameters = _Parameters(
+        tmp_path, ELECTRIC_PERFORMANCE_BESS, dynawo_model=True, selected_pcs=_I18
+    )
+
+    pcs_list = _pcs_list(parameters)
+
+    warnings = [record.getMessage() for record in caplog.records if record.levelname == "WARNING"]
+    warning = (
+        f"{_I18} is checked on the curves of the producer (-c), so a run on a model leaves it out"
+    )
+    assert pcs_list == []
+    # The message may carry the prefix of the test context an earlier test left
+    assert len([message for message in warnings if message.endswith(warning)]) == 1
 
 
 def test_a_power_park_module_is_given_no_grid_forming_pcs(tmp_path):

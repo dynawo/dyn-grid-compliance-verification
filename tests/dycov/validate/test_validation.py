@@ -348,6 +348,28 @@ def test_a_pcs_that_declares_no_test_is_not_validated(monkeypatch):
     assert result == ("Producer", "PCS_RTE-F16z3", [], {})
 
 
+def test_an_invalid_pcs_adds_nothing_to_the_summary(monkeypatch):
+    class InvalidPcs:
+        def __init__(self, producer_name, pcs_name, parameters):
+            self._producer_name = producer_name
+            self._name = pcs_name
+
+        def is_valid(self):
+            return False
+
+        def get_producer_name(self):
+            return self._producer_name
+
+        def get_name(self):
+            return self._name
+
+    monkeypatch.setattr("dycov.validate.validation.Pcs", InvalidPcs)
+
+    result = _validate_pcs((None, "PCS_RTE-I99", "Producer", Path("/tmp")))
+
+    assert result == ("Producer", "PCS_RTE-I99", [], {})
+
+
 def test_a_run_without_tests_generates_no_report(monkeypatch, tmp_path):
     validation = Validation.__new__(Validation)
     validation._parameters = DummyParameters(output_dir=tmp_path / "output")

@@ -93,7 +93,7 @@ def _validate_pcs(pcs_args) -> tuple:
     try:
         if not pcs.is_valid():
             dycov_logging.get_logger("Validation").error(f"{pcs.get_name()} is not a valid PCS")
-            return pcs.get_producer_name(), pcs.get_name(), False, {}
+            return pcs.get_producer_name(), pcs.get_name(), summary_list, {}
         if not pcs.declares_tests():
             dycov_logging.get_logger("Validation").info(
                 f"{pcs.get_name()}: no test declared, nothing to validate"
@@ -249,8 +249,15 @@ class Validation:
             A sorted list of PCS names to validate.
         """
         validation_pcs = set()
-        if self._parameters.get_selected_pcs():
-            validation_pcs.add(self._parameters.get_selected_pcs())
+        selected_pcs = self._parameters.get_selected_pcs()
+        if selected_pcs:
+            if self.__is_grid_forming_pcs(selected_pcs) and not self._checks_grid_forming_curves:
+                dycov_logging.get_logger("Validation").warning(
+                    f"{selected_pcs} is checked on the curves of the producer (-c), so a run on "
+                    "a model leaves it out"
+                )
+                return []
+            validation_pcs.add(selected_pcs)
 
         sim_type_mapping = {
             ELECTRIC_PERFORMANCE_SM: (
@@ -362,14 +369,31 @@ class Validation:
         if not self._checks_grid_forming_curves:
             return set()
 
-        gfm_unit = _GRID_FORMING_UNITS[self._parameters.get_sim_type()]
+        return {
+            pcs_name for pcs_name in self._validation_pcs if self.__is_grid_forming_pcs(pcs_name)
+        }
+
+    def __is_grid_forming_pcs(self, pcs_name: str) -> bool:
+        """Whether the PCS is one of the Grid Forming PCS of the kind of unit verified, which
+        the tool or the user's configuration directory describe.
+
+        Parameters
+        ----------
+        pcs_name : str
+            Name of the PCS.
+
+        Returns
+        -------
+        bool
+            True if the PCS is a Grid Forming PCS of the unit.
+        """
+        gfm_unit = _GRID_FORMING_UNITS.get(self._parameters.get_sim_type())
+        if gfm_unit is None:
+            return False
+
         gfm_templates = self._templates_path / "gfm" / gfm_unit
         templates_paths = (Path(__file__).resolve().parent.parent, config.get_config_dir())
-        return {
-            pcs_name
-            for pcs_name in self._validation_pcs
-            if any((path / gfm_templates / pcs_name).is_dir() for path in templates_paths)
-        }
+        return any((path / gfm_templates / pcs_name).is_dir() for path in templates_paths)
 
     def __get_pcs_parameters(self, pcs_name: str, producer_name: str):
         """The parameters a PCS of a unit is validated with: those of the Grid Forming tests of
