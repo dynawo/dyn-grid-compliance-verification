@@ -100,7 +100,7 @@ Running with **no options** will:
 *   **WECC Wind**: `WECC31`, `WECC32`, `WECC4A`, `WECC4B` (`WECC4`, the multi-generator example, is not usable yet and is left out)
 *   **WECC PV**: `WECCCurrentSource`, `WECCVoltageSource1`, `WECCVoltageSource2`, `WECCVoltageSource3`, `WECCVoltageSource4`
 *   **WECC BESS**: `WECC`
-*   **Grid Forming BESS**: `GridFormingDroop`, an installation of type C validated against the Fiche I16.2: its Zone 1 unit is the droop Grid Forming converter of Dynawo, and its Zone 3 plant that of the `WECC` example
+*   **Grid Forming BESS**: `GridFormingDroop` and `GridFormingEpri`, installations of type C validated against the Fiche I16.2: their Zone 1 unit is the droop and the EPRI Grid Forming converter of Dynawo, and their Zone 3 plant that of the `WECC` example
 *   Paths per model:
     *   Input: `${examples_path}/Model/<Family>/<Model>/Dynawo`
     *   References: `${examples_path}/Model/<Family>/<Model>/ReferenceCurves`

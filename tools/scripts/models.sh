@@ -27,6 +27,7 @@ MODEL_EXAMPLES_WECC=(
 )
 MODEL_EXAMPLES_GFM=(
     "BESS/GridFormingDroop"
+    "BESS/GridFormingEpri"
 )
 
 # The producer curves of each family are the curves of one of the examples above.
