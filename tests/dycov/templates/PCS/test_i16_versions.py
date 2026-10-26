@@ -107,7 +107,7 @@ def test_a_test_of_the_fiche_i18_is_set_up_as_its_tables_define_it(
 
     assert config.get_value(section, "tracked_magnitude") == tracked
     assert config.get_float(f"{section}.Model", "SCR", 0) == scr
-    assert config.get_value(f"{section}.Model", "pdr_P") == "0.5*PmaxInjection"
+    assert config.get_value(f"{section}.Model", "pdr_P") == "0.5*Snom"
     assert config.get_value(f"{section}.Event", event[0]) == event[1]
 
 
@@ -124,18 +124,15 @@ def test_a_jump_of_the_short_circuit_ratio_switches_a_line_between_2_and_20(load
         assert config.get_float(model, "switched_SCR", 0) == 20
 
 
-def test_zone3_of_types_c_and_d_has_no_fault(load_version):
+def test_zone3_of_types_c_and_d_has_neither_the_fault_nor_the_frequency_ramp(load_version):
     load_version("PCS_RTE-I16z3", "C")
 
-    benchmarks = config.get_list("PCS-Benchmarks", "PCS_RTE-I16z3")
-    assert "ThreePhaseFault" not in benchmarks
-    assert benchmarks == [
+    assert config.get_list("PCS-Benchmarks", "PCS_RTE-I16z3") == [
         "USetPointStep",
         "PSetPointStep",
         "QSetPointStep",
         "GridVoltageDip",
         "GridVoltageSwell",
-        "GridFreqRamp",
         "Islanding",
     ]
 
