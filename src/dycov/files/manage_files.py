@@ -493,6 +493,17 @@ def copy_latex_files(source: Path, target: Path, prefix_name: str) -> None:
         else:
             copy_file(file, target)
 
+    copy_latex_assets(target)
+
+
+def copy_latex_assets(target: Path) -> None:
+    """Copy the images the LaTeX templates include to the target directory.
+
+    Parameters
+    ----------
+    target : Path
+        Directory where the report is compiled.
+    """
     for asset in _LATEX_ASSETS:
         copy_file(asset, target)
 

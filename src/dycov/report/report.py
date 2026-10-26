@@ -780,6 +780,7 @@ def create_pdf(
     dycov_logging.get_logger("Report").debug(f"Root LaTeX path:{latex_root_path}")
     if latex_root_path.exists():
         shutil.copy(latex_root_path / REPORT_NAME, working_path)
+        manage_files.copy_latex_assets(working_path)
     else:
         dycov_logging.get_logger("Report").error("Latex Template do not exist")
         return
