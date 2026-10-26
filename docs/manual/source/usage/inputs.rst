@@ -66,6 +66,27 @@ PCS I16 in the RTE DTR. The ``Zone1/`` model is what the PCS of zone 1
 (``PCS_RTE-I16z3``, or the tests declared for ``PCS_RTE-F16z3``) accepts a
 directory with ``Zone3/`` alone.
 
+The INI file of ``Zone3/``, which describes the complete installation, may
+declare its type in the grid code with ``installation_type``, ``B``, ``C`` or
+``D`` (``B`` when absent). The DTR gives a storage installation of type C or D
+another version of the Fiche I16 (see :ref:`PCS I16 <pcs-i16-types>`):
+
+.. code-block:: ini
+
+   [DEFAULT]
+   # Type of the installation in the grid code: B, C or D
+   installation_type = C
+
+The version for types C and D simulates the tests of the Fiche I18 in Zone 1,
+whose events are sized by the effective reactance of the unit. The INI file of
+``Zone1/`` declares it, in pu of the nominal apparent power of the unit:
+
+.. code-block:: ini
+
+   [GFM Parameters]
+   # Effective reactance of the Grid Forming unit
+   Xeff = 0.2
+
 .. note::
    The name *PDR* always refers to the real connection point of the complete
    installation to RTE's grid. The connection node of the Zone 1 unit model is

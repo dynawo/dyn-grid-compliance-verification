@@ -73,6 +73,22 @@ cover this upgrade on their own:
 - none of them writes the capability-curve file, which has to be supplied by hand whichever route
   is taken.
 
+### Storage installations of types C and D are validated against the Fiche I16.2
+
+The DTR gives a storage installation of type C or D its own version of the Fiche I16, the
+Fiche I16.2, whose Zone 1 simulates the tests of the Fiche I18 (Grid Forming). DyCoV applies it
+when the INI file of `Zone3/` declares the type of the installation; without it the installation
+is of type B, as before:
+
+    [DEFAULT]
+    installation_type = C
+
+The events of the Fiche I18 are sized by the effective reactance of the unit, so the INI file of
+`Zone1/` of such an installation declares it, in pu of the nominal apparent power of the unit:
+
+    [GFM Parameters]
+    Xeff = 0.2
+
 ### Fixed
 
 - Islanding simulations run again: the `DYNModelOmegaRef` connectors are written with the names

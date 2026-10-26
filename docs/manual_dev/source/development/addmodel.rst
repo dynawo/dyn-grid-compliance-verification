@@ -48,8 +48,12 @@ equipment type, together with their meaning and when they are required. The
 dictionary INI files are the authoritative, complete list; when in doubt, copy
 the section of an existing model of the same family.
 
-Every model section must also declare its ``family`` key (``WECC`` or
-``IEC``): it selects which set of control flags applies to the model.
+Every model section must also declare its ``family`` key (``WECC``, ``IEC`` or
+``GFM``): it selects which set of control flags applies to the model.
+
+A flag of the tool that the Dynawo model has no parameter for, because the model
+always behaves one way, is written as its value, ``true`` or ``false``, in place
+of the name of a parameter.
 
 Bus
 ^^^
@@ -178,6 +182,21 @@ The generic keywords for Storage models are a subset of the Power Park
 keywords (initialization, frequency, voltage setpoint, currents, setpoints),
 with the same applicability conditions and the same WECC family control flags.
 
+The Grid Forming converters of Dynawo (``GridFormingConverterDroopControl`` and
+``GridFormingEpri``, family ``GFM``) have no control flags: the family lists
+``FrequencyDroop``, the active power droop, as the parameter every model of the
+family has, and no control mode, so they take every test. Both reach their
+terminal through an impedance of their own, which no parameter switches off
+(``ConverterLVControl = false``). The droop converter takes its references at
+its filter capacitor, behind that impedance (``SetpointsBehindTransformer =
+true``): the initial value of a stepped setpoint is then computed there, through
+``TransformerResistance`` and ``TransformerReactance``, and not at the terminal.
+The EPRI converter takes them at its terminal, and has no input for the
+frequency reference of the network (``NetworkFrequencyReference``): it sees the
+frequency of the grid only through the phase of its voltage, so the tests that
+drive the frequency through the Omega model do not reach it: the frequency ramps
+of Zone 3 and of the Fiche I16.2, and the islanding.
+
 
 Line
 ^^^^
@@ -187,6 +206,10 @@ Initialization:
 * ``'ResistancePu'``, ``'ReactancePu'``, ``'SusceptancePu'``,
   ``'ConductancePu'``
   — R, X, half-B, half-G in per unit. Required for initialization.
+
+* ``'SwitchOffSignal10'``, ``'SwitchOffSignal20'``
+    Initial switch-off signals of the line; a line one of them holds open from
+    the start is left out of the initialization.
 
 
 Load

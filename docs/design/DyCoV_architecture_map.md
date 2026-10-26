@@ -56,8 +56,10 @@ copies the producer's table files into the working directory with its DYD and PA
 **Config value definitions** (any multiplier-based `PCSDescription.ini` value): resolved data-driven,
 not per-key. `value_registry.unit_characteristics(producer, u_dim)` is the single registry of base
 magnitudes (`Pmax`/`PmaxInjection`/`PmaxConsumption`/`Qmax`/`Qmin`/`Snom`/`Udim`/`Unom=1.0`/`line_XPu`,
-powers in s_nref pu, voltage in Unom pu);
-`resolve_value_definition(defn, chars, sign, origin)` evaluates `[±mult*]Name`|numeric against it;
+powers in s_nref pu, voltage in Unom pu; plus `Xeff`, the producer's `[GFM Parameters] Xeff`, and
+`Xgrid`, the `1/SCR` of the OC, in pu of the unit's Snom and present only when known);
+`resolve_value_definition(defn, chars, sign, origin)` evaluates `[±mult*]Name`|`[±mult*](Name+Name)`
+|numeric against it;
 `origin=(section, key)` makes a rejected definition name its config file+line
 (`config.describe_option`). Every
 non-GFM value read pulls from that one registry: `_get_pdr` + `_complete_loads` (`model_setup.py`; loads
@@ -68,8 +70,37 @@ registry entry. `obtain_value` only resolves definitions that reference a magnit
 possibly signed registry name); anything else is a Dynawo parameter value passed through verbatim.
 A rejected definition aborts the run — `obtain_simulated_curve` turns only `SimulationOutcomeError`
 (the bisection outcomes, `model/parameters.py`) into a failed `SimulationResult`.
-Out of scope: GFM (own grammar `mult*(Xeff+Xgrid)`, `extract_defined_value` for p0/q0)
+Out of scope: GFM (own parsing of `mult*(Xeff+Xgrid)`, `extract_defined_value` for p0/q0)
 and `line_XPu` (DTR reactance-table base `a`/`b`).
+
+**Installation types (I16.2)**: a storage installation declares `installation_type` (B/C/D, B by
+default) in its Zone 3 INI (`ModelProducer.get_installation_type`), and `Pcs` loads, in the DTR
+revision layer of `cfg.py`, the `Type<types>.ini` next to the PCS description whose name holds the
+type (`_version_for_type`; `model/BESS/PCS_RTE-I16z{1,3}/TypeCD.ini`, the Fiche I16.2), which
+patches it key by key. Zone 1 of TypeCD runs the setpoint steps on SCR 2 and the tests of the
+Fiche I18 under their scenario names (`S_VolAngStep*`, `S_VolAmpStep*`, `S_SCRup1/down1`,
+`S_Rocof*`, `S_Fault4-6`), whose shared settings are the `I18*` aliases of
+`model/BESS/config_aliases.ini`. Their events: the default `TableInfiniteBus.txt` of
+`GridVWDisturbance_1Line_InfBusFromTab` (`TableFile`: `grid_phase_jump`, `grid_voltage_step`,
+`grid_frequency0`/`grid_rocof` on the `OmegaRefPu` of the bus, which the `InfiniteBus` Omega model
+hands the units, after a pre-event ramp to the initial frequency), and
+`SCRStepUp/Down_2Lines_InfBus`, a parallel line sized by `switched_SCR`
+(`ModelSetup._get_switched_line`) that a `BooleanTable` (`TableSwitchedLine.txt`) holds open until
+it closes (`line_SwitchOffSignal20 = true`, skipped by `get_line_values`) or an event opens. An OC marked `only_with_reference` runs only when its reference curve
+is there (`Benchmark.__is_run`, `manage_files.has_curves`): every I18 test but OC2/OC3. Criterion 5
+tracks the `tracked_magnitude` an OC names (`ModelValidator.__tracked_magnitude`,
+`compared_curves.setpoint_label` taking a label) when its event steps no setpoint. Every page of
+the TypeCD Zone 1 report is the shared `report.I16z1.TypeCD.Test.tex`, which prints the conditions
+of the test from its description (`report/tables/conditions.py`). The Grid Forming converters of
+Dynawo (`GridFormingConverterDroopControl`, `GridFormingEpri`, family `GFM` in `Storage.ini`) state
+in the dictionary flags no parameter holds (`ConverterLVControl = false`,
+`SetpointsBehindTransformer = true` for the droop one, `translator.get_stated_flag`): the start
+value of a stepped setpoint is then the one behind its transformer
+(`GenParams.reference_impedance`, `ModelSetup._reference_operating_point`). The EPRI one has no
+`NetworkFrequencyReference`, which `omega_file` then leaves unconnected, so no frequency event of
+the Omega models reaches it (the frequency ramps, I16.2 RoCoF included, and the islanding). The example `BESS/GridFormingDroop` is a type C installation:
+the droop converter in Zone 1, the plant of `BESS/WECC` in Zone 3, which neither GFM model of
+Dynawo rides through (the droop one loses synchronism in the dips).
 
 **Declared tests (F16)**: the DTR Fiche F16 fixes no test and applies to Zone 3 only, so
 `PCS_RTE-F16z3` ships with an empty `[PCS-Benchmarks]` and, next to it, the `F16Description.ini`

@@ -18,8 +18,12 @@ and organized into five layers, in decreasing order of priority:
    most specific file, it takes precedence over everything else.
 2. **User Configuration** — settings provided by the user in
    ``~/.config/dycov/config.ini``.
-3. **DTR Revision** — the PCS description of a selected DTR revision. This
-   layer is not populated yet.
+3. **DTR Revision** — the version of the PCS the DTR gives the type of the
+   installation, when the fiche has one by type: a ``Type<types>.ini`` next to
+   the shipped description, which patches it for the types it names
+   (``TypeCD.ini`` of ``PCS_RTE-I16z1`` and ``PCS_RTE-I16z3`` for a storage
+   installation of type C or D, the Fiche I16.2). The type is the
+   ``installation_type`` of the Zone 3 INI file of a model validation.
 4. :ref:`PCS Configuration <pcsconf>` — settings defined per PCS in
    ``src/dycov/templates/PCS/``. These should only be modified when a DTR
    update changes the PCS definition.

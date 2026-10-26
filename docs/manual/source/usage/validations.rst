@@ -348,6 +348,85 @@ defined by an operating point (OP), event parameters, and grid parameters.
    :alt: network setup for PCS I16 Zone 1
    :align: center
 
+.. _pcs-i16-types:
+
+The DTR gives the Fiche I16 of a storage installation in two versions, by the
+type of the installation in the grid code, which the INI file of Zone 3
+declares with ``installation_type``. The tables above are those of the version
+for type B (Fiche I16.1), and of every Power Park Module. The version for types
+C and D (Fiche I16.2), for the storage units the Fiche I18 asks to be Grid
+Forming, differs from it in that:
+
+* Zone 1 runs the setpoint steps on a grid of short-circuit ratio 2, has
+  neither the faults nor the steps of the grid voltage, and simulates the tests
+  of the Fiche I18 (Grid Forming), described below;
+* Zone 3 has no fault, the test of the Fiche I5;
+* the curves are filtered at 30 Hz instead of 15 Hz, given the response
+  dynamics of Grid Forming units, with a common sampling interval of 1 ms.
+
+The version Type C/D is a ``TypeCD.ini`` next to the description of each PCS,
+which patches it: every section and key it leaves out is that of type B.
+
+The tests of the Fiche I18 keep the names of its scenarios, and each one is run
+from the operating points of the fiche, at InternalNode1, the active power in pu
+of Pn (the ``p_max_injection`` of the unit):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 40 18 20
+
+   * - Tests
+     - Event at the infinite bus
+     - SCR
+     - Operating points
+   * - ``S_VolAngStep1``–``12``
+     - phase jump of :math:`\pm0.3` or :math:`\pm0.6\,(X_{eff}+X_{grid})` rad
+     - 2, 10, 20
+     - OC1–OC5
+   * - ``S_VolAmpStep1``–``6``
+     - voltage step of :math:`\pm0.15\,(X_{eff}+X_{grid})` pu
+     - 2, 10, 20
+     - OC1–OC7
+   * - ``S_SCRup1``, ``S_SCRdown1``
+     - a line in parallel with the grid closes (2 → 20) or opens (20 → 2)
+     - 2 ↔ 20
+     - OC1–OC5
+   * - ``S_Rocof1``–``12``
+     - ramps of the frequency from 49.5 or 50.5 Hz, at :math:`\pm0.5` Hz/s for
+       3 s or :math:`\pm2` Hz/s for 0.5 s
+     - 2, 10, 20
+     - OC1–OC5
+   * - ``S_Fault4``–``6``
+     - three-phase fault, bolted for 150 ms, or leaving 0.5 pu for 600 ms or
+       0.3 pu for 300 ms
+     - 2, 10, 20
+     - OC1–OC5
+
+The operating points are OC1 (:math:`P = 0`), OC2 (:math:`0.5\,P_n`), OC3
+(:math:`-0.5\,P_n`), OC4 (:math:`0.95\,P_n`), OC5 (:math:`-0.95\,P_n`), OC6
+(:math:`Q = -Q_{max}`) and OC7 (:math:`Q = Q_{max}`), with :math:`Q = 0` and
+:math:`U = U_n` otherwise. :math:`X_{eff}` is the effective reactance of the
+unit, which the INI file of ``Zone1/`` declares as ``Xeff`` in its
+``[GFM Parameters]`` section, and :math:`X_{grid} = 1/SCR`, both in pu of the
+nominal apparent power of the unit. The fiche asks for every test with OC2 and
+OC3, and for the others only when they drive the unit into current limitation:
+an operating condition other than those two runs when the producer delivers its
+reference curve, and is left out of the verification otherwise.
+
+The response of a test of the Fiche I18 is checked with the setpoint tracking
+criterion of the Fiche I16.2, the errors before, during (for a ramp of the
+frequency) and after the event, with 20 ms excluded after each change, and the
+steady-state error after it. The tracked magnitude is the active current of the
+unit, or its reactive current for a step of the grid voltage, which each test
+names with ``tracked_magnitude``; since the event steps no setpoint, the errors
+are in pu and not relative to a step. The faults are checked with the criteria
+of the faults of type B.
+
+Dynawo initialises a model at the nominal frequency, so a ramp of the frequency
+starting at 49.5 or 50.5 Hz reaches that frequency with a slow ramp over the
+first half of the time before the event, which leaves the unit the second half
+to settle at it.
+
 
 PCS F16
 ^^^^^^^
