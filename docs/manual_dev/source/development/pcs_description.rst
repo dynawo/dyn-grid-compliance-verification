@@ -417,9 +417,12 @@ The ``.Event`` section
 ``grid_frequency0``, ``grid_rocof``
   Frequency of the infinite bus before the event (Hz) and its rate of change
   during it (Hz/s), for ``fault_duration`` seconds, which the units take as their
-  frequency reference through the ``InfiniteBus`` Omega model. Dynawo initialises
-  a model at the nominal frequency, so the grid reaches ``grid_frequency0`` with
-  a ramp over the first half of the time before the event.
+  frequency reference through the ``InfiniteBus`` Omega model. A unit whose model
+  has no input for that reference sees the frequency as the rotation of the
+  voltage of the infinite bus instead, whose phase then turns with it. Dynawo
+  initialises a model at the nominal frequency, so the grid reaches
+  ``grid_frequency0`` with a ramp over the first half of the time before the
+  event.
 
 The validation sections
 ^^^^^^^^^^^^^^^^^^^^^^^

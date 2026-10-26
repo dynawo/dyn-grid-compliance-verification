@@ -193,9 +193,10 @@ true``): the initial value of a stepped setpoint is then computed there, through
 ``TransformerResistance`` and ``TransformerReactance``, and not at the terminal.
 The EPRI converter takes them at its terminal, and has no input for the
 frequency reference of the network (``NetworkFrequencyReference``): it sees the
-frequency of the grid only through the phase of its voltage, so the tests that
-drive the frequency through the Omega model do not reach it: the frequency ramps
-of Zone 3 and of the Fiche I16.2, and the islanding.
+frequency of the grid only through the phase of its voltage. The tests of the
+Fiche I16.2 drive the frequency from the table of the infinite bus, which then
+turns its phase with it, so they reach such a unit; those that drive it through
+an Omega model, the frequency ramp and the islanding of Zone 3, do not.
 
 
 Line

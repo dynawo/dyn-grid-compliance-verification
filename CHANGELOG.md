@@ -89,6 +89,10 @@ The events of the Fiche I18 are sized by the effective reactance of the unit, so
     [GFM Parameters]
     Xeff = 0.2
 
+Both Grid Forming converters of Dynawo, the droop one and the EPRI one, can be the Zone 1 unit:
+the examples `BESS/GridFormingDroop` and `BESS/GridFormingEpri` are such installations, with the
+plant of the `BESS/WECC` example in Zone 3.
+
 ### Fixed
 
 - Islanding simulations run again: the `DYNModelOmegaRef` connectors are written with the names

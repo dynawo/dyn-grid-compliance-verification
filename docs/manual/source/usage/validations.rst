@@ -360,7 +360,9 @@ Forming, differs from it in that:
 * Zone 1 runs the setpoint steps on a grid of short-circuit ratio 2, has
   neither the faults nor the steps of the grid voltage, and simulates the tests
   of the Fiche I18 (Grid Forming), described below;
-* Zone 3 has no fault, the test of the Fiche I5;
+* Zone 3 repeats the setpoint steps of the Fiche I2 and the Fiches I6, I7 and
+  I10, so it has neither the fault of the Fiche I5 nor the ramp of the grid
+  frequency;
 * the curves are filtered at 30 Hz instead of 15 Hz, given the response
   dynamics of Grid Forming units, with a common sampling interval of 1 ms.
 
@@ -369,7 +371,8 @@ which patches it: every section and key it leaves out is that of type B.
 
 The tests of the Fiche I18 keep the names of its scenarios, and each one is run
 from the operating points of the fiche, at InternalNode1, the active power in pu
-of Pn (the ``p_max_injection`` of the unit):
+of Pn, the rating of the converter that the fiche takes as its base: the nominal
+apparent power of the unit, and not its ``p_max_injection``:
 
 .. list-table::
    :header-rows: 1
@@ -412,6 +415,11 @@ nominal apparent power of the unit. The fiche asks for every test with OC2 and
 OC3, and for the others only when they drive the unit into current limitation:
 an operating condition other than those two runs when the producer delivers its
 reference curve, and is left out of the verification otherwise.
+
+A unit whose model has no input for the frequency reference of the network,
+such as the EPRI Grid Forming converter of Dynawo, sees the frequency of the
+grid as the rotation of its voltage: in the ramps of the frequency, the phase of
+the infinite bus turns with it.
 
 The response of a test of the Fiche I18 is checked with the setpoint tracking
 criterion of the Fiche I16.2, the errors before, during (for a ramp of the

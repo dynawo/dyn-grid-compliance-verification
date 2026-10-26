@@ -97,10 +97,13 @@ in the dictionary flags no parameter holds (`ConverterLVControl = false`,
 `SetpointsBehindTransformer = true` for the droop one, `translator.get_stated_flag`): the start
 value of a stepped setpoint is then the one behind its transformer
 (`GenParams.reference_impedance`, `ModelSetup._reference_operating_point`). The EPRI one has no
-`NetworkFrequencyReference`, which `omega_file` then leaves unconnected, so no frequency event of
-the Omega models reaches it (the frequency ramps, I16.2 RoCoF included, and the islanding). The example `BESS/GridFormingDroop` is a type C installation:
-the droop converter in Zone 1, the plant of `BESS/WECC` in Zone 3, which neither GFM model of
-Dynawo rides through (the droop one loses synchronism in the dips).
+`NetworkFrequencyReference`, which `omega_file` then leaves unconnected: for a unit without it,
+`TableFile` turns the `TableUPhase` of the infinite bus with the frequency of `TableOmegaRefPu`
+(the I16.2 RoCoF), while the Omega-model events (Zone 3 frequency ramp, islanding) do not reach
+it. The I18 OCs are in pu of the unit's `Snom`, the converter rating the Fiche I18 takes as
+base. The examples `BESS/GridFormingDroop` and `BESS/GridFormingEpri` are type C
+installations: a Dynawo GFM converter in Zone 1, the plant of `BESS/WECC` in Zone 3, which
+neither GFM model rides through (the droop one loses synchronism in the dips).
 
 **Declared tests (F16)**: the DTR Fiche F16 fixes no test and applies to Zone 3 only, so
 `PCS_RTE-F16z3` ships with an empty `[PCS-Benchmarks]` and, next to it, the `F16Description.ini`
