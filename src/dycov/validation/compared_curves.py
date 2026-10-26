@@ -196,7 +196,10 @@ def column_of(zone: int, label: str, columns: Iterable[str]) -> str | None:
 
 def setpoint_label(modified_setpoint: str) -> str:
     """The label of the magnitude a setpoint drives, the reactive power for an unknown one, as
-    the tool has always done."""
+    the tool has always done. A test whose event drives no setpoint names the magnitude it
+    tracks by its label instead, which is then its own."""
+    if by_label(modified_setpoint) is not None:
+        return modified_setpoint
     return _SETPOINT_LABELS.get(modified_setpoint, "reactive_power")
 
 

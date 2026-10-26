@@ -10,11 +10,14 @@
 
 from pathlib import Path
 
+import pytest
+
 
 class DummyProducer:
-    def __init__(self, reference_path=None):
+    def __init__(self, reference_path=None, installation_type=None):
         self.zone = None
         self._reference_path = reference_path
+        self._installation_type = installation_type
 
     def set_zone(self, zone, name):
         self.zone = zone
@@ -30,6 +33,9 @@ class DummyProducer:
 
     def get_reference_path(self):
         return self._reference_path
+
+    def get_installation_type(self):
+        return self._installation_type
 
 
 class DummyParams:
@@ -189,6 +195,39 @@ def test_prepare_pcs_config_loads_both_files_at_once(monkeypatch, tmp_path):
 
     assert dummy_config.loaded == (tool_file, user_file, None)
     assert pcs.is_valid() is True
+
+
+@pytest.mark.parametrize("installation_type, version", [("C", "TypeCD.ini"), ("B", None)])
+def test_the_version_of_the_type_of_the_installation_patches_the_description(
+    monkeypatch, tmp_path, installation_type, version
+):
+    tool_file = tmp_path / "tool" / "PCSDescription.ini"
+    tool_file.parent.mkdir()
+    tool_file.write_text("")
+    (tool_file.parent / "TypeCD.ini").write_text("")
+
+    pcs, dummy_config = _prepare_pcs_config(
+        monkeypatch,
+        tmp_path,
+        tool_file,
+        None,
+        DummyProducer(installation_type=installation_type),
+    )
+
+    assert dummy_config.loaded == (
+        tool_file,
+        None,
+        tool_file.parent / version if version else None,
+    )
+
+
+def test_a_verification_that_gives_every_type_the_same_fiches_loads_no_version(tmp_path):
+    from dycov.model.pcs import _version_for_type
+
+    (tmp_path / "TypeCD.ini").write_text("")
+
+    assert _version_for_type(tmp_path, None) is None
+    assert _version_for_type(tmp_path, "D") == tmp_path / "TypeCD.ini"
 
 
 def test_prepare_pcs_config_loads_only_the_files_that_exist(monkeypatch, tmp_path):

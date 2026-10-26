@@ -225,6 +225,8 @@ def dummy_config(monkeypatch):
         ("ReactivePowerSetpointPu", "Q"),
         ("VoltageSetpointPu", "V"),
         ("NetworkFrequencyPu", "$\\omega"),
+        ("active_current", "$I_p$"),
+        ("reactive_current", "$I_q$"),
         ("", "Q"),
     ],
 )
@@ -1353,3 +1355,17 @@ def test_get_measurement_names_in_zone3_includes_the_network_frequency():
         "BusPDR_BUS_ReactiveCurrent",
         "NetworkFrequencyPu",
     ]
+
+
+def test_a_test_names_the_magnitude_it_tracks_in_its_own_section(monkeypatch):
+    sections = {"PCS_RTE-I16z3.GridFreqRamp.Ramp": {"tracked_magnitude": "active_current"}}
+
+    class _Config:
+        def get_value(self, section, key, default=None):
+            return sections.get(section, {}).get(key, default)
+
+    monkeypatch.setattr(f"{MODEL_MODULE}.config", _Config())
+    validator = _make_validator()
+
+    assert validator._ModelValidator__tracked_magnitude("Ramp") == "active_current"
+    assert validator._ModelValidator__tracked_magnitude("Other") is None

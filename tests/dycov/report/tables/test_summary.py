@@ -139,3 +139,19 @@ def test_create_map_repeated_not_applicable_reuses_footnote():
     assert result[1][4] == (
         "\\textcolor{red}{Not applicable test}\\footnotemark[\\value{footnote}]"
     )
+
+
+def test_create_map_escapes_underscores_in_the_names_of_the_tests():
+    summary_list = [
+        DummySummary(
+            producer_name="Producer",
+            pcs="PCS_RTE-I16z1",
+            benchmark="S_Fault4",
+            operating_condition="OC2_SCR10",
+            compliance=Compliance.Compliant,
+        )
+    ]
+
+    result = create_map(summary_list)
+
+    assert result[0][2:4] == ["S\\_Fault4", "OC2\\_SCR10"]

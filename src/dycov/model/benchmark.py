@@ -152,6 +152,15 @@ class Benchmark:
             for oc_name in oc_names
         ]
 
+    def __is_run(self, pcs_bm_oc_name: str) -> bool:
+        """An operating condition the DTR only asks for when the producer records it, which
+        the PCS marks ``only_with_reference``, is run when its reference curve is delivered."""
+        if not config.get_boolean(pcs_bm_oc_name, "only_with_reference", False):
+            return True
+        return self._producer.has_reference_curves_path() and manage_files.has_curves(
+            self._producer.get_reference_curves_path() / self._producer_name, pcs_bm_oc_name
+        )
+
     def __create_operating_condition_working_paths(self, oc_names: list):
         for oc_name in oc_names:
             working_oc_dir = (
@@ -163,7 +172,11 @@ class Benchmark:
         self, parameters: Parameters, producer: Producer, thr_ss_tol: float
     ) -> tuple[list, CurvesManager | None, Validator | None]:
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
-        oc_names = config.get_list("PCS-OperatingConditions", pcs_benchmark_name)
+        oc_names = [
+            oc_name
+            for oc_name in config.get_list("PCS-OperatingConditions", pcs_benchmark_name)
+            if self.__is_run(pcs_benchmark_name + CASE_SEPARATOR + oc_name)
+        ]
         self.__create_operating_condition_working_paths(oc_names)
         if parameters.get_producer().is_gfm():
             return oc_names, None, None

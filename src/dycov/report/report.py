@@ -42,6 +42,7 @@ from dycov.report.tables import (
     active_power_recovery,
     characteristics_response,
     compliance,
+    conditions,
     results,
     signal_error,
     solver,
@@ -345,6 +346,10 @@ def _pcs_replace(
                 "benchmark": benchmark,
                 "operatingcondition": oc_name,
                 "link": latex_link,
+                "conditions": conditions.create_map(operating_condition),
+                "trackedmagnitude": config.get_value(
+                    operating_condition, "tracked_magnitude", ""
+                ).replace("_", " "),
             }
 
             oc_template = _get_template(working_path, f"{producer_name}.{oc_report}")

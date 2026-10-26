@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+  <set id="InfiniteBus">
+    <par type="DOUBLE" name="infiniteBus_UPu" value="{{infiniteBus_U0Pu}}"/>
+    <par type="DOUBLE" name="infiniteBus_UPhase" value="0"/>
+    <par type="DOUBLE" name="infiniteBus_UNom" value="{{bus_UNom}}"/>
+  </set>
+  <set id="Line">
+    <par type="DOUBLE" name="line_RPu" value="{{line_RPu}}"/>
+    <par type="DOUBLE" name="line_XPu" value="{{line_XPu}}"/>
+    <par type="DOUBLE" name="line_BPu" value="0.0"/>
+    <par type="DOUBLE" name="line_GPu" value="0.0"/>
+  </set>
+  <set id="SwitchedLine">
+    <par type="DOUBLE" name="line_RPu" value="{{switched_line_RPu}}"/>
+    <par type="DOUBLE" name="line_XPu" value="{{switched_line_XPu}}"/>
+    <par type="DOUBLE" name="line_BPu" value="0.0"/>
+    <par type="DOUBLE" name="line_GPu" value="0.0"/>
+    <par type="BOOL" name="line_SwitchOffSignal20" value="true"/>
+  </set>
+  <set id="PDR">
+    <par type="DOUBLE" name="bus_UNom" value="{{bus_UNom}}"/>
+  </set>
+  <set id="SwitchLine">
+    <par type="STRING" name="booleanTable_FileName" value="TableSwitchedLine.txt"/>
+    <par type="STRING" name="booleanTable_TableName" value="TableSwitchOff"/>
+    <par type="INT" name="booleanTable_Extrapolation" value="1"/>
+  </set>
+</parametersSet>

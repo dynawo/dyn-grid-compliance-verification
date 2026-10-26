@@ -79,6 +79,29 @@ def init_calcs(
     return grid_init
 
 
+def behind_series_impedance(v: complex, s: complex, z: complex) -> tuple[complex, complex]:
+    """The voltage and the power, generator convention, behind a series impedance that a unit
+    injects through.
+
+    Parameters
+    ----------
+    v: complex
+        Voltage on the grid side of the impedance
+    s: complex
+        Power the unit delivers there, generator convention, in the base of the impedance
+    z: complex
+        Series impedance
+
+    Returns
+    -------
+    tuple[complex, complex]
+        Voltage and power, generator convention, on the side of the unit
+    """
+    i = (s / v).conjugate()
+    v_behind = v + z * i
+    return v_behind, v_behind * i.conjugate()
+
+
 def _solve_grid_side(
     pdr: mp.PdrParams,
     grid_line: mp.PimodelParams,

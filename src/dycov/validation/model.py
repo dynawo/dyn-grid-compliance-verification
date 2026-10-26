@@ -14,6 +14,7 @@ import pandas as pd
 
 from dycov.configuration.cfg import config
 from dycov.core.validator import Validator
+from dycov.curves.curves import get_cfg_oc_name
 from dycov.curves.manager import CurvesManager
 from dycov.logging import dycov_logging
 from dycov.model.producer import Producer
@@ -39,6 +40,9 @@ def _get_column_name(
         return "V"
     if modified_setpoint == "NetworkFrequencyPu":
         return "$\\omega"
+    tracked = compared_curves.by_label(modified_setpoint)
+    if tracked is not None:
+        return tracked.display
 
     return "Q"
 
@@ -67,6 +71,13 @@ class ModelValidator(Validator):
             curves_manager, producer, validations, is_field_measurements, pcs_name, bm_name
         )
         self._pcs_bm_name = pcs_bm_name
+
+    def __tracked_magnitude(self, oc_name: str) -> str | None:
+        """The label of the magnitude a test whose event drives no setpoint tracks, as its
+        ``tracked_magnitude`` names it."""
+        return config.get_value(
+            get_cfg_oc_name(self._pcs_name, self._bm_name, oc_name), "tracked_magnitude"
+        )
 
     def __thresholds_family(self) -> str:
         """The family of [GridCode] thresholds the PCS applies to the controlled magnitude."""
@@ -834,6 +845,7 @@ class ModelValidator(Validator):
         if event_params["connect_to"] == "NetworkFrequencyPu":
             freq_peak = float(event_params["step_value"])
 
+        tracked = self.__tracked_magnitude(oc_name) or event_params["connect_to"]
         model_results = (
             self.__calculate(
                 self._producer.get_zone(),
@@ -841,17 +853,14 @@ class ModelValidator(Validator):
                 event_params["duration_time"],
                 freq0,
                 freq_peak,
-                event_params["connect_to"],
+                tracked,
                 abs(self._setpoint_variation),
             )
             if has_reference
             else self.__without_reference(event_params["start_time"])
         )
 
-        results = self.__check(
-            model_results,
-            event_params["connect_to"],
-        )
+        results = self.__check(model_results, tracked)
 
         exclusion_windows = self._get_exclusion_windows()
         results["event_exclusion_window_start"] = exclusion_windows.event_start

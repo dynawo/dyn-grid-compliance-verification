@@ -274,6 +274,7 @@ def append_generator(
     ppc_local = _get_generator_ppc_local(parset, nsmap, lib)
 
     converter_lv_control = _get_generator_converter_lv_control(parset, nsmap, lib)
+    reference_impedance = _get_generator_reference_impedance(parset, nsmap, lib)
 
     generators.append(
         GenParams(
@@ -293,6 +294,7 @@ def append_generator(
             use_voltage_droop=False,
             ppc_local=ppc_local,
             converter_lv_control=converter_lv_control,
+            reference_impedance=reference_impedance,
         )
     )
 
@@ -391,6 +393,9 @@ def _get_generator_ppc_local(parset, nsmap, lib):
 
 
 def _get_generator_converter_lv_control(parset, nsmap, lib):
+    stated = dynawo_translator.get_stated_flag(lib, "ConverterLVControl")
+    if stated is not None:
+        return stated
     _, converter_lv_control_str = par_access.get_parameter(
         parset, nsmap, lib, "ConverterLVControl"
     )
@@ -401,12 +406,27 @@ def _get_generator_converter_lv_control(parset, nsmap, lib):
     )
 
 
+def _get_generator_reference_impedance(parset, nsmap, lib) -> complex:
+    if not dynawo_translator.get_stated_flag(lib, "SetpointsBehindTransformer"):
+        return 0j
+    _, r_str = par_access.get_parameter(parset, nsmap, lib, "TransformerResistance")
+    _, x_str = par_access.get_parameter(parset, nsmap, lib, "TransformerReactance")
+    return complex(float(r_str or 0.0), float(x_str or 0.0))
+
+
 def get_line_values(
     dyd_root: etree.Element,
     par_root: etree.Element,
     applied_line_rpu: float,
     applied_line_xpu: float,
+    switched_line_zpu: Optional[complex] = None,
 ) -> list:
+    """The lines of a network that are in service when the simulation starts.
+
+    The ones whose impedance is a placeholder take the impedance the test applies: that of the
+    grid, or that of the line a test of the short-circuit ratio switches, for the
+    ``{{switched_line_RPu}}`` and ``{{switched_line_XPu}}`` placeholders.
+    """
     lines = []
     nsmap = {"ns": etree.QName(par_root).namespace}
     allowed_line_models = dynawo_translator.get_line_models()
@@ -416,14 +436,19 @@ def get_line_values(
         lib = model_parameter.get("lib")
         par_id = model_parameter.get("parId")
         parset = par_access.get_parset(par_root, par_id, nsmap)
+        if _starts_open(parset, nsmap, lib):
+            continue
 
         _, r_str = par_access.get_parameter(parset, nsmap, lib, "ResistancePu")
         _, x_str = par_access.get_parameter(parset, nsmap, lib, "ReactancePu")
         _, b_str = par_access.get_parameter(parset, nsmap, lib, "SusceptancePu")
         _, g_str = par_access.get_parameter(parset, nsmap, lib, "ConductancePu")
 
-        line_rpu = float(r_str) if applied_line_rpu is None else applied_line_rpu
-        line_xpu = _calculate_line_xpu(x_str, applied_line_xpu)
+        if switched_line_zpu is not None and x_str and "{{switched_line_XPu}}" in x_str:
+            line_rpu, line_xpu = switched_line_zpu.real, switched_line_zpu.imag
+        else:
+            line_rpu = float(r_str) if applied_line_rpu is None else applied_line_rpu
+            line_xpu = _calculate_line_xpu(x_str, applied_line_xpu)
         line_gpu = float(g_str) if g_str is not None else 0.0
         line_bpu = float(b_str) if b_str is not None else 0.0
 
@@ -447,6 +472,16 @@ def get_line_values(
         )
 
     return lines
+
+
+def _starts_open(parset, nsmap, lib) -> bool:
+    """Whether a line is open when the simulation starts: one of its switch-off signals holds
+    it open from the start."""
+    for signal in ("SwitchOffSignal10", "SwitchOffSignal20"):
+        _, value = par_access.get_parameter(parset, nsmap, lib, signal)
+        if value is not None and value.strip().lower() == "true":
+            return True
+    return False
 
 
 def _calculate_line_xpu(x_str: Optional[str], applied_line_xpu: float) -> float:

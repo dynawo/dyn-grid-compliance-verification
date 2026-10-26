@@ -372,32 +372,77 @@ def _copy_producer_tables(producer_path: Path, target_path: Path) -> None:
         copy_file(file, target_path / (file.stem + file.suffix.lower()))
 
 
-def _copy_curve_files_by_name(
-    source_path: Path, target_path: Path, base_name: str, target_stem: str
-) -> list[str]:
-    """Copy curve files by base name, renamed to target_stem, and return the copied names."""
+def _curve_files(source_path: Path, base_name: str) -> list[Path]:
+    """The files of a curve, which share its base name."""
     if not source_path.exists():
         return []
 
     supported_exts = {".csv", ".exp", ".cff", ".dat", ".cfg", ".dict"}
+    return [
+        file
+        for file in source_path.iterdir()
+        if file.is_file()
+        and file.stem.lower() == base_name.lower()
+        and file.suffix.lower() in supported_exts
+    ]
+
+
+def _curve_source(curves_dir: Path, prefix_name: str) -> tuple[Path, str]:
+    """The directory and the base name of the curve of a test, which the [Curves-Files]
+    section of CurvesFiles.ini may give another name and place (relative or absolute)."""
+    curves_cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
+    curves_cfg.read(curves_dir / "CurvesFiles.ini")
+    curves_filename = curves_cfg.get("Curves-Files", prefix_name, fallback=None)
+    if not curves_filename:
+        return curves_dir, prefix_name
+
+    main_file = Path(curves_filename)
+    if main_file.is_absolute():
+        return main_file.parent, main_file.stem
+    return curves_dir / main_file.parent, main_file.stem
+
+
+def _copy_curve_files_by_name(
+    source_path: Path, target_path: Path, base_name: str, target_stem: str
+) -> list[str]:
+    """Copy curve files by base name, renamed to target_stem, and return the copied names."""
     copied_files: list[str] = []
 
     try:
-        for file in source_path.iterdir():
-            if (
-                file.is_file()
-                and file.stem.lower() == base_name.lower()
-                and file.suffix.lower() in supported_exts
-            ):
-                target_name = f"{target_stem}{file.suffix.lower()}"
-                target_file = target_path / target_name
-
-                copy_file(file, target_file)
-                copied_files.append(target_name)
+        for file in _curve_files(source_path, base_name):
+            target_name = f"{target_stem}{file.suffix.lower()}"
+            copy_file(file, target_path / target_name)
+            copied_files.append(target_name)
 
         return copied_files
     except OSError:
         return []
+
+
+def has_curves(curves_dir: Path, prefix_name: str) -> bool:
+    """Check whether a curve directory holds the curve of a test, which takes a curve file and
+    its dictionary.
+
+    Parameters
+    ----------
+    curves_dir : Path
+        Directory holding the CurvesFiles.ini of the curves.
+    prefix_name : str
+        Name of the test (PCS.Benchmark.OperatingCondition).
+
+    Returns
+    -------
+    bool
+        True if the curve file and its dictionary are there.
+    """
+    if not (curves_dir / "CurvesFiles.ini").exists():
+        return False
+
+    try:
+        files = _curve_files(*_curve_source(curves_dir, prefix_name))
+    except OSError:
+        return False
+    return len(files) >= 2 and any(file.suffix.lower() == ".dict" for file in files)
 
 
 def copy_base_curves_files(source_path: Path, target_path: Path, prefix_name: str) -> bool:
@@ -438,21 +483,7 @@ def copy_base_curves_files(source_path: Path, target_path: Path, prefix_name: st
 
         copy_file(ini_file, target_path)
 
-        curves_cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
-        curves_cfg.read(ini_file)
-        curves_filename = curves_cfg.get("Curves-Files", prefix_name, fallback=None)
-
-        base_name = prefix_name
-        base_source_path = curves_dir
-
-        if curves_filename:
-            main_file = Path(curves_filename)
-            base_name = main_file.stem
-            if main_file.is_absolute():
-                base_source_path = main_file.parent
-            elif main_file.parent != Path("."):
-                base_source_path = curves_dir / main_file.parent
-
+        base_source_path, base_name = _curve_source(curves_dir, prefix_name)
         copied_files = _copy_curve_files_by_name(
             base_source_path, target_path, base_name, prefix_name
         )

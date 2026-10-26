@@ -227,6 +227,18 @@ def test_setpoint_label_is_the_magnitude_the_setpoint_drives(setpoint, label):
     assert compared_curves.setpoint_label(setpoint) == label
 
 
+@pytest.mark.parametrize("label", ["active_current", "reactive_current", "voltage"])
+def test_a_test_that_steps_no_setpoint_tracks_the_magnitude_it_names(label):
+    assert compared_curves.setpoint_label(label) == label
+
+
+def test_for_setpoint_of_a_tracked_current_is_the_current_of_the_unit():
+    columns = ["time", "Bess_GEN_ActiveCurrentInjTerminal", "Bess_GEN_ReactiveCurrentInjTerminal"]
+
+    assert compared_curves.for_setpoint(1, "active_current", columns) == columns[1]
+    assert compared_curves.for_setpoint(1, "reactive_current", columns) == columns[2]
+
+
 def test_column_of_a_label_the_zone_does_not_compare_is_none():
     assert compared_curves.column_of(1, "frequency", _ZONE_1_COLUMNS) is None
 

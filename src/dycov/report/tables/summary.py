@@ -40,8 +40,8 @@ def create_map(summary_list: list) -> list:
             [
                 f"{i.producer_name}".replace("_", r"\_").strip(),
                 f"{i.pcs}".replace("_", r"\_").strip(),
-                f"{i.benchmark}".strip(),
-                f"{i.operating_condition}".strip(),
+                f"{i.benchmark}".replace("_", r"\_").strip(),
+                f"{i.operating_condition}".replace("_", r"\_").strip(),
                 f"{compliance_str}".strip(),
             ]
         )

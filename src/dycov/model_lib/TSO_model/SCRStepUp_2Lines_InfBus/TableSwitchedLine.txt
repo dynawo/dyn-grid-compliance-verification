@@ -1,0 +1,6 @@
+#1
+double TableSwitchOff(4,2)
+{{simulation_start}} 1
+{{start_event}} 1
+{{start_event}} 0
+{{simulation_stop}} 0

@@ -10,7 +10,7 @@
 import configparser
 import copy
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import CASE_SEPARATOR
@@ -81,7 +81,14 @@ class Pcs:
 
         self._has_pcs_config = tool_pcs_path is not None
         self._has_user_config = user_pcs_path is not None
-        config.load_pcs_config(tool_pcs_path, user_pcs_path)
+        version_pcs_path = (
+            _version_for_type(tool_pcs_path.parent, producer.get_installation_type())
+            if tool_pcs_path is not None
+            else None
+        )
+        if version_pcs_path is not None:
+            dycov_logging.get_logger("PCS").debug(f"PCS version Path {version_pcs_path}")
+        config.load_pcs_config(tool_pcs_path, user_pcs_path, version_pcs_path)
 
         # Read configurations
         report_name = config.get_value(self._name, "report_name")
@@ -221,6 +228,18 @@ class Pcs:
 def _pcs_description_in(path: Path) -> Union[Path, None]:
     files = {file.stem.lower(): file for file in path.glob("*.[iI][nN][iI]")}
     return files.get("pcsdescription")
+
+
+def _version_for_type(path: Path, installation_type: Optional[str]) -> Union[Path, None]:
+    """The version of the PCS that the DTR gives the type of the installation, when the fiche
+    has one by type: a ``Type<types>.ini`` next to the PCS description, naming the types it is
+    for (``TypeCD.ini`` for types C and D), which patches the description."""
+    if installation_type is None:
+        return None
+    for version in sorted(path.glob("Type*.[iI][nN][iI]")):
+        if installation_type in version.stem[len("Type") :]:
+            return version
+    return None
 
 
 def _description_declaring(path: Path, pcs_name: str) -> Union[Path, None]:

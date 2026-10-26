@@ -17,6 +17,8 @@ from dycov.files import replace_placeholders
 from dycov.logging import dycov_logging
 from dycov.model.parameters import GenInit
 
+_TABLE_FILES = ("TableInfiniteBus.txt", "TableVariableImpedance.txt", "TableSwitchedLine.txt")
+
 
 class TableFile(FileVariables):
     """
@@ -46,6 +48,10 @@ class TableFile(FileVariables):
             "bus_u0pu",
             "bus_upu",
             "end_freq",
+            "bus_uphase",
+            "bus_omega0pu",
+            "bus_omegapu",
+            "end_frequency_settling",
         ]
         super().__init__(
             tool_variables,
@@ -53,6 +59,39 @@ class TableFile(FileVariables):
             bm_section,
             oc_section,
         )
+
+    def __grid_event(self, key: str) -> float:
+        """The size of an event of the grid the Event section of the test declares, 0 when it
+        declares none."""
+        if not config.has_option(self._event_section, key):
+            return 0.0
+        value = self._dynawo_curves.obtain_value(
+            config.get_value(self._event_section, key), origin=(self._event_section, key)
+        )
+        return float(value)
+
+    def __complete_grid_events(
+        self, variables_dict: dict, tso_gen: GenInit, event_params: dict
+    ) -> None:
+        """The steps of the voltage and of its phase, and the frequency profile, of the grid.
+
+        Dynawo initialises a model at the nominal frequency, so a profile that starts from
+        another one reaches it with a ramp over the first half of the time before the event,
+        which leaves the second half for the unit to settle.
+        """
+        variables_dict["bus_upu"] = tso_gen.u0 + self.__grid_event("grid_voltage_step")
+        variables_dict["bus_uphase"] = self.__grid_event("grid_phase_jump")
+
+        f_nom = config.get_float("Dynawo", "f_nom", 50.0)
+        frequency0 = self.__grid_event("grid_frequency0") or f_nom
+        rocof = self.__grid_event("grid_rocof")
+        frequency_end = frequency0 + rocof * event_params["duration_time"]
+        variables_dict["bus_omega0pu"] = frequency0 / f_nom
+        variables_dict["bus_omegapu"] = frequency_end / f_nom
+        simulation_start = config.get_float("Dynawo", "simulation_start", 0.0)
+        variables_dict["end_frequency_settling"] = (
+            simulation_start + event_params["start_time"]
+        ) / 2
 
     def __complete_Xv_entries(self, variables_dict, event_params):
         list_Xv = [s for s in event_params.keys() if s.startswith("Xv_")]
@@ -68,6 +107,7 @@ class TableFile(FileVariables):
         variables_dict["end_event"] = event_params["start_time"] + event_params["duration_time"]
 
         variables_dict["bus_u0pu"] = tso_gen.u0
+        self.__complete_grid_events(variables_dict, tso_gen, event_params)
 
         # Adjust bus voltage or frequency based on the event's connection type
         if event_params["connect_to"] == "VoltageSetpointPu":
@@ -275,9 +315,6 @@ class TableFile(FileVariables):
             A dictionary containing event-specific parameters, including start time,
             duration, step value, and connection type.
         """
-        if (working_oc_dir / "TableInfiniteBus.txt").exists():
-            self.__complete_file(working_oc_dir, tso_gen, event_params, "TableInfiniteBus.txt")
-        if (working_oc_dir / "TableVariableImpedance.txt").exists():
-            self.__complete_file(
-                working_oc_dir, tso_gen, event_params, "TableVariableImpedance.txt"
-            )
+        for table in _TABLE_FILES:
+            if (working_oc_dir / table).exists():
+                self.__complete_file(working_oc_dir, tso_gen, event_params, table)

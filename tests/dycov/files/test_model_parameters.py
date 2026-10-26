@@ -118,6 +118,47 @@ def testget_line_values_applies_provided_impedances():
     assert lines[0].x == pytest.approx(0.35)
 
 
+def test_a_line_that_starts_open_is_not_in_service_when_the_simulation_starts():
+    dyd_root = _make_root()
+    _add_bbmodel(dyd_root, "Line", "Line", "parLine")
+    _add_bbmodel(dyd_root, "SwitchedLine", "Line", "parSwitched")
+    par_root = _make_root()
+    _add_parset(par_root, "parLine", {"line_RPu": "{{line_RPu}}", "line_XPu": "{{line_XPu}}"})
+    _add_parset(
+        par_root,
+        "parSwitched",
+        {
+            "line_RPu": "{{switched_line_RPu}}",
+            "line_XPu": "{{switched_line_XPu}}",
+            "line_SwitchOffSignal20": "true",
+        },
+    )
+
+    lines = model_parameters.get_line_values(dyd_root, par_root, 0.02, 0.35)
+
+    assert [line.id for line in lines] == ["Line"]
+
+
+def test_the_switched_line_in_service_takes_the_impedance_of_the_test():
+    dyd_root = _make_root()
+    _add_bbmodel(dyd_root, "Line", "Line", "parLine")
+    _add_bbmodel(dyd_root, "SwitchedLine", "Line", "parSwitched")
+    par_root = _make_root()
+    _add_parset(par_root, "parLine", {"line_RPu": "{{line_RPu}}", "line_XPu": "{{line_XPu}}"})
+    _add_parset(
+        par_root,
+        "parSwitched",
+        {"line_RPu": "{{switched_line_RPu}}", "line_XPu": "{{switched_line_XPu}}"},
+    )
+
+    lines = model_parameters.get_line_values(dyd_root, par_root, 0.02, 0.35, complex(0.004, 0.04))
+
+    assert [(line.r, line.x) for line in lines] == [
+        (pytest.approx(0.02), pytest.approx(0.35)),
+        (pytest.approx(0.004), pytest.approx(0.04)),
+    ]
+
+
 def test_get_transformer_values_missing_parset_raises():
     dyd_root = _make_root()
     _add_bbmodel(dyd_root, "StepUp_Xfmr", "TransformerFixedRatio", "missing")
@@ -318,6 +359,41 @@ def test_get_generator_converter_lv_control_defaults_to_true_when_absent():
     )
 
     assert converter_lv_control is True
+
+
+def test_a_model_without_the_flag_has_the_converter_lv_control_its_dictionary_states():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {})
+
+    converter_lv_control = model_parameters._get_generator_converter_lv_control(
+        [parset], {"ns": _NS}, "GridFormingConverterDroopControl"
+    )
+
+    assert converter_lv_control is False
+
+
+def test_the_references_of_the_grid_forming_converter_are_behind_its_transformer():
+    par_root = _make_root()
+    parset = _add_parset(
+        par_root, "parGen", {"converter_RTransformer": "0.01", "converter_LTransformer": "0.2"}
+    )
+
+    impedance = model_parameters._get_generator_reference_impedance(
+        [parset], {"ns": _NS}, "GridFormingConverterDroopControl"
+    )
+
+    assert impedance == pytest.approx(complex(0.01, 0.2))
+
+
+def test_a_model_that_takes_its_references_at_its_terminal_has_no_reference_impedance():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {"BESS_RLvTrPu": "0.01", "BESS_XLvTrPu": "0.1"})
+
+    impedance = model_parameters._get_generator_reference_impedance(
+        [parset], {"ns": _NS}, "BESSWeccCurrentSource"
+    )
+
+    assert impedance == 0j
 
 
 def testappend_generator_takes_ppc_local_from_the_par_file():

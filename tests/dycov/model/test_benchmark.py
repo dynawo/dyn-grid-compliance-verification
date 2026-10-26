@@ -92,6 +92,74 @@ def _make_benchmark(
     )
 
 
+class _RecordingProducer(DummyProducer):
+    """A producer whose reference curves are those of the tests it records."""
+
+    def __init__(self, reference_path: Path):
+        super().__init__()
+        self._reference_path = reference_path
+
+    def has_reference_curves_path(self):
+        return True
+
+    def get_reference_curves_path(self):
+        return self._reference_path
+
+
+def _run_operating_conditions(monkeypatch, producer, recorded_only: set) -> list:
+    lists = {"PCS-OperatingConditions": {_PCS_BENCHMARK: ["OC1", "OC2", "OC3"]}}
+    monkeypatch.setattr(
+        Config, "get_list", lambda self, section, key: lists.get(section, {}).get(key, [])
+    )
+    monkeypatch.setattr(
+        Config,
+        "get_boolean",
+        lambda self, section, key, default=False: (
+            key == "only_with_reference" and section in recorded_only
+        ),
+    )
+    monkeypatch.setattr(benchmark.manage_files, "create_dir", lambda path: None)
+    bm = Benchmark(
+        pcs_name="PCS",
+        pcs_id=1,
+        pcs_zone=1,
+        producer_name="Prod",
+        report_name="Report",
+        benchmark_name="Bench",
+        parameters=DummyParams(producer),
+        producer=producer,
+    )
+    return [oc.get_name() for oc in bm._oc_list]
+
+
+def test_a_test_asked_only_when_recorded_runs_when_its_reference_is_delivered(
+    monkeypatch, tmp_path
+):
+    curves = tmp_path / "Prod"
+    curves.mkdir()
+    (curves / "CurvesFiles.ini").write_text("[Curves-Files]\n")
+    for stem in (f"{_PCS_BENCHMARK}.OC3",):
+        (curves / f"{stem}.csv").write_text("time;P\n0;1\n")
+        (curves / f"{stem}.dict").write_text("[Curves-Dictionary]\n")
+    recorded_only = {f"{_PCS_BENCHMARK}.OC1", f"{_PCS_BENCHMARK}.OC3"}
+
+    names = _run_operating_conditions(monkeypatch, _RecordingProducer(tmp_path), recorded_only)
+
+    assert names == ["OC2", "OC3"]
+
+
+def test_a_test_asked_only_when_recorded_is_not_run_without_references(monkeypatch):
+    recorded_only = {f"{_PCS_BENCHMARK}.OC1"}
+
+    class _WithoutReferences(DummyProducer):
+        def has_reference_curves_path(self):
+            return False
+
+    names = _run_operating_conditions(monkeypatch, _WithoutReferences(), recorded_only)
+
+    assert names == ["OC2", "OC3"]
+
+
 def _internal_node1_figures(bm: Benchmark) -> list:
     return [
         (figure.name, figure.variables, figure.in_pdf)

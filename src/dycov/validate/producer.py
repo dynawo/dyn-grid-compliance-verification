@@ -29,6 +29,9 @@ from dycov.sanity_checks import file_checks, parameter_checks, topology_checks
 
 _REQUIRED_PARAMETERS = ("u_nom", "q_min", "q_max", "p_max_injection")
 _CONSUMPTION_PARAMETER = "p_max_consumption"
+# The types of installation the DTR gives model validation fiches to, the first one being that of
+# an installation whose INI file declares none
+_INSTALLATION_TYPES = ("B", "C", "D")
 
 
 def _check_renamed_parameters(producer_config, section):
@@ -91,6 +94,7 @@ class ModelProducer(Producer):
 
         self._filename = None
         self._sim_type = None
+        self._installation_type = None
 
         dycov_logging.get_logger("Producer").debug("Initializing Producer:")
         if self._is_dynawo_model:
@@ -250,6 +254,37 @@ class ModelProducer(Producer):
         else:
             raise ValueError("Model validation does not support the modeled generator type")
 
+        self._installation_type = self.__read_installation_type()
+
+    def __read_installation_type(self) -> str:
+        """Reads the type of the installation, which its Zone 3 INI file declares, the INI file of
+        the complete installation.
+
+        Returns
+        -------
+        str
+            The type of the installation in the grid code.
+
+        Raises
+        ------
+        ValueError
+            If the type declared is not one the DTR gives model validation fiches to.
+        """
+        self._zone = 3
+        installation_type = (
+            self.__read_producer_ini()
+            .get("DEFAULT", "installation_type", fallback=_INSTALLATION_TYPES[0])
+            .strip()
+            .upper()
+        )
+        self._zone = 0
+        if installation_type not in _INSTALLATION_TYPES:
+            raise ValueError(
+                f"The Zone 3 INI file declares installation_type = {installation_type}; it must "
+                f"be one of {', '.join(_INSTALLATION_TYPES)}"
+            )
+        return installation_type
+
     def __set_dynawo_model_validation_type(self):
         self._zone = 1
         generators_z1 = list()
@@ -371,6 +406,7 @@ class ModelProducer(Producer):
         self.u_nom = float(producer_config.get(default_section, "u_nom"))
         self.topology = producer_config.get(default_section, "topology")
         self.s_nom = float(producer_config.get(default_section, "s_nom", fallback=self._s_nref))
+        self.x_eff = producer_config.getfloat("GFM Parameters", "Xeff", fallback=None)
 
     def __init_model(self) -> None:
         """Initializes the Producer-dependent model."""

@@ -193,3 +193,41 @@ def test_get_filenames_ignores_a_zone_name_above_the_curves_directory(tmp_path, 
     producer = _producer_with_curves(_curves_tree(tmp_path / enclosing_folder))
 
     assert producer.get_filenames() == ["Producer"]
+
+
+def _producer_reading_its_zone3(tmp_path: Path, zone3_ini: str) -> ModelProducer:
+    curves_path = _curves_tree(tmp_path)
+    (curves_path / "Zone3" / "Producer.ini").write_text(zone3_ini)
+    producer = _producer_with_curves(curves_path)
+    producer._filename = None
+    producer._zone = 0
+    return producer
+
+
+@pytest.mark.parametrize(
+    "declared, expected",
+    [("installation_type = C\n", "C"), ("installation_type = d\n", "D"), ("", "B")],
+)
+def test_the_installation_type_is_declared_in_the_zone3_ini(tmp_path, declared, expected):
+    producer = _producer_reading_its_zone3(tmp_path, _PRODUCER_INI + declared)
+
+    assert producer._ModelProducer__read_installation_type() == expected
+
+
+def test_an_installation_type_without_a_fiche_is_rejected(tmp_path):
+    producer = _producer_reading_its_zone3(tmp_path, _PRODUCER_INI + "installation_type = E\n")
+
+    with pytest.raises(ValueError, match="installation_type"):
+        producer._ModelProducer__read_installation_type()
+
+
+def test_the_effective_reactance_of_a_grid_forming_unit_is_read_from_its_ini(monkeypatch):
+    producer = _producer_reading(monkeypatch, _PRODUCER_INI + "[GFM Parameters]\nXeff = 0.27\n")
+
+    assert producer.x_eff == pytest.approx(0.27)
+
+
+def test_a_unit_that_declares_no_effective_reactance_has_none(monkeypatch):
+    producer = _producer_reading(monkeypatch, _PRODUCER_INI)
+
+    assert producer.x_eff is None

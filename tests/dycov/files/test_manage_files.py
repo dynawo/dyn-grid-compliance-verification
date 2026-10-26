@@ -29,6 +29,7 @@ from dycov.files.manage_files import (
     get_dynawo_version,
     get_latex_version,
     get_uv_version,
+    has_curves,
     list_directories,
     move_report,
     read_curves,
@@ -530,3 +531,31 @@ def test_check_output_dir_no_overwrite(tmp_path):
         res = check_output_dir(d)
 
     assert res is True
+
+
+def test_a_test_has_curves_when_its_file_and_its_dictionary_are_there(tmp_path):
+    _write_curves_ini(tmp_path)
+    _write_curve_pair(tmp_path, CANONICAL_NAME)
+
+    assert has_curves(tmp_path, CANONICAL_NAME) is True
+    assert has_curves(tmp_path, "PCS_RTE-I2.USetPointStep.BReactance") is False
+
+
+def test_a_test_has_the_curves_the_index_renames_for_it(tmp_path):
+    _write_curves_ini(tmp_path, "records/measured.csv")
+    _write_curve_pair(tmp_path / "records", "measured")
+
+    assert has_curves(tmp_path, CANONICAL_NAME) is True
+
+
+def test_a_curve_without_its_dictionary_is_no_curve(tmp_path):
+    _write_curves_ini(tmp_path)
+    (tmp_path / f"{CANONICAL_NAME}.csv").write_text("time;P\n0;1\n")
+
+    assert has_curves(tmp_path, CANONICAL_NAME) is False
+
+
+def test_a_directory_without_index_has_no_curves(tmp_path):
+    _write_curve_pair(tmp_path, CANONICAL_NAME)
+
+    assert has_curves(tmp_path, CANONICAL_NAME) is False

@@ -10,6 +10,7 @@
 
 import pytest
 
+from dycov.configuration.cfg import config
 from dycov.curves.curves import ProducerCurves
 from dycov.curves.dynawo.io.table import TableFile
 from dycov.model.parameters import GenInit
@@ -125,3 +126,62 @@ def test_complete_file_handles_invalid_step_value_type(working_dir, tso_gen, eve
     # Should raise ValueError when trying to convert step_value to float
     with pytest.raises(ValueError):
         table.complete_file(working_dir, tso_gen, params)
+
+
+class _NumericCurves(DummyProducerCurves):
+    def obtain_value(self, value_definition, origin=None):
+        return float(value_definition)
+
+
+@pytest.fixture
+def grid_events(tmp_path):
+    def write(**event):
+        pcs = tmp_path / "PCSDescription.ini"
+        pcs.write_text("[BM.OC.Event]\n" + "".join(f"{k} = {v}\n" for k, v in event.items()))
+        config.load_pcs_config(pcs)
+        table = tmp_path / "TableInfiniteBus.txt"
+        table.write_text(
+            "bus_upu={{ bus_upu }}\n"
+            "bus_uphase={{ bus_uphase }}\n"
+            "bus_omega0pu={{ bus_omega0pu }}\n"
+            "bus_omegapu={{ bus_omegapu }}\n"
+            "end_frequency_settling={{ end_frequency_settling }}\n"
+        )
+        return tmp_path
+
+    yield write
+    config.load_pcs_config(None)
+
+
+def _completed(working_dir, tso_gen, duration=0.0):
+    params = {"start_time": 20.0, "duration_time": duration, "connect_to": "", "step_value": 0}
+    TableFile(_NumericCurves(), "BM", "OC").complete_file(working_dir, tso_gen, params)
+    return dict(
+        line.split("=") for line in (working_dir / "TableInfiniteBus.txt").read_text().split()
+    )
+
+
+def test_a_grid_without_events_holds_its_voltage_phase_and_frequency(grid_events, tso_gen):
+    table = _completed(grid_events(), tso_gen)
+
+    assert float(table["bus_upu"]) == pytest.approx(tso_gen.u0)
+    assert float(table["bus_uphase"]) == 0.0
+    assert float(table["bus_omega0pu"]) == pytest.approx(1.0)
+    assert float(table["bus_omegapu"]) == pytest.approx(1.0)
+
+
+def test_the_steps_of_the_grid_voltage_and_of_its_phase(grid_events, tso_gen):
+    table = _completed(grid_events(grid_voltage_step=-0.05, grid_phase_jump=0.12), tso_gen)
+
+    assert float(table["bus_upu"]) == pytest.approx(tso_gen.u0 - 0.05)
+    assert float(table["bus_uphase"]) == pytest.approx(0.12)
+
+
+def test_a_frequency_profile_starts_once_the_grid_has_settled_at_its_initial_frequency(
+    grid_events, tso_gen
+):
+    table = _completed(grid_events(grid_frequency0=49.5, grid_rocof=0.5), tso_gen, duration=3.0)
+
+    assert float(table["bus_omega0pu"]) == pytest.approx(49.5 / 50.0)
+    assert float(table["bus_omegapu"]) == pytest.approx(51.0 / 50.0)
+    assert float(table["end_frequency_settling"]) == pytest.approx(10.0)
