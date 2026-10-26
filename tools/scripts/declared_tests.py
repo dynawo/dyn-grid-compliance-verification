@@ -6,7 +6,8 @@ of the rest would then be written by nothing.
 
 What must run is what the PCS of the tool declare plus what the example declares for itself: the
 tests of Fiche F16, which the fiche does not fix and regenerate_f16.sh writes into the example
-before the run.
+before the run. The PCS of the tool are read in the version of the installation type the example
+declares, and a test they run only when it is recorded is not one that must run.
 """
 
 import argparse
@@ -39,21 +40,42 @@ FELL_OVER = (
 )
 
 
+def installation_type(example: str) -> str:
+    """The type of the installation the Zone 3 INI of an example declares, B when it does not."""
+    producer = configparser.ConfigParser(inline_comment_prefixes=("#",))
+    producer.read(Path("examples/Model", example, "Dynawo", "Zone3", "Producer.ini"))
+    return producer.get("DEFAULT", "installation_type", fallback="B").strip().upper()
+
+
+def _version(description: Path, installation: str) -> list:
+    """The version of a PCS description for an installation type, which patches it, as the tool
+    picks it: a Type<types>.ini next to it whose name holds the type."""
+    versions = sorted(description.parent.glob("Type*.[iI][nN][iI]"))
+    return [version for version in versions if installation in version.stem[len("Type") :]][:1]
+
+
 def declared_tests(family: str, example: str) -> set:
     """The operating conditions the PCS of a family declare, which is what must run, plus the
     ones the example declares with its reference curves."""
     declared = set()
+    installation = installation_type(example)
     descriptions = sorted((TEMPLATES / family).glob("[!.]*/PCSDescription.ini")) + sorted(
         Path("examples/Model", example, "ReferenceCurves").glob("*Description.ini")
     )
     for description in descriptions:
         pcs_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         pcs_config.optionxform = str
-        pcs_config.read(description)
+        pcs_config.read([description, *_version(description, installation)])
         for pcs, benchmarks in pcs_config.items("PCS-Benchmarks"):
             for benchmark in filter(None, benchmarks.split(",")):
                 conditions = pcs_config.get("PCS-OperatingConditions", f"{pcs}.{benchmark}")
-                declared.update((pcs, benchmark, oc) for oc in conditions.split(","))
+                declared.update(
+                    (pcs, benchmark, oc)
+                    for oc in conditions.split(",")
+                    if not pcs_config.getboolean(
+                        f"{pcs}.{benchmark}.{oc}", "only_with_reference", fallback=False
+                    )
+                )
     return declared
 
 

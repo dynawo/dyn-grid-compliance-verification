@@ -64,7 +64,7 @@ if [ "$reuse" = false ]; then
 fi
 mkdir -p "$working_path"
 
-declare -a examples=("${MODEL_EXAMPLES_IEC[@]}" "${MODEL_EXAMPLES_WECC[@]}")
+declare -a examples=("${MODEL_EXAMPLES_IEC[@]}" "${MODEL_EXAMPLES_WECC[@]}" "${MODEL_EXAMPLES_GFM[@]}")
 declare -a options=(-l "$launcher" -o "$working_path")
 [ "$reuse" = true ] && options+=(--reuse)
 

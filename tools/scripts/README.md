@@ -72,8 +72,9 @@ Running with **no options** will:
 -o, --output <path>     Output/results path (default: ../Results)
 -r, --remove            Remove the output path if it exists (clean run)
 
---iec                   Include only IEC families (disables WECC)
---wecc                  Include only WECC families (disables IEC)
+--iec                   Include only IEC families (disables WECC and GFM)
+--wecc                  Include only WECC families (disables IEC and GFM)
+--gfm                   Include only Grid Forming families (disables IEC and WECC)
 
 -v, --validate          Run only the Model Validation
 -p, --performance       Run only the Electrical Performance Verification
@@ -84,8 +85,8 @@ Running with **no options** will:
 
 ### Defaults & interactions
 
-*   Defaults: `iec_models=true`, `wecc_models=true`, `validate=true`, `performance=true`, `generate=true`.
-*   `--iec` disables WECC; `--wecc` disables IEC.
+*   Defaults: `iec_models=true`, `wecc_models=true`, `gfm_models=true`, `validate=true`, `performance=true`, `generate=true`.
+*   `--iec`, `--wecc` and `--gfm` each keep only their own family.
 *   Phase selectors are **exclusive**: choosing one sets the other two to `false`.
 *   `--remove` cleans the output dir before the run.
 
@@ -99,6 +100,7 @@ Running with **no options** will:
 *   **WECC Wind**: `WECC31`, `WECC32`, `WECC4A`, `WECC4B` (`WECC4`, the multi-generator example, is not usable yet and is left out)
 *   **WECC PV**: `WECCCurrentSource`, `WECCVoltageSource1`, `WECCVoltageSource2`, `WECCVoltageSource3`, `WECCVoltageSource4`
 *   **WECC BESS**: `WECC`
+*   **Grid Forming BESS**: `GridFormingDroop`, an installation of type C validated against the Fiche I16.2: its Zone 1 unit is the droop Grid Forming converter of Dynawo, and its Zone 3 plant that of the `WECC` example
 *   Paths per model:
     *   Input: `${examples_path}/Model/<Family>/<Model>/Dynawo`
     *   References: `${examples_path}/Model/<Family>/<Model>/ReferenceCurves`

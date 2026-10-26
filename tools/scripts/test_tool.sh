@@ -40,6 +40,7 @@ usage() {
     echo "  -r, --remove: remove the output path if it exists"
     echo "  --iec: execute only IEC models"
     echo "  --wecc: execute only WECC models"
+    echo "  --gfm: execute only Grid Forming models"
     echo "  -v, --validate: execute only model validation"
     echo "  -p, --performance: execute only performance verification"
     echo "  -g, --generate: execute only envelope generation (GFM)"
@@ -88,6 +89,9 @@ selected_model_examples() {
     fi
     if [ "$wecc_models" = true ]; then
         examples+=("${MODEL_EXAMPLES_WECC[@]}")
+    fi
+    if [ "$gfm_models" = true ]; then
+        examples+=("${MODEL_EXAMPLES_GFM[@]}")
     fi
     printf '%s\n' "${examples[@]}"
 }
@@ -329,6 +333,7 @@ PYCODE
 launcher="dynawo.sh"
 iec_models=true  # by default, add IEC models
 wecc_models=true # by default, add WECC models
+gfm_models=true  # by default, add Grid Forming models
 # Accumulative execution flags: start disabled; we'll enable after parsing
 # If user does not specify any (-v/-p/-g), we will enable all three.
 validate=false
@@ -349,10 +354,17 @@ while (($#)); do
     case "$1" in
         --iec)
             wecc_models=false
+            gfm_models=false
             shift
             ;;
         --wecc)
             iec_models=false
+            gfm_models=false
+            shift
+            ;;
+        --gfm)
+            iec_models=false
+            wecc_models=false
             shift
             ;;
         -v | --validate)

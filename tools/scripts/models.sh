@@ -25,6 +25,9 @@ MODEL_EXAMPLES_WECC=(
     "Wind/WECC4A"
     "Wind/WECC4B"
 )
+MODEL_EXAMPLES_GFM=(
+    "BESS/GridFormingDroop"
+)
 
 # The producer curves of each family are the curves of one of the examples above.
 PRODUCER_CURVES_SOURCE=(
