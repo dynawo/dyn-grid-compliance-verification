@@ -274,6 +274,33 @@ def convert_columns(df_curves: pd.DataFrame, curves_dict: dict) -> None:
             curves_dict[col] = df_curves[col].tolist()
 
 
+def _get_node2_powers(generators: list, df_curves: pd.DataFrame) -> None:
+    """Derive the powers at Node2 of a unit whose model gives the voltage and the current there,
+    but not the powers, as the IEC turbines do.
+
+    Parameters
+    ----------
+    generators : list
+        A list of generator objects, which contain information about the generator IDs.
+    df_curves : pd.DataFrame
+        The DataFrame containing the translated curves, where the voltage and the injected current
+        at Node2 are complex; it gains the active and reactive power at Node2 in s_nref pu, and
+        loses the current.
+    """
+    for generator in generators:
+        voltage_col = f"{generator.id}_GEN_VoltageNode2"
+        current_col = f"{generator.id}_GEN_CurrentNode2"
+        if voltage_col not in df_curves.columns or current_col not in df_curves.columns:
+            continue
+
+        power = np.asarray(df_curves[voltage_col].tolist(), dtype=np.complex128) * np.conj(
+            np.asarray(df_curves[current_col].tolist(), dtype=np.complex128)
+        )
+        df_curves[f"{generator.id}_GEN_ActivePowerNode2"] = power.real
+        df_curves[f"{generator.id}_GEN_ReactivePowerNode2"] = power.imag
+        _drop_columns(df_curves, [current_col])
+
+
 def _get_node2_curves(
     snref: float,
     snom: float,
@@ -568,6 +595,7 @@ def build_output_curves(
     ).tolist()
 
     _get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
+    _get_node2_powers(generators, df_curves)
     _get_node2_curves(s_nref, s_nom, generators, df_curves, curves_dict)
     _get_controlled_point_curves(s_nref, s_nom, generators, df_curves, curves_dict)
     _get_tso_synchronous_condenser_curves(s_nref, s_nom, df_curves, curves_dict)

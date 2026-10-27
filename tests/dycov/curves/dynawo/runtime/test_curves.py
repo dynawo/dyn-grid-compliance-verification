@@ -20,6 +20,7 @@ from dycov.curves.dynawo.runtime._curves import (
     _get_magnitude_controlled_by_avr,
     _get_modulus,
     _get_node2_curves,
+    _get_node2_powers,
     convert_columns,
     create_curves,
     prepare_complex_column,
@@ -278,6 +279,35 @@ def test_injector_terminal_currents_divided_by_terminal_voltage():
     assert curves_dict["GEN1_GEN_ActiveCurrentNode2"] == pytest.approx([1.0, 4.0])
     assert curves_dict["GEN1_GEN_ReactiveCurrentNode2"] == pytest.approx([0.5, 2.0])
     assert df_curves.columns.empty
+
+
+def test_the_powers_at_node2_come_from_its_voltage_and_current_when_the_model_gives_none():
+    df_curves = pd.DataFrame(
+        {
+            "GEN1_GEN_VoltageNode2": [complex(1.0, 0.0), complex(0.0, 0.5)],
+            "GEN1_GEN_CurrentNode2": [complex(0.5, -0.2), complex(0.4, 0.2)],
+        }
+    )
+
+    _get_node2_powers([DummyGenerator("GEN1")], df_curves)
+
+    assert list(df_curves["GEN1_GEN_ActivePowerNode2"]) == pytest.approx([0.5, 0.1])
+    assert list(df_curves["GEN1_GEN_ReactivePowerNode2"]) == pytest.approx([0.2, 0.2])
+    assert "GEN1_GEN_CurrentNode2" not in df_curves.columns
+
+
+def test_the_powers_at_node2_a_model_gives_are_kept():
+    df_curves = pd.DataFrame(
+        {
+            "GEN1_GEN_VoltageNode2": [complex(1.0, 0.0)],
+            "GEN1_GEN_ActivePowerNode2": [0.7],
+        }
+    )
+
+    _get_node2_powers([DummyGenerator("GEN1")], df_curves)
+
+    assert list(df_curves["GEN1_GEN_ActivePowerNode2"]) == pytest.approx([0.7])
+    assert "GEN1_GEN_ReactivePowerNode2" not in df_curves.columns
 
 
 def test_the_injector_currents_are_emitted_under_their_own_name():
