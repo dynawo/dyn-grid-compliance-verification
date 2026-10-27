@@ -274,23 +274,23 @@ def convert_columns(df_curves: pd.DataFrame, curves_dict: dict) -> None:
             curves_dict[col] = df_curves[col].tolist()
 
 
-def _get_injector_terminal_curves(
+def _get_node2_curves(
     snref: float,
     snom: float,
     generators: list,
     df_curves: pd.DataFrame,
     curves_dict: dict,
 ) -> None:
-    """Derive the active and reactive current curves of the generator injectors from the power
-    and voltage curves Dynawo provides, applying the appropriate base conversion.
+    """Derive the active and reactive current curves at Node2 from the power and voltage curves
+    Dynawo provides, applying the appropriate base conversion.
 
-    Dynawo gives a power at the injector terminal, so the current is a curve the tool computes,
-    and it carries its own name: the dictionary declares what Dynawo provides, this function
-    emits what the criteria compare.
+    Dynawo gives a power at Node2, the converter terminal, so the current is a curve the tool
+    computes, and it carries its own name: the dictionary declares what Dynawo provides, this
+    function emits what the criteria compare.
 
-    The injector terminal sits behind the unit's own impedance, so its voltage is never
-    exactly zero and the division always has an answer, however small the voltage gets: the
-    power vanishes with it and the quotient is the current all the same. Zero is guarded
+    Node2 sits behind the unit's own impedance, so its voltage is never exactly zero and the
+    division always has an answer, however small the voltage gets: the power vanishes with it
+    and the quotient is the current all the same. Zero is guarded
     against because nothing forbids it, not because it is expected — unlike the connection
     point, which a bolted fault does take to zero.
 
@@ -313,9 +313,9 @@ def _get_injector_terminal_curves(
     columns_to_remove = []
 
     for generator in generators:
-        voltage_col = f"{generator.id}_GEN_VoltageInjTerminal"
-        active_power_col = f"{generator.id}_GEN_ActivePowerInjTerminal"
-        reactive_power_col = f"{generator.id}_GEN_ReactivePowerInjTerminal"
+        voltage_col = f"{generator.id}_GEN_VoltageNode2"
+        active_power_col = f"{generator.id}_GEN_ActivePowerNode2"
+        reactive_power_col = f"{generator.id}_GEN_ReactivePowerNode2"
 
         has_all_columns = (
             voltage_col in df_curves.columns
@@ -334,10 +334,10 @@ def _get_injector_terminal_curves(
 
         curves_dict[voltage_col] = voltage
         valid_mask = np.isfinite(voltage_array) & (voltage_array != 0.0)
-        curves_dict[f"{generator.id}_GEN_ActiveCurrentInjTerminal"] = np.divide(
+        curves_dict[f"{generator.id}_GEN_ActiveCurrentNode2"] = np.divide(
             active_power, voltage_array, out=np.zeros_like(active_power), where=valid_mask
         ).tolist()
-        curves_dict[f"{generator.id}_GEN_ReactiveCurrentInjTerminal"] = np.divide(
+        curves_dict[f"{generator.id}_GEN_ReactiveCurrentNode2"] = np.divide(
             reactive_power, voltage_array, out=np.zeros_like(reactive_power), where=valid_mask
         ).tolist()
 
@@ -384,8 +384,8 @@ def _get_controlled_point_curves(
         A dictionary to store the converted power curves.
     """
     for generator in generators:
-        active_power_col = f"{generator.id}_GEN_ActivePowerControlledPu"
-        reactive_power_col = f"{generator.id}_GEN_ReactivePowerControlledPu"
+        active_power_col = f"{generator.id}_GEN_ActivePowerControlledNode"
+        reactive_power_col = f"{generator.id}_GEN_ReactivePowerControlledNode"
 
         if not all(col in df_curves.columns for col in (active_power_col, reactive_power_col)):
             continue
@@ -568,7 +568,7 @@ def build_output_curves(
     ).tolist()
 
     _get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
-    _get_injector_terminal_curves(s_nref, s_nom, generators, df_curves, curves_dict)
+    _get_node2_curves(s_nref, s_nom, generators, df_curves, curves_dict)
     _get_controlled_point_curves(s_nref, s_nom, generators, df_curves, curves_dict)
     _get_tso_synchronous_condenser_curves(s_nref, s_nom, df_curves, curves_dict)
     _get_tso_load_curves(s_nref, s_nom, df_curves, curves_dict)

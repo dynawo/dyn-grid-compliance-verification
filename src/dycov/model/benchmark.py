@@ -581,8 +581,8 @@ class Benchmark:
             FigureDescription(
                 name="fig_I",
                 variables=[
-                    {"type": "generator", "variable": "ActiveCurrentInjTerminal"},
-                    {"type": "generator", "variable": "ReactiveCurrentInjTerminal"},
+                    {"type": "generator", "variable": "ActiveCurrentNode2"},
+                    {"type": "generator", "variable": "ReactiveCurrentNode2"},
                 ],
                 ylabel=i_label,
                 tolerance_band=tolerance_band,
@@ -597,7 +597,7 @@ class Benchmark:
         self._figures_description.append(
             FigureDescription(
                 name="fig_UIt",
-                variables=[{"type": "generator", "variable": "VoltageInjTerminal"}],
+                variables=[{"type": "generator", "variable": "VoltageNode2"}],
                 ylabel="V (pu base Unom)",
                 setpoint=self.__setpoint_driving("injector_voltage"),
             )
