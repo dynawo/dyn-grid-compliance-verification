@@ -131,7 +131,7 @@ def ratio_of_tap(tap: int, n_prises: int, r_min: float, r_max: float) -> float:
     tap: int
         Tap position, from 0 to *n_prises*.
     n_prises: int
-        Number of taps of the changer.
+        Highest tap position: the changer has ``n_prises + 1`` taps (``NbTap``).
     r_min: float
         Ratio of the lowest tap.
     r_max: float

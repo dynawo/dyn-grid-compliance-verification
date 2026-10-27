@@ -39,6 +39,11 @@ To add support for a new Dynawo model, find the INI file corresponding to
 the equipment type and add the mapping from the model's Dynawo variable names
 to the DyCoV generic keywords described below.
 
+An entry never names a read-only parameter of the model: Dynawo computes those
+itself and ignores, without a word, the value a PAR gives them. When Dynawo is
+installed, ``tests/dycov/curves/dynawo/dictionary`` checks every entry against
+the model descriptors.
+
 
 Generic keywords by equipment type
 ------------------------------------
@@ -234,9 +239,6 @@ Initialization:
 
 * ``'Tap'``
     Current tap position.
-
-An entry never names a read-only parameter of the model: Dynawo computes those
-itself and ignores, without a word, the value a PAR gives them.
 
 
 Control Modes

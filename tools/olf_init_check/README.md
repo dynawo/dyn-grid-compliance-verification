@@ -73,7 +73,7 @@ grid needs one).
 | `z3_Saux_islanding_pv` | 3 | S+Aux | InertialGrid | islanding: TSO `Main_load` sits on the PDR |
 | `z3_Saux_linefault_bess` | 3 | S+Aux | InfiniteBus+LineFault | fault grid line (pre-fault steady state) |
 | `z3_Maux_2gen_wind` | 3 | M+Aux | InfiniteBus | two units on the internal bus, no per-unit transformer |
-| `z3_Si_offnominal_tap_wind` | 3 | S+i | InfiniteBus | internal line + `Main_Xfmr` at tap 1.05 |
+| `z3_Si_offnominal_tap_wind` | 3 | S+i | InfiniteBus | internal line + `Main_Xfmr` at ratio 1.05 (tap 11) |
 | `z3_Sauxi_infbus_sm` | 3 | S+Aux+i | InfiniteBus | fullest topology; synchronous machine |
 | `z3_S_equivmachine_sm` | 3 | S | EquivMachine | Pcs I8: the TSO's own machine is the grid |
 
