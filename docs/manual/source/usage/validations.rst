@@ -187,9 +187,9 @@ voltage magnitude at the converter output) are measured at **InternalNode2**,
 the node between the unit and its transformer (the node called *Node2* in the
 DTR). Both nodes are labeled in the network schema of each report. These
 curves are read from the unit model itself at the converter terminal — the LV
-side of its internal transformer — where the voltage never reaches zero during
-a fault; samples where it is not available are discarded rather than turned
-into a current.
+side of the unit's transformer, whether the model holds that transformer or not
+— where the voltage never reaches zero during a fault; samples where it is not
+available are discarded rather than turned into a current.
 
 Zone 1 compares six curves, in every one of its benchmarks: the voltage at
 InternalNode1, the voltage at InternalNode2, the active and reactive power at
