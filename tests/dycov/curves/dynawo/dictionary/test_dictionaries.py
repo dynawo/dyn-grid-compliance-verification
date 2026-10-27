@@ -28,6 +28,8 @@ _DICTIONARIES = Path(dictionary.__file__).parent
 # The control modes name the parameter sets of a mode, not a model.
 _NOT_MODELS = {"Control_Modes.ini"}
 _DYNAWO_NS = "{http://www.rte-france.com/dynawo}"
+# A flag that no parameter of the model holds is stated in the dictionary itself.
+_STATED_FLAGS = {"true", "false"}
 
 
 def _models():
@@ -40,7 +42,9 @@ def _models():
         parser.read(path)
         for lib in parser.sections():
             entries = {
-                key: value.lstrip("-") for key, value in parser.items(lib) if key != "family"
+                key: value.lstrip("-")
+                for key, value in parser.items(lib)
+                if key != "family" and value.lower() not in _STATED_FLAGS
             }
             models.append(pytest.param(lib, entries, id=lib))
     return models
