@@ -584,8 +584,8 @@ def test_calculate_others_keeps_the_worst_static_difference():
 def _make_injection_curves(active_current, reactive_current):
     return _make_pdr_curves(
         **{
-            "G1_GEN_ActiveCurrentInjTerminal": active_current,
-            "G1_GEN_ReactiveCurrentInjTerminal": reactive_current,
+            "G1_GEN_ActiveCurrentNode2": active_current,
+            "G1_GEN_ReactiveCurrentNode2": reactive_current,
         }
     )
 

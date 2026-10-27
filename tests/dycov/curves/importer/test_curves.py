@@ -247,6 +247,30 @@ def test_producer_curves_name_the_network_frequency_after_the_unit_frequency(
     assert list(curves_df["NetworkFrequencyPu"]) == pytest.approx([0.99, 0.99])
 
 
+@pytest.mark.parametrize("zone", [1, 3])
+def test_reference_curves_read_the_names_the_generator_curves_had_before_the_nodes(
+    tmp_path, tool_config, zone
+):
+    ref_dir = tmp_path / "ReferenceCurves"
+    _write_curves(ref_dir)
+    _overwrite_dict(
+        ref_dir,
+        f"{_FILLED_METADATA}\n[Curves-Dictionary]\ntime = time\n"
+        "WT_GEN_VoltageInjTerminal = U2\nWT_GEN_ActiveCurrentInjTerminal = Ip2\n",
+    )
+    (ref_dir / "Producer" / f"{_CFG_OC_NAME}.csv").write_text(
+        "time;U2;Ip2\n0.0;1.0;0.8\n20.0;0.9;0.7\n"
+    )
+    imported_curves = ImportedCurves(DummyProducer(zone=zone))
+
+    _, curves_df = imported_curves.obtain_reference_curve(
+        _make_working_dir(tmp_path), "Producer", _PCS, _BM, _OC, ref_dir
+    )
+
+    assert list(curves_df["WT_GEN_VoltageNode2"]) == pytest.approx([1.0, 0.9])
+    assert list(curves_df["WT_GEN_ActiveCurrentNode2"]) == pytest.approx([0.8, 0.7])
+
+
 def test_imported_curves_keep_the_network_frequency_they_declare(tmp_path, tool_config):
     ref_dir = tmp_path / "ReferenceCurves"
     _write_frequency_curves(

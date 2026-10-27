@@ -154,11 +154,11 @@ def _make_window_manager(calculated=None, windows_raise=False, reference=None):
 def _make_zone1_curves(controlled_active_power=None):
     """The curves Zone 1 compares: the node 1 voltage plus the converter magnitudes."""
     curves = _make_pdr_curves()
-    curves["WT_GEN_VoltageInjTerminal"] = [1.0, 1.0, 1.0, 1.0]
-    curves["WT_GEN_ActivePowerControlledPu"] = controlled_active_power or [0.5, 0.5, 0.6, 0.6]
-    curves["WT_GEN_ReactivePowerControlledPu"] = [0.1, 0.1, 0.1, 0.1]
-    curves["WT_GEN_ActiveCurrentInjTerminal"] = [0.5, 0.5, 0.6, 0.6]
-    curves["WT_GEN_ReactiveCurrentInjTerminal"] = [0.1, 0.1, 0.1, 0.1]
+    curves["WT_GEN_VoltageNode2"] = [1.0, 1.0, 1.0, 1.0]
+    curves["WT_GEN_ActivePowerControlledNode"] = controlled_active_power or [0.5, 0.5, 0.6, 0.6]
+    curves["WT_GEN_ReactivePowerControlledNode"] = [0.1, 0.1, 0.1, 0.1]
+    curves["WT_GEN_ActiveCurrentNode2"] = [0.5, 0.5, 0.6, 0.6]
+    curves["WT_GEN_ReactiveCurrentNode2"] = [0.1, 0.1, 0.1, 0.1]
     return curves
 
 
@@ -416,7 +416,7 @@ def test_check_ramp_only_checks_the_enabled_validations():
 def _make_step_manager(zone=3):
     """Calculated active power steps 1 s after the event, the reference one 2 s after."""
     time = [0.0, 1.0, 2.0, 3.0, 4.0]
-    name = "BusPDR_BUS_ActivePower" if zone == 3 else "WT_GEN_ActivePowerControlledPu"
+    name = "BusPDR_BUS_ActivePower" if zone == 3 else "WT_GEN_ActivePowerControlledNode"
     calculated = pd.DataFrame({"time": time, name: [0.0, 0.0, 1.0, 1.0, 1.0]})
     reference = pd.DataFrame({"time": time, name: [0.0, 0.0, 0.0, 1.0, 1.0]})
     return DummyCurvesManager(calculated=calculated, reference=reference)
@@ -1001,7 +1001,7 @@ def test_calculate_in_zone1_takes_the_active_power_from_the_controlled_point():
         setpoint_variation=0.1,
     )
 
-    assert results["after"]["WT_GEN_ActivePowerControlledPu"]["mae"] > 0.0
+    assert results["after"]["WT_GEN_ActivePowerControlledNode"]["mae"] > 0.0
     assert "BusPDR_BUS_ActivePower" not in results["after"]
 
 
@@ -1356,11 +1356,11 @@ def test_get_measurement_names_in_zone1_asks_for_the_converter_magnitudes():
 
     assert names == [
         "BusPDR_BUS_Voltage",
-        "_GEN_VoltageInjTerminal",
-        "_GEN_ActivePowerControlledPu",
-        "_GEN_ReactivePowerControlledPu",
-        "_GEN_ActiveCurrentInjTerminal",
-        "_GEN_ReactiveCurrentInjTerminal",
+        "_GEN_VoltageNode2",
+        "_GEN_ActivePowerControlledNode",
+        "_GEN_ReactivePowerControlledNode",
+        "_GEN_ActiveCurrentNode2",
+        "_GEN_ReactiveCurrentNode2",
     ]
 
 

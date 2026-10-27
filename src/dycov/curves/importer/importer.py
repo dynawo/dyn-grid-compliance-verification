@@ -125,7 +125,7 @@ class CurvesImporter:
             curves_dict = {
                 channel: naming.to_internal_name(name) for channel, name in curves_dict.items()
             }
-        return curves_dict
+        return {channel: naming.from_legacy_name(name) for channel, name in curves_dict.items()}
 
     @property
     def metadata(self) -> CurvesMetadata:
