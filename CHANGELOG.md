@@ -124,8 +124,9 @@ unit take those names:
 | `<unit>_GEN_ActivePowerControlledPu`    | `<unit>_GEN_ActivePowerControlledNode`   |
 | `<unit>_GEN_ReactivePowerControlledPu`  | `<unit>_GEN_ReactivePowerControlledNode` |
 
-The results, the reports and the dictionaries the tool scaffolds use the new names. A dictionary
-of curves written with the previous ones is still read as it is.
+The results, the reports, the dictionaries the tool scaffolds and the example workbooks use the
+new names. A dictionary of curves written with the previous ones is still read as it is, and so
+is a curve file whose columns carry them.
 
 The keys of the Dynawo dictionaries change the same way. A configuration that lists its own
 `[CurvesVariables]` has to list them by their new names — `ActivePowerNode2`,
@@ -134,7 +135,8 @@ The keys of the Dynawo dictionaries change the same way. A configuration that li
 dictionaries do not know asks Dynawo for nothing. In the dictionary of a unit model,
 `MagnitudeControlledByAVRPu` becomes `VoltageControlledNode`, and the operating point at the PCC
 and `PPCLocal` are gone: they belong to the plant controller. The tool wrote that operating point
-into the PAR of a unit, where Dynawo ignored it.
+into the PAR of a unit, where Dynawo ignored it. The storage unit's `VoltageControlledNode` names
+`BESS_reecC_UPu`: it named a variable the model does not have.
 
 The IEC wind turbines of zone 1 are now measured at Node2 itself. Their voltage and powers were
 read on the grid side of their low-voltage transformer, which is Node1 when that transformer is

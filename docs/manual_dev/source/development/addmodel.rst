@@ -140,7 +140,7 @@ Node1 or at Node2 — the controlled node:
   converter injects at the controlled node (pu). Required for Model Validation.
 * ``'VoltageControlledNode'`` — the voltage at the controlled node (pu). It takes the
   place of ``'MagnitudeControlledByAVRPu'``, which is the magnitude a plant controller
-  regulates.
+  regulates. No test asks for it yet.
 
 The initial values at the PCC (``'ActivePowerPcc0Pu'``, ``'ReactivePowerPcc0Pu'``,
 ``'VoltagePcc0Pu'``, ``'PhasePcc0'``) and ``'PPCLocal'`` belong to the plant controller: only
