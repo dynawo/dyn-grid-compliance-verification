@@ -129,18 +129,18 @@ of curves written with the previous ones is still read as it is.
 
 The keys of the Dynawo dictionaries change the same way. A configuration that lists its own
 `[CurvesVariables]` has to list them by their new names — `ActivePowerNode2`,
-`ReactivePowerNode2`, `VoltageNode2`, `VoltageNode2Re`, `VoltageNode2Im`,
-`ActivePowerControlledNode`, `ReactivePowerControlledNode` — because a name the dictionaries do
-not know asks Dynawo for nothing. In the dictionary of a unit model, `MagnitudeControlledByAVRPu`
-becomes `VoltageControlledNode`, and the operating point at the PCC and `PPCLocal` are gone: they
-belong to the plant controller, and the tool wrote them into the PAR of a unit, where Dynawo
-ignored them.
+`ReactivePowerNode2`, `VoltageNode2`, `VoltageNode2Re`, `VoltageNode2Im`, `CurrentNode2Re`,
+`CurrentNode2Im`, `ActivePowerControlledNode`, `ReactivePowerControlledNode` — because a name the
+dictionaries do not know asks Dynawo for nothing. In the dictionary of a unit model,
+`MagnitudeControlledByAVRPu` becomes `VoltageControlledNode`, and the operating point at the PCC
+and `PPCLocal` are gone: they belong to the plant controller. The tool wrote that operating point
+into the PAR of a unit, where Dynawo ignored it.
 
-The IEC wind turbines of zone 1 give their voltage at Node2 from Node2 itself; it was read on
-the grid side of their low-voltage transformer. Their powers are still read there until the
-Dynawo models expose them at Node2, so while that transformer is inside the unit model
-(`WT_ConverterLVControl = false`) the currents at Node2 divide the powers of one side of it by
-the voltage of the other.
+The IEC wind turbines of zone 1 are now measured at Node2 itself. Their voltage and powers were
+read on the grid side of their low-voltage transformer, which is Node1 when that transformer is
+inside the unit model (`WT_ConverterLVControl = false`). Their models give no powers at Node2, so
+the tool computes them from the voltage and the current there. In the IEC plant models of zone 3
+the Node2 curves are still read on the grid side of that transformer.
 
 ### Fixed
 

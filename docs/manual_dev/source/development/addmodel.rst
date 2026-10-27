@@ -126,6 +126,10 @@ the currents as ``'ActiveCurrentNode2'`` and ``'ReactiveCurrentNode2'``:
 * ``'VoltageNode2'`` — the amplitude of the voltage at Node2 (pu), when the model
   provides it; otherwise ``'VoltageNode2Re'`` / ``'VoltageNode2Im'``, its
   components, whose amplitude the tool emits under that same name.
+* ``'CurrentNode2Re'`` / ``'CurrentNode2Im'`` — the components of the current the
+  unit injects at Node2 (pu, generator convention), in place of the two powers when
+  the model gives none there: the tool computes them from that current and the
+  voltage components.
 * ``'MaxCurrentAtConverter'`` — maximum current amplitude (pu). Required for
   Electrical Performance Verification.
 

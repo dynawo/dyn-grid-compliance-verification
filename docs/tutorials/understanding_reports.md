@@ -135,7 +135,7 @@ For RMS model validation, results are further grouped into:
 In Zone 1, the unit's connection node appears in the report as
 **InternalNode1** (the node called *Node1* in the DTR) — the name *PDR* is
 reserved for the real connection point of the complete installation, used in
-Zone 3. The injector-terminal figures (the currents Ip and Iq and the voltage
+Zone 3. The Node2 figures (the currents Ip and Iq and the voltage
 at the converter output) are measured at **InternalNode2** (*Node2* in the
 DTR). Both nodes are labeled in the network schema included in each report.
 
