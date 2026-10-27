@@ -9,10 +9,10 @@
 #
 """The entries of the Dynawo dictionaries against the models of the Dynawo the tool runs.
 
-Dynawo accepts a parameter its model does not have, and drops the request of a curve its model
-does not have, without failing: an entry that names neither goes unnoticed. These tests read the
-model descriptors of the installation DYNAWOPATH or the PATH points to, and are skipped without
-one.
+Dynawo accepts a parameter its model does not have, ignores a read-only parameter a PAR sets, and
+drops the request of a curve its model does not have, all without failing: an entry that names
+none of what a PAR or a curve can reach goes unnoticed. These tests read the model descriptors of
+the installation DYNAWOPATH or the PATH points to, and are skipped without one.
 """
 
 import configparser
@@ -46,13 +46,14 @@ def _models():
     return models
 
 
-def _names_of(descriptor: Path) -> set[str]:
+def _reachable_names_of(descriptor: Path) -> set[str]:
     root = ET.parse(descriptor).getroot()
-    return {
+    parameters = {
         element.get("name")
-        for tag in ("parameter", "variable")
-        for element in root.iter(f"{_DYNAWO_NS}{tag}")
+        for element in root.iter(f"{_DYNAWO_NS}parameter")
+        if element.get("readOnly") != "true"
     }
+    return parameters | {element.get("name") for element in root.iter(f"{_DYNAWO_NS}variable")}
 
 
 @pytest.fixture(scope="module")
@@ -64,10 +65,12 @@ def descriptors() -> Path:
 
 
 @pytest.mark.parametrize("lib, entries", _models())
-def test_every_entry_names_a_parameter_or_a_variable_of_its_model(descriptors, lib, entries):
+def test_every_entry_names_a_settable_parameter_or_a_variable_of_its_model(
+    descriptors, lib, entries
+):
     descriptor = descriptors / f"{lib}.desc.xml"
     assert descriptor.exists(), f"Dynawo has no model {lib}"
 
-    names = _names_of(descriptor)
+    names = _reachable_names_of(descriptor)
 
     assert {key: name for key, name in entries.items() if name not in names} == {}
