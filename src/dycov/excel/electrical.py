@@ -168,8 +168,9 @@ def transformer_taps(n_prises: int, r_min: float, r_max: float, tap_0=None, r_0=
     Returns
     -------
     dict
-        The tap parameters Dynawo reads: ``NbTap``, ``Tap0``, ``RatioTfoMinPu``,
-        ``RatioTfoMaxPu`` and the derived ``RatioTfo0Pu``.
+        The tap parameters Dynawo reads, ``NbTap``, ``Tap0``, ``RatioTfoMinPu`` and
+        ``RatioTfoMaxPu``, and ``RatioTfo0Pu``, the starting ratio Dynawo derives from them,
+        which no PAR carries.
     """
     nb_tap = int(n_prises) + 1
     if tap_0 is None and r_0 is None:

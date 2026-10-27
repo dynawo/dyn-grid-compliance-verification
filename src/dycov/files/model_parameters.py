@@ -18,6 +18,7 @@ from typing import Optional
 from lxml import etree
 
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
+from dycov.excel.electrical import ratio_of_tap
 from dycov.files import par_access
 from dycov.logging import dycov_logging
 from dycov.model.parameters import (
@@ -538,7 +539,7 @@ def _get_tap_rho(parset, nsmap, lib):
 
 
 def _get_starting_tap_rho(parset, nsmap, lib):
-    """The ratio a tap changer starts from, derived from its starting tap as Dynawo derives it."""
+    """The ratio a tap changer starts from: the one its starting tap gives."""
     tap0, nb_tap, rho_min, rho_max = (
         par_access.get_parameter(parset, nsmap, lib, name)[1]
         for name in ("Tap0", "NbTap", "RhoMin", "RhoMax")
@@ -547,7 +548,7 @@ def _get_starting_tap_rho(parset, nsmap, lib):
         return 1.0
     if int(nb_tap) < 2:
         return float(rho_min)
-    return float(rho_min) + (float(rho_max) - float(rho_min)) * int(tap0) / (int(nb_tap) - 1)
+    return ratio_of_tap(int(tap0), int(nb_tap) - 1, float(rho_min), float(rho_max))
 
 
 def _get_tap_alpha(parset, nsmap, lib):
