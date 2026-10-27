@@ -203,6 +203,25 @@ def test_a_curve_the_file_does_not_carry_is_left_empty_and_warned(tmp_path, capl
     assert "does not carry" in caplog.text
 
 
+def test_columns_named_before_the_dtr_nodes_are_declared_under_their_current_names(
+    tmp_path, caplog
+):
+    curves = tmp_path / "curves"
+    curves.mkdir()
+    previous = ZONE1_COLUMNS.replace("Node2", "InjTerminal").replace(
+        "ControlledNode", "ControlledPu"
+    )
+    csv = _make_zone1_curves(curves, previous)
+
+    with caplog.at_level(logging.WARNING):
+        _create_dict_file(csv, {})
+
+    lines = _curves_section(csv.with_suffix(".dict"))
+    assert "PV_Array_GEN_VoltageNode2 = PV_Array_GEN_VoltageInjTerminal" in lines
+    assert "PV_Array_GEN_ActivePowerControlledNode = PV_Array_GEN_ActivePowerControlledPu" in lines
+    assert "does not carry" not in caplog.text
+
+
 def test_a_synchronous_compensator_is_not_taken_for_a_generating_unit(tmp_path, caplog):
     curves = tmp_path / "curves"
     curves.mkdir()
