@@ -121,13 +121,11 @@
   <!-- tfo -->
   <set id="Main_Xfmr">
     <!-- Be careful : In this model, impedance are in pu base SnRef = 100MVA by default -->
-    <par type="DOUBLE" name="transformer_SNom" value="90"/>
     <par type="DOUBLE" name="transformer_RPu" value="0.00001"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.0001"/>
     <par type="DOUBLE" name="transformer_BPu" value="0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0"/>
     <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
-    <par type="DOUBLE" name="transformer_RatioTfo0Pu" value="1.05"/>
     <par type="DOUBLE" name="transformer_RatioTfoMaxPu" value="1.5"/>
     <par type="DOUBLE" name="transformer_RatioTfoMinPu" value="0.5"/>
     <par type="INT" name="transformer_NbTap" value="21"/>
@@ -136,7 +134,6 @@
     <par name="transformer_Q10Pu" type="DOUBLE" value="5.1564621580135056e-05"/>
     <par name="transformer_U10Pu" type="DOUBLE" value="0.9947158359657241"/>
     <par name="transformer_U1Phase0" type="DOUBLE" value="0.04171133145512272"/>
-    <par name="transformer_U20Pu" type="DOUBLE" value="1.0444444444444445"/>
   </set>
   <set id="IntNetwork_Line">
     <par type="DOUBLE" name="line_RPu" value="0.0004"/>
