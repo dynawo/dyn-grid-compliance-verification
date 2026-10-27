@@ -348,6 +348,20 @@ def testappend_generator_defaults_ppc_local_to_true_when_the_par_omits_it():
     assert generators[0].ppc_local is True
 
 
+def test_append_generator_takes_the_power_limits_of_an_iec_plant_from_its_power_reference():
+    dyd_root = _make_root()
+    model_parameter = _add_bbmodel(dyd_root, "Wind_Turbine", "IECWPP4BCurrentSource2020", "parGen")
+    _add_connect(dyd_root, "Wind_Turbine", "WPP_terminal", "Main_Xfmr", "transformer_terminal2")
+    par_root = _make_root()
+    _add_parset(par_root, "parGen", {"WPP_PRefMaxPu": "0.9", "WPP_PRefMinPu": "0.1"})
+    generators = []
+
+    model_parameters.append_generator(dyd_root, par_root, model_parameter, generators)
+
+    assert generators[0].p_max == pytest.approx(0.9)
+    assert generators[0].p_min == pytest.approx(0.1)
+
+
 def _xfmr(id: str) -> SimpleNamespace:
     return SimpleNamespace(id=id)
 
