@@ -161,6 +161,32 @@ def test_get_transformer_values_reads_pu_parameters():
     assert xfmr.terminals[1].connected_equipment == "Wind_Turbine"
 
 
+def test_get_transformer_values_takes_a_tap_changer_ratio_from_its_starting_tap():
+    dyd_root = _make_root()
+    _add_bbmodel(dyd_root, "Main_Xfmr", "TransformerRatioTapChanger", "parXfmr")
+    par_root = _make_root()
+    _add_parset(
+        par_root,
+        "parXfmr",
+        {
+            "transformer_RPu": "0.0",
+            "transformer_XPu": "0.0001",
+            "transformer_BPu": "0.0",
+            "transformer_GPu": "0.0",
+            "transformer_AlphaTfo0": "0.0",
+            "transformer_RatioTfo0Pu": "1.0",
+            "transformer_RatioTfoMinPu": "0.5",
+            "transformer_RatioTfoMaxPu": "1.5",
+            "transformer_NbTap": "21",
+            "transformer_Tap0": "11",
+        },
+    )
+
+    transformers = model_parameters._get_transformer_values(dyd_root, par_root, s_nref=100.0)
+
+    assert transformers[0].r_tfo == pytest.approx(1.05)
+
+
 def test_convert_transformer_units_scales_percent_values(monkeypatch):
     dynawo_names = {
         "Resistance": "transformer_R",

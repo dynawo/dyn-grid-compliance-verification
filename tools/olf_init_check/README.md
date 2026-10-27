@@ -139,9 +139,11 @@ now means a regression.
   true solution. `z1_S_weakgrid_pv` demonstrates it: at OLF's default epsilon it stops after
   2 iterations and DIVERGEs at `1.5e-04` rad.
 * **Off-nominal taps** are modelled, not skipped: the ratio is the terminal-1-to-terminal-2
-  voltage gain, entered as the pi-equivalent's asymmetric shunts. `test_compare_init.py`
-  pins that encoding against pypowsybl's own two-windings transformer. A *phase-shifting*
-  tap (`AlphaTfo0` non-zero) is still skipped with an explicit reason; no bundled case has one.
+  voltage gain, entered as the pi-equivalent's asymmetric shunts. A tap changer's ratio is the
+  one its starting tap gives, as Dynawo derives it, whatever ratio its set states.
+  `test_compare_init.py` pins that encoding against pypowsybl's own two-windings transformer. A
+  *phase-shifting* tap (`AlphaTfo0` non-zero) is still skipped with an explicit reason; no bundled
+  case has one.
 * **Pcs I8** replaces the infinite bus with an equivalent synchronous machine on the TSO side,
   reported as grid family `EquivMachine`: a generator the TSO model owns is the grid (slack at
   its recorded voltage), one the producer owns is a plant unit. Its two grid-side loads carry

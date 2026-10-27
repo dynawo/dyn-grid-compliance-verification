@@ -532,9 +532,22 @@ def _convert_transformer_units(parset, nsmap, lib, s_nref):
 
 def _get_tap_rho(parset, nsmap, lib):
     _, rho_str = par_access.get_parameter(parset, nsmap, lib, "Rho")
-    if rho_str is None:
+    if rho_str is not None:
+        return float(rho_str)
+    return _get_starting_tap_rho(parset, nsmap, lib)
+
+
+def _get_starting_tap_rho(parset, nsmap, lib):
+    """The ratio a tap changer starts from, derived from its starting tap as Dynawo derives it."""
+    tap0, nb_tap, rho_min, rho_max = (
+        par_access.get_parameter(parset, nsmap, lib, name)[1]
+        for name in ("Tap0", "NbTap", "RhoMin", "RhoMax")
+    )
+    if None in (tap0, nb_tap, rho_min, rho_max):
         return 1.0
-    return float(rho_str)
+    if int(nb_tap) < 2:
+        return float(rho_min)
+    return float(rho_min) + (float(rho_max) - float(rho_min)) * int(tap0) / (int(nb_tap) - 1)
 
 
 def _get_tap_alpha(parset, nsmap, lib):
