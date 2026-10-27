@@ -232,11 +232,11 @@ Initialization:
 * ``'ActivePower10'``, ``'ReactivePower10'``, ``'Voltage10'``, ``'Phase10'``
   — start values at terminal 1. Required for initialization.
 
-An entry never names a read-only parameter of the model: Dynawo computes those
-itself and ignores, without a word, the value a PAR gives them.
-
 * ``'Tap'``
     Current tap position.
+
+An entry never names a read-only parameter of the model: Dynawo computes those
+itself and ignores, without a word, the value a PAR gives them.
 
 
 Control Modes
