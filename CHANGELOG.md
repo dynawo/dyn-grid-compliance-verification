@@ -117,6 +117,10 @@ the 0.00 of the DTR, because not every model converges with a voltage of exactly
   not have, and was skipped. A declaration above the model's stops the run (#649).
 - IEC plants whose controller measures at the PCC start in steady state. They were given a phase
   of 0 there whatever the operating point, and started with a small transient (#649).
+- The starting ratio of a tap changer is the one its starting tap gives, as in Dynawo. The tool
+  read the ratio the PAR states, which Dynawo ignores, so a model whose two disagreed started
+  from an operating point Dynawo did not simulate. Neither that ratio, nor the transformer's
+  nominal power, which the model does not have, is written by `excel2inputs` any more (#649).
 - Islanding simulations run again: the `DYNModelOmegaRef` connectors are written with the names
   Dynawo 2.0.0 expects (#606).
 - The WECC examples simulate every test again when several run at once: their plant controller no
