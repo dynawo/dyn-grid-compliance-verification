@@ -271,6 +271,31 @@ def test_reference_curves_read_the_names_the_generator_curves_had_before_the_nod
     assert list(curves_df["WT_GEN_ActiveCurrentNode2"]) == pytest.approx([0.8, 0.7])
 
 
+def test_a_file_whose_columns_carry_the_names_before_the_nodes_serves_the_current_ones(
+    tmp_path, tool_config
+):
+    ref_dir = tmp_path / "ReferenceCurves"
+    _write_curves(ref_dir)
+    _overwrite_dict(
+        ref_dir,
+        f"{_FILLED_METADATA}\n[Curves-Dictionary]\ntime = time\n"
+        "WT_GEN_VoltageNode2 = WT_GEN_VoltageNode2\n"
+        "WT_GEN_ActiveCurrentNode2 = WT_GEN_ActiveCurrentNode2\n",
+    )
+    (ref_dir / "Producer" / f"{_CFG_OC_NAME}.csv").write_text(
+        "time;WT_GEN_VoltageInjTerminal;WT_GEN_ActiveCurrentInjTerminal;WT_GEN_ActiveCurrentNode2\n"
+        "0.0;1.0;0.8;0.6\n20.0;0.9;0.7;0.5\n"
+    )
+    imported_curves = ImportedCurves(DummyProducer(zone=1))
+
+    _, curves_df = imported_curves.obtain_reference_curve(
+        _make_working_dir(tmp_path), "Producer", _PCS, _BM, _OC, ref_dir
+    )
+
+    assert list(curves_df["WT_GEN_VoltageNode2"]) == pytest.approx([1.0, 0.9])
+    assert list(curves_df["WT_GEN_ActiveCurrentNode2"]) == pytest.approx([0.6, 0.5])
+
+
 def test_imported_curves_keep_the_network_frequency_they_declare(tmp_path, tool_config):
     ref_dir = tmp_path / "ReferenceCurves"
     _write_frequency_curves(
