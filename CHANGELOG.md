@@ -110,6 +110,38 @@ instead of waiting for a release.
 One value belongs to no revision: the residual voltage of a gabarit of a type D is 1e-3 and not
 the 0.00 of the DTR, because not every model converges with a voltage of exactly zero.
 
+### The curves of a unit are named after the nodes of the DTR
+
+Node2 is the converter terminal, between the unit and its transformer, and the controlled node
+is the one the control of the converter measures, Node1 or Node2. The curves of a generating
+unit take those names:
+
+| Previous name                           | Name now                                 |
+| --------------------------------------- | ---------------------------------------- |
+| `<unit>_GEN_VoltageInjTerminal`         | `<unit>_GEN_VoltageNode2`                |
+| `<unit>_GEN_ActiveCurrentInjTerminal`   | `<unit>_GEN_ActiveCurrentNode2`          |
+| `<unit>_GEN_ReactiveCurrentInjTerminal` | `<unit>_GEN_ReactiveCurrentNode2`        |
+| `<unit>_GEN_ActivePowerControlledPu`    | `<unit>_GEN_ActivePowerControlledNode`   |
+| `<unit>_GEN_ReactivePowerControlledPu`  | `<unit>_GEN_ReactivePowerControlledNode` |
+
+The results, the reports and the dictionaries the tool scaffolds use the new names. A dictionary
+of curves written with the previous ones is still read as it is.
+
+The keys of the Dynawo dictionaries change the same way. A configuration that lists its own
+`[CurvesVariables]` has to list them by their new names — `ActivePowerNode2`,
+`ReactivePowerNode2`, `VoltageNode2`, `VoltageNode2Re`, `VoltageNode2Im`,
+`ActivePowerControlledNode`, `ReactivePowerControlledNode` — because a name the dictionaries do
+not know asks Dynawo for nothing. In the dictionary of a unit model, `MagnitudeControlledByAVRPu`
+becomes `VoltageControlledNode`, and the operating point at the PCC and `PPCLocal` are gone: they
+belong to the plant controller, and the tool wrote them into the PAR of a unit, where Dynawo
+ignored them.
+
+The IEC wind turbines of zone 1 give their voltage at Node2 from Node2 itself; it was read on
+the grid side of their low-voltage transformer. Their powers are still read there until the
+Dynawo models expose them at Node2, so while that transformer is inside the unit model
+(`WT_ConverterLVControl = false`) the currents at Node2 divide the powers of one side of it by
+the voltage of the other.
+
 ### Fixed
 
 - Islanding simulations run again: the `DYNModelOmegaRef` connectors are written with the names
