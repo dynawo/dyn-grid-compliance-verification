@@ -160,7 +160,8 @@ def test_main_transformer_par_set(zone3, named):
     values = named(params)
     assert values["transformer_XPu"] == pytest.approx(0.18)
     assert values["transformer_RPu"] == pytest.approx(0.0)
-    assert values["transformer_SNom"] == pytest.approx(100.0)
+    assert "transformer_SNom" not in values
+    assert "transformer_RatioTfo0Pu" not in values
     assert values["transformer_NbTap"] == 21
     assert values["transformer_Tap0"] == 10
     assert values["transformer_RatioTfoMinPu"] == pytest.approx(0.9)

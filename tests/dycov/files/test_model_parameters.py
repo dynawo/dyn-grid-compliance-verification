@@ -161,6 +161,32 @@ def test_get_transformer_values_reads_pu_parameters():
     assert xfmr.terminals[1].connected_equipment == "Wind_Turbine"
 
 
+def test_get_transformer_values_takes_a_tap_changer_ratio_from_its_starting_tap():
+    dyd_root = _make_root()
+    _add_bbmodel(dyd_root, "Main_Xfmr", "TransformerRatioTapChanger", "parXfmr")
+    par_root = _make_root()
+    _add_parset(
+        par_root,
+        "parXfmr",
+        {
+            "transformer_RPu": "0.0",
+            "transformer_XPu": "0.0001",
+            "transformer_BPu": "0.0",
+            "transformer_GPu": "0.0",
+            "transformer_AlphaTfo0": "0.0",
+            "transformer_RatioTfo0Pu": "1.0",
+            "transformer_RatioTfoMinPu": "0.5",
+            "transformer_RatioTfoMaxPu": "1.5",
+            "transformer_NbTap": "21",
+            "transformer_Tap0": "11",
+        },
+    )
+
+    transformers = model_parameters._get_transformer_values(dyd_root, par_root, s_nref=100.0)
+
+    assert transformers[0].r_tfo == pytest.approx(1.05)
+
+
 def test_convert_transformer_units_scales_percent_values(monkeypatch):
     dynawo_names = {
         "Resistance": "transformer_R",
@@ -379,6 +405,20 @@ def testappend_generator_defaults_ppc_local_to_true_when_the_par_omits_it():
     model_parameters.append_generator(dyd_root, par_root, model_parameter, generators)
 
     assert generators[0].ppc_local is True
+
+
+def test_append_generator_takes_the_power_limits_of_an_iec_plant_from_its_power_reference():
+    dyd_root = _make_root()
+    model_parameter = _add_bbmodel(dyd_root, "Wind_Turbine", "IECWPP4BCurrentSource2020", "parGen")
+    _add_connect(dyd_root, "Wind_Turbine", "WPP_terminal", "Main_Xfmr", "transformer_terminal2")
+    par_root = _make_root()
+    _add_parset(par_root, "parGen", {"WPP_PRefMaxPu": "0.9", "WPP_PRefMinPu": "0.1"})
+    generators = []
+
+    model_parameters.append_generator(dyd_root, par_root, model_parameter, generators)
+
+    assert generators[0].p_max == pytest.approx(0.9)
+    assert generators[0].p_min == pytest.approx(0.1)
 
 
 def _xfmr(id: str) -> SimpleNamespace:

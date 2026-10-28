@@ -238,13 +238,11 @@
 
   <set id="Main_Xfmr">
     <!-- impedances in pu, base SnRef = 100 MVA -->
-    <par type="DOUBLE" name="transformer_SNom" value="90.0"/>
     <par type="DOUBLE" name="transformer_RPu" value="9.999999999999999e-06"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.00010000000000000002"/>
     <par type="DOUBLE" name="transformer_BPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
-    <par type="DOUBLE" name="transformer_RatioTfo0Pu" value="1.0"/>
     <par type="DOUBLE" name="transformer_RatioTfoMaxPu" value="1.1"/>
     <par type="DOUBLE" name="transformer_RatioTfoMinPu" value="0.9"/>
     <par type="INT" name="transformer_NbTap" value="21"/>

@@ -164,6 +164,12 @@ the Node2 curves are still read on the grid side of that transformer.
 
 ### Fixed
 
+- The maximum power declared for an IEC plant is checked against its model's, as for WECC, and a
+  declaration above it now stops the run: the check read a parameter IEC models lack (#649).
+- IEC plants whose controller measures at the PCC start in steady state, and no longer from a
+  phase of 0 there whatever the operating point (#649).
+- The tool computes the starting point of a tap changer with the ratio its starting tap gives,
+  the one Dynawo simulates, and no longer with the one the PAR states, which Dynawo ignores (#649).
 - Islanding simulations run again: the `DYNModelOmegaRef` connectors are written with the names
   Dynawo 2.0.0 expects (#606).
 - The WECC examples simulate every test again when several run at once: their plant controller no

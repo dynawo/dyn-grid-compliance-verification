@@ -39,7 +39,11 @@ build network structure dynamically.
 
 **Dynawo version coupling** (DyCoV targets 2.0.0): DyCoV writes model names Dynawo owns in two
 places — the dictionaries (`curves/dynawo/dictionary/*.ini`, every parameter and variable DyCoV
-reads or writes) and `files/omega_file.py` (the `DYNModelOmegaRef` connectors, `omega_grp_<n>_` /
+reads or writes; `tests/dycov/curves/dynawo/dictionary` checks that each names a variable or a
+parameter that is not read-only, which Dynawo ignores in a PAR, in the model descriptors of the
+installation `DYNAWOPATH` or the `dynawo.sh` on the PATH points to, and is skipped without one; a
+tap changer's starting ratio is derived from its starting tap, as Dynawo does) and
+`files/omega_file.py` (the `DYNModelOmegaRef` connectors, `omega_grp_<n>_` /
 `omegaRef_grp_<n>_` / `running_grp_<n>_`: 2.0.0 drops the `_value` suffix and keeps the `_` that
 marks the array index, as Dynawo's own examples spell them). The rest of the names are the
 producer's, in its DYD and PAR, and a model written for an older Dynawo is migrated with the

@@ -77,14 +77,8 @@ def main_par_set(par_id: str, zone3: dict) -> tuple:
         tap_0=P.optional_number("Zone3", zone3, "starting_tap"),
         r_0=P.optional_number("Zone3", zone3, "starting_ratio"),
     )
-    return par_id, [
-        {"name": "transformer_SNom", "type": "DOUBLE", "value": s_nom, "comments": [PU_BASE_NOTE]},
-        {"name": "transformer_RPu", "type": "DOUBLE", "value": r_pu},
-        {"name": "transformer_XPu", "type": "DOUBLE", "value": x_pu},
-        {"name": "transformer_BPu", "type": "DOUBLE", "value": 0.0},
-        {"name": "transformer_GPu", "type": "DOUBLE", "value": 0.0},
+    return par_id, _impedance_params(r_pu, x_pu) + [
         {"name": "transformer_AlphaTfo0", "type": "DOUBLE", "value": 0.0},
-        {"name": "transformer_RatioTfo0Pu", "type": "DOUBLE", "value": taps["RatioTfo0Pu"]},
         {"name": "transformer_RatioTfoMaxPu", "type": "DOUBLE", "value": taps["RatioTfoMaxPu"]},
         {"name": "transformer_RatioTfoMinPu", "type": "DOUBLE", "value": taps["RatioTfoMinPu"]},
         {"name": "transformer_NbTap", "type": "INT", "value": taps["NbTap"]},
