@@ -223,21 +223,26 @@ def _producer_reading_its_zone3(tmp_path: Path, zone3_ini: str) -> ModelProducer
     return producer
 
 
-@pytest.mark.parametrize(
-    "declared, expected",
-    [("installation_type = C\n", "C"), ("installation_type = d\n", "D"), ("", "B")],
-)
-def test_the_installation_type_is_declared_in_the_zone3_ini(tmp_path, declared, expected):
-    producer = _producer_reading_its_zone3(tmp_path, _PRODUCER_INI + declared)
+@pytest.mark.parametrize("p_max_injection, category", [(15, "B"), (40, "C"), (60, "D")])
+def test_a_storage_installation_takes_the_category_the_dtr_gives_its_zone3(
+    tmp_path, p_max_injection, category
+):
+    """A storage installation at 225 kV is of type B below 18 MW, C below 50 MW and D above."""
+    zone3_ini = _PRODUCER_INI.replace("= 80", f"= {p_max_injection}")
+    producer = _producer_reading_its_zone3(tmp_path, zone3_ini)
+    producer._sim_type = MODEL_VALIDATION_BESS
 
-    assert producer._ModelProducer__read_installation_type() == expected
+    assert producer._ModelProducer__read_installation_category() == category
 
 
-def test_an_installation_type_without_a_fiche_is_rejected(tmp_path):
-    producer = _producer_reading_its_zone3(tmp_path, _PRODUCER_INI + "installation_type = E\n")
+def test_the_category_of_the_installation_ignores_the_zone_in_preparation(tmp_path):
+    """A unit of Zone 1 is smaller than its installation, and the fiche follows the latter."""
+    producer = _producer_reading_its_zone3(tmp_path, _PRODUCER_INI)
+    producer._sim_type = MODEL_VALIDATION_BESS
+    producer._zone = 1
 
-    with pytest.raises(ValueError, match="installation_type"):
-        producer._ModelProducer__read_installation_type()
+    assert producer._ModelProducer__read_installation_category() == "D"
+    assert producer._zone == 1
 
 
 def test_the_effective_reactance_of_a_grid_forming_unit_is_read_from_its_ini(monkeypatch):

@@ -1,0 +1,46 @@
+% Custom macros common to all reports:
+{{ producercommand }}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% The document starts here
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% The version Type C/D compares the curves of InternalNode1, the output of the unit after its
+% transformer, where the fiche observes the results of the Fiche I18, and the captions say so
+\newcommand{\GridCurvesDescriptionNodeOne}{
+    \figuredrawnzonefalse
+    \GridCurveDescriptionZone{fig_V}{Voltage at InternalNode1.}
+    \GridCurveDescriptionZone{fig_P}{Active power at InternalNode1.}
+    \GridCurveDescriptionZone{fig_Q}{Reactive power at InternalNode1.}
+    \GridCurveDescriptionZone{fig_Ip}{Active current at InternalNode1.}
+    \GridCurveDescriptionZone{fig_Iq}{Reactive current at InternalNode1.}
+    \GridCurveDescriptionZone{fig_WRef}{Frequency of the converter.}
+    \iffiguredrawnzone\else\item No figure: the test produced no curve.\fi
+}
+
+\newcommand{\GridCurvesNodeOne}{%
+    \setcounter{gridfigure}{0}%
+    \noindent
+    \GridCurveZone{fig_V}{Voltage magnitude measured at InternalNode1.}
+    \GridCurveZone{fig_P}{Active power P at InternalNode1.}
+    \GridCurveZone{fig_Q}{Reactive power Q at InternalNode1.}
+    \GridCurveZone{fig_Ip}{Active current Ip at InternalNode1.}
+    \GridCurveZone{fig_Iq}{Reactive current Iq at InternalNode1.}
+    \GridCurveZone{fig_WRef}{Frequency of the converter.}
+}
+
+    \section{Results for PCS RTE-I16 Zone 1, version Type C/D ({{producer}})}
+
+    In this report, \textbf{InternalNode1} denotes the internal connection point of the
+    Zone 1 unit model inside the aggregated plant model (the node named \emph{Node1} in
+    the DTR). The name \emph{PDR} is reserved for the connection point of the complete
+    installation to RTE's grid. The Fiche I16.2 observes the references of Zone 1, the results
+    of the Fiche I18, at the output of the unit after its transformer, so every magnitude this
+    report compares (and the corresponding curve signal names) refers to InternalNode1.
+
+    \BLOCK{for subReport in subReports}
+    {{subReport}}
+    \newpage
+    \BLOCK{endfor}
+

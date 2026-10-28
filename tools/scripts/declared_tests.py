@@ -6,8 +6,9 @@ of the rest would then be written by nothing.
 
 What must run is what the PCS of the tool declare plus what the example declares for itself: the
 tests of Fiche F16, which the fiche does not fix and regenerate_f16.sh writes into the example
-before the run. The PCS of the tool are read in the version of the installation type the example
-declares, and a test they run only when it is recorded is not one that must run.
+before the run. The PCS of the tool are read as the revision of the DTR the run followed writes
+them for the category of the installation of the example, and a test they run only when it is
+recorded is not one that must run.
 """
 
 import argparse
@@ -16,6 +17,9 @@ import re
 import sys
 from collections import defaultdict
 from pathlib import Path
+
+from dycov.configuration.cfg import config
+from dycov.electrical.generator_variables import generator_variables
 
 PACKAGE_TEMPLATES = Path("src/dycov/templates")
 TEMPLATES = PACKAGE_TEMPLATES / "PCS/model"
@@ -42,20 +46,6 @@ FELL_OVER = (
 )
 
 
-def installation_type(example: str) -> str:
-    """The type of the installation the Zone 3 INI of an example declares, B when it does not."""
-    producer = configparser.ConfigParser(inline_comment_prefixes=("#",))
-    producer.read(Path("examples/Model", example, "Dynawo", "Zone3", "Producer.ini"))
-    return producer.get("DEFAULT", "installation_type", fallback="B").strip().upper()
-
-
-def _version(description: Path, installation: str) -> list:
-    """The version of a PCS description for an installation type, which patches it, as the tool
-    picks it: a Type<types>.ini next to it whose name holds the type."""
-    versions = sorted(description.parent.glob("Type*.[iI][nN][iI]"))
-    return [version for version in versions if installation in version.stem[len("Type") :]][:1]
-
-
 def names_in(value: str) -> list:
     """The names of a list of the configuration. The word ``none`` means a list with nothing
     in it, which an empty value cannot say, and a revision that withdraws a fiche writes it."""
@@ -76,11 +66,38 @@ def delta_of(description: Path, revision: str) -> Path:
     return delta if delta.is_file() else None
 
 
+def installation_category(example: str, revision: str) -> str:
+    """The category the DTR gives the installation of an example, from the INI of its Zone 3,
+    as the revision of the DTR the run followed draws the line between the categories."""
+    producer = configparser.ConfigParser(inline_comment_prefixes=("#",))
+    producer.read(Path("examples/Model", example, "Dynawo", "Zone3", "Producer.ini"))
+    config.set_value("DTR", "current", revision)
+    config.load_dtr_delta_config(revision)
+    return generator_variables.get_generator_category(
+        producer.getfloat("DEFAULT", "u_nom"),
+        producer.getfloat("DEFAULT", "p_max_injection"),
+        example.startswith("BESS/"),
+    )
+
+
+def version_of(description: Path, revision: str, category: str) -> list:
+    """The version of a PCS the revision writes for the category of the installation, which
+    patches its delta, as the tool picks it: a Type<categories>.ini beside the delta whose name
+    holds the category."""
+    try:
+        inside = description.parent.relative_to(PACKAGE_TEMPLATES)
+    except ValueError:
+        return []
+
+    versions = sorted((PACKAGE_TEMPLATES / "revisions" / revision / inside).glob("Type*.ini"))
+    return [version for version in versions if category in version.stem[len("Type") :]][:1]
+
+
 def declared_tests(family: str, example: str, revision: str) -> set:
     """The operating conditions the PCS of a family declare for a revision of the DTR, which is
     what must run, plus the ones the example declares with its reference curves."""
     declared = set()
-    installation = installation_type(example)
+    category = installation_category(example, revision)
     descriptions = sorted((TEMPLATES / family).glob("[!.]*/PCSDescription.ini")) + sorted(
         Path("examples/Model", example, "ReferenceCurves").glob("*Description.ini")
     )
@@ -88,11 +105,12 @@ def declared_tests(family: str, example: str, revision: str) -> set:
         pcs_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         pcs_config.optionxform = str
         pcs_config.read(description)
+        # A delta overlays the description key by key, and a version the delta, which is what
+        # each further read does.
         delta = delta_of(description, revision)
         if delta is not None:
-            # A delta overlays the description key by key, which is what a second read does.
             pcs_config.read(delta)
-        pcs_config.read(_version(description, installation))
+        pcs_config.read(version_of(description, revision, category))
 
         for pcs, benchmarks in pcs_config.items("PCS-Benchmarks"):
             for benchmark in names_in(benchmarks):

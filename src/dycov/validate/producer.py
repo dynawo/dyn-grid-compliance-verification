@@ -30,9 +30,6 @@ from dycov.sanity_checks import file_checks, parameter_checks, topology_checks
 
 _REQUIRED_PARAMETERS = ("u_nom", "q_min", "q_max", "p_max_injection")
 _CONSUMPTION_PARAMETER = "p_max_consumption"
-# The types of installation the DTR gives model validation fiches to, the first one being that of
-# an installation whose INI file declares none
-_INSTALLATION_TYPES = ("B", "C", "D")
 
 
 def _check_renamed_parameters(producer_config, section):
@@ -95,7 +92,7 @@ class ModelProducer(Producer):
 
         self._filename = None
         self._sim_type = None
-        self._installation_type = None
+        self._installation_category = None
 
         dycov_logging.get_logger("Producer").debug("Initializing Producer:")
         if self._is_dynawo_model:
@@ -255,36 +252,25 @@ class ModelProducer(Producer):
         else:
             raise ValueError("Model validation does not support the modeled generator type")
 
-        self._installation_type = self.__read_installation_type()
+        self._installation_category = self.__read_installation_category()
 
-    def __read_installation_type(self) -> str:
-        """Reads the type of the installation, which its Zone 3 INI file declares, the INI file of
-        the complete installation.
+    def __read_installation_category(self) -> str:
+        """Reads the category of the installation, as the DTR defines it, from the INI file of
+        its Zone 3, which describes the complete installation.
 
         Returns
         -------
         str
-            The type of the installation in the grid code.
-
-        Raises
-        ------
-        ValueError
-            If the type declared is not one the DTR gives model validation fiches to.
+            The category of the installation: A, B, C or D.
         """
-        self._zone = 3
-        installation_type = (
-            self.__read_producer_ini()
-            .get("DEFAULT", "installation_type", fallback=_INSTALLATION_TYPES[0])
-            .strip()
-            .upper()
+        zone, self._zone = self._zone, 3
+        producer_config = self.__read_producer_ini()
+        self._zone = zone
+        return generator_variables.get_generator_category(
+            float(producer_config.get("DEFAULT", "u_nom")),
+            float(producer_config.get("DEFAULT", "p_max_injection")),
+            self._sim_type == MODEL_VALIDATION_BESS,
         )
-        self._zone = 0
-        if installation_type not in _INSTALLATION_TYPES:
-            raise ValueError(
-                f"The Zone 3 INI file declares installation_type = {installation_type}; it must "
-                f"be one of {', '.join(_INSTALLATION_TYPES)}"
-            )
-        return installation_type
 
     def __set_dynawo_model_validation_type(self):
         self._zone = 1

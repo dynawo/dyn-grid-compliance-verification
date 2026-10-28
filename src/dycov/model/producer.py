@@ -21,7 +21,7 @@ class Producer:
         self._producer_model_path = producer_model
         self._producer_ini_path = producer_ini.parent if producer_ini else None
         self._sim_type = None
-        self._installation_type = None
+        self._installation_category = None
         self.x_eff: Optional[float] = None
 
     def get_producer_path(self) -> Path:
@@ -68,13 +68,14 @@ class Producer:
         """Gets a string according to the type of validation executed."""
         pass
 
-    def get_installation_type(self) -> Optional[str]:
-        """Gets the type of the installation in the grid code, which decides the version of a
-        fiche the DTR gives it when the fiche has one by type.
+    def get_installation_category(self) -> Optional[str]:
+        """Gets the category of the whole installation, as the DTR defines it, which decides the
+        version of a fiche the DTR gives it when the fiche has one by category.
 
         Returns
         -------
         Optional[str]
-            'B', 'C' or 'D', None when the verification gives every type the same fiches.
+            'A', 'B', 'C' or 'D', None when the verification gives every category the same
+            fiches.
         """
-        return self._installation_type
+        return self._installation_category
