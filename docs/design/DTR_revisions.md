@@ -106,6 +106,16 @@ a declared-tests fiche already takes. The word is needed because an empty value 
 layer that writes one leaves the layer below to answer. The same word withdraws one test of a
 fiche, in the list of its operating conditions.
 
+**A fiche a revision splits by category** keeps one description in the delta, the one of the
+categories the revision does not single out, and a version for the others beside it, named after
+them: `Type<categories>.ini`. The revision `20260723` splits the Fiche I16 of a storage
+installation this way, into the Fiche I16.1 for type B and the Fiche I16.2, `TypeCD.ini`, for
+types C and D. The category is the one the DTR gives the whole installation, from its Zone 3, and
+the version is part of what the revision writes for the PCS: it shares the layer of the delta and
+is read after it, so it only carries what the categories it names do differently. A revision that
+does not split the fiche has no version, so a run that follows it gives every category the same
+fiche.
+
 ## What the tool already gives a delta
 
 Three mechanisms are in the tool so that a delta carries data alone:
@@ -267,7 +277,9 @@ that writes it says so.
 a ramp of +500 mHz at 2 Hz/s on the AC source, and a zone 1 model cannot run it. The tool runs it
 as `GridFreqRamp` of `PCS_RTE-I16z3`, with the same magnitude and the same slope, so the curves it
 compares are those of the PDR and not those of the node 1. Every revision of the DTR so far
-places the test in zone 1, and the tool will keep it in zone 3.
+places the test in zone 1, and the tool will keep it in zone 3. The Fiche I16.2 of the revision
+`20260723`, for a storage installation of type C or D, has no such ramp, so its version runs it in
+neither zone.
 
 ## What stays in the code
 

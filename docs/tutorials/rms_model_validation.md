@@ -106,6 +106,13 @@ Both variants:
 However, the **set of tests and operating points differs**, notably to account
 for **bidirectional power operation in BESS installations**.
 
+From the revision of the DTR of 20260723, PCS‑I16 for BESS itself comes in two
+versions, by the category the DTR gives the installation, which DyCoV computes
+from the connection voltage and the maximum power at injection of its Zone 3:
+the Fiche I16.1 for type B, and the Fiche I16.2 for types C and D, the storage
+units the Fiche I18 asks to be Grid Forming. The Fiche I16.2 simulates the tests
+of the Fiche I18 in Zone 1, and compares them at InternalNode1.
+
 DyCoV supports RMS validation for both variants.
 
 ---

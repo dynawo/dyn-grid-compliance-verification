@@ -350,24 +350,32 @@ defined by an operating point (OP), event parameters, and grid parameters.
 
 .. _pcs-i16-types:
 
-The DTR gives the Fiche I16 of a storage installation in two versions, by the
-type of the installation in the grid code, which the INI file of Zone 3
-declares with ``installation_type``. The tables above are those of the version
-for type B (Fiche I16.1), and of every Power Park Module. The version for types
-C and D (Fiche I16.2), for the storage units the Fiche I18 asks to be Grid
-Forming, differs from it in that:
+From the revision of the DTR of 20260723, the Fiche I16 of a storage
+installation comes in two versions, by the category of the installation, which
+the tool computes as the DTR does from the connection voltage and the maximum
+power at injection of the INI file of Zone 3. The tables above are those of the
+version for type B (Fiche I16.1), and of every Power Park Module. The version
+for types C and D (Fiche I16.2), for the storage units the Fiche I18 asks to be
+Grid Forming, differs from it in that:
 
 * Zone 1 runs the setpoint steps on a grid of short-circuit ratio 2, has
   neither the faults nor the steps of the grid voltage, and simulates the tests
   of the Fiche I18 (Grid Forming), described below;
+* Zone 1 compares the curves of InternalNode1, the voltage, the active and
+  reactive power and the active and reactive current there, because the fiche
+  observes the results of the Fiche I18 at the output of the unit, after its
+  transformer;
 * Zone 3 repeats the setpoint steps of the Fiche I2 and the Fiches I6, I7 and
   I10, so it has neither the fault of the Fiche I5 nor the ramp of the grid
   frequency;
 * the curves are filtered at 30 Hz instead of 15 Hz, given the response
   dynamics of Grid Forming units, with a common sampling interval of 1 ms.
 
-The version Type C/D is a ``TypeCD.ini`` next to the description of each PCS,
-which patches it: every section and key it leaves out is that of type B.
+The version Type C/D is a ``TypeCD.ini`` beside the delta of each PCS in the
+revision ``20260723``, which patches it: every section and key it leaves out is
+that of type B. A run that selects an earlier revision of the DTR validates a
+storage installation of any type against the Fiche I16 of that revision, which
+has no Fiche I18 to repeat.
 
 The tests of the Fiche I18 keep the names of its scenarios, and each one is run
 from the operating points of the fiche, at InternalNode1, the active power in pu
@@ -424,11 +432,12 @@ the infinite bus turns with it.
 The response of a test of the Fiche I18 is checked with the setpoint tracking
 criterion of the Fiche I16.2, the errors before, during (for a ramp of the
 frequency) and after the event, with 20 ms excluded after each change, and the
-steady-state error after it. The tracked magnitude is the active current of the
-unit, or its reactive current for a step of the grid voltage, which each test
-names with ``tracked_magnitude``; since the event steps no setpoint, the errors
-are in pu and not relative to a step. The faults are checked with the criteria
-of the faults of type B.
+steady-state error after it. The tracked magnitude is the active current at
+InternalNode1, or the reactive current there for a step of the grid voltage,
+which each test names with ``tracked_magnitude``; since the event steps no
+setpoint, the errors are in pu and not relative to a step. The faults are
+checked with the criteria of the faults of type B, on the curves of
+InternalNode1.
 
 Dynawo initialises a model at the nominal frequency, so a ramp of the frequency
 starting at 49.5 or 50.5 Hz reaches that frequency with a slow ramp over the

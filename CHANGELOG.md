@@ -164,13 +164,21 @@ the Node2 curves are still read on the grid side of that transformer.
 
 ### Storage installations of types C and D are validated against the Fiche I16.2
 
-The DTR gives a storage installation of type C or D its own version of the Fiche I16, the
-Fiche I16.2, whose Zone 1 simulates the tests of the Fiche I18 (Grid Forming). DyCoV applies it
-when the INI file of `Zone3/` declares the type of the installation; without it the installation
-is of type B, as before:
+The revision of the DTR of 20260723 gives a storage installation of type C or D its own version
+of the Fiche I16, the Fiche I16.2. Its Zone 1 runs the setpoint steps on a grid of short-circuit
+ratio 2 and simulates the tests of the Fiche I18 (Grid Forming); its Zone 3 has neither the
+fault of the Fiche I5 nor the ramp of the grid frequency; both filter the curves at 30 Hz.
 
-    [DEFAULT]
-    installation_type = C
+DyCoV applies it to the installations the DTR puts in category C or D, which the tool computes
+from the connection voltage and the maximum power at injection of the INI file of `Zone3/`, so
+nothing has to be declared for it. A run that follows an earlier revision gives them the
+Fiche I16 of that revision, which has no Fiche I18 to repeat.
+
+The fiche observes the references of Zone 1, the results of the Fiche I18, at the output of the
+unit after its transformer, so Zone 1 compares the curves of InternalNode1 alone, and its
+reference dictionaries declare them: `InternalNode1_BUS_Voltage`,
+`InternalNode1_BUS_ActivePower`, `InternalNode1_BUS_ReactivePower`,
+`InternalNode1_BUS_ActiveCurrent` and `InternalNode1_BUS_ReactiveCurrent`.
 
 The events of the Fiche I18 are sized by the effective reactance of the unit, so the INI file of
 `Zone1/` of such an installation declares it, in pu of the nominal apparent power of the unit:
@@ -179,8 +187,10 @@ The events of the Fiche I18 are sized by the effective reactance of the unit, so
     Xeff = 0.2
 
 Both Grid Forming converters of Dynawo, the droop one and the EPRI one, can be the Zone 1 unit:
-the examples `BESS/GridFormingDroop` and `BESS/GridFormingEpri` are such installations, with the
-plant of the `BESS/WECC` example in Zone 3.
+the examples `BESS/GridFormingDroop` and `BESS/GridFormingEpri` are such installations, of
+type C, with a WECC plant of 40 MW at 225 kV in Zone 3. The `BESS/WECC` example, whose plant had
+that same size and so was of type C too, is now of 15 MW, a type B: under this revision a
+storage installation of type C has to be Grid Forming, and its unit is not.
 
 ### Fixed
 

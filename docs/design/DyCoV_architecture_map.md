@@ -77,14 +77,19 @@ A rejected definition aborts the run — `obtain_simulated_curve` turns only `Si
 Out of scope: GFM (own parsing of `mult*(Xeff+Xgrid)`, `extract_defined_value` for p0/q0)
 and `line_XPu` (DTR reactance-table base `a`/`b`).
 
-**Installation types (I16.2)**: a storage installation declares `installation_type` (B/C/D, B by
-default) in its Zone 3 INI (`ModelProducer.get_installation_type`), and `Pcs` loads, in the DTR
-revision layer of `cfg.py`, the `Type<types>.ini` next to the PCS description whose name holds the
-type (`_version_for_type`; `model/BESS/PCS_RTE-I16z{1,3}/TypeCD.ini`, the Fiche I16.2), which
-patches it key by key. Zone 1 of TypeCD runs the setpoint steps on SCR 2 and the tests of the
+**Storage of types C and D (I16.2)**: the revision `20260723` splits the Fiche I16 of a storage
+installation into I16.1 for type B, which its delta writes, and I16.2 for types C and D, a version
+`Type<categories>.ini` beside that delta (`revisions/20260723/PCS/model/BESS/PCS_RTE-I16z{1,3}/
+TypeCD.ini`, its templates in the mirrored `reports/`); the base revision has none, I18 not
+existing. `Pcs` picks it by the category of the installation (`ModelProducer.
+get_installation_category`: `get_generator_category` on the Zone 3 INI, whatever zone runs;
+`_version_for_category`), and `load_pcs_config` reads it into the delta layer after the delta,
+which it patches key by key. Zone 1 of TypeCD runs the setpoint steps on SCR 2 and the tests of the
 Fiche I18 under their scenario names (`S_VolAngStep*`, `S_VolAmpStep*`, `S_SCRup1/down1`,
-`S_Rocof*`, `S_Fault4-6`), whose shared settings are the `I18*` aliases of
-`model/BESS/config_aliases.ini`. Their events: the default `TableInfiniteBus.txt` of
+`S_Rocof*`, `S_Fault4-6`), whose shared settings are the `I18*` aliases of the
+`config_aliases.ini` of the delta, and compares the curves of InternalNode1 alone, where the fiche
+observes the results of I18 (`[GridCode] zone1_compared_at_node1`, which turns
+`compared_curves.for_zone(1)` into V, P, Q, Ip and Iq of `BusPDR`). Their events: the default `TableInfiniteBus.txt` of
 `GridVWDisturbance_1Line_InfBusFromTab` (`TableFile`: `grid_phase_jump`, `grid_voltage_step`,
 `grid_frequency0`/`grid_rocof` on the `OmegaRefPu` of the bus, which the `InfiniteBus` Omega model
 hands the units, after a pre-event ramp to the initial frequency), and
@@ -100,14 +105,17 @@ Dynawo (`GridFormingConverterDroopControl`, `GridFormingEpri`, family `GFM` in `
 in the dictionary flags no parameter holds (`ConverterLVControl = false`,
 `SetpointsBehindTransformer = true` for the droop one, `translator.get_stated_flag`): the start
 value of a stepped setpoint is then the one behind its transformer
-(`GenParams.reference_impedance`, `ModelSetup._reference_operating_point`). The EPRI one has no
+(`GenParams.reference_impedance`, `ModelSetup._reference_operating_point`). The droop one keeps
+that transformer inside and gives the power on its converter side in the base of the unit, so its
+Node2 curves are read at its terminal, as those of the IEC plants of zone 3. The EPRI one has no
 `NetworkFrequencyReference`, which `omega_file` then leaves unconnected: for a unit without it,
 `TableFile` turns the `TableUPhase` of the infinite bus with the frequency of `TableOmegaRefPu`
 (the I16.2 RoCoF), while the Omega-model events (Zone 3 frequency ramp, islanding) do not reach
 it. The I18 OCs are in pu of the unit's `Snom`, the converter rating the Fiche I18 takes as
 base. The examples `BESS/GridFormingDroop` and `BESS/GridFormingEpri` are type C
-installations: a Dynawo GFM converter in Zone 1, the plant of `BESS/WECC` in Zone 3, which
-neither GFM model rides through (the droop one loses synchronism in the dips).
+installations: a Dynawo GFM converter in Zone 1, a WECC plant of 40 MW at 225 kV in Zone 3, which
+neither GFM model rides through (the droop one loses synchronism in the dips); `BESS/WECC`, of
+15 MW, is a type B one.
 
 **Declared tests (F16)**: the DTR Fiche F16 fixes no test and applies to Zone 3 only, so
 `PCS_RTE-F16z3` ships with an empty `[PCS-Benchmarks]` and, next to it, the `F16Description.ini`
@@ -115,7 +123,7 @@ template of the declaration, which `core/initialization.py` copies under that sa
 user's templates (`_copy_pcs_to_declare`, never over a copy already there); a PCS that declares no benchmark is skipped by `_validate_pcs`. The producer declares
 the recorded tests in `<ReferenceCurves>/F16Description.ini`, which `Pcs` takes as the user PCS
 description of the PCS the file names in its `[PCS-Benchmarks]` (`_description_declaring`, in place
-of the one in the configuration directory), so `cfg.py` keeps its five layers. Every
+of the one in the configuration directory), so `cfg.py` keeps its six layers. Every
 declared test is rendered with the shared `report.F16z3.DeclaredTest.tex`: `_pcs_replace` writes
 one `report.<pcs>.<bm>.<oc>.tex` per operating condition and hands the template its maps without the
 `PCS…` suffix (`rm`, `thm`, `tem`…) plus `benchmark`/`operatingcondition`. The F16 error

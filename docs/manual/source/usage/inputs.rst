@@ -66,16 +66,12 @@ PCS I16 in the RTE DTR. The ``Zone1/`` model is what the PCS of zone 1
 (``PCS_RTE-I16z3``, or the tests declared for ``PCS_RTE-F16z3``) accepts a
 directory with ``Zone3/`` alone.
 
-The INI file of ``Zone3/``, which describes the complete installation, may
-declare its type in the grid code with ``installation_type``, ``B``, ``C`` or
-``D`` (``B`` when absent). The DTR gives a storage installation of type C or D
-another version of the Fiche I16 (see :ref:`PCS I16 <pcs-i16-types>`):
-
-.. code-block:: ini
-
-   [DEFAULT]
-   # Type of the installation in the grid code: B, C or D
-   installation_type = C
+The INI file of ``Zone3/`` describes the complete installation, so its
+connection voltage and its maximum power at injection give the installation
+the category, A to D, the DTR defines. From the revision of the DTR of
+20260723, a storage installation of type C or D is validated against another
+version of the Fiche I16 (see :ref:`PCS I16 <pcs-i16-types>`), and the category
+is all the tool needs to choose it: nothing is declared for it.
 
 The version for types C and D simulates the tests of the Fiche I18 in Zone 1,
 whose events are sized by the effective reactance of the unit. The INI file of
@@ -112,6 +108,13 @@ whose events are sized by the effective reactance of the unit. The INI file of
    ``*_GEN_ActivePowerSetpointPu``, ``*_GEN_ReactivePowerSetpointPu`` and
    ``*_GEN_VoltageSetpointPu``, which are not compared: in a setpoint step,
    the report draws the one the step moves over the magnitude it drives.
+   The Zone 1 of a storage installation of type C or D observes its references
+   at InternalNode1 alone, where the Fiche I16.2 takes the results of the
+   Fiche I18: its dictionary declares instead the voltage, the active and
+   reactive power and the active and reactive current there,
+   ``InternalNode1_BUS_Voltage``, ``InternalNode1_BUS_ActivePower``,
+   ``InternalNode1_BUS_ReactivePower``, ``InternalNode1_BUS_ActiveCurrent``
+   and ``InternalNode1_BUS_ReactiveCurrent``, and the same setpoints.
 
 For information on the DYD and PAR file formats, refer to the
 `Dynawo documentation <https://dynawo.github.io/>`_.
