@@ -166,15 +166,15 @@
     <par type="DOUBLE" name="BESS_RLvTrPu" value="0.015"/>
     <par type="DOUBLE" name="BESS_XLvTrPu" value="0.06"/>
     <!-- General -->
-    <par type="DOUBLE" name="BESS_SNom" value="60.0"/>
+    <par type="DOUBLE" name="BESS_SNom" value="22.5"/>
     <par type="STRING" name="lhvrt_TablesFile" value="LHVRT.txt"/>
     <par type="BOOL" name="lhvrt_TablesOnFile" value="true"/>
   </set>
 
   <set id="Main_Xfmr">
     <!-- impedances in pu, base SnRef = 100 MVA -->
-    <par type="DOUBLE" name="transformer_RPu" value="1e-05"/>
-    <par type="DOUBLE" name="transformer_XPu" value="0.00010000000000000003"/>
+    <par type="DOUBLE" name="transformer_RPu" value="2.666666666666667e-05"/>
+    <par type="DOUBLE" name="transformer_XPu" value="0.00026666666666666673"/>
     <par type="DOUBLE" name="transformer_BPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
@@ -194,8 +194,8 @@
   </set>
 
   <set id="Aux_Load">
-    <par type="DOUBLE" name="load_PRefPu" value="0.01"/>
-    <par type="DOUBLE" name="load_QRefPu" value="0.005"/>
+    <par type="DOUBLE" name="load_PRefPu" value="0.00375"/>
+    <par type="DOUBLE" name="load_QRefPu" value="0.001875"/>
     <par type="DOUBLE" name="load_alpha" value="1.0"/>
     <par type="DOUBLE" name="load_beta" value="1.0"/>
   </set>
