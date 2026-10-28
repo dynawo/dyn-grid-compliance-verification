@@ -19,7 +19,6 @@
     <par type="DOUBLE" name="gfm_KPi" value="0.5"/>
     <par type="DOUBLE" name="gfm_KPp" value="2"/>
     <par type="DOUBLE" name="gfm_KPv" value="2"/>
-    <par type="DOUBLE" name="gfm_LFilterPu" value="0.15"/>
     <par type="DOUBLE" name="gfm_MF" value="0.15"/>
     <par type="DOUBLE" name="gfm_OmegaDroopPu" value="0.05"/>
     <par type="INT" name="gfm_OmegaFlag" value="1"/>
@@ -27,7 +26,6 @@
     <par type="DOUBLE" name="gfm_OmegaMinPu" value="0.5"/>
     <par type="BOOL" name="gfm_PQFlag" value="true"/>
     <par type="DOUBLE" name="gfm_QDroopPu" value="0.2"/>
-    <par type="DOUBLE" name="gfm_RFilterPu" value="0.00015"/>
     <par type="DOUBLE" name="gfm_RSourcePu" value="0.00015"/>
     <par type="DOUBLE" name="gfm_UDipPu" value="0.8"/>
     <par type="DOUBLE" name="gfm_XSourcePu" value="0.15"/>
