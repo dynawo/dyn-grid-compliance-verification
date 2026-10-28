@@ -9,6 +9,7 @@
 #
 
 import pandas as pd
+import pytest
 
 from dycov.curves import naming
 
@@ -45,6 +46,30 @@ def test_to_internal_name_zone1_bus_curve():
 def test_to_internal_name_passthrough():
     assert naming.to_internal_name("BusPDR_BUS_Voltage") == "BusPDR_BUS_Voltage"
     assert naming.to_internal_name("time") == "time"
+
+
+@pytest.mark.parametrize(
+    "legacy, current",
+    [
+        ("WT_GEN_VoltageInjTerminal", "WT_GEN_VoltageNode2"),
+        ("WT_GEN_ActiveCurrentInjTerminal", "WT_GEN_ActiveCurrentNode2"),
+        ("WT_GEN_ReactiveCurrentInjTerminal", "WT_GEN_ReactiveCurrentNode2"),
+        ("WT_GEN_ActivePowerControlledPu", "WT_GEN_ActivePowerControlledNode"),
+        ("WT_GEN_ReactivePowerControlledPu", "WT_GEN_ReactivePowerControlledNode"),
+        ("WT_GEN_VoltageInjTerminal_b", "WT_GEN_VoltageNode2_b"),
+    ],
+)
+def test_from_legacy_name_translates_the_generator_curves_named_before_the_nodes(legacy, current):
+    assert naming.from_legacy_name(legacy) == current
+
+
+def test_from_legacy_name_passthrough():
+    assert naming.from_legacy_name("WT_GEN_VoltageNode2") == "WT_GEN_VoltageNode2"
+    assert naming.from_legacy_name("WT_GEN_MagnitudeControlledByAVRPu") == (
+        "WT_GEN_MagnitudeControlledByAVRPu"
+    )
+    assert naming.from_legacy_name("VoltageInjTerminal") == "VoltageInjTerminal"
+    assert naming.from_legacy_name("time") == "time"
 
 
 def test_rename_columns_for_output_zone1():

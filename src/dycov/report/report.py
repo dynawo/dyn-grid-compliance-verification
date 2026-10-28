@@ -400,23 +400,23 @@ def _render_zone1_circuits(working_path: Path, producer: ModelProducer) -> None:
 def _get_iq_last_val(plot_curves: list) -> float | None:
     """Return the last value of the first Iq curve found, or None."""
     for curve in plot_curves:
-        if "ReactiveCurrentInjTerminal" in curve["name"]:
+        if "ReactiveCurrentNode2" in curve["name"]:
             return curve["curve"][-1]
     return None
 
 
 def _add_current_magnitude(plot_curves: list) -> None:
     """Compute |I| = hypot(Ip, Iq) and append it to plot_curves if both are present."""
-    ip_curves = [c for c in plot_curves if "ActiveCurrentInjTerminal" in c["name"]]
-    iq_curves = [c for c in plot_curves if "ReactiveCurrentInjTerminal" in c["name"]]
+    ip_curves = [c for c in plot_curves if "ActiveCurrentNode2" in c["name"]]
+    iq_curves = [c for c in plot_curves if "ReactiveCurrentNode2" in c["name"]]
     if not ip_curves or not iq_curves:
         return
 
-    curve_style = get_curve_style("modIInjTerminal")
+    curve_style = get_curve_style("modINode2")
     insert_pos = 0
     for ip, iq in zip(ip_curves, iq_curves):
         gen_id = ip["name"].split("_GEN_")[0] if "_GEN_" in ip["name"] else ""
-        mag_name = f"{gen_id}_GEN_modIInjTerminal" if gen_id else "modIInjTerminal"
+        mag_name = f"{gen_id}_GEN_modINode2" if gen_id else "modINode2"
         plot_curves.insert(
             insert_pos,
             {
@@ -431,15 +431,15 @@ def _add_current_magnitude(plot_curves: list) -> None:
 
 def _inject_current_magnitude_df(curves: pd.DataFrame) -> pd.DataFrame:
     """Return a copy of curves with current_magnitude columns added if Ip and Iq are present."""
-    ip_cols = [c for c in curves.columns if "ActiveCurrentInjTerminal" in c]
-    iq_cols = [c for c in curves.columns if "ReactiveCurrentInjTerminal" in c]
+    ip_cols = [c for c in curves.columns if "ActiveCurrentNode2" in c]
+    iq_cols = [c for c in curves.columns if "ReactiveCurrentNode2" in c]
     if not ip_cols or not iq_cols:
         return curves
 
     curves = curves.copy()
     for ip_col, iq_col in zip(ip_cols, iq_cols):
         gen_id = ip_col.split("_GEN_")[0] if "_GEN_" in ip_col else ""
-        mag_name = f"{gen_id}_GEN_modIInjTerminal" if gen_id else "modIInjTerminal"
+        mag_name = f"{gen_id}_GEN_modINode2" if gen_id else "modINode2"
         curves[mag_name] = np.hypot(curves[ip_col], curves[iq_col])
     return curves
 

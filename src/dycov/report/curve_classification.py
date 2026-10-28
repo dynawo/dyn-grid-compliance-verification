@@ -19,13 +19,13 @@ _XFMR_SUFFIX = "_XFMR_"
 _SETPOINT_SUFFIX = "SetpointPu"
 
 _VARIABLE_LABELS = {
-    "ActiveCurrentInjTerminal": "Ip",
-    "ReactiveCurrentInjTerminal": "Iq",
+    "ActiveCurrentNode2": "Ip",
+    "ReactiveCurrentNode2": "Iq",
     "ActivePowerSetpointPu": "Active Power Setpoint",
     "ReactivePowerSetpointPu": "Reactive Power Setpoint",
     "VoltageSetpointPu": "Plant-level voltage regulation Setpoint",
     "MagnitudeControlledByAVRPu": "Plant-level voltage regulation Magnitude",
-    "VoltageInjTerminal": "Voltage",
+    "VoltageNode2": "Voltage",
     "RotorSpeedPu": "Rotor Speed",
     "NetworkFrequencyPu": "Frequency",
     "InternalAngle": "Internal Angle",
@@ -60,7 +60,7 @@ def get_curve_style(variable_name: str, is_reference: bool = False) -> CurveStyl
     Parameters
     ----------
     variable_name: str
-        Full internal variable name (e.g., "BusPDR_BUS_ActivePower", "modIInjTerminal")
+        Full internal variable name (e.g., "BusPDR_BUS_ActivePower", "modINode2")
     is_reference: bool
         Whether the curve corresponds to a reference trajectory (e.g., from a reference solution or
         a baseline method)
@@ -76,11 +76,11 @@ def get_curve_style(variable_name: str, is_reference: bool = False) -> CurveStyl
         return CurveStyle(color="#8c8c8c", style=":")
     if is_reference:
         return CurveStyle(color="#dd8452", style="-")
-    if "modIInjTerminal" in variable_name:
+    if "modINode2" in variable_name:
         return CurveStyle(color="#e2c22e", style="-")
-    if "ActiveCurrentInjTerminal" in variable_name:
+    if "ActiveCurrentNode2" in variable_name:
         return CurveStyle(color="#64b5cd", style="-")
-    if "ReactiveCurrentInjTerminal" in variable_name:
+    if "ReactiveCurrentNode2" in variable_name:
         return CurveStyle(color="#8172b3", style="-")
     return CurveStyle(color="#4c72b0", style="-")
 
@@ -91,7 +91,7 @@ def get_variable_label(variable_name: str, zone: int = 0) -> str:
     Parameters
     ----------
     variable_name: str
-        Full internal variable name (e.g., "BusPDR_BUS_ActivePower", "modIInjTerminal")
+        Full internal variable name (e.g., "BusPDR_BUS_ActivePower", "modINode2")
     zone: int
         Validation zone (1 for Zone1, 3 for Zone3, 0 otherwise)
 
@@ -100,7 +100,7 @@ def get_variable_label(variable_name: str, zone: int = 0) -> str:
     str
         A human-readable label for the variable (e.g., "Active Power", "|I|")
     """
-    if "modIInjTerminal" in variable_name:
+    if "modINode2" in variable_name:
         return "|I|"
     for labels in (_VARIABLE_LABELS_BY_ZONE.get(zone, {}), _VARIABLE_LABELS):
         for key, label in labels.items():
@@ -199,7 +199,7 @@ def build_figure_title(variables: str | list[dict], zone: int = 0) -> str:
         equipment = get_bus_label(zone)
     elif equipment_type == "sync_condenser":
         equipment = "Synchronous Condenser"
-    elif zone == 1 and _is_injector_terminal_figure(variables):
+    elif zone == 1 and _is_node2_figure(variables):
         equipment = ZONE1_INJECTOR_NODE_LABEL
     else:
         equipment = equipment_type.capitalize()
@@ -207,5 +207,5 @@ def build_figure_title(variables: str | list[dict], zone: int = 0) -> str:
     return f"{magnitude} — {equipment}"
 
 
-def _is_injector_terminal_figure(variables: list[dict]) -> bool:
-    return all("InjTerminal" in v["variable"] for v in variables if not is_setpoint(v["variable"]))
+def _is_node2_figure(variables: list[dict]) -> bool:
+    return all("Node2" in v["variable"] for v in variables if not is_setpoint(v["variable"]))
