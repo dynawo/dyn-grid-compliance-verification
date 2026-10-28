@@ -33,6 +33,7 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_PPM,
     REPORT_NAME,
 )
+from dycov.curves import naming
 from dycov.files import manage_files, value_registry
 from dycov.logging import dycov_logging
 from dycov.report import figure, html
@@ -461,8 +462,19 @@ def _with_stepped_setpoint(
         return figure_description
     return replace(
         figure_description,
-        variables=[*figure_description.variables, {"type": "generator", "variable": stepped}],
+        variables=[
+            *_as_typed_variables(figure_description.variables),
+            {"type": "generator", "variable": stepped},
+        ],
     )
+
+
+def _as_typed_variables(variables: str | list) -> list:
+    """The variables of a figure as a list of typed ones, which is what a figure that draws
+    more than one curve takes: a curve of the bus named in full becomes the bus variable."""
+    if isinstance(variables, str):
+        return [{"type": "bus", "variable": variables.removeprefix(naming.INTERNAL_BUS_PREFIX)}]
+    return variables
 
 
 def _generate_figures(

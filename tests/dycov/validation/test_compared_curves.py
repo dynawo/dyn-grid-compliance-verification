@@ -239,6 +239,42 @@ def test_for_setpoint_of_a_tracked_current_is_the_current_of_the_unit():
     assert compared_curves.for_setpoint(1, "reactive_current", columns) == columns[2]
 
 
+def _zone1_compared_at_node1(monkeypatch):
+    """Config is frozen, so the double replaces the method on the class."""
+    from dycov.configuration.cfg import Config
+
+    monkeypatch.setattr(
+        Config,
+        "get_boolean",
+        lambda self, section, key, default=False: (
+            (section, key) == ("GridCode", "zone1_compared_at_node1")
+        ),
+    )
+
+
+def test_zone1_compares_internal_node1_alone_when_the_pcs_observes_it_there(monkeypatch):
+    _zone1_compared_at_node1(monkeypatch)
+
+    assert [curve.selector for curve in compared_curves.for_zone(1)] == [
+        "BusPDR_BUS_Voltage",
+        "BusPDR_BUS_ActivePower",
+        "BusPDR_BUS_ReactivePower",
+        "BusPDR_BUS_ActiveCurrent",
+        "BusPDR_BUS_ReactiveCurrent",
+    ]
+    assert compared_curves.curve_names(1, ["Bess"]) == [
+        curve.selector for curve in compared_curves.for_zone(1)
+    ]
+
+
+def test_a_tracked_current_at_internal_node1_is_the_current_of_the_bus(monkeypatch):
+    _zone1_compared_at_node1(monkeypatch)
+    columns = ["time", "Bess_GEN_ActiveCurrentNode2", "BusPDR_BUS_ActiveCurrent"]
+
+    assert compared_curves.for_setpoint(1, "active_current", columns) == columns[2]
+    assert compared_curves.threshold_of(columns[2]) == "Ip"
+
+
 def test_column_of_a_label_the_zone_does_not_compare_is_none():
     assert compared_curves.column_of(1, "frequency", _ZONE_1_COLUMNS) is None
 
@@ -275,16 +311,8 @@ def test_for_setpoint_without_the_column_is_the_selector_so_it_is_reported_missi
 @pytest.mark.parametrize(
     "selector, column, expected",
     [
-        (
-            "_GEN_ActivePowerControlledNode",
-            "PV_Array_GEN_ActivePowerControlledNode",
-            True,
-        ),
-        (
-            "_GEN_ActivePowerControlledNode",
-            "PV_Array_GEN_ReactivePowerControlledNode",
-            False,
-        ),
+        ("_GEN_ActivePowerControlledNode", "PV_Array_GEN_ActivePowerControlledNode", True),
+        ("_GEN_ActivePowerControlledNode", "PV_Array_GEN_ReactivePowerControlledNode", False),
         ("BusPDR_BUS_Voltage", "BusPDR_BUS_Voltage", True),
         ("BusPDR_BUS_Voltage", "InternalNode1_BUS_Voltage", False),
     ],

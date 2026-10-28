@@ -224,6 +224,25 @@ def test_a_test_without_a_type_draws_no_setpoint():
     assert _setpoints_by_figure(drawn) == {}
 
 
+def test_a_setpoint_step_draws_its_setpoint_over_a_curve_of_internal_node1(set_user_option):
+    """A Zone 1 that compares InternalNode1, as the Fiche I16.2 does, draws the active power
+    of the bus, which the figure names in full."""
+    set_user_option(_OC, "setpoint_change_test_type", "PSetpoint")
+    fig_p = FigureDescription(
+        name="fig_P",
+        variables="BusPDR_BUS_ActivePower",
+        ylabel="P",
+        setpoint="ActivePowerSetpointPu",
+    )
+
+    drawn = report._with_stepped_setpoint(fig_p, _OC, 1)
+
+    assert drawn.variables == [
+        {"type": "bus", "variable": "ActivePower"},
+        {"type": "generator", "variable": "ActivePowerSetpointPu"},
+    ]
+
+
 def test_a_setpoint_step_of_zone_3_draws_no_setpoint(set_user_option):
     set_user_option(_OC, "setpoint_change_test_type", "PSetpoint")
     fig_p = FigureDescription(name="fig_P", variables="BusPDR_BUS_ActivePower", ylabel="P")
