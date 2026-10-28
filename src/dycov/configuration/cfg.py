@@ -16,6 +16,16 @@ from typing import Optional
 
 from dycov.logging import dycov_logging
 
+_NORM_SECTIONS = (
+    "GridCode",
+    "PCS-Benchmarks",
+    "PCS-OperatingConditions",
+    "Performance-Validations",
+    "Model-Validations",
+)
+"""Sections of the default configuration that hold what the DTR fixes, and not how the tool
+runs. Every section of a PCS description holds the norm, whatever its name."""
+
 
 @dataclass(frozen=True)
 class Config:
@@ -24,9 +34,10 @@ class Config:
     Configuration is loaded with the following priority:
     1. User Performance Checking Sheet (PCS) description
     2. User configuration
-    3. PCS description of the selected DTR revision
+    3. Delta of this PCS for the selected DTR revision
     4. PCS description shipped with the tool
-    5. Default configuration
+    5. Rest of the delta of the selected DTR revision
+    6. Default configuration
 
     The three PCS layers describe one PCS at a time, and load_pcs_config rebuilds them
     every time a PCS is prepared. The user configuration outlives them, because it also
@@ -42,38 +53,48 @@ class Config:
         Parser for the user-specific configuration.
     _pcs_user_config: configparser.ConfigParser
         Parser for the PCS description written by the user.
-    _pcs_dtr_config: configparser.ConfigParser
-        Parser for the PCS description of the selected DTR revision.
+    _pcs_dtr_delta_config: configparser.ConfigParser
+        Parser for the delta of this PCS: what the selected revision of the DTR writes
+        differently from the description shipped with the tool.
     _pcs_default_config: configparser.ConfigParser
         Parser for the PCS description shipped with the tool.
+    _dtr_delta_config: configparser.ConfigParser
+        Parser for the rest of the delta: what the selected revision of the DTR writes
+        outside any PCS.
     _pcs_user_files: list[str]
         Path of the user PCS description in preparation, used to locate an option in its
         source file when reporting errors.
-    _pcs_dtr_files: list[str]
-        Path of the DTR revision description in preparation, used to locate an option in
-        its source file when reporting errors.
+    _pcs_dtr_delta_files: list[str]
+        Path of the delta of the PCS in preparation, used to locate an option in its
+        source file when reporting errors.
     _pcs_default_files: list[str]
         Path of the shipped PCS description in preparation, used to locate an option in
         its source file when reporting errors.
+    _dtr_delta_files: list[str]
+        Path of the delta file in use, used to locate an option in its source file when
+        reporting errors.
     """
 
     _config_dir: Path
     _default_config: configparser.ConfigParser
     _user_config: configparser.ConfigParser
     _pcs_user_config: configparser.ConfigParser
-    _pcs_dtr_config: configparser.ConfigParser
+    _pcs_dtr_delta_config: configparser.ConfigParser
     _pcs_default_config: configparser.ConfigParser
+    _dtr_delta_config: configparser.ConfigParser
     _pcs_user_files: list[str] = field(default_factory=list)
-    _pcs_dtr_files: list[str] = field(default_factory=list)
+    _pcs_dtr_delta_files: list[str] = field(default_factory=list)
     _pcs_default_files: list[str] = field(default_factory=list)
+    _dtr_delta_files: list[str] = field(default_factory=list)
 
     def _layers(self) -> tuple[configparser.ConfigParser, ...]:
         """Configuration parsers, from the highest precedence to the lowest."""
         return (
             self._pcs_user_config,
             self._user_config,
-            self._pcs_dtr_config,
+            self._pcs_dtr_delta_config,
             self._pcs_default_config,
+            self._dtr_delta_config,
             self._default_config,
         )
 
@@ -102,9 +123,10 @@ class Config:
         The priority defined in the configuration is:
           1. User Performance Checking Sheet (PCS) description
           2. User config
-          3. PCS description of the selected DTR revision
+          3. Delta of this PCS for the selected DTR revision
           4. PCS description shipped with the tool
-          5. Default config
+          5. Rest of the delta of the selected DTR revision
+          6. Default config
 
         Parameters
         ----------
@@ -144,17 +166,39 @@ class Config:
             )
             raise
 
+    def load_dtr_delta_config(self, revision: str) -> None:
+        """Loads the sections the selected revision of the DTR writes outside any PCS.
+
+        They come as one file per article of the DTR, so that a reader sees which article
+        changed. A revision that writes none has no file, and the layer is then empty.
+
+        Parameters
+        ----------
+        revision: str
+            Revision of the DTR, as the date of the edition that carries it (YYYYMMDD).
+        """
+        self._dtr_delta_config.clear()
+        self._dtr_delta_files.clear()
+        for path in _dtr_delta_paths(revision):
+            dycov_logging.get_logger("Cfg").info("Loading DTR delta from: %s", path)
+            self._dtr_delta_config.read(path, encoding="utf-8")
+            self._dtr_delta_files.append(str(path))
+
     def load_pcs_config(
         self,
         pcs_path: Optional[Path],
         user_pcs_path: Optional[Path] = None,
-        dtr_pcs_path: Optional[Path] = None,
+        pcs_dtr_delta_path: Optional[Path] = None,
+        pcs_dtr_version_path: Optional[Path] = None,
     ) -> None:
         """Rebuild the Performance Checking Sheet (PCS) description layers from the files
         of a single PCS, discarding whatever a previously prepared PCS had left.
 
         Each file goes into the layer of its origin, so which one wins is a matter of
-        precedence and not of the order in which they are read.
+        precedence and not of the order in which they are read. The one exception is the
+        version of the PCS a revision writes for some categories of unit: it is part of what
+        that revision writes for the PCS, so it shares the layer of the delta, and it is read
+        after the delta because it patches it.
 
         Every layer then resolves the inheritance mechanism using alias files: any file
         named "*aliases*" located two levels above its PCS file. If a section contains an
@@ -168,36 +212,47 @@ class Config:
             Path to the PCS description shipped with the tool.
         user_pcs_path: Optional[Path]
             Path to the PCS description written by the user.
-        dtr_pcs_path: Optional[Path]
-            Path to the PCS description of the selected DTR revision.
+        pcs_dtr_delta_path: Optional[Path]
+            Path to the delta of this PCS for the selected DTR revision.
+        pcs_dtr_version_path: Optional[Path]
+            Path to the version of this PCS the selected DTR revision writes for the category
+            of the installation, when it writes one.
         """
         self._load_pcs_layer(self._pcs_user_config, self._pcs_user_files, user_pcs_path)
-        self._load_pcs_layer(self._pcs_dtr_config, self._pcs_dtr_files, dtr_pcs_path)
+        self._load_pcs_layer(
+            self._pcs_dtr_delta_config,
+            self._pcs_dtr_delta_files,
+            pcs_dtr_delta_path,
+            pcs_dtr_version_path,
+        )
         self._load_pcs_layer(self._pcs_default_config, self._pcs_default_files, pcs_path)
 
     def _load_pcs_layer(
         self,
         parser: configparser.ConfigParser,
         layer_files: list[str],
-        path: Optional[Path],
+        *paths: Optional[Path],
     ) -> None:
-        """Internal helper to replace the contents of one PCS layer with the given file."""
+        """Internal helper to replace the contents of one PCS layer with the given files, each
+        of which patches the ones before it."""
         parser.clear()
         layer_files.clear()
-        if path is None:
-            return
+        for path in paths:
+            if path is None:
+                continue
 
-        dycov_logging.get_logger("Cfg").info("Loading PCS configuration from: %s", path)
-        try:
-            parser.read(path, encoding="utf-8")
-            layer_files.append(str(path))
-            _resolve_inherited_sections(parser, _alias_files(path))
-            dycov_logging.get_logger("Cfg").info("Successfully loaded PCS configuration.")
-        except Exception as e:
-            dycov_logging.get_logger("Cfg").error(
-                "Error loading PCS configuration from %s: %s", path, e
-            )
-            raise
+            dycov_logging.get_logger("Cfg").info("Loading PCS configuration from: %s", path)
+            try:
+                parser.read(path, encoding="utf-8")
+                # The file read last wins, so an option is looked for in it first
+                layer_files.insert(0, str(path))
+                _resolve_inherited_sections(parser, _alias_files(path))
+                dycov_logging.get_logger("Cfg").info("Successfully loaded PCS configuration.")
+            except Exception as e:
+                dycov_logging.get_logger("Cfg").error(
+                    "Error loading PCS configuration from %s: %s", path, e
+                )
+                raise
 
     def get_config_dir(self) -> Path:
         """Returns the configuration directory path.
@@ -254,8 +309,9 @@ class Config:
         return [
             *(Path(pcs_file) for pcs_file in self._pcs_user_files),
             _user_config_path(self._config_dir),
-            *(Path(pcs_file) for pcs_file in self._pcs_dtr_files),
+            *(Path(pcs_file) for pcs_file in self._pcs_dtr_delta_files),
             *(Path(pcs_file) for pcs_file in self._pcs_default_files),
+            *(Path(dtr_delta_file) for dtr_delta_file in self._dtr_delta_files),
             _default_config_path(),
         ]
 
@@ -303,11 +359,14 @@ class Config:
         if self._has_valid_option(self._user_config, section, key):
             return self._user_config
 
-        if self._has_valid_option(self._pcs_dtr_config, section, key):
+        if self._has_valid_option(self._pcs_dtr_delta_config, section, key):
             return self._user_config
 
         if self._has_valid_option(self._pcs_default_config, section, key):
             return self._pcs_default_config
+
+        if self._has_valid_option(self._dtr_delta_config, section, key):
+            return self._user_config
 
         if self._has_valid_option(self._default_config, section, key):
             return self._default_config
@@ -394,6 +453,34 @@ class Config:
             )
             return default
 
+    def get_threshold(self, section: str, key: str, default: float) -> float | None:
+        """Gets the limit of a check, which the configuration may leave empty.
+
+        A revision of the DTR may ask for a value and check nothing against it. It writes
+        ``none`` as the limit, and the check then reports the value without a verdict. An
+        empty value says nothing, because the layer below answers for it.
+
+        Parameters
+        ----------
+        section: str
+            Section header.
+        key: str
+            Key within the section.
+        default: float
+            Default value to return if the key is not found.
+
+        Returns
+        -------
+        float | None
+            The limit of the check, or None when the configuration gives it as ``none``.
+        """
+        value = self._get_config_value(section, key)
+        if value is None:
+            return default
+        if value.strip().lower() == "none":
+            return None
+        return self.get_float(section, key, default)
+
     def get_boolean(self, section: str, key: str, default: bool = False) -> bool:
         """Gets a boolean value for a given key and section.
 
@@ -416,7 +503,7 @@ class Config:
             return default
         return value.lower() == "true"
 
-    def find_option(self, section: str, key: str, suffix: str) -> str | None:
+    def find_option(self, section: str, key: str, *suffixes: str) -> str | None:
         """Names the key the section defines for a suffix: ``<key>_<suffix>`` wins over ``<key>``.
 
         Parameters
@@ -425,8 +512,9 @@ class Config:
             Section header.
         key: str
             Plain key within the section.
-        suffix: str
-            Suffix of the specific key, e.g. the voltage level of the producer.
+        suffixes: str
+            Suffixes of the specific keys, in the order they win, e.g. the category of the
+            producer and then its voltage level.
 
         Returns
         -------
@@ -434,14 +522,56 @@ class Config:
             The suffixed key if the section defines it, else the plain key if it defines that,
             else None.
         """
-        for candidate in (f"{key}_{suffix}", key):
+        for candidate in (*(f"{key}_{suffix}" for suffix in suffixes), key):
             if self.has_option(section, candidate):
                 return candidate
         return None
 
+    def overridden_norm_options(self) -> list[tuple[str, str]]:
+        """Options the DTR fixes that the configuration of the user changed.
+
+        A verdict measured with them is not a conformity check, so the report says so and
+        names them. Which options belong to the norm is not a judgement: they are the ones
+        the shipped catalogue of the PCS, the delta of the selected revision, and the
+        sections of the norm of the default configuration define.
+
+        Returns
+        -------
+        list[tuple[str, str]]
+            The section and the key of every option, sorted.
+        """
+        overridden = set()
+        for user_layer in (self._pcs_user_config, self._user_config):
+            for section in user_layer.sections():
+                for key in user_layer.options(section):
+                    if not self._has_valid_option(user_layer, section, key):
+                        continue
+                    if self._is_norm_option(section, key):
+                        overridden.add((section, key))
+
+        return sorted(overridden)
+
+    def _is_norm_option(self, section: str, key: str) -> bool:
+        """Internal helper that tells whether the DTR fixes an option."""
+        for layer in (self._pcs_dtr_delta_config, self._pcs_default_config):
+            if self._has_valid_option(layer, section, key):
+                return True
+
+        if section not in _NORM_SECTIONS and not section.startswith("PCS_RTE-"):
+            return False
+
+        return any(
+            self._has_valid_option(layer, section, key)
+            for layer in (self._dtr_delta_config, self._default_config)
+        )
+
     def get_list(self, section: str, key: str) -> list:
         """Gets a list of string values for a given key and section.
         Values are assumed to be comma-separated in the configuration file.
+
+        The word ``none`` means a list with nothing in it, which an empty value cannot say:
+        a layer writing an empty value leaves the layer below to answer. A revision of the
+        DTR that withdraws a fiche, or a test of a fiche, writes that word.
 
         Parameters
         ----------
@@ -456,7 +586,7 @@ class Config:
             A list of strings if the key exists, an empty list otherwise.
         """
         value = self._get_config_value(section, key)
-        if value is None:
+        if value is None or value.strip().lower() == "none":
             return []
         return value.split(",")
 
@@ -484,6 +614,15 @@ class Config:
             for option in parser.options(section)
         )
         return list(options)
+
+
+def is_base_revision(revision: str) -> bool:
+    """Whether a revision of the DTR is the one the shipped catalogue holds.
+
+    The base needs no delta, so nothing looks for one: a directory under
+    ``templates/revisions`` named after it would be read by nobody.
+    """
+    return revision == config.get_value("DTR", "base", "")
 
 
 def _new_parser() -> configparser.ConfigParser:
@@ -526,6 +665,22 @@ def _resolve_inherited_sections(parser: configparser.ConfigParser, alias_files: 
 def _user_config_path(config_dir: Path) -> Path:
     """Path of the user configuration file."""
     return config_dir / "config.ini"
+
+
+def _dtr_delta_paths(revision: str) -> list[Path]:
+    """Files a revision of the DTR writes outside any PCS, one per article it changes.
+
+    A revision keeps its whole delta in one directory of its own, which mirrors the shipped
+    templates: the descriptions of the PCS it changes, the reports, and these files, named
+    ``revision_art_<article>.ini`` after the article of the DTR they come from. The base
+    revision is the catalogue itself, so it has none.
+    """
+    if is_base_revision(revision):
+        return []
+
+    package = Path(__file__).resolve().parent.parent
+    directory = package / "templates" / "revisions" / revision
+    return sorted(directory.glob("revision_art_*.ini"))
 
 
 def _default_config_path() -> Path:
@@ -571,8 +726,9 @@ def _get_instance() -> Config:
     default_config = _new_parser()
     user_config = _new_parser()
     pcs_user_config = _new_parser()
-    pcs_dtr_config = _new_parser()
+    pcs_dtr_delta_config = _new_parser()
     pcs_default_config = _new_parser()
+    dtr_delta_config = _new_parser()
 
     # Load default configuration from the package
     default_config_path = _default_config_path()
@@ -606,8 +762,9 @@ def _get_instance() -> Config:
         default_config,
         user_config,
         pcs_user_config,
-        pcs_dtr_config,
+        pcs_dtr_delta_config,
         pcs_default_config,
+        dtr_delta_config,
     )
 
 

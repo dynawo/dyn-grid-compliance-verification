@@ -27,6 +27,30 @@ options from the advanced profile may also be copied into ``config.ini``
 directly — any option is honored there, whichever profile it comes from.
 
 
+The revision of the DTR
+-----------------------
+
+A verdict only means something against the revision of the DTR it was measured
+with, so a run names one. The revision takes the date of the edition of the DTR
+that carries it, as ``YYYYMMDD``, and not the date the article inside takes
+force.
+
+The ``[DTR]`` section holds it:
+
+* ``current`` — the revision a run validates against.
+* ``available`` — the revisions the tool implements. A run that asks for
+  another one stops with an error; the tool never falls back to another norm
+  in silence.
+
+``--dtr <YYYYMMDD>`` overrides ``current`` for one execution, so the same
+producer runs against two revisions one after the other. Only the criteria
+change, so the curves need no regeneration.
+
+The revision to use is the one in force at the date of the *Proposition
+Technique et Financière* of the installation, because the specifications of
+the installation were written with it.
+
+
 PCS Structure
 --------------
 

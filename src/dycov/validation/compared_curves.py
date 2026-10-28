@@ -57,11 +57,11 @@ class ComparedCurve:
 
 _ZONE_1 = (
     ComparedCurve("BusPDR_BUS_Voltage", "voltage", "V", None),
-    ComparedCurve("_GEN_VoltageInjTerminal", "injector_voltage", "V InternalNode2", None),
-    ComparedCurve("_GEN_ActivePowerControlledPu", "active_power", "P", "P"),
-    ComparedCurve("_GEN_ReactivePowerControlledPu", "reactive_power", "Q", "Q"),
-    ComparedCurve("_GEN_ActiveCurrentInjTerminal", "active_current", "$I_p$", "Ip"),
-    ComparedCurve("_GEN_ReactiveCurrentInjTerminal", "reactive_current", "$I_q$", "Iq"),
+    ComparedCurve("_GEN_VoltageNode2", "injector_voltage", "V InternalNode2", None),
+    ComparedCurve("_GEN_ActivePowerControlledNode", "active_power", "P", "P"),
+    ComparedCurve("_GEN_ReactivePowerControlledNode", "reactive_power", "Q", "Q"),
+    ComparedCurve("_GEN_ActiveCurrentNode2", "active_current", "$I_p$", "Ip"),
+    ComparedCurve("_GEN_ReactiveCurrentNode2", "reactive_current", "$I_q$", "Iq"),
 )
 
 _ZONE_3 = (

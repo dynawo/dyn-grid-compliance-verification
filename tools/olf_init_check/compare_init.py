@@ -139,6 +139,16 @@ def _find_suffix(d, *suffixes):
     return None
 
 
+def _starting_ratio(d):
+    """A tap changer starts from the ratio its starting tap gives, as Dynawo derives it,
+    whatever ratio its set also states; a fixed-ratio branch from the ratio it states."""
+    tap0, nb_tap = _find_suffix(d, "_Tap0"), _find_suffix(d, "_NbTap")
+    low, high = _find_suffix(d, "_RatioTfoMinPu"), _find_suffix(d, "_RatioTfoMaxPu")
+    if None not in (tap0, nb_tap, low, high) and nb_tap > 1:
+        return low + (high - low) * tap0 / (nb_tap - 1)
+    return _find_suffix(d, "rTfoPu")
+
+
 def _branch_pimodel(r, x, rho):
     """Pi-equivalent of an ideal ratio `rho` at terminal 1 followed by the series impedance.
 
@@ -241,7 +251,7 @@ def compare_case(case):
             r, x = _find_suffix(s, "_RPu"), _find_suffix(s, "_XPu")
             if r is None or x is None:
                 return dict(status="SKIP", reason=f"no branch impedance ({lib})")
-            ratio = _find_suffix(s, "RatioTfo0Pu", "rTfoPu")
+            ratio = _starting_ratio(s)
             branches.append((mid, uf.find(ts[0]), uf.find(ts[1]), r, x,
                              1.0 if ratio is None else ratio))
             if lib in LINE_LIBS:

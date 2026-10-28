@@ -441,7 +441,7 @@ def _terminal_frame(voltages):
     return pd.DataFrame(
         {
             "time": np.linspace(0, 1, len(voltages)),
-            "Wind_Turbine_GEN_VoltageInjTerminal": voltages,
+            "Wind_Turbine_GEN_VoltageNode2": voltages,
         }
     )
 
@@ -688,11 +688,11 @@ ALL_MEASUREMENTS = [
 
 ZONE_1_MEASUREMENTS = [
     "BusPDR_BUS_Voltage",
-    "Gen_GEN_VoltageInjTerminal",
-    "Gen_GEN_ActivePowerControlledPu",
-    "Gen_GEN_ReactivePowerControlledPu",
-    "Gen_GEN_ActiveCurrentInjTerminal",
-    "Gen_GEN_ReactiveCurrentInjTerminal",
+    "Gen_GEN_VoltageNode2",
+    "Gen_GEN_ActivePowerControlledNode",
+    "Gen_GEN_ReactivePowerControlledNode",
+    "Gen_GEN_ActiveCurrentNode2",
+    "Gen_GEN_ReactiveCurrentNode2",
 ]
 
 

@@ -23,9 +23,9 @@ from dycov.curves.anonymizer.sources import (
 from dycov.files.simulation_files import SIMULATION_INPUTS_FILE
 
 ZONE1_COLUMNS = (
-    "time;InternalNode1_BUS_Voltage;PV_Array_GEN_VoltageInjTerminal;"
-    "PV_Array_GEN_ActivePowerControlledPu;PV_Array_GEN_ReactivePowerControlledPu;"
-    "PV_Array_GEN_ActiveCurrentInjTerminal;PV_Array_GEN_ReactiveCurrentInjTerminal\n"
+    "time;InternalNode1_BUS_Voltage;PV_Array_GEN_VoltageNode2;"
+    "PV_Array_GEN_ActivePowerControlledNode;PV_Array_GEN_ReactivePowerControlledNode;"
+    "PV_Array_GEN_ActiveCurrentNode2;PV_Array_GEN_ReactiveCurrentNode2\n"
 )
 
 
@@ -111,11 +111,11 @@ def test_the_dictionary_asks_for_every_curve_the_zone_compares_or_draws(tmp_path
         "time = time",
         "NetworkFrequencyPu = ",
         "InternalNode1_BUS_Voltage = InternalNode1_BUS_Voltage",
-        "PV_Array_GEN_VoltageInjTerminal = PV_Array_GEN_VoltageInjTerminal",
-        "PV_Array_GEN_ActivePowerControlledPu = PV_Array_GEN_ActivePowerControlledPu",
-        "PV_Array_GEN_ReactivePowerControlledPu = PV_Array_GEN_ReactivePowerControlledPu",
-        "PV_Array_GEN_ActiveCurrentInjTerminal = PV_Array_GEN_ActiveCurrentInjTerminal",
-        "PV_Array_GEN_ReactiveCurrentInjTerminal = PV_Array_GEN_ReactiveCurrentInjTerminal",
+        "PV_Array_GEN_VoltageNode2 = PV_Array_GEN_VoltageNode2",
+        "PV_Array_GEN_ActivePowerControlledNode = PV_Array_GEN_ActivePowerControlledNode",
+        "PV_Array_GEN_ReactivePowerControlledNode = PV_Array_GEN_ReactivePowerControlledNode",
+        "PV_Array_GEN_ActiveCurrentNode2 = PV_Array_GEN_ActiveCurrentNode2",
+        "PV_Array_GEN_ReactiveCurrentNode2 = PV_Array_GEN_ReactiveCurrentNode2",
         "PV_Array_GEN_ActivePowerSetpointPu = ",
         "PV_Array_GEN_ReactivePowerSetpointPu = ",
     ]
@@ -160,13 +160,13 @@ def test_an_existing_dictionary_is_repointed_at_the_file_just_written(tmp_path):
     csv.with_suffix(".dict").write_text(
         "[Curves-Metadata]\nsim_t_event_start = 30.0\n\n"
         "[Curves-Dictionary]\n"
-        "PV_Array_GEN_VoltageInjTerminal = Wind_Turbine_GEN_VoltageInjTerminal\n",
+        "PV_Array_GEN_VoltageNode2 = Wind_Turbine_GEN_VoltageNode2\n",
         encoding="utf-8",
     )
 
     _create_dict_file(csv, {})
 
-    assert "PV_Array_GEN_VoltageInjTerminal = PV_Array_GEN_VoltageInjTerminal" in _curves_section(
+    assert "PV_Array_GEN_VoltageNode2 = PV_Array_GEN_VoltageNode2" in _curves_section(
         csv.with_suffix(".dict")
     )
     assert "Wind_Turbine" not in csv.with_suffix(".dict").read_text()
@@ -191,16 +191,35 @@ def test_an_existing_dictionary_keeps_the_metadata_it_states(tmp_path):
 def test_a_curve_the_file_does_not_carry_is_left_empty_and_warned(tmp_path, caplog):
     curves = tmp_path / "curves"
     curves.mkdir()
-    columns = ZONE1_COLUMNS.replace(";PV_Array_GEN_ActivePowerControlledPu", "")
+    columns = ZONE1_COLUMNS.replace(";PV_Array_GEN_ActivePowerControlledNode", "")
     csv = curves / "PCS_RTE-I16z1.GridVoltageStep.Drop.csv"
     csv.write_text(columns + "0.0;1.0;1.0;0.1;0.5;0.1\n", encoding="utf-8")
 
     with caplog.at_level(logging.WARNING):
         _create_dict_file(csv, {})
 
-    assert "PV_Array_GEN_ActivePowerControlledPu = " in _curves_section(csv.with_suffix(".dict"))
-    assert "PV_Array_GEN_ActivePowerControlledPu" in caplog.text
+    assert "PV_Array_GEN_ActivePowerControlledNode = " in _curves_section(csv.with_suffix(".dict"))
+    assert "PV_Array_GEN_ActivePowerControlledNode" in caplog.text
     assert "does not carry" in caplog.text
+
+
+def test_columns_named_before_the_dtr_nodes_are_declared_under_their_current_names(
+    tmp_path, caplog
+):
+    curves = tmp_path / "curves"
+    curves.mkdir()
+    previous = ZONE1_COLUMNS.replace("Node2", "InjTerminal").replace(
+        "ControlledNode", "ControlledPu"
+    )
+    csv = _make_zone1_curves(curves, previous)
+
+    with caplog.at_level(logging.WARNING):
+        _create_dict_file(csv, {})
+
+    lines = _curves_section(csv.with_suffix(".dict"))
+    assert "PV_Array_GEN_VoltageNode2 = PV_Array_GEN_VoltageInjTerminal" in lines
+    assert "PV_Array_GEN_ActivePowerControlledNode = PV_Array_GEN_ActivePowerControlledPu" in lines
+    assert "does not carry" not in caplog.text
 
 
 def test_a_synchronous_compensator_is_not_taken_for_a_generating_unit(tmp_path, caplog):

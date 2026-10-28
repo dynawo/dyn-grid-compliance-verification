@@ -41,6 +41,11 @@ class DummyConfig:
     def get_float(self, section: str, key: str, default: float) -> float:
         return self._values.get(key, default)
 
+    def get_threshold(self, section: str, key: str, default: float) -> float | None:
+        """The word "none" withdraws a limit: the check reports its value and gives no verdict."""
+        value = self._values.get(key, default)
+        return None if value == "none" else value
+
     def get_value(self, section: str, key: str, default=None):
         return self._values.get(key, default)
 
@@ -149,11 +154,11 @@ def _make_window_manager(calculated=None, windows_raise=False, reference=None):
 def _make_zone1_curves(controlled_active_power=None):
     """The curves Zone 1 compares: the node 1 voltage plus the converter magnitudes."""
     curves = _make_pdr_curves()
-    curves["WT_GEN_VoltageInjTerminal"] = [1.0, 1.0, 1.0, 1.0]
-    curves["WT_GEN_ActivePowerControlledPu"] = controlled_active_power or [0.5, 0.5, 0.6, 0.6]
-    curves["WT_GEN_ReactivePowerControlledPu"] = [0.1, 0.1, 0.1, 0.1]
-    curves["WT_GEN_ActiveCurrentInjTerminal"] = [0.5, 0.5, 0.6, 0.6]
-    curves["WT_GEN_ReactiveCurrentInjTerminal"] = [0.1, 0.1, 0.1, 0.1]
+    curves["WT_GEN_VoltageNode2"] = [1.0, 1.0, 1.0, 1.0]
+    curves["WT_GEN_ActivePowerControlledNode"] = controlled_active_power or [0.5, 0.5, 0.6, 0.6]
+    curves["WT_GEN_ReactivePowerControlledNode"] = [0.1, 0.1, 0.1, 0.1]
+    curves["WT_GEN_ActiveCurrentNode2"] = [0.5, 0.5, 0.6, 0.6]
+    curves["WT_GEN_ReactiveCurrentNode2"] = [0.1, 0.1, 0.1, 0.1]
     return curves
 
 
@@ -413,7 +418,7 @@ def test_check_ramp_only_checks_the_enabled_validations():
 def _make_step_manager(zone=3):
     """Calculated active power steps 1 s after the event, the reference one 2 s after."""
     time = [0.0, 1.0, 2.0, 3.0, 4.0]
-    name = "BusPDR_BUS_ActivePower" if zone == 3 else "WT_GEN_ActivePowerControlledPu"
+    name = "BusPDR_BUS_ActivePower" if zone == 3 else "WT_GEN_ActivePowerControlledNode"
     calculated = pd.DataFrame({"time": time, name: [0.0, 0.0, 1.0, 1.0, 1.0]})
     reference = pd.DataFrame({"time": time, name: [0.0, 0.0, 0.0, 1.0, 1.0]})
     return DummyCurvesManager(calculated=calculated, reference=reference)
@@ -621,6 +626,25 @@ def test_check_times_outside_the_reaction_time_threshold_fails():
     assert check_results["reaction_time_check"] is False
     assert check_results["reaction_time_error"] == pytest.approx(100.0)
     assert check_results["compliance"] is False
+
+
+def test_check_times_reports_the_reaction_time_when_its_limit_is_withdrawn(monkeypatch):
+    """A revision of the DTR may keep an indicator and take its criterion away."""
+    monkeypatch.setattr(f"{MODEL_MODULE}.config", DummyConfig(thr_reaction_time="none"))
+    validator = _make_validator(validations=["reaction_time"])
+    check_results = {"compliance": True}
+    compliance_values = {
+        "calc_reaction_time": 2.0,
+        "ref_reaction_time": 1.0,
+        "calc_reaction_target": {"BusPDR_BUS_ActivePower": 0.1},
+    }
+
+    validator._ModelValidator__check_times(check_results, compliance_values)
+
+    assert "reaction_time_thr" not in check_results
+    assert check_results["reaction_time_check"] is None
+    assert check_results["reaction_time_error"] == pytest.approx(100.0)
+    assert check_results["compliance"] is True
 
 
 def test_check_times_overshoots_inside_the_tolerance_band_match():
@@ -979,7 +1003,7 @@ def test_calculate_in_zone1_takes_the_active_power_from_the_controlled_point():
         setpoint_variation=0.1,
     )
 
-    assert results["after"]["WT_GEN_ActivePowerControlledPu"]["mae"] > 0.0
+    assert results["after"]["WT_GEN_ActivePowerControlledNode"]["mae"] > 0.0
     assert "BusPDR_BUS_ActivePower" not in results["after"]
 
 
@@ -1334,11 +1358,11 @@ def test_get_measurement_names_in_zone1_asks_for_the_converter_magnitudes():
 
     assert names == [
         "BusPDR_BUS_Voltage",
-        "_GEN_VoltageInjTerminal",
-        "_GEN_ActivePowerControlledPu",
-        "_GEN_ReactivePowerControlledPu",
-        "_GEN_ActiveCurrentInjTerminal",
-        "_GEN_ReactiveCurrentInjTerminal",
+        "_GEN_VoltageNode2",
+        "_GEN_ActivePowerControlledNode",
+        "_GEN_ReactivePowerControlledNode",
+        "_GEN_ActiveCurrentNode2",
+        "_GEN_ReactiveCurrentNode2",
     ]
 
 

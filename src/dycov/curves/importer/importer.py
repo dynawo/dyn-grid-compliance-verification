@@ -21,6 +21,18 @@ from dycov.curves.importer.metadata import CurvesMetadata
 from dycov.curves.importer.reader import get_curves_reader
 
 
+def _declared_channel(channel_id: str, curves_dict: dict, carried: set) -> Optional[str]:
+    """The channel of the dictionary a channel of the file provides: itself, or the name the
+    curve has now, when the file still carries it under a previous name and not under that one.
+    """
+    if channel_id in curves_dict:
+        return channel_id
+    current = naming.from_legacy_name(channel_id)
+    if current in curves_dict and current not in carried:
+        return current
+    return None
+
+
 class CurvesImporter:
     """Curves importer.
 
@@ -125,7 +137,7 @@ class CurvesImporter:
             curves_dict = {
                 channel: naming.to_internal_name(name) for channel, name in curves_dict.items()
             }
-        return curves_dict
+        return {channel: naming.from_legacy_name(name) for channel, name in curves_dict.items()}
 
     @property
     def metadata(self) -> CurvesMetadata:
@@ -196,9 +208,11 @@ class CurvesImporter:
 
         # Populate the DataFrame dictionary
         df_dict["time"] = curves_reader.time
+        carried = set(curves_reader.analog_channel_ids)
         for idx, channel_id in enumerate(curves_reader.analog_channel_ids):
-            if channel_id not in curves_dict:
+            channel = _declared_channel(channel_id, curves_dict, carried)
+            if channel is None:
                 continue
-            df_dict[curves_dict[channel_id]] = curves_reader.analog[idx]
+            df_dict[curves_dict[channel]] = curves_reader.analog[idx]
 
         return pd.DataFrame.from_dict(df_dict, orient="columns")

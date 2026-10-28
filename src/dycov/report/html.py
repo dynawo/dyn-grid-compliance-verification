@@ -47,8 +47,7 @@ def _get_curve_names(
                     [
                         col
                         for col in curves
-                        if col.endswith("_GEN_" + name["variable"])
-                        and "modIInjTerminal" not in col
+                        if col.endswith("_GEN_" + name["variable"]) and "modINode2" not in col
                     ]
                 )
             elif name["type"] == "sync_condenser":
@@ -66,10 +65,10 @@ def _get_curve_names(
             elif name["type"] == "bus":
                 curve_names.extend(["BusPDR" + "_BUS_" + name["variable"]])
 
-    ip_names = [n for n in curve_names if "ActiveCurrentInjTerminal" in n]
-    iq_names = [n for n in curve_names if "ReactiveCurrentInjTerminal" in n]
+    ip_names = [n for n in curve_names if "ActiveCurrentNode2" in n]
+    iq_names = [n for n in curve_names if "ReactiveCurrentNode2" in n]
     if ip_names and iq_names:
-        mag_names = [col for col in curves.columns if "modIInjTerminal" in col]
+        mag_names = [col for col in curves.columns if "modINode2" in col]
         for insert_pos, mag_name in enumerate(mag_names):
             curve_names.insert(insert_pos, mag_name)
 
@@ -79,7 +78,7 @@ def _get_curve_names(
 def _has_iq_curve(variables) -> bool:
     if isinstance(variables, str):
         return False
-    return any("ReactiveCurrentInjTerminal" in v.get("variable", "") for v in variables)
+    return any("ReactiveCurrentNode2" in v.get("variable", "") for v in variables)
 
 
 def _plotly_figures(
@@ -94,7 +93,7 @@ def _plotly_figures(
 ):
     renderer = PlotlyRenderer(fig)
     scale = drawn_scale(figure_description)
-    is_iq_curve = "ReactiveCurrentInjTerminal" in curve_name
+    is_iq_curve = "ReactiveCurrentNode2" in curve_name
     if is_iq_curve or not _has_iq_curve(figure_description.variables):
         last_val = (
             band_ref_val if band_ref_val is not None else calculated_curves[curve_name].iloc[-1]

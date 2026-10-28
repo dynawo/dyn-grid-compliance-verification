@@ -50,7 +50,15 @@ class DummyBenchmark:
     instances = []
 
     def __init__(
-        self, pcs_name, pcs_id, pcs_zone, producer_name, report_name, bm_name, parameters, producer
+        self,
+        pcs_name,
+        pcs_id,
+        pcs_zone,
+        producer_name,
+        report_name,
+        bm_name,
+        parameters,
+        producer,
     ):
         self._name = bm_name
         self.generated = False
@@ -87,8 +95,19 @@ class DummyConfig:
     def get_list(self, section, key):
         return ["BM"]
 
-    def load_pcs_config(self, pcs_path, user_pcs_path=None, dtr_pcs_path=None):
-        self.loaded = (pcs_path, user_pcs_path, dtr_pcs_path)
+    def load_pcs_config(
+        self,
+        pcs_path,
+        user_pcs_path=None,
+        pcs_dtr_delta_path=None,
+        pcs_dtr_version_path=None,
+    ):
+        self.loaded = (
+            pcs_path,
+            user_pcs_path,
+            pcs_dtr_delta_path,
+            pcs_dtr_version_path,
+        )
 
 
 def _make_pcs(monkeypatch, bms=("BM_OK", "BM_KO")):
@@ -180,7 +199,9 @@ def _prepare_pcs_config(monkeypatch, tmp_path, tool_file, user_file, producer=No
     monkeypatch.setattr(
         Pcs,
         "_Pcs__get_pcs_path",
-        lambda self, producer, source_path: found.get(source_path),
+        lambda self, producer, source_path, templates_path=None: (
+            None if templates_path else found.get(source_path)
+        ),
     )
 
     pcs = Pcs("Prod", "PCS_Test", DummyParams(producer or DummyProducer()))
@@ -193,7 +214,7 @@ def test_prepare_pcs_config_loads_both_files_at_once(monkeypatch, tmp_path):
 
     pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, tool_file, user_file)
 
-    assert dummy_config.loaded == (tool_file, user_file, None)
+    assert dummy_config.loaded == (tool_file, user_file, None, None)
     assert pcs.is_valid() is True
 
 
@@ -217,11 +238,14 @@ def test_the_version_of_the_type_of_the_installation_patches_the_description(
     assert dummy_config.loaded == (
         tool_file,
         None,
+        None,
         tool_file.parent / version if version else None,
     )
 
 
-def test_a_verification_that_gives_every_type_the_same_fiches_loads_no_version(tmp_path):
+def test_a_verification_that_gives_every_type_the_same_fiches_loads_no_version(
+    tmp_path,
+):
     from dycov.model.pcs import _version_for_type
 
     (tmp_path / "TypeCD.ini").write_text("")
@@ -235,7 +259,7 @@ def test_prepare_pcs_config_loads_only_the_files_that_exist(monkeypatch, tmp_pat
 
     pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, None, user_file)
 
-    assert dummy_config.loaded == (None, user_file, None)
+    assert dummy_config.loaded == (None, user_file, None, None)
     assert pcs._has_pcs_config is False
     assert pcs._has_user_config is True
 
@@ -243,7 +267,7 @@ def test_prepare_pcs_config_loads_only_the_files_that_exist(monkeypatch, tmp_pat
 def test_prepare_pcs_config_without_any_file_is_not_a_valid_pcs(monkeypatch, tmp_path):
     pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, None, None)
 
-    assert dummy_config.loaded == (None, None, None)
+    assert dummy_config.loaded == (None, None, None, None)
     assert pcs.is_valid() is False
 
 
@@ -259,7 +283,7 @@ def test_the_description_delivered_with_the_reference_curves_is_the_user_one(
 
     pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, tool_file, user_file, producer)
 
-    assert dummy_config.loaded == (tool_file, delivered, None)
+    assert dummy_config.loaded == (tool_file, delivered, None, None)
     assert pcs.is_valid() is True
 
 
@@ -272,7 +296,7 @@ def test_a_description_delivered_for_another_pcs_is_not_the_user_one(monkeypatch
 
     pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, None, user_file, producer)
 
-    assert dummy_config.loaded == (None, user_file, None)
+    assert dummy_config.loaded == (None, user_file, None, None)
 
 
 def test_only_a_description_file_delivered_with_the_reference_curves_is_read(
@@ -285,7 +309,7 @@ def test_only_a_description_file_delivered_with_the_reference_curves_is_read(
 
     pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, None, None, producer)
 
-    assert dummy_config.loaded == (None, None, None)
+    assert dummy_config.loaded == (None, None, None, None)
 
 
 def test_a_pcs_without_benchmarks_declares_no_test(monkeypatch):

@@ -316,7 +316,7 @@ step-response characteristics when they were computed.
      - Magnitude controlled by the voltage regulation and its setpoint, with
        the ±5 % band of ``AVR_5`` when activated.
    * - ``fig_UIt``
-     - Voltage at the injector terminal (Zone 1), with the voltage setpoint
+     - Voltage at Node2, the converter terminal (Zone 1), with the voltage setpoint
        overlaid when the converter controls that node.
    * - ``fig_InternalNode1P``, ``fig_InternalNode1Q``
      - Active and reactive power at InternalNode1 (Zone 1), drawn but not

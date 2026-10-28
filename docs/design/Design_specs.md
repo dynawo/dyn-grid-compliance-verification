@@ -9,6 +9,26 @@ Developed by Grupo AIA
 ===========================
 
 
+# Which revision this document comes from
+
+This document comes from a DTR older than the base revision of the tool. It was written in
+2022, and the chapter *DTR Sheets: our implementation* keeps the values of the article 8.3.3
+of that time.
+
+The base revision of the tool is `20240215`, the DTR of 15/02/2024.
+`Summary_data_from_the_DTR.md` gives its values, and `DTR_revisions.md` says how the tool
+carries a later revision. Where this document and those two disagree, those two are right.
+Two differences are known:
+
+  - **The gabarit of the voltage dip.** This document puts a column for each voltage level in
+    the table of each class. The gabarit of `20240215` gives one set of values for each
+    category. Only the fault elimination time T of the fiches I4 and I5 depends on the voltage
+    level: 85 ms in HTB3 and HTB2, 150 ms in HTB1.
+
+  - **The gabarit of the overvoltage.** This document gives four voltage levels and three
+    times. The figure 13 of `20240215` gives three voltage levels and two times.
+
+
 # Architecture
 
 ## Organization of the code

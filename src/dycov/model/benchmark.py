@@ -22,7 +22,12 @@ from dycov.files import manage_files
 from dycov.logging import dycov_logging
 from dycov.model.compliance import Compliance
 from dycov.model.operating_condition import OperatingCondition
-from dycov.model.parameters import CurvesAvailability, CurvesCheckResult, SimulationError
+from dycov.model.parameters import (
+    CurvesAvailability,
+    CurvesCheckResult,
+    SimulationError,
+    SimulationResult,
+)
 from dycov.model.producer import Producer
 from dycov.report.types import (
     DynamicBand,
@@ -46,6 +51,7 @@ class Summary:
     operating_condition: str
     compliance: Compliance
     report_name: str
+    altered_criteria: tuple[str, ...] = ()
 
 
 _FAILED_RESULTS: dict = {"compliance": False, "curves": None}
@@ -60,6 +66,11 @@ _FREQUENCY_BANDS = {
     "freq_200": FrequencyBand(upper=0.2, lower=0.2, color="#55a868"),
     "freq_250": FrequencyBand(upper=0.25, lower=0.25, color="#c44e52"),
 }
+
+
+def _altered_criteria() -> tuple[str, ...]:
+    """The options of the DTR the configuration of the user changed, as it names them."""
+    return tuple(f"{key} of [{section}]" for section, key in config.overridden_norm_options())
 
 
 def _compliance_for_simulation_error(error: SimulationError) -> Compliance:
@@ -82,6 +93,12 @@ def _compliance_for_missing_curves(availability: CurvesAvailability) -> Complian
             return Compliance.WithoutReferenceCurves
         case _:
             return Compliance.WithoutCurves
+
+
+def _compliance_for_simulation(simulation: SimulationResult) -> Compliance:
+    if simulation.success and simulation.has_simulated_curves:
+        return Compliance.Simulated
+    return Compliance.FailedSimulation
 
 
 class Benchmark:
@@ -577,8 +594,8 @@ class Benchmark:
             FigureDescription(
                 name="fig_I",
                 variables=[
-                    {"type": "generator", "variable": "ActiveCurrentInjTerminal"},
-                    {"type": "generator", "variable": "ReactiveCurrentInjTerminal"},
+                    {"type": "generator", "variable": "ActiveCurrentNode2"},
+                    {"type": "generator", "variable": "ReactiveCurrentNode2"},
                 ],
                 ylabel=i_label,
                 tolerance_band=tolerance_band,
@@ -593,7 +610,7 @@ class Benchmark:
         self._figures_description.append(
             FigureDescription(
                 name="fig_UIt",
-                variables=[{"type": "generator", "variable": "VoltageInjTerminal"}],
+                variables=[{"type": "generator", "variable": "VoltageNode2"}],
                 ylabel="V (pu base Unom)",
                 setpoint=self.__setpoint_driving("injector_voltage"),
             )
@@ -810,6 +827,10 @@ class Benchmark:
         elif sim.time_exceeds:
             compliance = Compliance.SimulationTimeOut
             results = {**_FAILED_RESULTS}
+        elif self._parameters.is_curves_only():
+            compliance = _compliance_for_simulation(sim)
+            op_cond_success = compliance == Compliance.Simulated
+            results = {**_FAILED_RESULTS}
         elif curves_result.availability == CurvesAvailability.ALL:
             op_cond_success, results, compliance = self.__validate(
                 op_cond,
@@ -916,6 +937,7 @@ class Benchmark:
                     operating_condition=op_cond.get_name(),
                     compliance=compliance,
                     report_name=self._report_name,
+                    altered_criteria=_altered_criteria(),
                 )
             )
             pcs_results[

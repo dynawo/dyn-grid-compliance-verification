@@ -131,7 +131,7 @@ def ratio_of_tap(tap: int, n_prises: int, r_min: float, r_max: float) -> float:
     tap: int
         Tap position, from 0 to *n_prises*.
     n_prises: int
-        Number of taps of the changer.
+        Highest tap position: the changer has ``n_prises + 1`` taps (``NbTap``).
     r_min: float
         Ratio of the lowest tap.
     r_max: float
@@ -168,8 +168,9 @@ def transformer_taps(n_prises: int, r_min: float, r_max: float, tap_0=None, r_0=
     Returns
     -------
     dict
-        The tap parameters Dynawo reads: ``NbTap``, ``Tap0``, ``RatioTfoMinPu``,
-        ``RatioTfoMaxPu`` and the derived ``RatioTfo0Pu``.
+        The tap parameters Dynawo reads, ``NbTap``, ``Tap0``, ``RatioTfoMinPu`` and
+        ``RatioTfoMaxPu``, and ``RatioTfo0Pu``, the starting ratio Dynawo derives from them,
+        which no PAR carries.
     """
     nb_tap = int(n_prises) + 1
     if tap_0 is None and r_0 is None:

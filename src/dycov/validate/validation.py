@@ -96,7 +96,8 @@ def _validate_pcs(pcs_args) -> tuple:
         pcs_results["sim_type"] = parameters.get_sim_type()
         pcs_results["success"] = success
         pcs_results["report_name"] = report_name
-        _prepare_report_pcs(pcs_results, parameters, path_latex_files)
+        if not parameters.is_curves_only():
+            _prepare_report_pcs(pcs_results, parameters, path_latex_files)
         return pcs.get_producer_name(), pcs.get_name(), summary_list, pcs_results
     except (FileNotFoundError, IOError, ValueError) as e:
         if dycov_logging.get_logger("Validation").getEffectiveLevel() == logging.DEBUG:
@@ -258,6 +259,9 @@ class Validation:
             validation_pcs.update(
                 manage_files.list_directories(tool_path / self._templates_path / validation_path)
             )
+            delta_path = manage_files.dtr_delta_path(tool_path / self._templates_path)
+            if delta_path is not None:
+                validation_pcs.update(manage_files.list_directories(delta_path / validation_path))
 
     def __prepare_pcs_list(self) -> list:
         """Prepares the list of PCS and their associated producers for validation.
@@ -313,6 +317,9 @@ class Validation:
                 dycov_logging.get_logger("Validation").warning(
                     "No test was run, so there is no report to generate"
                 )
+                return
+            if self._parameters.is_curves_only():
+                report.log_summary(summary_list, self._parameters)
                 return
             report.create_pdf(
                 summary_list,
@@ -423,7 +430,7 @@ class Validation:
         self._summary = sorted_summary_list
         self.__create_report(sorted_summary_list, report_results)
 
-        if self._parameters.get_output_dir().exists():
+        if not self._parameters.is_curves_only() and self._parameters.get_output_dir().exists():
             report_file = (
                 self._parameters.get_output_dir() / "Reports" / REPORT_NAME.replace("tex", "pdf")
             )

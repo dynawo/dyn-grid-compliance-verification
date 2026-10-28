@@ -43,9 +43,9 @@ def _make_injector_current_curves():
     return pd.DataFrame(
         {
             "time": [0, 1, 2],
-            "WT_GEN_ActiveCurrentInjTerminal": [0.8, 0.6, 0.4],
-            "WT_GEN_ReactiveCurrentInjTerminal": [0.1, 0.3, 0.5],
-            "WT_GEN_modIInjTerminal": [0.81, 0.67, 0.64],
+            "WT_GEN_ActiveCurrentNode2": [0.8, 0.6, 0.4],
+            "WT_GEN_ReactiveCurrentNode2": [0.1, 0.3, 0.5],
+            "WT_GEN_modINode2": [0.81, 0.67, 0.64],
         }
     )
 
@@ -330,8 +330,8 @@ def test_plotly_figures_marks_no_mxe_on_a_figure_of_several_magnitudes(monkeypat
     figure_description = FigureDescription(
         name="fig_I",
         variables=[
-            {"type": "generator", "variable": "ActiveCurrentInjTerminal"},
-            {"type": "generator", "variable": "ReactiveCurrentInjTerminal"},
+            {"type": "generator", "variable": "ActiveCurrentNode2"},
+            {"type": "generator", "variable": "ReactiveCurrentNode2"},
         ],
         ylabel="I",
     )
@@ -364,7 +364,7 @@ def test_plotly_figures_draws_a_curve_without_reference_alone():
 _POWER_WITH_ITS_SETPOINT = FigureDescription(
     name="fig_P",
     variables=[
-        {"type": "generator", "variable": "ActivePowerControlledPu"},
+        {"type": "generator", "variable": "ActivePowerControlledNode"},
         {"type": "generator", "variable": "ActivePowerSetpointPu"},
     ],
     ylabel="P",
@@ -372,7 +372,7 @@ _POWER_WITH_ITS_SETPOINT = FigureDescription(
 
 
 def _make_power_curves(with_setpoint: bool = True) -> pd.DataFrame:
-    curves = {"time": [0, 1, 2], "WT_GEN_ActivePowerControlledPu": [0.85, 0.82, 0.80]}
+    curves = {"time": [0, 1, 2], "WT_GEN_ActivePowerControlledNode": [0.85, 0.82, 0.80]}
     if with_setpoint:
         curves["WT_GEN_ActivePowerSetpointPu"] = [0.85, 0.80, 0.80]
     return pd.DataFrame(curves)
@@ -418,7 +418,7 @@ def test_plotly_figures_titles_the_figure_after_the_power_and_not_its_setpoint()
         _POWER_WITH_ITS_SETPOINT, _make_power_curves(), None, {}, zone=1
     )
 
-    assert curve_names == ["WT_GEN_ActivePowerControlledPu", "WT_GEN_ActivePowerSetpointPu"]
+    assert curve_names == ["WT_GEN_ActivePowerControlledNode", "WT_GEN_ActivePowerSetpointPu"]
     assert name == "fig_P"
     assert "Active Power \\u2014 Generator" in html_out
 
@@ -443,20 +443,20 @@ def test_plotly_all_curves_skips_plotted_and_time():
 
 def test_get_curve_names_draws_the_magnitude_with_both_components():
     variables = [
-        {"type": "generator", "variable": "ActiveCurrentInjTerminal"},
-        {"type": "generator", "variable": "ReactiveCurrentInjTerminal"},
+        {"type": "generator", "variable": "ActiveCurrentNode2"},
+        {"type": "generator", "variable": "ReactiveCurrentNode2"},
     ]
 
     names = html._get_curve_names(variables, _make_injector_current_curves())
 
-    assert "WT_GEN_modIInjTerminal" in names
+    assert "WT_GEN_modINode2" in names
 
 
 def test_get_curve_names_leaves_the_magnitude_out_of_the_active_current_figure():
-    variables = [{"type": "generator", "variable": "ActiveCurrentInjTerminal"}]
+    variables = [{"type": "generator", "variable": "ActiveCurrentNode2"}]
 
     names = html._get_curve_names(variables, _make_injector_current_curves())
 
     # The magnitude is the resultant of both components, so it belongs only to the figure
     # that draws both.
-    assert names == ["WT_GEN_ActiveCurrentInjTerminal"]
+    assert names == ["WT_GEN_ActiveCurrentNode2"]

@@ -17,9 +17,10 @@ from dycov.curves.dynawo.runtime import _curves as curves_module
 from dycov.curves.dynawo.runtime._curves import (
     ABS_TOLERANCE_FACTOR,
     VOLTAGE_DIP_THRESHOLD,
-    _get_injector_terminal_curves,
     _get_magnitude_controlled_by_avr,
     _get_modulus,
+    _get_node2_curves,
+    _get_node2_powers,
     convert_columns,
     create_curves,
     prepare_complex_column,
@@ -34,22 +35,22 @@ _PDR_TRANSLATIONS = {
 }
 
 _TERMINAL_POWER_REQUEST = {
-    "Gen_injector_PInjPu": ["Gen_GEN_ActivePowerInjTerminal"],
-    "Gen_GEN_ActivePowerInjTerminal": 1,
-    "Gen_injector_QInjPu": ["Gen_GEN_ReactivePowerInjTerminal"],
-    "Gen_GEN_ReactivePowerInjTerminal": 1,
+    "Gen_injector_PInjPu": ["Gen_GEN_ActivePowerNode2"],
+    "Gen_GEN_ActivePowerNode2": 1,
+    "Gen_injector_QInjPu": ["Gen_GEN_ReactivePowerNode2"],
+    "Gen_GEN_ReactivePowerNode2": 1,
 }
 
 _TERMINAL_AMPLITUDE_REQUEST = {
-    "Gen_injector_UPu": ["Gen_GEN_VoltageInjTerminal"],
-    "Gen_GEN_VoltageInjTerminal": 1,
+    "Gen_injector_UPu": ["Gen_GEN_VoltageNode2"],
+    "Gen_GEN_VoltageNode2": 1,
 }
 
 _TERMINAL_COMPONENTS_REQUEST = {
-    "Gen_injector_terminal_V_re": ["Gen_GEN_VoltageInjTerminalRe"],
-    "Gen_GEN_VoltageInjTerminalRe": 1,
-    "Gen_injector_terminal_V_im": ["Gen_GEN_VoltageInjTerminalIm"],
-    "Gen_GEN_VoltageInjTerminalIm": 1,
+    "Gen_injector_terminal_V_re": ["Gen_GEN_VoltageNode2Re"],
+    "Gen_GEN_VoltageNode2Re": 1,
+    "Gen_injector_terminal_V_im": ["Gen_GEN_VoltageNode2Im"],
+    "Gen_GEN_VoltageNode2Im": 1,
 }
 
 
@@ -91,7 +92,7 @@ def _injector_terminal_curves(voltage_request: dict, voltage_columns: dict) -> d
     )
 
     curves_dict = {}
-    _get_injector_terminal_curves(100.0, 100.0, [DummyGenerator("Gen")], df_curves, curves_dict)
+    _get_node2_curves(100.0, 100.0, [DummyGenerator("Gen")], df_curves, curves_dict)
     return curves_dict
 
 
@@ -204,8 +205,8 @@ def test_translate_curves_names_a_complex_curve_after_its_components():
 
     result_df = translate_curves(_TERMINAL_COMPONENTS_REQUEST, df_curves_imported)
 
-    assert list(result_df.columns) == ["time", "Gen_GEN_VoltageInjTerminal"]
-    assert result_df["Gen_GEN_VoltageInjTerminal"].tolist() == pytest.approx(
+    assert list(result_df.columns) == ["time", "Gen_GEN_VoltageNode2"]
+    assert result_df["Gen_GEN_VoltageNode2"].tolist() == pytest.approx(
         [complex(0.6, 0.8), complex(0.3, -0.4)]
     )
 
@@ -265,86 +266,115 @@ def test_get_modulus_correct_calculation():
 def test_injector_terminal_currents_divided_by_terminal_voltage():
     df_curves = pd.DataFrame(
         {
-            "GEN1_GEN_VoltageInjTerminal": [complex(0.8, 0.6), complex(0.5, 0.0)],
-            "GEN1_GEN_ActivePowerInjTerminal": [0.5, 1.0],
-            "GEN1_GEN_ReactivePowerInjTerminal": [0.25, 0.5],
+            "GEN1_GEN_VoltageNode2": [complex(0.8, 0.6), complex(0.5, 0.0)],
+            "GEN1_GEN_ActivePowerNode2": [0.5, 1.0],
+            "GEN1_GEN_ReactivePowerNode2": [0.25, 0.5],
         }
     )
     curves_dict = {}
 
-    _get_injector_terminal_curves(90.0, 45.0, [DummyGenerator("GEN1")], df_curves, curves_dict)
+    _get_node2_curves(90.0, 45.0, [DummyGenerator("GEN1")], df_curves, curves_dict)
 
-    assert curves_dict["GEN1_GEN_VoltageInjTerminal"] == pytest.approx([1.0, 0.5])
-    assert curves_dict["GEN1_GEN_ActiveCurrentInjTerminal"] == pytest.approx([1.0, 4.0])
-    assert curves_dict["GEN1_GEN_ReactiveCurrentInjTerminal"] == pytest.approx([0.5, 2.0])
+    assert curves_dict["GEN1_GEN_VoltageNode2"] == pytest.approx([1.0, 0.5])
+    assert curves_dict["GEN1_GEN_ActiveCurrentNode2"] == pytest.approx([1.0, 4.0])
+    assert curves_dict["GEN1_GEN_ReactiveCurrentNode2"] == pytest.approx([0.5, 2.0])
     assert df_curves.columns.empty
+
+
+def test_the_powers_at_node2_come_from_its_voltage_and_current_when_the_model_gives_none():
+    df_curves = pd.DataFrame(
+        {
+            "GEN1_GEN_VoltageNode2": [complex(1.0, 0.0), complex(0.0, 0.5)],
+            "GEN1_GEN_CurrentNode2": [complex(0.5, -0.2), complex(0.4, 0.2)],
+        }
+    )
+
+    _get_node2_powers([DummyGenerator("GEN1")], df_curves)
+
+    assert list(df_curves["GEN1_GEN_ActivePowerNode2"]) == pytest.approx([0.5, 0.1])
+    assert list(df_curves["GEN1_GEN_ReactivePowerNode2"]) == pytest.approx([0.2, 0.2])
+    assert "GEN1_GEN_CurrentNode2" not in df_curves.columns
+
+
+def test_the_powers_at_node2_a_model_gives_are_kept():
+    df_curves = pd.DataFrame(
+        {
+            "GEN1_GEN_VoltageNode2": [complex(1.0, 0.0)],
+            "GEN1_GEN_ActivePowerNode2": [0.7],
+        }
+    )
+
+    _get_node2_powers([DummyGenerator("GEN1")], df_curves)
+
+    assert list(df_curves["GEN1_GEN_ActivePowerNode2"]) == pytest.approx([0.7])
+    assert "GEN1_GEN_ReactivePowerNode2" not in df_curves.columns
 
 
 def test_the_injector_currents_are_emitted_under_their_own_name():
     df_curves = pd.DataFrame(
         {
-            "GEN1_GEN_VoltageInjTerminal": [complex(1.0, 0.0)],
-            "GEN1_GEN_ActivePowerInjTerminal": [1.0],
-            "GEN1_GEN_ReactivePowerInjTerminal": [0.5],
+            "GEN1_GEN_VoltageNode2": [complex(1.0, 0.0)],
+            "GEN1_GEN_ActivePowerNode2": [1.0],
+            "GEN1_GEN_ReactivePowerNode2": [0.5],
         }
     )
     curves_dict = {}
 
-    _get_injector_terminal_curves(100.0, 100.0, [DummyGenerator("GEN1")], df_curves, curves_dict)
+    _get_node2_curves(100.0, 100.0, [DummyGenerator("GEN1")], df_curves, curves_dict)
 
-    assert "GEN1_GEN_ActiveCurrentInjTerminal" in curves_dict
-    assert "GEN1_GEN_ReactiveCurrentInjTerminal" in curves_dict
-    assert "GEN1_GEN_ActivePowerInjTerminal" not in curves_dict
-    assert "GEN1_GEN_ReactivePowerInjTerminal" not in curves_dict
+    assert "GEN1_GEN_ActiveCurrentNode2" in curves_dict
+    assert "GEN1_GEN_ReactiveCurrentNode2" in curves_dict
+    assert "GEN1_GEN_ActivePowerNode2" not in curves_dict
+    assert "GEN1_GEN_ReactivePowerNode2" not in curves_dict
 
 
 def test_injector_terminal_currents_divide_however_small_the_voltage_is():
     df_curves = pd.DataFrame(
         {
-            "GEN1_GEN_VoltageInjTerminal": [complex(1e-6, 0.0), complex(1.0, 0.0)],
-            "GEN1_GEN_ActivePowerInjTerminal": [1e-6, 1.0],
-            "GEN1_GEN_ReactivePowerInjTerminal": [5e-7, 0.5],
+            "GEN1_GEN_VoltageNode2": [complex(1e-6, 0.0), complex(1.0, 0.0)],
+            "GEN1_GEN_ActivePowerNode2": [1e-6, 1.0],
+            "GEN1_GEN_ReactivePowerNode2": [5e-7, 0.5],
         }
     )
     curves_dict = {}
 
-    _get_injector_terminal_curves(100.0, 100.0, [DummyGenerator("GEN1")], df_curves, curves_dict)
+    _get_node2_curves(100.0, 100.0, [DummyGenerator("GEN1")], df_curves, curves_dict)
 
-    assert curves_dict["GEN1_GEN_ActiveCurrentInjTerminal"] == pytest.approx([1.0, 1.0])
-    assert curves_dict["GEN1_GEN_ReactiveCurrentInjTerminal"] == pytest.approx([0.5, 0.5])
+    assert curves_dict["GEN1_GEN_ActiveCurrentNode2"] == pytest.approx([1.0, 1.0])
+    assert curves_dict["GEN1_GEN_ReactiveCurrentNode2"] == pytest.approx([0.5, 0.5])
 
 
 def test_injector_terminal_currents_are_zero_only_where_the_voltage_is():
     df_curves = pd.DataFrame(
         {
-            "GEN1_GEN_VoltageInjTerminal": [complex(0.0, 0.0), complex(1.0, 0.0)],
-            "GEN1_GEN_ActivePowerInjTerminal": [1.0, 1.0],
-            "GEN1_GEN_ReactivePowerInjTerminal": [0.5, 0.5],
+            "GEN1_GEN_VoltageNode2": [complex(0.0, 0.0), complex(1.0, 0.0)],
+            "GEN1_GEN_ActivePowerNode2": [1.0, 1.0],
+            "GEN1_GEN_ReactivePowerNode2": [0.5, 0.5],
         }
     )
     curves_dict = {}
 
-    _get_injector_terminal_curves(100.0, 100.0, [DummyGenerator("GEN1")], df_curves, curves_dict)
+    _get_node2_curves(100.0, 100.0, [DummyGenerator("GEN1")], df_curves, curves_dict)
 
-    assert curves_dict["GEN1_GEN_ActiveCurrentInjTerminal"] == pytest.approx([0.0, 1.0])
-    assert curves_dict["GEN1_GEN_ReactiveCurrentInjTerminal"] == pytest.approx([0.0, 0.5])
+    assert curves_dict["GEN1_GEN_ActiveCurrentNode2"] == pytest.approx([0.0, 1.0])
+    assert curves_dict["GEN1_GEN_ReactiveCurrentNode2"] == pytest.approx([0.0, 0.5])
 
 
 def test_injector_terminal_curves_skip_a_unit_without_all_its_terminal_curves():
     df_curves = pd.DataFrame(
         {
-            "GEN1_GEN_VoltageInjTerminal": [1.0],
-            "GEN1_GEN_ActivePowerInjTerminal": [1.0],
+            "GEN1_GEN_VoltageNode2": [1.0],
+            "GEN1_GEN_ActivePowerNode2": [1.0],
         }
     )
     curves_dict = {}
 
-    _get_injector_terminal_curves(100.0, 100.0, [DummyGenerator("GEN1")], df_curves, curves_dict)
+    _get_node2_curves(100.0, 100.0, [DummyGenerator("GEN1")], df_curves, curves_dict)
 
     assert curves_dict == {}
     assert list(df_curves.columns) == [
-        "GEN1_GEN_VoltageInjTerminal",
-        "GEN1_GEN_ActivePowerInjTerminal",
+        "GEN1_GEN_VoltageNode2",
+        "GEN1_GEN_ActivePowerNode2",
     ]
 
 
@@ -355,9 +385,9 @@ def test_the_injector_currents_divide_by_the_amplitude_dynawo_publishes():
         _TERMINAL_AMPLITUDE_REQUEST, {"Gen_injector_UPu": [1.0, 0.5]}
     )
 
-    assert curves["Gen_GEN_VoltageInjTerminal"] == pytest.approx([1.0, 0.5])
-    assert curves["Gen_GEN_ActiveCurrentInjTerminal"] == pytest.approx([0.5, 0.5])
-    assert curves["Gen_GEN_ReactiveCurrentInjTerminal"] == pytest.approx([0.25, -0.2])
+    assert curves["Gen_GEN_VoltageNode2"] == pytest.approx([1.0, 0.5])
+    assert curves["Gen_GEN_ActiveCurrentNode2"] == pytest.approx([0.5, 0.5])
+    assert curves["Gen_GEN_ReactiveCurrentNode2"] == pytest.approx([0.25, -0.2])
 
 
 def test_the_injector_curves_are_the_same_from_the_amplitude_or_from_the_components():

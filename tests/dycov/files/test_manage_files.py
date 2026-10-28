@@ -559,3 +559,59 @@ def test_a_directory_without_index_has_no_curves(tmp_path):
     _write_curve_pair(tmp_path, CANONICAL_NAME)
 
     assert has_curves(tmp_path, CANONICAL_NAME) is False
+
+
+def _given_revision(monkeypatch, revision, base="20240215"):
+    """Config is frozen, so the double replaces the method on the class."""
+    from dycov.configuration.cfg import Config
+
+    values = {
+        ("Global", "templates_path"): "templates/PCS",
+        ("DTR", "current"): revision,
+        ("DTR", "base"): base,
+    }
+    monkeypatch.setattr(
+        Config, "get_value", lambda self, section, key, default=None: values[(section, key)]
+    )
+
+
+def test_the_delta_of_a_revision_mirrors_the_templates(monkeypatch, tmp_path):
+    from dycov.files import manage_files
+
+    _given_revision(monkeypatch, "20250801")
+    shipped = tmp_path / "templates" / "reports" / "PPM" / "PCS_RTE-I6"
+    delta = tmp_path / "templates" / "revisions" / "20250801" / "reports" / "PPM" / "PCS_RTE-I6"
+    delta.mkdir(parents=True)
+
+    assert manage_files.dtr_delta_path(shipped) == delta
+
+
+def test_a_revision_that_writes_no_delta_of_a_directory_has_none(monkeypatch, tmp_path):
+    from dycov.files import manage_files
+
+    _given_revision(monkeypatch, "20250801")
+
+    assert (
+        manage_files.dtr_delta_path(tmp_path / "templates" / "PCS" / "SM" / "PCS_RTE-I6") is None
+    )
+
+
+def test_a_path_outside_the_templates_has_no_delta(monkeypatch, tmp_path):
+    from dycov.files import manage_files
+
+    _given_revision(monkeypatch, "20250801")
+
+    assert manage_files.dtr_delta_path(tmp_path / "model_lib" / "Omega") is None
+
+
+def test_the_base_revision_has_no_delta_directory(monkeypatch, tmp_path):
+    """The base is the catalogue itself, so nothing looks for a delta of it."""
+    from dycov.files import manage_files
+
+    _given_revision(monkeypatch, "20240215")
+    delta = tmp_path / "templates" / "revisions" / "20240215" / "PCS" / "SM" / "PCS_RTE-I6"
+    delta.mkdir(parents=True)
+
+    assert (
+        manage_files.dtr_delta_path(tmp_path / "templates" / "PCS" / "SM" / "PCS_RTE-I6") is None
+    )

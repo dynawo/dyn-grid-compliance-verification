@@ -11,6 +11,7 @@
 import pytest
 
 from dycov.configuration.cfg import Config
+from dycov.core.global_variables import ELECTRIC_PERFORMANCE_PPM
 from dycov.curves.curves import ProducerCurves
 from dycov.curves.dynawo.io import file_variables
 from dycov.curves.dynawo.io.file_variables import FileVariables
@@ -19,6 +20,13 @@ from dycov.curves.dynawo.io.file_variables import FileVariables
 class DummyProducer:
     def __init__(self, u_nom):
         self.u_nom = u_nom
+        self.p_max_injection_pu = 0.75
+
+    def get_sim_type(self):
+        return ELECTRIC_PERFORMANCE_PPM
+
+    def get_category(self):
+        return "D"
 
 
 class DummyProducerCurves(ProducerCurves):

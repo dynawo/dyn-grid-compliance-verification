@@ -34,7 +34,7 @@ _SETPOINT_STEPS = [
 def load_version():
     def load(pcs: str, installation_type: str) -> None:
         version = _version_for_type(_BESS / pcs, installation_type)
-        config.load_pcs_config(_BESS / pcs / "PCSDescription.ini", None, version)
+        config.load_pcs_config(_BESS / pcs / "PCSDescription.ini", None, None, version)
 
     yield load
     config.load_pcs_config(None)
@@ -74,7 +74,11 @@ def test_zone1_of_types_c_and_d_simulates_the_tests_of_the_fiche_i18(load_versio
     assert config.get_list("PCS-Benchmarks", "PCS_RTE-I16z1")[1:] == _I18_TESTS
     assert _operating_conditions("S_VolAngStep1") == ["OC1", "OC2", "OC3", "OC4", "OC5"]
     assert _operating_conditions("S_VolAmpStep1")[-2:] == ["OC6", "OC7"]
-    assert _operating_conditions("S_Fault4")[:3] == ["OC1_SCR2", "OC1_SCR10", "OC1_SCR20"]
+    assert _operating_conditions("S_Fault4")[:3] == [
+        "OC1_SCR2",
+        "OC1_SCR10",
+        "OC1_SCR20",
+    ]
 
 
 def test_every_test_of_the_fiche_i18_runs_for_oc2_and_oc3_and_the_others_when_recorded(
@@ -93,9 +97,24 @@ def test_every_test_of_the_fiche_i18_runs_for_oc2_and_oc3_and_the_others_when_re
 @pytest.mark.parametrize(
     "benchmark, tracked, scr, event",
     [
-        ("S_VolAngStep1", "active_current", 10, ("grid_phase_jump", "0.3*(Xeff+Xgrid)")),
-        ("S_VolAngStep8", "active_current", 2, ("grid_phase_jump", "-0.6*(Xeff+Xgrid)")),
-        ("S_VolAmpStep6", "reactive_current", 20, ("grid_voltage_step", "-0.15*(Xeff+Xgrid)")),
+        (
+            "S_VolAngStep1",
+            "active_current",
+            10,
+            ("grid_phase_jump", "0.3*(Xeff+Xgrid)"),
+        ),
+        (
+            "S_VolAngStep8",
+            "active_current",
+            2,
+            ("grid_phase_jump", "-0.6*(Xeff+Xgrid)"),
+        ),
+        (
+            "S_VolAmpStep6",
+            "reactive_current",
+            20,
+            ("grid_voltage_step", "-0.15*(Xeff+Xgrid)"),
+        ),
         ("S_Rocof7", "active_current", 10, ("grid_rocof", "2.0")),
     ],
 )
@@ -111,7 +130,9 @@ def test_a_test_of_the_fiche_i18_is_set_up_as_its_tables_define_it(
     assert config.get_value(f"{section}.Event", event[0]) == event[1]
 
 
-def test_a_jump_of_the_short_circuit_ratio_switches_a_line_between_2_and_20(load_version):
+def test_a_jump_of_the_short_circuit_ratio_switches_a_line_between_2_and_20(
+    load_version,
+):
     load_version("PCS_RTE-I16z1", "C")
 
     for benchmark, bench in (
@@ -124,7 +145,9 @@ def test_a_jump_of_the_short_circuit_ratio_switches_a_line_between_2_and_20(load
         assert config.get_float(model, "switched_SCR", 0) == 20
 
 
-def test_zone3_of_types_c_and_d_has_neither_the_fault_nor_the_frequency_ramp(load_version):
+def test_zone3_of_types_c_and_d_has_neither_the_fault_nor_the_frequency_ramp(
+    load_version,
+):
     load_version("PCS_RTE-I16z3", "C")
 
     assert config.get_list("PCS-Benchmarks", "PCS_RTE-I16z3") == [

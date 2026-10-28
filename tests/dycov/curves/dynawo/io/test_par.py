@@ -10,6 +10,7 @@
 
 import pytest
 
+from dycov.core.global_variables import ELECTRIC_PERFORMANCE_PPM
 from dycov.curves.curves import ProducerCurves
 from dycov.curves.dynawo.io.par import ParFile
 from dycov.model.parameters import GenInit
@@ -19,14 +20,28 @@ from dycov.model.parameters import GenInit
 class DummyProducer:
     def __init__(self):
         self.p_max_pu = 1.0
+        self.p_max_injection_pu = 0.75
         self.q_max_pu = 0.5
         self.u_nom = 400.0
+
+    def get_sim_type(self):
+        return ELECTRIC_PERFORMANCE_PPM
+
+    def get_category(self):
+        return "D"
 
 
 class DummyParameters:
     def __init__(self):
         self.producer = DummyProducer()
         self.u_nom = self.producer.u_nom
+        self.p_max_injection_pu = self.producer.p_max_injection_pu
+
+    def get_sim_type(self):
+        return self.producer.get_sim_type()
+
+    def get_category(self):
+        return self.producer.get_category()
 
     def get_producer(self):
         return self.producer

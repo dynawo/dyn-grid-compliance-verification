@@ -263,6 +263,10 @@ pytest --cov=src                # with coverage
 `tests/README.md` states the style every new test must follow. Coverage is
 informational: there is no coverage gate.
 
+`tests/dtr/` holds the acceptance tests of the DTR. They are not unit tests:
+they read the catalogue the tool ships and state what the norm says, with one
+file per revision of the DTR. `tests/dtr/README.md` explains them.
+
 The end-to-end tests under `tests_integration/` are not part of that run. They
 execute real Dynawo simulations, so they need a working Dynawo installation
 and take far longer. Run them explicitly:
