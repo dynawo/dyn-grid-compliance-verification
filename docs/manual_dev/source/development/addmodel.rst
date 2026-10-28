@@ -121,18 +121,35 @@ The generic keywords for Power Park models are the same as for Synchronous
 Generators, with the same applicability conditions, plus the following
 converter-specific keys and model-family-specific control flags.
 
-Injector terminal (required for Electrical Performance Verification and Model Validation).
-The dictionary declares what the Dynawo model provides; the tool divides the powers by the
-terminal voltage and emits the currents as ``'ActiveCurrentInjTerminal'`` and
-``'ReactiveCurrentInjTerminal'``:
+Node2, the converter terminal between the unit and its transformer, as the DTR names it
+(required for Electrical Performance Verification and Model Validation). The dictionary
+declares what the Dynawo model provides; the tool divides the powers by the voltage and emits
+the currents as ``'ActiveCurrentNode2'`` and ``'ReactiveCurrentNode2'``:
 
-* ``'ActivePowerInjTerminal'`` — active power at the injector's LV terminal (pu).
-* ``'ReactivePowerInjTerminal'`` — reactive power at the injector's LV terminal (pu).
-* ``'VoltageInjTerminal'`` — the amplitude of the terminal voltage (pu), when the model
-  provides it; otherwise ``'VoltageInjTerminalRe'`` / ``'VoltageInjTerminalIm'``, its
+* ``'ActivePowerNode2'`` — active power at Node2 (pu).
+* ``'ReactivePowerNode2'`` — reactive power at Node2 (pu).
+* ``'VoltageNode2'`` — the amplitude of the voltage at Node2 (pu), when the model
+  provides it; otherwise ``'VoltageNode2Re'`` / ``'VoltageNode2Im'``, its
   components, whose amplitude the tool emits under that same name.
+* ``'CurrentNode2Re'`` / ``'CurrentNode2Im'`` — the components of the current the
+  unit injects at Node2 (pu, generator convention), in place of the two powers when
+  the model gives none there: the tool computes them from that current and the
+  voltage components.
 * ``'MaxCurrentAtConverter'`` — maximum current amplitude (pu). Required for
   Electrical Performance Verification.
+
+A unit model, with no plant controller, is the Zone 1 model, and its control measures at
+Node1 or at Node2 — the controlled node:
+
+* ``'ActivePowerControlledNode'``, ``'ReactivePowerControlledNode'`` — the powers the
+  converter injects at the controlled node (pu). Required for Model Validation.
+* ``'VoltageControlledNode'`` — the voltage at the controlled node (pu). It takes the
+  place of ``'MagnitudeControlledByAVRPu'``, which is the magnitude a plant controller
+  regulates. No test asks for it yet.
+
+The initial values at the PCC (``'ActivePowerPcc0Pu'``, ``'ReactivePowerPcc0Pu'``,
+``'VoltagePcc0Pu'``, ``'PhasePcc0'``) and ``'PPCLocal'`` belong to the plant controller: only
+plant models declare them.
 
 Setpoints (required for Model Validation):
 

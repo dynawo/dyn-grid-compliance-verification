@@ -169,19 +169,19 @@ def _zone1_figures() -> list:
         ),
         FigureDescription(
             name="fig_UIt",
-            variables=[{"type": "generator", "variable": "VoltageInjTerminal"}],
+            variables=[{"type": "generator", "variable": "VoltageNode2"}],
             ylabel="V",
             setpoint="VoltageSetpointPu",
         ),
         FigureDescription(
             name="fig_P",
-            variables=[{"type": "generator", "variable": "ActivePowerControlledPu"}],
+            variables=[{"type": "generator", "variable": "ActivePowerControlledNode"}],
             ylabel="P",
             setpoint="ActivePowerSetpointPu",
         ),
         FigureDescription(
             name="fig_Q",
-            variables=[{"type": "generator", "variable": "ReactivePowerControlledPu"}],
+            variables=[{"type": "generator", "variable": "ReactivePowerControlledNode"}],
             ylabel="Q",
             setpoint="ReactivePowerSetpointPu",
         ),
@@ -260,7 +260,7 @@ def test_generate_figures_draws_the_setpoint_of_the_step_in_the_pdf_and_in_the_h
         "Producer",
         {"PCS.Benchmark": [_zone1_figures()[2]]},
         "PCS.Benchmark",
-        _step_results("WT_GEN_ActivePowerControlledPu", "WT_GEN_ActivePowerSetpointPu", True),
+        _step_results("WT_GEN_ActivePowerControlledNode", "WT_GEN_ActivePowerSetpointPu", True),
         _OC,
         0.0,
         2.0,
@@ -268,7 +268,7 @@ def test_generate_figures_draws_the_setpoint_of_the_step_in_the_pdf_and_in_the_h
     )
 
     expected = [
-        {"type": "generator", "variable": "ActivePowerControlledPu"},
+        {"type": "generator", "variable": "ActivePowerControlledNode"},
         {"type": "generator", "variable": "ActivePowerSetpointPu"},
     ]
     assert pdf_variables == [expected]
@@ -282,13 +282,13 @@ def test_generate_figures_draws_the_setpoint_of_the_step_in_the_pdf_and_in_the_h
         (
             "PSetpoint",
             _zone1_figures()[2],
-            "WT_GEN_ActivePowerControlledPu",
+            "WT_GEN_ActivePowerControlledNode",
             "WT_GEN_ActivePowerSetpointPu",
         ),
         (
             "USetpoint",
             _zone1_figures()[1],
-            "WT_GEN_VoltageInjTerminal",
+            "WT_GEN_VoltageNode2",
             "WT_GEN_VoltageSetpointPu",
         ),
         (
@@ -342,11 +342,11 @@ def test_build_oc_notices_without_missing_or_warnings():
 
 def test_build_oc_notices_with_missed_columns():
     notices, watermark = report._build_oc_notices(
-        {"missed_columns": ["Wind_Turbine_GEN_ActiveCurrentInjTerminal"]}
+        {"missed_columns": ["Wind_Turbine_GEN_ActiveCurrentNode2"]}
     )
 
     assert "\\noindent\\textcolor{red}{Missing curves:}" in notices
-    assert "\\item \\textcolor{red}{Wind\\_Turbine\\_GEN\\_ActiveCurrentInjTerminal}" in notices
+    assert "\\item \\textcolor{red}{Wind\\_Turbine\\_GEN\\_ActiveCurrentNode2}" in notices
     assert watermark == "\\SetWatermarkText{INVALID}"
 
 

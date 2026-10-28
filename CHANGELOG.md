@@ -13,8 +13,9 @@ This release ships and requires Dynawo 2.0.0. The previous one shipped a Dynawo 
 which the voltage ride-through protection described below did not exist. The Dynawo models
 themselves changed, so a producer model prepared for the previous release does not load unchanged.
 
-The simplest way through is to update the workbook and regenerate the model with `dycov generate`.
-Editing the DYD and the PAR by hand works too, and the three points below are what has to end up in
+The simplest way through is to update the workbook and regenerate the model with
+`dycov excel2inputs`.
+Editing the DYD and the PAR by hand works too, and the four points below are what has to end up in
 them either way.
 
 #### WECC models: the voltage ride-through protection is now mandatory
@@ -50,6 +51,21 @@ be set: remove them. The low-voltage transformer is declared instead as `WT_RLvT
 `WT_GLvTrPu` and `WT_BLvTrPu`. `WT_ConverterLVControl` has lost its default value and has to be
 given one.
 
+#### IEC wind power plants of 2020: a lead-lag per communication
+
+The plant controller of `IECWPP4ACurrentSource2020` and `IECWPP4BCurrentSource2020` delays each of
+its three communications — the measurements, the setpoints it sends to the turbines and the
+external references — through a lead-lag of its own. `WPP_tLead` and `WPP_tLag` are gone, replaced
+by `WPP_tLeadM`/`WPP_tLagM`, `WPP_tLeadPD`/`WPP_tLagPD` and `WPP_tLeadRef`/`WPP_tLagRef`, none of
+which has a default value. Giving the three pairs the values the old one had leaves the model as it
+was, and that is what Dynawo's own migration does: ticket 4237 of `sbin/updateXML`, which has to be
+run on its own, with `--tickets 4237` (see below).
+
+In the IEC workbook the six parameters take the place of the two of the `LinearCommunication_2020`
+table, in the `Mesures de parc` sheet. A workbook made with the previous template generates a model
+Dynawo refuses: copy the table from `workbooks/Producer_IEC.xlsx`, or start again from that
+template.
+
 #### WECC workbooks: a new sheet
 
 The WECC template gained a `Protection de tension` sheet, holding the parameters the producer
@@ -65,8 +81,10 @@ again from that template.
 `<dynawo>/sbin/updateXML` carries the migrations Dynawo applies to input files, and they do not
 cover this upgrade on their own:
 
-- asked to migrate from 1.8.0 to 2.0.0 the updater reports no patch files at all, because every
-  migration that matters here is numbered `1.8.0.x` and so belongs to 1.8.0;
+- asked to migrate from 1.8.0 to 2.0.0, the updater runs only the three migrations numbered
+  `2.0.0.x`, the last of which is the ticket 4237 above. The first of them, ticket 4244, stops with
+  an `AttributeError` on any WECC or IEC model, so on those the chain never gets that far. Every
+  other migration that matters here is numbered `1.8.0.x` and so belongs to 1.8.0;
 - the chain that does contain them — `--origin 1.7.0 --version 1.8.0` — stops with a `NameError`
   in the script that adds the protection's parameters (Dynawo issue 4278), before the rest of the
   chain has run;
@@ -110,6 +128,40 @@ instead of waiting for a release.
 One value belongs to no revision: the residual voltage of a gabarit of a type D is 1e-3 and not
 the 0.00 of the DTR, because not every model converges with a voltage of exactly zero.
 
+### The curves of a unit are named after the nodes of the DTR
+
+Node2 is the converter terminal, between the unit and its transformer, and the controlled node
+is the one the control of the converter measures, Node1 or Node2. The curves of a generating
+unit take those names:
+
+| Previous name                           | Name now                                 |
+| --------------------------------------- | ---------------------------------------- |
+| `<unit>_GEN_VoltageInjTerminal`         | `<unit>_GEN_VoltageNode2`                |
+| `<unit>_GEN_ActiveCurrentInjTerminal`   | `<unit>_GEN_ActiveCurrentNode2`          |
+| `<unit>_GEN_ReactiveCurrentInjTerminal` | `<unit>_GEN_ReactiveCurrentNode2`        |
+| `<unit>_GEN_ActivePowerControlledPu`    | `<unit>_GEN_ActivePowerControlledNode`   |
+| `<unit>_GEN_ReactivePowerControlledPu`  | `<unit>_GEN_ReactivePowerControlledNode` |
+
+The results, the reports, the dictionaries the tool scaffolds and the example workbooks use the
+new names. A dictionary of curves written with the previous ones is still read as it is, and so
+is a curve file whose columns carry them.
+
+The keys of the Dynawo dictionaries change the same way. A configuration that lists its own
+`[CurvesVariables]` has to list them by their new names — `ActivePowerNode2`,
+`ReactivePowerNode2`, `VoltageNode2`, `VoltageNode2Re`, `VoltageNode2Im`, `CurrentNode2Re`,
+`CurrentNode2Im`, `ActivePowerControlledNode`, `ReactivePowerControlledNode` — because a name the
+dictionaries do not know asks Dynawo for nothing. In the dictionary of a unit model,
+`MagnitudeControlledByAVRPu` becomes `VoltageControlledNode`, and the operating point at the PCC
+and `PPCLocal` are gone: they belong to the plant controller. The tool wrote that operating point
+into the PAR of a unit, where Dynawo ignored it. The storage unit's `VoltageControlledNode` names
+`BESS_reecC_UPu`: it named a variable the model does not have.
+
+The IEC wind turbines of zone 1 are now measured at Node2 itself. Their voltage and powers were
+read on the grid side of their low-voltage transformer, which is Node1 when that transformer is
+inside the unit model (`WT_ConverterLVControl = false`). Their models give no powers at Node2, so
+the tool computes them from the voltage and the current there. In the IEC plant models of zone 3
+the Node2 curves are still read on the grid side of that transformer.
+
 ### Fixed
 
 - The maximum power declared for an IEC plant is checked against its model's, as for WECC, and a
@@ -122,3 +174,5 @@ the 0.00 of the DTR, because not every model converges with a voltage of exactly
   Dynawo 2.0.0 expects (#606).
 - The WECC examples simulate every test again when several run at once: their plant controller no
   longer has a voltage deadband, on whose edge the WECCVoltageSource4 swell kept the solver (#626).
+- The IEC 2020 examples simulate again: their plant controller declares the three lead-lag pairs
+  Dynawo 2.0.0 asks for (#633).

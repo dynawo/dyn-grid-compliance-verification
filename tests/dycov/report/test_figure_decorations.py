@@ -68,10 +68,10 @@ def test_draw_frequency_band_reads_f_nom_from_the_dynawo_section(monkeypatch, re
 @pytest.mark.parametrize(
     "zone, curve_name, label",
     [
-        (1, "WT_GEN_ActivePowerControlledPu", "active_power"),
-        (1, "WT_GEN_ReactivePowerControlledPu", "reactive_power"),
-        (1, "WT_GEN_ActiveCurrentInjTerminal", "active_current"),
-        (1, "WT_GEN_ReactiveCurrentInjTerminal", "reactive_current"),
+        (1, "WT_GEN_ActivePowerControlledNode", "active_power"),
+        (1, "WT_GEN_ReactivePowerControlledNode", "reactive_power"),
+        (1, "WT_GEN_ActiveCurrentNode2", "active_current"),
+        (1, "WT_GEN_ReactiveCurrentNode2", "reactive_current"),
         (3, "BusPDR_BUS_ActivePower", "active_power"),
     ],
 )
@@ -101,7 +101,7 @@ def test_draw_mxe_leaves_unmarked_a_magnitude_the_test_does_not_check(renderer):
     "curve_name",
     [
         "BusPDR_BUS_ActivePower",  # drawn in Zone 1, but compared only in Zone 3
-        "WT_GEN_VoltageInjTerminal",  # the voltage at InternalNode2, not the one at InternalNode1
+        "WT_GEN_VoltageNode2",  # the voltage at InternalNode2, not the one at InternalNode1
     ],
 )
 def test_draw_mxe_marks_no_curve_the_zone_does_not_compare_under_the_checked_label(
@@ -122,9 +122,9 @@ def test_draw_mxe_marks_no_curve_the_zone_does_not_compare_under_the_checked_lab
 @pytest.mark.parametrize(
     "curve_name, marked",
     [
-        ("WT_GEN_ActivePowerControlledPu", True),
-        ("WT_GEN_ActiveCurrentInjTerminal", False),
-        ("WT_GEN_ReactivePowerControlledPu", False),
+        ("WT_GEN_ActivePowerControlledNode", True),
+        ("WT_GEN_ActiveCurrentNode2", False),
+        ("WT_GEN_ReactivePowerControlledNode", False),
     ],
 )
 def test_draw_mxe_marks_the_controlled_magnitude_of_a_setpoint_test(renderer, curve_name, marked):
@@ -148,6 +148,6 @@ def test_draw_mxe_marks_a_magnitude_a_setpoint_test_also_tracks(renderer):
         **_mxe_results("tc_reactive_power"),
     }
 
-    figure_decorations.draw_mxe(renderer, "WT_GEN_ReactivePowerControlledPu", results, 1)
+    figure_decorations.draw_mxe(renderer, "WT_GEN_ReactivePowerControlledNode", results, 1)
 
     assert renderer.marks == _MXE_MARKS

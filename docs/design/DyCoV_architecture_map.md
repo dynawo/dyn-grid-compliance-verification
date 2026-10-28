@@ -173,7 +173,10 @@ report, which is all the anonymizer needs; the curve regeneration of the example
 Output naming (`curves/naming.py`): internals use `BusPDR_BUS_*` everywhere, but Zone 1
 outputs (saved CSVs, report/figure labels) rename the bus to `InternalNode1` — PDR is
 reserved for the real connection point (issue #275). The importer accepts both namings
-in Zone 1 reference-curve dictionaries.
+in Zone 1 reference-curve dictionaries. The curves of a unit are named after the DTR nodes
+(`*_GEN_VoltageNode2`, `*_GEN_ActiveCurrentNode2`, `*_GEN_ActivePowerControlledNode`…), and
+`naming.from_legacy_name` lets the importer read, in any zone, the names they had before
+(`InjTerminal`, `ControlledPu`).
 
 ## Logging (`logging/`)
 

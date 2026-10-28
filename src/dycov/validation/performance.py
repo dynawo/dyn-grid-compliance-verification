@@ -365,17 +365,17 @@ class PerformanceValidator(Validator):
             time_curve = self.__curve_list("time")
 
             active_current = {
-                c.replace("_GEN_ActiveCurrentInjTerminal", ""): c
-                for c in self.__get_filtered_columns("_GEN_ActiveCurrentInjTerminal")
+                c.replace("_GEN_ActiveCurrentNode2", ""): c
+                for c in self.__get_filtered_columns("_GEN_ActiveCurrentNode2")
             }
             reactive_current = {
-                c.replace("_GEN_ReactiveCurrentInjTerminal", ""): c
-                for c in self.__get_filtered_columns("_GEN_ReactiveCurrentInjTerminal")
+                c.replace("_GEN_ReactiveCurrentNode2", ""): c
+                for c in self.__get_filtered_columns("_GEN_ReactiveCurrentNode2")
             }
 
             # Columns names are expected to be in the format:
-            #   - <generator_id>_GEN_ActiveCurrentInjTerminal
-            #   - <generator_id>_GEN_ReactiveCurrentInjTerminal
+            #   - <generator_id>_GEN_ActiveCurrentNode2
+            #   - <generator_id>_GEN_ReactiveCurrentNode2
             # so we can match them based on the generator_id extracted from the column name
             generator_ids = sorted(set(active_current.keys()) & set(reactive_current.keys()))
             for generator_id in generator_ids:
