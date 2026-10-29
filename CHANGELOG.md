@@ -7,6 +7,41 @@ the issue each one points at holds the explanation.
 
 ## Unreleased
 
+### The Grid Forming tests of the DTR Fiche I18
+
+The performance verification of a storage installation of type C or D, given its curves (`-c`),
+checks the tests of the Fiche I18 that the revision 20260723 of the DTR adds: the curves of each
+test against its envelope, generated from the `[GFM Parameters]` of the INI file of the producer
+or read from the output of `dycov generate_gfm_envelopes` given with `-g`, and the damping of
+their oscillations. A run on a model leaves those tests out, as does a run on an earlier revision
+or for an installation of another type. The curves of a test hold the active and reactive
+currents and the voltage at the terminals of the converter (the PGU), and cover the whole envelope.
+
+The INI file of a Grid Forming unit declares what it is, `generator_type = BESS` or `PPM`, and
+`dycov generate_gfm_envelopes` stops without it: a storage unit gets the Fiche I18, a power park
+module the four tests agreed with RTE before it, whose envelopes do not change unless the unit
+declares an `Imax`. The command now writes a PDF report of the envelopes, the INI dump of every
+test and a `results.json` describing its envelopes, which the performance verification reads back
+with `-g`, and stops when the file gives nothing to generate them from.
+
+The `[GFM Parameters]` section describes the PGU, apart from the installation that `[DEFAULT]`
+describes in a performance verification: its `Snom` and, when they differ, its
+`p_max_injection`, `p_max_consumption`, `q_max` and `q_min`. It may also declare `Imax`, the
+short-duration maximum current the fiche asks the manufacturer to define, which bounds every
+envelope, and `emt = true` when the curves of the unit come from EMT simulations. The Fiche I18
+fixes the effective reactance, 0.27 pu, and the inertia, H = 5 s, of its envelopes; a higher
+`Xeff` of the producer is used instead, and the values RTE sets otherwise go in a description of
+the user (`Xeff`, and `H`, `H_Overdamped` and `H_Underdamped` for the inertia).
+
+The Grid Forming templates of the user move by kind of unit, as the tool's do: a PCS under
+`templates/PCS/gfm/` or `templates/reports/gfm/` goes under `gfm/PPM/` or `gfm/BESS/`, and the
+tool warns of one left where it was. `SCRmax` of `[GFM]` is now 20, the maximum short-circuit
+ratio of the fiche, and the 10 it was before is `SCRmed`: a description of the user that names
+`SCRmax` is warned of. The curves of the Grid Forming tests are filtered at 30 Hz, the `cutoff`
+of `[GFM]`.
+
+## 1.3.0 — 2026-10-29
+
 ### Built on Dynawo 2.0.0
 
 This release ships and requires Dynawo 2.0.0. The previous one shipped a Dynawo 1.8.0 nightly in
@@ -91,11 +126,47 @@ cover this upgrade on their own:
 - none of them writes the capability-curve file, which has to be supplied by hand whichever route
   is taken.
 
+### The magnitudes of `Producer.ini` lose their `_at_PDR` suffix
+
+The magnitudes a producer declares — `p_max_injection`, `p_max_consumption`, `p_min_injection`,
+`p_min_consumption`, `u_nom`, `q_max` and `q_min` — no longer carry the `_at_PDR` suffix: each one
+holds at the point of the zone it describes, the internal node in zone 1 and the PDR in zone 3. A
+`Producer.ini` that still uses the previous names stops the run with an error naming the key.
+
+`dycov migrate_inputs <inputs>` renames them, in a single file or in every INI under a directory.
+Only the names change, so values, comments and layout stay as they are, and `--dry-run` reports
+what it would rename without writing. Inputs generated from a workbook with `dycov excel2inputs`
+already use the new names.
+
+### The revision of the DTR a run validates against
+
+A run validates against a revision of the DTR, named after the date of the edition that carries
+it. The `[DTR]` section of the configuration chooses it with `current`, and
+`dycov --dtr <YYYYMMDD> <command>` overrides it for one execution; a revision the tool does not
+implement stops the run. The report, the summary of the log and every `results.json` state the
+revision used. A PCS measured with criteria the user changed in the configuration is marked in the
+summary, with the options changed, because its verdict is then not a conformity check.
+
+Two revisions are implemented: `20240215`, the base the catalogue of the tool holds, and
+`20260723`, which carries revision 3.6 of article 8.3.3, in force since 04/05/2026. A run that
+names none follows `20260723`, so some verdicts differ from those of the previous release:
+
+- the fiche I5 adds a transient impedant three-phase fault, and so does the fiche I16 zone 3;
+- the voltage dips of the fiches I6 and I16 zone 3 start at Un;
+- the voltage swell of the fiches I7 and I16 zone 3 is run at Q = 0 and from Un, in place of its
+  operating points at Qmax and Qmin (in injection and in consumption for a storage unit);
+- the reaction time is reported without a verdict;
+- at 110 kV and above, a unit that does not store energy is of type D from 30 MW instead of from
+  any power.
+
+`dycov --dtr 20240215` measures against the revision of 15/02/2024, with the corrections of the
+next section.
+
 ### The values of the DTR of 15/02/2024
 
-DyCoV says which revision of the DTR it implements: the one of 15/02/2024, which carries revision
-3.3 of article 8.3.3. A later revision enters the tool as a delta over that one, and
-`docs/design/DTR_revisions.md` says how. Nothing of that mechanism is in this release.
+The revision of 15/02/2024, which carries revision 3.3 of article 8.3.3, is the base of the
+catalogue the tool ships: every later revision enters as a delta over it, and
+`docs/design/DTR_revisions.md` says how.
 
 Several values did not match that revision, or any other one. They are corrected, so a test that
 reads one of them may now give another verdict:
@@ -162,38 +233,38 @@ inside the unit model (`WT_ConverterLVControl = false`). Their models give no po
 the tool computes them from the voltage and the current there. In the IEC plant models of zone 3
 the Node2 curves are still read on the grid side of that transformer.
 
-### The Grid Forming tests of the DTR Fiche I18
+### The on-site tests of the Fiche F16
 
-The performance verification of a storage installation of type C or D, given its curves (`-c`),
-checks the tests of the Fiche I18 that the revision 20260723 of the DTR adds: the curves of each
-test against its envelope, generated from the `[GFM Parameters]` of the INI file of the producer
-or read from the output of `dycov generate_gfm_envelopes` given with `-g`, and the damping of
-their oscillations. A run on a model leaves those tests out, as does a run on an earlier revision
-or for an installation of another type. The curves of a test hold the active and reactive
-currents and the voltage at the terminals of the converter (the PGU), and cover the whole envelope.
+`PCS_RTE-F16z3` validates the model of zone 3 against the records of the commissioning tests at
+the PDR, the second phase of the validation after the fiche I16. The fiche fixes no test of its
+own, so the PCS ships without any, and the producer declares the tests it recorded in an
+`F16Description.ini` delivered with the reference curves. The tool leaves a template of that file
+among the templates of the user. Only the operating conditions whose records are delivered are
+run, with the error thresholds of the fiche (`thr_FT_reftrack_*` in `[GridCode]`), and the
+workbook gives the minimum powers of the tests. `docs/tutorials/f16_declaring_recorded_tests.md`
+walks through a declaration.
 
-The INI file of a Grid Forming unit declares what it is, `generator_type = BESS` or `PPM`, and
-`dycov generate_gfm_envelopes` stops without it: a storage unit gets the Fiche I18, a power park
-module the four tests agreed with RTE before it, whose envelopes do not change unless the unit
-declares an `Imax`. The command now writes a PDF report of the envelopes, the INI dump of every
-test and a `results.json` describing its envelopes, which the performance verification reads back
-with `-g`, and stops when the file gives nothing to generate them from.
+A producer validated against F16 alone delivers its `Zone3/` model: `Zone1/` is required only
+when a PCS of zone 1 is validated.
 
-The `[GFM Parameters]` section describes the PGU, apart from the installation that `[DEFAULT]`
-describes in a performance verification: its `Snom` and, when they differ, its
-`p_max_injection`, `p_max_consumption`, `q_max` and `q_min`. It may also declare `Imax`, the
-short-duration maximum current the fiche asks the manufacturer to define, which bounds every
-envelope, and `emt = true` when the curves of the unit come from EMT simulations. The Fiche I18
-fixes the effective reactance, 0.27 pu, and the inertia, H = 5 s, of its envelopes; a higher
-`Xeff` of the producer is used instead, and the values RTE sets otherwise go in a description of
-the user (`Xeff`, and `H`, `H_Overdamped` and `H_Underdamped` for the inertia).
+### Running the tool
 
-The Grid Forming templates of the user move by kind of unit, as the tool's do: a PCS under
-`templates/PCS/gfm/` or `templates/reports/gfm/` goes under `gfm/PPM/` or `gfm/BESS/`, and the
-tool warns of one left where it was. `SCRmax` of `[GFM]` is now 20, the maximum short-circuit
-ratio of the fiche, and the 10 it was before is `SCRmed`: a description of the user that names
-`SCRmax` is warned of. The curves of the Grid Forming tests are filtered at 30 Hz, the `cutoff`
-of `[GFM]`.
+- `--curves-only`, on `validate` and `performance` with a model, runs the simulations and keeps
+  their curves without the checks, the figures or the report.
+- Each execution writes its own log, `dycov_run.log`, at the root of its results.
+- The working directory of a run is created next to its output directory instead of in the
+  current one, so the directory that holds the output has to be writable.
+- Dynawo logs at the level of `[Dynawo] log_level`, `WARN` by default and `DEBUG` when DyCoV runs
+  in debug, instead of one line per time step.
+- The log says how long each test took and how it ended, and each retry of the solver says what
+  it changed and why the previous attempt failed.
+
+### The curves of the examples ship with the release
+
+The reference and producer curves of the examples are no longer in the repository: each release
+publishes them as its `dycov_examples.zip` asset, which the installer and the image already carry.
+A clone of the sources has the examples without their curves, and
+`tools/scripts/fetch_example_curves.sh` brings in those of the release the clone descends from.
 
 ### Fixed
 
