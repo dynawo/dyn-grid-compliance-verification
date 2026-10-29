@@ -38,6 +38,14 @@ _EXPECTED_FORMS = (
     "'multiplier*(Name+Name)' (e.g. '0.3*(Xeff+Xgrid)')"
 )
 
+_GIVEN_MAGNITUDES = {
+    "Xeff": (
+        "the effective reactance of a Grid Forming unit, which the INI file of Zone1/ of the "
+        "producer declares in its [GFM Parameters] section"
+    ),
+    "Xgrid": "the reactance of the grid of the test, which a test without a grid line lacks",
+}
+
 
 def extract_defined_value(
     value_definition: str, parameter: str, base_value: float, sign: int = 1
@@ -218,6 +226,11 @@ def resolve_value_definition(
         names = m.groupdict().get("name") or m.group("names")
         magnitude = 0.0
         for name in (name.strip() for name in names.split("+")):
+            if name not in characteristics and name in _GIVEN_MAGNITUDES:
+                raise ValueError(
+                    f"The value definition '{value_definition}' names '{name}', "
+                    f"{_GIVEN_MAGNITUDES[name]}, and none is given.{location}"
+                )
             if name not in characteristics:
                 raise ValueError(
                     f"Unknown magnitude '{name}' in value definition '{value_definition}'."

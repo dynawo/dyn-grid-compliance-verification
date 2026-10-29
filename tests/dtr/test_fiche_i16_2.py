@@ -9,8 +9,9 @@
 #
 """The Fiche I16 of a storage installation, in the two versions the revision 20260723 gives it.
 
-The revision splits the fiche into the Fiche I16.1 for type B, which its delta writes over the
-base, and the Fiche I16.2 for types C and D, which patches that delta. The version Type C/D drops
+The revision splits the fiche into the Fiche I16.1 for type B, the base with what its delta writes
+over it, and the Fiche I16.2 for types C and D, which patches the description the revision gives
+type B, its delta when it writes one. The version Type C/D drops
 the faults and the steps of the grid voltage of type B from Zone 1, whose setpoint steps run with
 a grid of short-circuit ratio 2, and simulates there the tests of the Fiche I18 (Grid Forming),
 compared at InternalNode1; it drops the fault of the Fiche I5 and the ramp of the grid frequency

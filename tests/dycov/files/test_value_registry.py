@@ -164,13 +164,24 @@ def test_an_event_of_the_fiche_i18_is_sized_by_a_sum_of_magnitudes(definition, e
     assert value_registry.resolve_value_definition(definition, chars) == pytest.approx(expected)
 
 
-def test_a_sum_naming_an_unknown_magnitude_names_it():
+def test_a_sum_naming_a_reactance_the_producer_does_not_declare_says_where_it_goes():
     chars = value_registry.unit_characteristics(_producer(), u_dim=20.0, x_grid=0.1)
 
     with pytest.raises(ValueError) as error:
         value_registry.resolve_value_definition("0.3*(Xeff+Xgrid)", chars)
 
-    assert "Unknown magnitude 'Xeff'" in str(error.value)
+    assert "names 'Xeff'" in str(error.value)
+    assert "Zone1/" in str(error.value)
+    assert "[GFM Parameters]" in str(error.value)
+
+
+def test_a_sum_naming_an_unknown_magnitude_names_it():
+    chars = value_registry.unit_characteristics(_producer(x_eff=0.27), u_dim=20.0, x_grid=0.1)
+
+    with pytest.raises(ValueError) as error:
+        value_registry.resolve_value_definition("0.3*(Xeff+Xgird)", chars)
+
+    assert "Unknown magnitude 'Xgird'" in str(error.value)
 
 
 def test_a_sum_is_only_accepted_in_parentheses():

@@ -274,8 +274,9 @@ def _pcs_description_in(path: Path) -> Union[Path, None]:
 
 def _version_for_category(path: Path, category: Optional[str]) -> Union[Path, None]:
     """The version of a fiche the DTR gives some categories of unit: a ``Type<categories>.ini``
-    beside the description of the PCS, named after the categories it is for (``TypeCD.ini`` for
-    the categories C and D), which patches that description."""
+    in the directory of the delta of the PCS, named after the categories it is for
+    (``TypeCD.ini`` for the categories C and D), which patches the description the revision
+    gives the PCS."""
     if category is None:
         return None
     for version in sorted(path.glob("Type*.[iI][nN][iI]")):
