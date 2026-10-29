@@ -68,3 +68,18 @@ def test_numerical_noise_of_a_flat_signal_does_not_oscillate(noise):
     signal = 0.5 + noise * np.random.default_rng(1).standard_normal(len(_TIME))
 
     assert matrix_pencil.oscillation_modes(_TIME, signal, 0.1, 10.0, 1e-3) == []
+
+
+def test_a_trend_slower_than_the_window_does_not_oscillate():
+    time = np.arange(0.0, 0.5, 0.001)
+
+    assert matrix_pencil.oscillation_modes(time, 0.3 * time**2, 0.1, 10.0, 1e-3) == []
+
+
+def test_a_long_window_is_read_over_a_few_periods_of_the_lowest_frequency():
+    time = np.arange(0.0, 80.0, 0.001)
+    oscillation = 0.05 * np.exp(-0.1 * 2 * np.pi * 2 * time) * np.sin(2 * np.pi * 2 * time)
+
+    modes = matrix_pencil.oscillation_modes(time, 0.5 + oscillation, 0.1, 10.0, 1e-3)
+
+    assert [round(mode.damping_ratio, 2) for mode in modes] == [0.1]

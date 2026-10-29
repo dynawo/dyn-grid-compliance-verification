@@ -33,6 +33,9 @@ _SVD_TOLERANCE = 5e-2
 # Modes whose amplitude is below this fraction of the peak-to-peak span of the signal are fitting
 # residue rather than an oscillation present in the signal.
 _AMPLITUDE_TOLERANCE = 0.01
+# Periods of the lowest frequency of interest the fit looks at. A few periods show any mode of
+# the band, while the cost of the SVD grows with the cube of the samples of the window.
+_PERIODS_OF_THE_LOWEST_FREQUENCY = 3
 
 
 def oscillation_modes(
@@ -71,7 +74,8 @@ def oscillation_modes(
         return []
 
     sampling_rate = _SAMPLES_PER_PERIOD * f_max
-    uniform_time = np.arange(time[0], time[-1], 1 / sampling_rate)
+    end = min(time[-1], time[0] + _PERIODS_OF_THE_LOWEST_FREQUENCY / f_min)
+    uniform_time = np.arange(time[0], end, 1 / sampling_rate)
     values = np.interp(uniform_time, time, signal)
     # The final value is a pole at z = 1 that the fit would otherwise spend an exponential on
     values = values - values[-1]
@@ -95,7 +99,10 @@ def oscillation_modes(
             relative_amplitude >= _AMPLITUDE_TOLERANCE
             and relative_amplitude * span >= min_amplitude
         )
-        if f_min <= frequency <= f_max and is_present:
+        # A mode slower than the window does not oscillate in it: the fit uses it to follow a
+        # trend, such as the ramp of the current during a ramp of the frequency
+        is_seen = frequency * (uniform_time[-1] - uniform_time[0]) >= 1
+        if f_min <= frequency <= f_max and is_present and is_seen:
             modes.append(
                 Mode(
                     frequency=frequency,

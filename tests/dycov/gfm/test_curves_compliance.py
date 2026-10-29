@@ -134,3 +134,21 @@ def test_pre_event_value_held_during_the_admitted_delay_stays_inside():
     signal = np.where(time < 0.01, 0.5, 0.7)
 
     assert curves_compliance._check_envelope(time, signal, lower, upper).within
+
+
+def test_curves_without_the_voltage_are_missing(tmp_path):
+    _write_curves(tmp_path / "curves", _ideal)
+    curves = pd.read_csv(tmp_path / "curves" / f"{_TEST}.csv", sep=";").drop(columns=["u"])
+    curves.to_csv(tmp_path / "curves" / f"{_TEST}.csv", sep=";", index=False)
+
+    assert _check(tmp_path).compliance == Compliance.WithoutProducerCurves
+
+
+def test_curves_that_stop_before_the_end_of_the_envelope_are_missing(tmp_path):
+    _write_curves(tmp_path / "curves", _ideal)
+    curves = pd.read_csv(tmp_path / "curves" / f"{_TEST}.csv", sep=";")
+    curves[curves["t"] < _EVENT_IN_CURVES + 3.0].to_csv(
+        tmp_path / "curves" / f"{_TEST}.csv", sep=";", index=False
+    )
+
+    assert _check(tmp_path).compliance == Compliance.WithoutProducerCurves

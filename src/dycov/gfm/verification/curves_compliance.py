@@ -29,14 +29,13 @@ from dycov.logging import dycov_logging
 from dycov.model.compliance import Compliance
 from dycov.sigpro import matrix_pencil, signal_windows, sigpro
 
-# The producer curve of each magnitude: the envelope bounds one of the currents and the damping
-# of all of them is checked, the voltage only when the producer delivers it
+# The producer curve of each magnitude, all of which the DTR Fiche I18 asks for: the envelope
+# bounds one of the currents, and the damping of all of them is checked
 _CURVES = {
     "Ip": "BusPDR_BUS_ActiveCurrent",
     "Iq": "BusPDR_BUS_ReactiveCurrent",
     "U": "BusPDR_BUS_Voltage",
 }
-_REQUIRED_MAGNITUDES = ("Ip", "Iq")
 # The PGU terminals are the Node 1 of the Zone 1 of the DTR, so the curves may also be named
 # after the Zone 1 bus (InternalNode1_BUS_*), which the importer translates for this zone
 _PGU_ZONE = 1
@@ -103,7 +102,7 @@ def check(
         logger.warning(f"No producer curves for the test in '{curves_path}'")
         return CurvesCheck(Compliance.WithoutProducerCurves, None, None, [])
 
-    missing = [_CURVES[name] for name in _REQUIRED_MAGNITUDES if _CURVES[name] not in curves]
+    missing = [curve for curve in _CURVES.values() if curve not in curves]
     if missing:
         logger.warning(f"The producer curves of the test miss {', '.join(missing)}")
         return CurvesCheck(Compliance.WithoutProducerCurves, None, None, [])
@@ -113,6 +112,13 @@ def check(
     curves = sigpro.filter_curves(curves, windows, config.get_float("GFM", "cutoff", 30.0))
 
     signal = _on_envelope_time(curves, _CURVES[magnitude], time_array)
+    reached = time_array[~np.isnan(signal)]
+    if not reached.size or reached[-1] < time_array[-2]:
+        logger.warning(
+            "The producer curves of the test stop before the end of its envelope, at "
+            f"{time_array[-1]:.3f} s, so its final band cannot be checked"
+        )
+        return CurvesCheck(Compliance.WithoutProducerCurves, None, None, [])
     envelope = _check_envelope(time_array, signal, lower_envelope, upper_envelope)
     modes = _damped_modes(curves, windows)
 
