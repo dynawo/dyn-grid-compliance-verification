@@ -50,9 +50,17 @@ def _csv_files(directory: Path) -> list[Path]:
     return sorted(path.relative_to(directory) for path in directory.rglob("*.csv"))
 
 
+def _without_grid_forming_templates(directory: str, names: list[str]) -> list[str]:
+    """The release read none of the Grid Forming templates of the case, which the tool now
+    takes for the user's descriptions of its own Grid Forming PCS."""
+    return ["gfm"] if Path(directory).parent.name == "templates" else []
+
+
 def _home_with_user_config(tmp_path: Path) -> Path:
     home = tmp_path / "home"
-    shutil.copytree(RESOURCES / "config", home / ".config" / "dycov")
+    shutil.copytree(
+        RESOURCES / "config", home / ".config" / "dycov", ignore=_without_grid_forming_templates
+    )
     return home
 
 

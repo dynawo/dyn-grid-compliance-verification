@@ -140,6 +140,22 @@ class TestDycovInitializer:
             assert d.is_dir()
         assert not (base_template_dir / template_name / "model" / "SM").exists()
 
+    def test_a_grid_forming_pcs_of_the_user_left_out_of_its_kind_of_unit_is_reported(
+        self, dycov_initializer
+    ):
+        templates = self.mock_config.get_config_dir.return_value / "templates"
+        (templates / "PCS" / "gfm" / "PCS_RTE-IGFM1").mkdir(parents=True)
+        (templates / "PCS" / "gfm" / "MyGridFormingPCS").mkdir(parents=True)
+        (templates / "PCS" / "gfm" / ".DummySample").mkdir(parents=True)
+        (templates / "PCS" / "gfm" / "PPM" / "PCS_RTE-IGFM2").mkdir(parents=True)
+
+        dycov_initializer._warn_of_grid_forming_templates_out_of_place()
+
+        messages = [call.args[0] for call in self._mock_logger.warning.call_args_list]
+        assert len(messages) == 2
+        assert "MyGridFormingPCS is not read" in messages[0]
+        assert "PCS_RTE-IGFM1 is not read" in messages[1]
+
     def test_configure_template_category_keeps_a_directory_another_run_just_created(
         self, dycov_initializer, monkeypatch
     ):
