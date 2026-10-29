@@ -69,7 +69,7 @@ _FREQUENCY_BANDS = {
 }
 
 
-def _altered_criteria() -> tuple[str, ...]:
+def altered_criteria() -> tuple[str, ...]:
     """The options of the DTR the configuration of the user changed, as it names them."""
     return tuple(f"{key} of [{section}]" for section, key in config.overridden_norm_options())
 
@@ -925,7 +925,7 @@ class Benchmark:
                     operating_condition=op_cond.get_name(),
                     compliance=compliance,
                     report_name=self._report_name,
-                    altered_criteria=_altered_criteria(),
+                    altered_criteria=altered_criteria(),
                 )
             )
             pcs_results[

@@ -736,7 +736,9 @@ class ModelProducer(Producer):
         Path
             Path to the INI file of the unit, None when it does not exist
         """
-        return self.__get_file_by_pattern(re.compile(rf".*.{filename}.[iI][nN][iI]"), zone)
+        return self.__get_file_by_pattern(
+            re.compile(rf".*[/\\]{re.escape(filename)}\.[iI][nN][iI]$"), zone
+        )
 
     def get_producer_curves_path(self) -> Path:
         """Gets the Producer Curves Directory.

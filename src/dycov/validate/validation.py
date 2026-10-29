@@ -8,6 +8,7 @@
 #     demiguelm@aia.es
 #
 
+import configparser
 import logging
 import multiprocessing
 import operator
@@ -31,12 +32,13 @@ from dycov.core.global_variables import (
     REPORT_NAME,
 )
 from dycov.core.graceful_shutdown import terminate_all_children
+from dycov.electrical.generator_variables import generator_variables
 from dycov.files import manage_files
 from dycov.gfm import report as gfm_report
 from dycov.gfm.parameters import GFMParameters
 from dycov.gfm.producer import GFMProducer
 from dycov.logging import dycov_logging, worker_initializer
-from dycov.model.benchmark import Summary
+from dycov.model.benchmark import Summary, altered_criteria
 from dycov.model.pcs import Pcs
 from dycov.report import report
 from dycov.report.LatexReportException import LatexReportException
@@ -45,6 +47,8 @@ from dycov.validate.parameters import ValidationParameters
 # The kind of unit whose Grid Forming PCS a performance verification runs: the DTR Fiche I18
 # covers storage units, and neither power park modules nor synchronous machines
 _GRID_FORMING_UNITS = {ELECTRIC_PERFORMANCE_BESS: "BESS"}
+# The categories of storage installation the DTR Fiche I18 applies to
+_GRID_FORMING_CATEGORIES = ("C", "D")
 
 
 def _open_document(file: Path, is_testing: bool) -> None:
@@ -100,7 +104,7 @@ def _validate_pcs(pcs_args) -> tuple:
             )
             return pcs.get_producer_name(), pcs.get_name(), summary_list, {}
         if parameters.get_producer().is_gfm():
-            return _check_grid_forming_pcs(pcs, parameters)
+            return _check_grid_forming_pcs(pcs, parameters, summary_list)
 
         report_name, success, pcs_results = pcs.validate(summary_list)
         pcs_results["pcs"] = pcs
@@ -122,7 +126,7 @@ def _validate_pcs(pcs_args) -> tuple:
         return pcs.get_producer_name(), pcs.get_name(), summary_list, {}
 
 
-def _check_grid_forming_pcs(pcs: Pcs, parameters: GFMParameters) -> tuple:
+def _check_grid_forming_pcs(pcs: Pcs, parameters: GFMParameters, summary_list: list) -> tuple:
     """Checks the producer curves of every Grid Forming test of the PCS against its envelopes,
     instead of simulating the test, and writes the section of the PCS in the report.
 
@@ -132,6 +136,9 @@ def _check_grid_forming_pcs(pcs: Pcs, parameters: GFMParameters) -> tuple:
         The Grid Forming PCS of a producer.
     parameters : GFMParameters
         The parameters the tests of the producer are checked with.
+    summary_list : list
+        The summary of the PCS, filled with that of each test before its section is written,
+        so that the verdicts survive a section that cannot be.
 
     Returns
     -------
@@ -139,7 +146,7 @@ def _check_grid_forming_pcs(pcs: Pcs, parameters: GFMParameters) -> tuple:
         A tuple containing producer name, PCS name, summary list, and PCS results.
     """
     tests = pcs.generate()
-    summary_list = [
+    summary_list.extend(
         Summary(
             producer_name=test.producer_name,
             id=pcs.get_id(),
@@ -149,9 +156,10 @@ def _check_grid_forming_pcs(pcs: Pcs, parameters: GFMParameters) -> tuple:
             operating_condition=test.operating_condition,
             compliance=test.compliance,
             report_name=pcs.get_report_name(),
+            altered_criteria=altered_criteria(),
         )
         for test in tests
-    ]
+    )
     gfm_report.prepare_pcs_report(
         gfm_report.PcsReport(
             pcs.get_producer_name(),
@@ -221,6 +229,7 @@ class Validation:
         self._validation_pcs = self.__get_validation_pcs()
         self._grid_forming_pcs = self.__get_grid_forming_pcs()
         self._grid_forming_parameters: dict[str, GFMParameters] = {}
+        self._grid_forming_categories: dict[str, str] = {}
         self._pcs_list = self.__prepare_pcs_list()
 
     def __initialize_working_environment(self) -> None:
@@ -319,23 +328,16 @@ class Validation:
         if not validation_pcs:
             validation_pcs.update(config.get_list("Global", validation_key))
         if not validation_pcs:
+            shipped = tool_path / self._templates_path
+            sources = [shipped, manage_files.dtr_delta_path(shipped)]
+            if not self._parameters.get_only_dtr():
+                sources.append(config.get_config_dir() / self._templates_path)
             for validation_path in validation_paths:
-                if not self._parameters.get_only_dtr():
-                    validation_pcs.update(
-                        manage_files.list_directories(
-                            config.get_config_dir() / self._templates_path / validation_path
+                for source in sources:
+                    if source is not None and (source / validation_path).is_dir():
+                        validation_pcs.update(
+                            manage_files.list_directories(source / validation_path)
                         )
-                    )
-                validation_pcs.update(
-                    manage_files.list_directories(
-                        tool_path / self._templates_path / validation_path
-                    )
-                )
-                delta_path = manage_files.dtr_delta_path(tool_path / self._templates_path)
-                if delta_path is not None and (delta_path / validation_path).is_dir():
-                    validation_pcs.update(
-                        manage_files.list_directories(delta_path / validation_path)
-                    )
 
     def __checks_grid_forming_curves(self) -> bool:
         """Whether the run checks the curves of the Grid Forming tests of the DTR Fiche I18: a
@@ -381,7 +383,8 @@ class Validation:
 
     def __is_grid_forming_pcs(self, pcs_name: str) -> bool:
         """Whether the PCS is one of the Grid Forming PCS of the kind of unit verified, which
-        the tool or the user's configuration directory describe.
+        the tool, the delta of the selected revision of the DTR or the user's configuration
+        directory describe.
 
         Parameters
         ----------
@@ -397,9 +400,16 @@ class Validation:
         if gfm_unit is None:
             return False
 
-        gfm_templates = self._templates_path / "gfm" / gfm_unit
-        templates_paths = (Path(__file__).resolve().parent.parent, config.get_config_dir())
-        return any((path / gfm_templates / pcs_name).is_dir() for path in templates_paths)
+        shipped = Path(__file__).resolve().parent.parent / self._templates_path
+        sources = (
+            shipped,
+            manage_files.dtr_delta_path(shipped),
+            config.get_config_dir() / self._templates_path,
+        )
+        return any(
+            source is not None and (source / "gfm" / gfm_unit / pcs_name).is_dir()
+            for source in sources
+        )
 
     def __get_pcs_parameters(self, pcs_name: str, producer_name: str):
         """The parameters a PCS of a unit is validated with: those of the Grid Forming tests of
@@ -497,8 +507,42 @@ class Validation:
                         self._path_latex_files,
                     )
                     for pcs_name in self._validation_pcs
+                    if pcs_name not in self._grid_forming_pcs
+                    or self.__takes_grid_forming_tests(producer_name)
                 )
         return pcs_list
+
+    def __takes_grid_forming_tests(self, producer_name: str) -> bool:
+        """Whether the installation of a producer is of a category the DTR Fiche I18 applies to,
+        which the connection voltage and the maximum power at injection of its INI file give.
+
+        Parameters
+        ----------
+        producer_name : str
+            Name of the producer, that of its INI file.
+
+        Returns
+        -------
+        bool
+            True if the Grid Forming PCS are run for the producer.
+        """
+        if producer_name not in self._grid_forming_categories:
+            producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
+            producer_config.read(
+                self._parameters.get_producer().get_producer_ini(0, producer_name)
+            )
+            category = generator_variables.get_generator_category(
+                producer_config.getfloat("DEFAULT", "u_nom"),
+                producer_config.getfloat("DEFAULT", "p_max_injection"),
+                is_storage=True,
+            )
+            self._grid_forming_categories[producer_name] = category
+            if category not in _GRID_FORMING_CATEGORIES:
+                dycov_logging.get_logger("Validation").info(
+                    f"{producer_name} is a storage installation of type {category}, and the DTR "
+                    "Fiche I18 applies to types C and D: its Grid Forming tests are not run"
+                )
+        return self._grid_forming_categories[producer_name] in _GRID_FORMING_CATEGORIES
 
     def __create_report(self, summary_list: list, report_results: dict) -> None:
         """Creates the full validation report.
