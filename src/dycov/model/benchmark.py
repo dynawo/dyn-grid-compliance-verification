@@ -170,30 +170,55 @@ class Benchmark:
         ]
 
     def __is_run(self, pcs_bm_oc_name: str) -> bool:
-        """An operating condition the DTR only asks for when the producer records it, which
-        the PCS marks ``only_with_reference``, is run when its reference curve is delivered."""
+        """An operating condition the DTR asks for only under a condition the producer shows by
+        delivering its reference curve, which the PCS marks ``only_with_reference``, is run when
+        that curve is delivered."""
         if not config.get_boolean(pcs_bm_oc_name, "only_with_reference", False):
             return True
         return self._producer.has_reference_curves_path() and manage_files.has_curves(
             self._producer.get_reference_curves_path() / self._producer_name, pcs_bm_oc_name
         )
 
+    def __report_left_out(self, oc_names: list) -> None:
+        if not oc_names:
+            return
+        condition = config.get_value(
+            self._pcs_name, "only_with_reference_condition", "a condition the tool does not check"
+        )
+        if len(oc_names) == 1:
+            reason = (
+                f"the DTR asks for it only under {condition}, which the producer shows by "
+                "delivering its reference curve, and it is not delivered"
+            )
+        else:
+            reason = (
+                f"the DTR asks for them only under {condition}, which the producer shows by "
+                "delivering their reference curves, and none is delivered"
+            )
+        dycov_logging.set_test_context(
+            pcs=self._pcs_name, benchmark=self._name, oc=None, producer=self._producer_name
+        )
+        dycov_logging.get_logger("Benchmark").info(f"{', '.join(oc_names)} not run: {reason}")
+        dycov_logging.clear_test_context()
+
     def __create_operating_condition_working_paths(self, oc_names: list):
         for oc_name in oc_names:
-            working_oc_dir = (
-                self._working_dir / self._producer_name / self._pcs_name / self._name / oc_name
-            )
-            manage_files.create_dir(working_oc_dir)
+            manage_files.create_dir(self.__working_oc_dir(oc_name))
+
+    def __working_oc_dir(self, oc_name: str) -> Path:
+        return self._working_dir / self._producer_name / self._pcs_name / self._name / oc_name
 
     def __prepare_benchmark_validation(
         self, parameters: Parameters, producer: Producer, thr_ss_tol: float
     ) -> tuple[list, CurvesManager | None, Validator | None]:
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
+        declared = config.get_list("PCS-OperatingConditions", pcs_benchmark_name)
         oc_names = [
             oc_name
-            for oc_name in config.get_list("PCS-OperatingConditions", pcs_benchmark_name)
+            for oc_name in declared
             if self.__is_run(pcs_benchmark_name + CASE_SEPARATOR + oc_name)
         ]
+        self.__report_left_out([oc_name for oc_name in declared if oc_name not in oc_names])
         self.__create_operating_condition_working_paths(oc_names)
         if parameters.get_producer().is_gfm():
             return oc_names, None, None
@@ -942,8 +967,10 @@ class Benchmark:
             )
             pcs_results[
                 self._pcs_name + CASE_SEPARATOR + self._name + CASE_SEPARATOR + op_cond.get_name()
-            ] = results
+            ] = manage_files.set_curves_aside(results, self.__working_oc_dir(op_cond.get_name()))
 
+        if self._curves_manager is not None:
+            self._curves_manager.release_curves()
         return success
 
     def generate(self) -> None:

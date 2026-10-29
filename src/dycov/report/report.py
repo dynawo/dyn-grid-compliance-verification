@@ -401,6 +401,14 @@ def _render_zone1_circuits(working_path: Path, producer: ModelProducer) -> None:
         if (working_path / tikz_name).exists():
             tikz_template = _get_template(working_path, tikz_name)
             tikz_template.stream(hasgroupxfmr=has_group_xfmr).dump(str(working_path / tikz_name))
+    switched_line = working_path / "circuit_z1_switched_line.tikz"
+    if switched_line.exists():
+        tikz_template = _get_template(working_path, switched_line.name)
+        for action, closes in (("closes", True), ("opens", False)):
+            tikz_template.stream(hasgroupxfmr=has_group_xfmr, closes=closes).dump(
+                str(working_path / f"circuit_z1_switched_line_{action}.tikz")
+            )
+        switched_line.unlink()
 
 
 def _get_iq_last_val(plot_curves: list) -> float | None:
@@ -577,6 +585,7 @@ def _create_full_tex(
     for operating_condition, oc_results in pcs_results.items():
         if not isinstance(oc_results, dict):
             continue
+        oc_results = manage_files.take_curves_back(oc_results)
 
         figure_key = operating_condition.rsplit(".", 1)[0]
         if figure_key not in figures_description:

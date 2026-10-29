@@ -32,6 +32,9 @@ _LATEX_ASSETS = [
     _PKG_ROOT / "templates/reports/TSO_logo.pdf",
     _PKG_ROOT / "templates/reports/fig_placeholder.pdf",
 ]
+CURVES_SET_ASIDE_FILE = "curves_set_aside.pkl"
+_CURVES_FOR_THE_REPORT = ("curves", "reference_curves")
+_CURVES_FOR_NO_ONE = ("curves_error",)
 
 
 def get_dynawo_version(launcher_dwo: Path) -> str:
@@ -554,6 +557,66 @@ def _copy_pcs_delta_files(
     benchmark_path = delta_path / model_files.benchmark
     if benchmark_path.exists():
         copy_from_path(benchmark_path, target_path, extra_excludes=exclude_patterns)
+
+
+def set_curves_aside(results: dict, working_oc_dir: Path) -> dict:
+    """The results of a test without its curves, which wait in a file of its working directory
+    until the report draws them, so that a PCS of many tests holds the curves of none in memory.
+
+    Parameters
+    ----------
+    results: dict
+        Results of the test, its curves included.
+    working_oc_dir: Path
+        Working directory of the test.
+
+    Returns
+    -------
+    dict
+        The results without the curves, and the file that holds them.
+    """
+    if results.get("curves") is None:
+        return results
+    path = working_oc_dir / CURVES_SET_ASIDE_FILE
+    pd.to_pickle({key: results[key] for key in _CURVES_FOR_THE_REPORT if key in results}, path)
+    left_out = _CURVES_FOR_THE_REPORT + _CURVES_FOR_NO_ONE
+    return {key: value for key, value in results.items() if key not in left_out} | {
+        "curves_set_aside": path
+    }
+
+
+def take_curves_back(results: dict) -> dict:
+    """The results of a test with the curves set aside for its report, whose file goes.
+
+    Parameters
+    ----------
+    results: dict
+        Results of the test, as `set_curves_aside` left them.
+
+    Returns
+    -------
+    dict
+        The results with their curves.
+    """
+    path = results.get("curves_set_aside")
+    if path is None:
+        return results
+    curves = pd.read_pickle(path)
+    path.unlink()
+    return {key: value for key, value in results.items() if key != "curves_set_aside"} | curves
+
+
+def discard_curves_set_aside(pcs_working_dir: Path) -> None:
+    """Removes the curves set aside that no report took back, however the validation of the PCS
+    ended, so that none reaches the results.
+
+    Parameters
+    ----------
+    pcs_working_dir: Path
+        Working directory of the PCS, which holds those of its tests.
+    """
+    for path in pcs_working_dir.rglob(CURVES_SET_ASIDE_FILE):
+        path.unlink()
 
 
 def copy_latex_files(source: Path, target: Path, prefix_name: str) -> None:

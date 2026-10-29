@@ -6,9 +6,12 @@
 %% The document starts here
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+% Every unit of Zone 1 inputs its own copy of this report into the final one, so its macros are
+% provided, defined by the first copy only.
+
 % The version Type C/D compares the curves of InternalNode1, the output of the unit after its
 % transformer, where the fiche observes the results of the Fiche I18, and the captions say so
-\newcommand{\GridCurvesDescriptionNodeOne}{
+\providecommand{\GridCurvesDescriptionNodeOne}{
     \figuredrawnzonefalse
     \GridCurveDescriptionZone{fig_V}{Voltage at InternalNode1.}
     \GridCurveDescriptionZone{fig_P}{Active power at InternalNode1.}
@@ -19,7 +22,20 @@
     \iffiguredrawnzone\else\item No figure: the test produced no curve.\fi
 }
 
-\newcommand{\GridCurvesNodeOne}{%
+% #1 = what the line Zs does at the event, #2 = the schematic of its state before the event
+\providecommand{\GridCircuitZoneSwitchedLine}[2]{
+    The grid model and its operational point is as in the following schematic, where the line
+    Zs#1:
+    \begin{center}
+        \includestandalone[width=0.8\textwidth]{#2}
+    \end{center}
+    \begin{center}
+        \small \textbf{Note: This schematic is only a reminder of the test setup on the TSO's
+        side --- the Producer's side may vary, depending on the user-provided model.}
+    \end{center}
+}
+
+\providecommand{\GridCurvesNodeOne}{%
     \setcounter{gridfigure}{0}%
     \noindent
     \GridCurveZone{fig_V}{Voltage magnitude measured at InternalNode1.}

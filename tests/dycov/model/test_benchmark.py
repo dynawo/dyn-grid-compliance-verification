@@ -160,6 +160,84 @@ def test_a_test_asked_only_when_recorded_is_not_run_without_references(monkeypat
     assert names == ["OC2", "OC3"]
 
 
+@pytest.mark.parametrize(
+    "left_out, message",
+    [
+        (
+            ("OC1",),
+            "OC1 not run: the DTR asks for it only under a condition the tool does not check, "
+            "which the producer shows by delivering its reference curve, and it is not "
+            "delivered",
+        ),
+        (
+            ("OC1", "OC3"),
+            "OC1, OC3 not run: the DTR asks for them only under a condition the tool does not "
+            "check, which the producer shows by delivering their reference curves, and none is "
+            "delivered",
+        ),
+    ],
+)
+def test_the_tests_left_out_for_lack_of_their_reference_say_so_once(
+    monkeypatch, left_out, message
+):
+    told = []
+
+    class _Logger:
+        def info(self, message):
+            told.append(message)
+
+        def __getattr__(self, name):
+            return lambda *args, **kwargs: None
+
+    class _WithoutReferences(DummyProducer):
+        def has_reference_curves_path(self):
+            return False
+
+    monkeypatch.setattr(benchmark.dycov_logging, "get_logger", lambda name: _Logger())
+
+    _run_operating_conditions(
+        monkeypatch, _WithoutReferences(), {f"{_PCS_BENCHMARK}.{oc}" for oc in left_out}
+    )
+
+    assert [said for said in told if "not run" in said] == [message]
+
+
+def test_a_test_left_out_for_lack_of_its_reference_names_the_condition_its_pcs_gives(
+    monkeypatch,
+):
+    told = []
+
+    class _Logger:
+        def info(self, message):
+            told.append(message)
+
+        def __getattr__(self, name):
+            return lambda *args, **kwargs: None
+
+    class _WithoutReferences(DummyProducer):
+        def has_reference_curves_path(self):
+            return False
+
+    monkeypatch.setattr(benchmark.dycov_logging, "get_logger", lambda name: _Logger())
+    get_value = Config.get_value
+    monkeypatch.setattr(
+        Config,
+        "get_value",
+        lambda self, section, key, default=None: (
+            "current limitation"
+            if (section, key) == ("PCS", "only_with_reference_condition")
+            else get_value(self, section, key, default)
+        ),
+    )
+
+    _run_operating_conditions(monkeypatch, _WithoutReferences(), {f"{_PCS_BENCHMARK}.OC1"})
+
+    assert [said for said in told if "not run" in said] == [
+        "OC1 not run: the DTR asks for it only under current limitation, which the producer "
+        "shows by delivering its reference curve, and it is not delivered"
+    ]
+
+
 def _internal_node1_figures(bm: Benchmark) -> list:
     return [
         (figure.name, figure.variables, figure.in_pdf)

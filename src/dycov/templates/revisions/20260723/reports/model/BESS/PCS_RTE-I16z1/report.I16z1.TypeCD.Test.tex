@@ -31,10 +31,23 @@
     Checks for compliant behavior of the generating unit under the three-phase fault of this
     test of the Fiche I18 (Grid Forming), which the version Type C/D of the Fiche I16 simulates.
     \GridCircuitZoneFault
+    \BLOCK{ elif benchmark.startswith('S_SCR') }
+    Checks for compliant behavior of the generating unit under the jump of the short-circuit
+    ratio of this test of the Fiche I18 (Grid Forming), which the version Type C/D of the Fiche I16
+    simulates. The response is tracked on the {{ trackedmagnitude }}, the magnitude the Fiche I18
+    bounds with envelopes.
+    \BLOCK{ if benchmark == 'S_SCRup1' }
+    \GridCircuitZoneSwitchedLine{, out of service before the event, closes at it}{%
+circuit_z1_switched_line_closes.tikz}
+    \BLOCK{ else }
+    \GridCircuitZoneSwitchedLine{, in service before the event, opens at it}{%
+circuit_z1_switched_line_opens.tikz}
+    \BLOCK{ endif }
     \BLOCK{ else }
     Checks for compliant behavior of the generating unit under the event of the grid of this
-    test of the Fiche I18 (Grid Forming), which the version Type C/D of the Fiche I16 simulates
-    and tracks on the {{ trackedmagnitude }}.
+    test of the Fiche I18 (Grid Forming), which the version Type C/D of the Fiche I16 simulates.
+    The response is tracked on the {{ trackedmagnitude }}, the magnitude the Fiche I18 bounds with
+    envelopes.
     \GridCircuitZoneSetPoint
     \BLOCK{ endif }
 
