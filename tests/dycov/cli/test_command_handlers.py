@@ -22,7 +22,7 @@ from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 _LAUNCHER = Path("dynawo.sh")
 
 
-def _performance_args(model=None, curves=None, excel=None, gfm_envelopes=None):
+def _performance_args(model=None, curves=None, excel=None, gfm_envelopes=None, curves_only=False):
     args = MagicMock()
     args.model = model
     args.curves = curves
@@ -32,11 +32,12 @@ def _performance_args(model=None, curves=None, excel=None, gfm_envelopes=None):
     args.pcs = None
     args.only_dtr = True
     args.testing = False
+    args.curves_only = curves_only
     return args
 
 
-def _validate_args(model=None, curves=None, reference=None, excel=None):
-    args = _performance_args(model=model, curves=curves)
+def _validate_args(model=None, curves=None, reference=None, excel=None, curves_only=False):
+    args = _performance_args(model=model, curves=curves, curves_only=curves_only)
     args.reference = reference
     args.excel = excel
     return args
@@ -156,6 +157,50 @@ def test_validate_without_reference_reports_a_parser_error(mocker):
     run_verification.assert_not_called()
 
 
+def test_validate_passes_curves_only_on(mocker):
+    run_verification = mocker.patch("dycov.cli.command_handlers._run_verification", return_value=0)
+    parser = MagicMock()
+    args = _validate_args(model="Dynawo", reference="ReferenceCurves", curves_only=True)
+
+    result = handle_validate_command(parser, args, _LAUNCHER)
+
+    assert result == 0
+    assert run_verification.call_args.kwargs["curves_only"] is True
+
+
+def test_performance_passes_curves_only_on(mocker):
+    run_verification = mocker.patch("dycov.cli.command_handlers._run_verification", return_value=0)
+    parser = MagicMock()
+    args = _performance_args(model="Dynawo", curves_only=True)
+
+    result = handle_performance_command(parser, args, _LAUNCHER)
+
+    assert result == 0
+    assert run_verification.call_args.kwargs["curves_only"] is True
+
+
+def test_validate_refuses_curves_only_without_a_model(mocker):
+    run_verification = mocker.patch("dycov.cli.command_handlers._run_verification")
+    parser = MagicMock()
+    args = _validate_args(curves="Curves", reference="Ref", curves_only=True)
+
+    handle_validate_command(parser, args, _LAUNCHER)
+
+    parser.error.assert_called_once()
+    run_verification.assert_not_called()
+
+
+def test_performance_refuses_curves_only_without_a_model(mocker):
+    run_verification = mocker.patch("dycov.cli.command_handlers._run_verification")
+    parser = MagicMock()
+    args = _performance_args(curves="ProducerCurves/PPM", curves_only=True)
+
+    handle_performance_command(parser, args, _LAUNCHER)
+
+    parser.error.assert_called_once()
+    run_verification.assert_not_called()
+
+
 def _excel2inputs_args(excel="Producer.xlsx", output="output_dir"):
     args = MagicMock()
     args.excel = excel
@@ -250,6 +295,24 @@ def test_validate_from_a_workbook_converts_and_validates_what_came_out(mocker, t
     assert kwargs["verification_type"] == MODEL_VALIDATION
     # The report names the workbook, not the directory that is about to disappear.
     assert kwargs["producer_workbook"] == workbook
+
+
+def test_validate_from_a_workbook_passes_curves_only_on(mocker, tmp_path):
+    workbook = tmp_path / "Producer.xlsx"
+    workbook.touch()
+    run_verification = mocker.patch("dycov.cli.command_handlers._run_verification", return_value=0)
+    mocker.patch("dycov.cli.command_handlers.excel_generator.generate", return_value="report")
+    mocker.patch(
+        "dycov.cli.command_handlers.excel_generator.tests_without_metadata", return_value=[]
+    )
+    parser = MagicMock()
+
+    result = handle_validate_command(
+        parser, _validate_args(excel=str(workbook), curves_only=True), _LAUNCHER
+    )
+
+    assert result == 0
+    assert run_verification.call_args.kwargs["curves_only"] is True
 
 
 def test_validate_from_a_workbook_leaves_no_temporary_directory(mocker, tmp_path):

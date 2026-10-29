@@ -12,6 +12,7 @@ import copy
 from pathlib import Path
 from typing import Union
 
+from dycov.configuration import cfg
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.core.parameters import Parameters
@@ -77,12 +78,14 @@ class Pcs:
     def __prepare_pcs_config(self, producer: Producer) -> tuple[str, list, int]:
         tool_pcs_path = self.__get_pcs_path(producer, Path(__file__).resolve().parent.parent)
         user_pcs_path = self.__get_user_pcs_path(producer)
+        pcs_dtr_delta_path = self.__get_delta_pcs_path(producer)
         dycov_logging.get_logger("PCS").debug(f"PCS Path {tool_pcs_path}")
         dycov_logging.get_logger("PCS").debug(f"User PCS Path {user_pcs_path}")
+        dycov_logging.get_logger("PCS").debug(f"PCS delta Path {pcs_dtr_delta_path}")
 
-        self._has_pcs_config = tool_pcs_path is not None
+        self._has_pcs_config = tool_pcs_path is not None or pcs_dtr_delta_path is not None
         self._has_user_config = user_pcs_path is not None
-        config.load_pcs_config(tool_pcs_path, user_pcs_path)
+        config.load_pcs_config(tool_pcs_path, user_pcs_path, pcs_dtr_delta_path)
 
         # Read configurations
         report_name = config.get_value(self._name, "report_name")
@@ -92,12 +95,33 @@ class Pcs:
 
         return report_name, bms_by_pcs, pcs_id, pcs_zone
 
-    def __get_pcs_path(self, producer: Producer, source_path: Path) -> Union[Path, None]:
-        path = source_path / self._templates_path / producer.get_sim_type_str() / self._name
+    def __get_pcs_path(
+        self, producer: Producer, source_path: Path, templates_path: Path = None
+    ) -> Union[Path, None]:
+        templates = self._templates_path if templates_path is None else templates_path
+        path = source_path / templates / producer.get_sim_type_str() / self._name
         if not path.exists():
             return None
 
         return _pcs_description_in(path)
+
+    def __get_delta_pcs_path(self, producer: Producer) -> Union[Path, None]:
+        """The delta of this PCS: what the selected revision of the DTR writes differently.
+
+        A revision keeps its whole delta in a directory of its own, which mirrors the shipped
+        templates. A PCS the revision does not touch has no description there, and its delta
+        layer stays empty.
+        """
+        revision = config.get_value("DTR", "current")
+        if cfg.is_base_revision(revision):
+            return None
+
+        templates_path = (
+            self._templates_path.parent / "revisions" / revision / self._templates_path.name
+        )
+        return self.__get_pcs_path(
+            producer, Path(__file__).resolve().parent.parent, templates_path
+        )
 
     def __get_user_pcs_path(self, producer: Producer) -> Union[Path, None]:
         """The user's description of this PCS: the one delivered with the reference curves of

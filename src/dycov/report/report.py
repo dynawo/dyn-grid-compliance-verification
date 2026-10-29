@@ -14,7 +14,7 @@ import shutil
 import signal
 import subprocess
 import time
-from dataclasses import replace
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import numpy as np
@@ -50,7 +50,6 @@ from dycov.report.tables import (
     thresholds,
 )
 from dycov.report.types import FigureDescription
-from dycov.templates.reports.create_figures import create_figures
 from dycov.validate.parameters import ValidationParameters
 from dycov.validate.producer import ModelProducer
 from dycov.validation import compared_curves
@@ -250,21 +249,15 @@ def copy_pcs_latex_files(
     if latex_tool_path.exists():
         manage_files.copy_latex_files(latex_tool_path, working_path, prefix)
 
+    latex_delta_path = manage_files.dtr_delta_path(latex_tool_path)
+    if latex_delta_path is not None:
+        dycov_logging.get_logger("Report").debug(
+            f"{pcs_name}: DTR delta LaTeX path:{latex_delta_path}"
+        )
+        manage_files.copy_latex_files(latex_delta_path, working_path, prefix)
+
     if not (latex_tool_path.exists() or latex_user_path.exists()):
         dycov_logging.get_logger("Report").error(f"{pcs_name}: Latex Template do not exist")
-
-
-def _create_pcs_figures(
-    pcs_results: dict,
-    working_path: Path,
-):
-    pcs = pcs_results["pcs"]
-    create_figures(
-        working_path,
-        pcs_results["producer"],
-        pcs.get_name(),
-        pcs_results["sim_type"],
-    )
 
 
 def _build_notice_block(color: str, title: str, items: list) -> str:
@@ -310,6 +303,7 @@ def _pcs_replace(
 
     subst_dict = {
         "producercommand": f"\\renewcommand{{\\Producer}}{{{pcs_results['producer']}}}",
+        "category": producer.get_category(),
     }
     subreports = []
     for (
@@ -437,23 +431,23 @@ def _render_zone1_circuits(working_path: Path, producer: ModelProducer) -> None:
 def _get_iq_last_val(plot_curves: list) -> float | None:
     """Return the last value of the first Iq curve found, or None."""
     for curve in plot_curves:
-        if "ReactiveCurrentInjTerminal" in curve["name"]:
+        if "ReactiveCurrentNode2" in curve["name"]:
             return curve["curve"][-1]
     return None
 
 
 def _add_current_magnitude(plot_curves: list) -> None:
     """Compute |I| = hypot(Ip, Iq) and append it to plot_curves if both are present."""
-    ip_curves = [c for c in plot_curves if "ActiveCurrentInjTerminal" in c["name"]]
-    iq_curves = [c for c in plot_curves if "ReactiveCurrentInjTerminal" in c["name"]]
+    ip_curves = [c for c in plot_curves if "ActiveCurrentNode2" in c["name"]]
+    iq_curves = [c for c in plot_curves if "ReactiveCurrentNode2" in c["name"]]
     if not ip_curves or not iq_curves:
         return
 
-    curve_style = get_curve_style("modIInjTerminal")
+    curve_style = get_curve_style("modINode2")
     insert_pos = 0
     for ip, iq in zip(ip_curves, iq_curves):
         gen_id = ip["name"].split("_GEN_")[0] if "_GEN_" in ip["name"] else ""
-        mag_name = f"{gen_id}_GEN_modIInjTerminal" if gen_id else "modIInjTerminal"
+        mag_name = f"{gen_id}_GEN_modINode2" if gen_id else "modINode2"
         plot_curves.insert(
             insert_pos,
             {
@@ -468,15 +462,15 @@ def _add_current_magnitude(plot_curves: list) -> None:
 
 def _inject_current_magnitude_df(curves: pd.DataFrame) -> pd.DataFrame:
     """Return a copy of curves with current_magnitude columns added if Ip and Iq are present."""
-    ip_cols = [c for c in curves.columns if "ActiveCurrentInjTerminal" in c]
-    iq_cols = [c for c in curves.columns if "ReactiveCurrentInjTerminal" in c]
+    ip_cols = [c for c in curves.columns if "ActiveCurrentNode2" in c]
+    iq_cols = [c for c in curves.columns if "ReactiveCurrentNode2" in c]
     if not ip_cols or not iq_cols:
         return curves
 
     curves = curves.copy()
     for ip_col, iq_col in zip(ip_cols, iq_cols):
         gen_id = ip_col.split("_GEN_")[0] if "_GEN_" in ip_col else ""
-        mag_name = f"{gen_id}_GEN_modIInjTerminal" if gen_id else "modIInjTerminal"
+        mag_name = f"{gen_id}_GEN_modINode2" if gen_id else "modINode2"
         curves[mag_name] = np.hypot(curves[ip_col], curves[iq_col])
     return curves
 
@@ -648,23 +642,74 @@ def _create_full_tex(
     return _pcs_replace(working_path, pcs_results, report_name, producer)
 
 
-def _summary_log(
-    summary_list: list,
-    timestamp: str,
-    dynawo_version: str,
-    model_template: str,
-    reference_template: str,
-    model_is_workbook: bool = False,
-) -> None:
-    header_txt = f"\n\n\nSummary Report\n==============\n\n***Run on: {timestamp}***\n"
-    header_txt += f"***Dycov version: {version} commit: {commit_id}***\n"
-    if dynawo_version:
-        header_txt += f"***Dynawo version: {dynawo_version}***\n"
-    if model_template:
-        label = "Workbook" if model_is_workbook else "Model dir"
-        header_txt += f"***{label}: {model_template}***\n"
-    if reference_template:
-        header_txt += f"***Reference curves dir: {reference_template}***\n"
+@dataclass(frozen=True)
+class _RunDescription:
+    """What a run ran on, as the summary of the log and the one of the report state it."""
+
+    timestamp: str
+    dtr_revision: str
+    dynawo_version: str | None
+    model_label: str
+    model_template: str
+    reference_template: str | None
+
+    def lines(self) -> list:
+        lines = [
+            f"Run on: {self.timestamp}",
+            f"Dycov version: {version} commit: {commit_id}",
+            f"DTR revision: {self.dtr_revision}",
+        ]
+        if self.dynawo_version:
+            lines.append(f"Dynawo version: {self.dynawo_version}")
+        lines.append(f"{self.model_label}: {self.model_template}")
+        if self.reference_template:
+            lines.append(f"Reference curves dir: {self.reference_template}")
+        return lines
+
+
+def _latex_escaped(text: str) -> str:
+    return text.replace("\\", "\\textbackslash")
+
+
+def _describe_run(parameters: ValidationParameters) -> _RunDescription:
+    timestamp = time.strftime("%Y-%m-%d %H:%M %Z", time.localtime(time.time()))
+    dtr_revision = config.get_value("DTR", "current")
+    producer = parameters.get_producer()
+    dynawo_version = None
+    if producer.is_dynawo_model():
+        dynawo_version = _latex_escaped(
+            str(manage_files.get_dynawo_version(parameters.get_launcher_dwo()))
+        )
+
+    workbook = parameters.get_producer_workbook()
+    if workbook:
+        # The model and its reference curves were generated into a directory that is removed
+        # when the run ends, so the input worth naming is the workbook they came from.
+        return _RunDescription(
+            timestamp,
+            dtr_revision,
+            dynawo_version,
+            "Workbook",
+            _latex_escaped(str(workbook)),
+            None,
+        )
+
+    reference_template = None
+    if producer.has_reference_curves_path():
+        reference_template = _latex_escaped(str(producer.get_reference_path()))
+    return _RunDescription(
+        timestamp,
+        dtr_revision,
+        dynawo_version,
+        "Model dir",
+        _latex_escaped(str(producer.get_producer_path())),
+        reference_template,
+    )
+
+
+def _summary_log(summary_list: list, run: _RunDescription) -> None:
+    header_txt = "\n\n\nSummary Report\n==============\n\n"
+    header_txt += "".join(f"***{line}***\n" for line in run.lines())
 
     header_txt += (
         "\n\n"
@@ -738,16 +783,24 @@ def prepare_pcs_report(
         working_path,
     )
 
-    _create_pcs_figures(
-        pcs_results,
-        working_path,
-    )
-
     _create_pcs_reports(
         pcs_results,
         output_path,
         working_path,
     )
+
+
+def log_summary(sorted_summary: list, parameters: ValidationParameters) -> None:
+    """Logs the summary of the run, the one the report opens with, without the report.
+
+    Parameters
+    ----------
+    sorted_summary: list
+        Sorted list of the overall test results per pcs
+    parameters: ValidationParameters
+        Validation parameters
+    """
+    _summary_log(sorted_summary, _describe_run(parameters))
 
 
 def create_pdf(
@@ -787,46 +840,9 @@ def create_pdf(
 
     reports = _get_reports(sorted_summary, report_results, working_path)
 
-    summary_description = ""
-    now = time.time()
-    timestamp = time.strftime("%Y-%m-%d %H:%M %Z", time.localtime(now))
-    summary_description += f"Run on: {timestamp} \\\\"
-    summary_description += f"Dycov version: {version} commit: {commit_id} \\\\"
-
-    producer = parameters.get_producer()
-    dynawo_version = None
-    if producer.is_dynawo_model():
-        dynawo_version = str(
-            manage_files.get_dynawo_version(parameters.get_launcher_dwo())
-        ).replace("\\", "\\textbackslash")
-        summary_description += f"Dynawo version: {dynawo_version} \\\\"
-
-    workbook = parameters.get_producer_workbook()
-    if workbook:
-        # The model and its reference curves were generated into a directory that is removed
-        # when the run ends, so the input worth naming is the workbook they came from.
-        model_template = str(workbook).replace("\\", "\\textbackslash")
-        reference_template = None
-        summary_description += f"Workbook: {model_template} \\\\"
-    else:
-        model_template = str(producer.get_producer_path()).replace("\\", "\\textbackslash")
-        summary_description += f"Model dir: {model_template} \\\\"
-
-        reference_template = None
-        if producer.has_reference_curves_path():
-            reference_template = str(producer.get_reference_path()).replace(
-                "\\", "\\textbackslash"
-            )
-            summary_description += f"Reference curves dir: {reference_template} \\\\"
-
-    _summary_log(
-        sorted_summary,
-        timestamp,
-        dynawo_version,
-        model_template,
-        reference_template,
-        model_is_workbook=bool(workbook),
-    )
+    run = _describe_run(parameters)
+    summary_description = "".join(f"{line} \\\\" for line in run.lines())
+    _summary_log(sorted_summary, run)
     summary_map = summary.create_map(sorted_summary)
 
     # Extracting zones from the PCS data in the summary to identify the relevant "common" files
@@ -849,8 +865,8 @@ def create_pdf(
             "summary_description": summary_description.replace("_", r"\_"),
             "summaryReport": summary_map,
             "reports": reports,
-            "verificationtype": _get_verification_type(producer.get_sim_type()),
-            "modeltype": _get_model_type(producer.get_sim_type()),
+            "verificationtype": _get_verification_type(parameters.get_sim_type()),
+            "modeltype": _get_model_type(parameters.get_sim_type()),
         }
     ).dump(str(working_path / REPORT_NAME))
 

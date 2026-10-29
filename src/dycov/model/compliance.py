@@ -19,6 +19,7 @@ class Compliance(Enum):
     NotApplicableTest = 12
     VoltageCurveMissing = 13
     WithoutEnvelopes = 14
+    Simulated = 15
 
     def to_str(self) -> str:
         """Return a human-readable string representation of the compliance status.
@@ -57,6 +58,8 @@ class Compliance(Enum):
             return "Missing the simulated voltage curve"
         elif self == Compliance.WithoutEnvelopes:
             return "Missing the envelopes"
+        elif self == Compliance.Simulated:
+            return "Simulated"
 
     def show_report(self) -> bool:
         """Indicate whether this compliance status should generate a report.

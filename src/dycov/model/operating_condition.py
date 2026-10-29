@@ -82,7 +82,9 @@ class OperatingCondition:
             results["compliance"] = None
 
         keys_to_exclude = {"curves", "reference_curves", "curves_error"}
-        results_for_json = {k: v for k, v in results.items() if k not in keys_to_exclude}
+        results_for_json = {"dtr_revision": config.get_value("DTR", "current")} | {
+            k: v for k, v in results.items() if k not in keys_to_exclude
+        }
 
         with open(working_oc_dir / "results.json", "w", encoding="utf-8") as outfile:
             json.dump(

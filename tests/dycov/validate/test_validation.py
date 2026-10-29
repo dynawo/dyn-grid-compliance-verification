@@ -79,6 +79,9 @@ class DummyProducer:
     def is_dynawo_model(self):
         return self._is_dynawo_model
 
+    def is_gfm(self):
+        return False
+
     def is_user_curves(self):
         return self._is_user_curves
 
@@ -108,6 +111,7 @@ class DummyParameters(ValidationParameters):
         only_dtr=False,
         verification_type=0,
         sim_type=ELECTRIC_PERFORMANCE_SM,
+        curves_only=False,
     ):
         self._launcher_dwo = launcher_dwo
         self._selected_pcs = selected_pcs
@@ -117,6 +121,7 @@ class DummyParameters(ValidationParameters):
         self._working_dir = Path(tempfile.mkdtemp())
         self._verification_type = verification_type
         self._gfm_envelopes = None
+        self._curves_only = curves_only
 
     def get_launcher_dwo(self):
         return self._launcher_dwo
@@ -390,3 +395,81 @@ def test_a_run_without_tests_generates_no_report(monkeypatch, tmp_path):
     validation._Validation__create_report([], {})
 
     assert moved == [(validation._parameters.get_working_dir(), tmp_path / "output")]
+
+
+def test_a_curves_only_run_logs_the_summary_without_the_report(monkeypatch, tmp_path):
+    validation = Validation.__new__(Validation)
+    validation._parameters = DummyParameters(output_dir=tmp_path / "output", curves_only=True)
+    validation._path_latex_files = tmp_path / "latex"
+    validation._dry_run = False
+    logged = []
+    moved = []
+    monkeypatch.setattr(
+        "dycov.validate.validation.report.create_pdf",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("no report expected")),
+    )
+    monkeypatch.setattr(
+        "dycov.validate.validation.report.log_summary",
+        lambda summary, parameters: logged.append(summary),
+    )
+    monkeypatch.setattr("dycov.validate.validation.manage_files.remove_dir", lambda path: None)
+    monkeypatch.setattr(
+        "dycov.validate.validation.manage_files.rename_path",
+        lambda source, target: moved.append((source, target)),
+    )
+    monkeypatch.setattr("dycov.validate.validation.dycov_logging.close_run_handler", lambda: None)
+
+    validation._Validation__create_report(["summary"], {})
+
+    assert logged == [["summary"]]
+    assert moved == [(validation._parameters.get_working_dir(), tmp_path / "output")]
+
+
+def test_a_curves_only_run_opens_no_report(monkeypatch, tmp_path):
+    validation = Validation.__new__(Validation)
+    validation._parameters = DummyParameters(output_dir=tmp_path, curves_only=True)
+    validation._is_testing = False
+    make_report_file(tmp_path)
+    monkeypatch.setattr(validation, "_validate", lambda use_parallel, num_processes: ([], {}))
+    monkeypatch.setattr(validation, "_Validation__create_report", lambda summary, results: None)
+    monkeypatch.setattr(
+        "dycov.validate.validation._open_document",
+        lambda *args: (_ for _ in ()).throw(AssertionError("no report to open")),
+    )
+
+    assert validation.validate() == []
+
+
+def test_a_curves_only_pcs_prepares_no_report(monkeypatch):
+    class SimulatedPcs:
+        def __init__(self, producer_name, pcs_name, parameters):
+            self._producer_name = producer_name
+            self._name = pcs_name
+
+        def is_valid(self):
+            return True
+
+        def declares_tests(self):
+            return True
+
+        def get_producer_name(self):
+            return self._producer_name
+
+        def get_name(self):
+            return self._name
+
+        def validate(self, summary_list):
+            return "report.tex", True, {}
+
+    monkeypatch.setattr("dycov.validate.validation.Pcs", SimulatedPcs)
+    monkeypatch.setattr(
+        "dycov.validate.validation._prepare_report_pcs",
+        lambda *args: (_ for _ in ()).throw(AssertionError("no report expected")),
+    )
+
+    producer_name, pcs_name, summary_list, pcs_results = _validate_pcs(
+        (DummyParameters(curves_only=True), "PCS_RTE-I16z3", "Producer", Path("/tmp"))
+    )
+
+    assert (producer_name, pcs_name, summary_list) == ("Producer", "PCS_RTE-I16z3", [])
+    assert pcs_results["success"]

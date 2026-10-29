@@ -11,6 +11,7 @@ def _fake_args(command):
     args = MagicMock()
     args.command = command
     args.launcher = "dynawo"
+    args.dtr = None
     return args
 
 
@@ -106,3 +107,56 @@ def test_dycov_empty_command_logs_error(mocker, caplog):
 
     assert result == 1
     assert "Please provide a command" in caplog.text
+
+
+# ---------------------------------------------------------------------------
+# Selection of the DTR revision
+# ---------------------------------------------------------------------------
+
+
+def _config(mocker, current, available):
+    config = mocker.patch("dycov.configuration.cfg.config")
+    config.get_value.return_value = current
+    config.get_list.return_value = available
+    return config
+
+
+def test_the_run_keeps_the_revision_of_the_configuration(mocker):
+    _config(mocker, "20240215", ["20240215"])
+    parser = MagicMock()
+    args = _fake_args("performance")
+    args.dtr = None
+
+    from dycov.launchers import DycovCLI
+
+    DycovCLI()._select_dtr_revision(parser, args)
+
+    parser.error.assert_not_called()
+
+
+def test_the_dtr_option_overrides_the_configuration(mocker):
+    config = _config(mocker, "20250801", ["20240215", "20250801"])
+    parser = MagicMock()
+    args = _fake_args("performance")
+    args.dtr = "20250801"
+
+    from dycov.launchers import DycovCLI
+
+    DycovCLI()._select_dtr_revision(parser, args)
+
+    config.set_value.assert_called_once_with("DTR", "current", "20250801")
+    parser.error.assert_not_called()
+
+
+def test_a_revision_the_tool_does_not_implement_stops_the_run(mocker):
+    _config(mocker, "19991231", ["20240215"])
+    parser = MagicMock()
+    args = _fake_args("performance")
+    args.dtr = "19991231"
+
+    from dycov.launchers import DycovCLI
+
+    DycovCLI()._select_dtr_revision(parser, args)
+
+    parser.error.assert_called_once()
+    assert "19991231" in parser.error.call_args[0][0]

@@ -24,6 +24,10 @@ compliance criteria it checks. Its purpose is to make those checks reproducible:
 same tests, run the same way, by the producer preparing a connection request and by
 the TSO reviewing it.
 
+DyCoV implements the DTR of 15/02/2024, which carries revision 3.3 of article 8.3.3.
+A later revision enters the tool as a delta over that one, as `docs/design/DTR_revisions.md`
+says.
+
 ---
 
 ## Contents

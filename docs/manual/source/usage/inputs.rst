@@ -76,14 +76,17 @@ directory with ``Zone3/`` alone.
    ``BusPDR`` for both zones, and reference-curve dictionaries for Zone 1
    accept both namings. The converter-output node of the Zone 1 unit model,
    between the unit and its transformer, is named **InternalNode2** (the node
-   called *Node2* in the DTR); the injector-terminal signals
-   (``*_GEN_ActiveCurrentInjTerminal``, ``*_GEN_ReactiveCurrentInjTerminal``,
-   ``*_GEN_VoltageInjTerminal``)
+   called *Node2* in the DTR); the signals named after it
+   (``*_GEN_ActiveCurrentNode2``, ``*_GEN_ReactiveCurrentNode2``,
+   ``*_GEN_VoltageNode2``)
    are measured there. A Zone 1 reference-curve dictionary declares six
    signals: those three, ``InternalNode1_BUS_Voltage`` (or its
    ``BusPDR_BUS_Voltage`` alias), and the active and reactive power at the
-   point controlled by the converter,
-   ``*_GEN_ActivePowerControlledPu`` and ``*_GEN_ReactivePowerControlledPu``.
+   node the converter controls,
+   ``*_GEN_ActivePowerControlledNode`` and ``*_GEN_ReactivePowerControlledNode``.
+   Dictionaries written before these signals were named after the nodes —
+   ``InjTerminal`` for ``Node2``, ``ControlledPu`` for ``ControlledNode`` — are
+   still accepted.
    It may also declare the setpoints sent to the converter,
    ``*_GEN_ActivePowerSetpointPu``, ``*_GEN_ReactivePowerSetpointPu`` and
    ``*_GEN_VoltageSetpointPu``, which are not compared: in a setpoint step,

@@ -41,10 +41,12 @@ class ValidationParameters(Parameters):
         0 if it is an electrical performance verification.
         10 if it is a model validation.
     producer_workbook: Path
-        Workbook the producer inputs were generated from.
+        Workbook the producer inputs were generated from, when there is one.
     gfm_envelopes: Path
         Directory of the envelopes the curves of the Grid Forming tests are checked against,
         written by 'dycov generate_gfm_envelopes'.
+    curves_only: bool
+        Run the simulations and keep their curves, without the checks or the report.
     """
 
     def __init__(
@@ -59,6 +61,7 @@ class ValidationParameters(Parameters):
         verification_type: int,
         producer_workbook: Path = None,
         gfm_envelopes: Path = None,
+        curves_only: bool = False,
     ):
         # Inputs parameters
         super().__init__(launcher_dwo, selected_pcs, output_dir, only_dtr)
@@ -73,6 +76,7 @@ class ValidationParameters(Parameters):
         )
         self._producer_workbook = producer_workbook
         self._gfm_envelopes = gfm_envelopes
+        self._curves_only = curves_only
 
     def get_sim_type(self) -> int:
         """Get the executed validation type.

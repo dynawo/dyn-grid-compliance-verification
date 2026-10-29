@@ -161,6 +161,32 @@ def test_get_transformer_values_reads_pu_parameters():
     assert xfmr.terminals[1].connected_equipment == "Wind_Turbine"
 
 
+def test_get_transformer_values_takes_a_tap_changer_ratio_from_its_starting_tap():
+    dyd_root = _make_root()
+    _add_bbmodel(dyd_root, "Main_Xfmr", "TransformerRatioTapChanger", "parXfmr")
+    par_root = _make_root()
+    _add_parset(
+        par_root,
+        "parXfmr",
+        {
+            "transformer_RPu": "0.0",
+            "transformer_XPu": "0.0001",
+            "transformer_BPu": "0.0",
+            "transformer_GPu": "0.0",
+            "transformer_AlphaTfo0": "0.0",
+            "transformer_RatioTfo0Pu": "1.0",
+            "transformer_RatioTfoMinPu": "0.5",
+            "transformer_RatioTfoMaxPu": "1.5",
+            "transformer_NbTap": "21",
+            "transformer_Tap0": "11",
+        },
+    )
+
+    transformers = model_parameters._get_transformer_values(dyd_root, par_root, s_nref=100.0)
+
+    assert transformers[0].r_tfo == pytest.approx(1.05)
+
+
 def test_convert_transformer_units_scales_percent_values(monkeypatch):
     dynawo_names = {
         "Resistance": "transformer_R",
@@ -242,10 +268,10 @@ def testget_load_values_reads_parameters():
 
 def test_get_generator_ppc_local_reads_a_declared_true():
     par_root = _make_root()
-    parset = _add_parset(par_root, "parGen", {"WT4B_PPCLocal": "true"})
+    parset = _add_parset(par_root, "parGen", {"WTG4B_PPCLocal": "true"})
 
     ppc_local = model_parameters._get_generator_ppc_local(
-        [parset], {"ns": _NS}, "WT4BWeccCurrentSource"
+        [parset], {"ns": _NS}, "WTG4BWeccCurrentSource"
     )
 
     assert ppc_local is True
@@ -253,10 +279,10 @@ def test_get_generator_ppc_local_reads_a_declared_true():
 
 def test_get_generator_ppc_local_reads_a_declared_false():
     par_root = _make_root()
-    parset = _add_parset(par_root, "parGen", {"WT4B_PPCLocal": "false"})
+    parset = _add_parset(par_root, "parGen", {"WTG4B_PPCLocal": "false"})
 
     ppc_local = model_parameters._get_generator_ppc_local(
-        [parset], {"ns": _NS}, "WT4BWeccCurrentSource"
+        [parset], {"ns": _NS}, "WTG4BWeccCurrentSource"
     )
 
     assert ppc_local is False
@@ -285,6 +311,37 @@ def test_get_generator_ppc_local_reads_every_model_with_a_pcc(lib, prefix):
     ppc_local = model_parameters._get_generator_ppc_local([parset], {"ns": _NS}, lib)
 
     assert ppc_local is False
+
+
+def _unit_models():
+    """Every model whose dictionary names the voltage of the node its control measures, with
+    the keys it declares: the models of a unit, with no plant controller."""
+    dictionaries = Path(model_parameters.__file__).parents[1] / "curves" / "dynawo" / "dictionary"
+    models = []
+    for name in ("Power_Park.ini", "Storage.ini"):
+        parser = configparser.ConfigParser(inline_comment_prefixes=("#",), strict=False)
+        parser.optionxform = str
+        parser.read(dictionaries / name)
+        models += [
+            pytest.param(set(parser.options(lib)), id=lib)
+            for lib in parser.sections()
+            if parser.has_option(lib, "VoltageControlledNode")
+        ]
+    return models
+
+
+@pytest.mark.parametrize("keys", _unit_models())
+def test_a_unit_model_declares_nothing_of_a_plant_controller(keys):
+    plant_controller_keys = {
+        "ActivePowerPcc0Pu",
+        "ReactivePowerPcc0Pu",
+        "VoltagePcc0Pu",
+        "PhasePcc0",
+        "PPCLocal",
+        "MagnitudeControlledByAVRPu",
+    }
+
+    assert not keys & plant_controller_keys
 
 
 def test_get_generator_ppc_local_defaults_to_true_when_the_parameter_is_absent():
@@ -322,10 +379,12 @@ def test_get_generator_converter_lv_control_defaults_to_true_when_absent():
 
 def testappend_generator_takes_ppc_local_from_the_par_file():
     dyd_root = _make_root()
-    model_parameter = _add_bbmodel(dyd_root, "Wind_Turbine", "WT4BWeccCurrentSource", "parGen")
-    _add_connect(dyd_root, "Wind_Turbine", "WT4B_terminal", "StepUp_Xfmr", "transformer_terminal2")
+    model_parameter = _add_bbmodel(dyd_root, "Wind_Turbine", "WTG4BWeccCurrentSource", "parGen")
+    _add_connect(
+        dyd_root, "Wind_Turbine", "WTG4B_terminal", "StepUp_Xfmr", "transformer_terminal2"
+    )
     par_root = _make_root()
-    _add_parset(par_root, "parGen", {"WT4B_PPCLocal": "false"})
+    _add_parset(par_root, "parGen", {"WTG4B_PPCLocal": "false"})
     generators = []
 
     model_parameters.append_generator(dyd_root, par_root, model_parameter, generators)
@@ -346,6 +405,20 @@ def testappend_generator_defaults_ppc_local_to_true_when_the_par_omits_it():
     model_parameters.append_generator(dyd_root, par_root, model_parameter, generators)
 
     assert generators[0].ppc_local is True
+
+
+def test_append_generator_takes_the_power_limits_of_an_iec_plant_from_its_power_reference():
+    dyd_root = _make_root()
+    model_parameter = _add_bbmodel(dyd_root, "Wind_Turbine", "IECWPP4BCurrentSource2020", "parGen")
+    _add_connect(dyd_root, "Wind_Turbine", "WPP_terminal", "Main_Xfmr", "transformer_terminal2")
+    par_root = _make_root()
+    _add_parset(par_root, "parGen", {"WPP_PRefMaxPu": "0.9", "WPP_PRefMinPu": "0.1"})
+    generators = []
+
+    model_parameters.append_generator(dyd_root, par_root, model_parameter, generators)
+
+    assert generators[0].p_max == pytest.approx(0.9)
+    assert generators[0].p_min == pytest.approx(0.1)
 
 
 def _xfmr(id: str) -> SimpleNamespace:

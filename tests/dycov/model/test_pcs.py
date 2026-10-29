@@ -82,8 +82,8 @@ class DummyConfig:
     def get_list(self, section, key):
         return ["BM"]
 
-    def load_pcs_config(self, pcs_path, user_pcs_path=None, dtr_pcs_path=None):
-        self.loaded = (pcs_path, user_pcs_path, dtr_pcs_path)
+    def load_pcs_config(self, pcs_path, user_pcs_path=None, pcs_dtr_delta_path=None):
+        self.loaded = (pcs_path, user_pcs_path, pcs_dtr_delta_path)
 
 
 def _make_pcs(monkeypatch, bms=("BM_OK", "BM_KO")):
@@ -175,7 +175,9 @@ def _prepare_pcs_config(monkeypatch, tmp_path, tool_file, user_file, producer=No
     monkeypatch.setattr(
         Pcs,
         "_Pcs__get_pcs_path",
-        lambda self, producer, source_path: found.get(source_path),
+        lambda self, producer, source_path, templates_path=None: (
+            None if templates_path else found.get(source_path)
+        ),
     )
 
     pcs = Pcs("Prod", "PCS_Test", DummyParams(producer or DummyProducer()))

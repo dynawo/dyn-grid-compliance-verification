@@ -215,8 +215,13 @@ matter of taste:
     model: the Model ones from the run of stage 3, the Performance ones from a run of their own,
     in performance mode.
 
-Run `--help` on any of them for what it does. Four things are worth knowing before using it:
+Run `--help` on any of them for what it does. Five things are worth knowing before using it:
 
+*   **The run stops at the curves.** The anonymizer reads only the curves of each test and
+    the record of what its simulation ran with, so the runs of stages 3 and 4 pass
+    `--curves-only`: no check, no figure, no report. The summary of each run still lists
+    every test, with the outcome of its simulation, and that is what the coverage check
+    reads.
 *   **The simulation stays.** A reference curve is the simulation that produced it, reduced to
     the samples that carry its shape and given the noise of a measurement, with nothing filtered
     out. On the examples the de-ripple of the anonymizer only ever caught the response of a

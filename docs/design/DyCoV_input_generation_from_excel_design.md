@@ -283,8 +283,8 @@ Zone1 and `Un_PDR` in Zone3.
 
 **Which parameters carry that branch is the Dynawo dictionary's answer**, not the code's: the
 converter set asks `dynawo_translator` for the model's `TransformerResistance` / `Reactance` /
-`Conductance` / `Susceptance`, so a family that spells them differently (WECC `R/XLvTrPu` in both
-levels, IEC `R/XLvTrPu` in the plant and `R/X/G/BesPu` in the turbine) is an entry in
+`Conductance` / `Susceptance`, so a family that spells them differently (WECC `R/XLvTrPu`, IEC
+`R/X/G/BLvTrPu`, both in the plant and in the turbine) is an entry in
 `curves/dynawo/dictionary/{Power_Park,Storage}.ini`. A model whose entry is missing is refused by
 name. None of these parameters has a `defaultValue` in the descriptors, so they are written
 whatever the flag says — zeroed where the flag moves the transformer out of the model.

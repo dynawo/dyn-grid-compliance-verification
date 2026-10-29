@@ -9,6 +9,7 @@
 #
 
 import argparse
+import re
 
 import pytest
 import shtab
@@ -70,12 +71,30 @@ def test_positional_arguments_complete_paths(parser):
     assert excel.complete == shtab.FILE
 
 
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["validate", "-m", "Dynawo", "ReferenceCurves"],
+        ["performance", "-m", "Dynawo"],
+    ],
+)
+def test_curves_only_is_off_unless_asked_for(parser, arguments):
+    assert parser.parse_args(arguments).curves_only is False
+    assert parser.parse_args([*arguments, "--curves-only"]).curves_only is True
+
+
 def test_print_completion_writes_the_script_and_exits(parser, capsys):
     with pytest.raises(SystemExit) as exit_info:
         parser.parse_args(["--print-completion", "bash"])
 
     assert exit_info.value.code == 0
-    assert "complete -F _shtab_dycov dycov" in capsys.readouterr().out
+    script = capsys.readouterr().out
+    assert re.search(r"^complete (-o \S+ )*-F _shtab_dycov dycov$", script, re.MULTILINE)
+
+
+def test_the_dtr_option_is_global_and_empty_by_default(parser):
+    assert parser.parse_args(["performance"]).dtr is None
+    assert parser.parse_args(["--dtr", "20240215", "performance"]).dtr == "20240215"
 
 
 def test_envelope_generation_no_longer_takes_producer_curves(parser):

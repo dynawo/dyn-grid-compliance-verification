@@ -39,7 +39,11 @@ build network structure dynamically.
 
 **Dynawo version coupling** (DyCoV targets 2.0.0): DyCoV writes model names Dynawo owns in two
 places — the dictionaries (`curves/dynawo/dictionary/*.ini`, every parameter and variable DyCoV
-reads or writes) and `files/omega_file.py` (the `DYNModelOmegaRef` connectors, `omega_grp_<n>_` /
+reads or writes; `tests/dycov/curves/dynawo/dictionary` checks that each names a variable or a
+parameter that is not read-only, which Dynawo ignores in a PAR, in the model descriptors of the
+installation `DYNAWOPATH` or the `dynawo.sh` on the PATH points to, and is skipped without one; a
+tap changer's starting ratio is derived from its starting tap, as Dynawo does) and
+`files/omega_file.py` (the `DYNModelOmegaRef` connectors, `omega_grp_<n>_` /
 `omegaRef_grp_<n>_` / `running_grp_<n>_`: 2.0.0 drops the `_value` suffix and keeps the `_` that
 marks the array index, as Dynawo's own examples spell them). The rest of the names are the
 producer's, in its DYD and PAR, and a model written for an older Dynawo is migrated with the
@@ -160,10 +164,19 @@ move is a rename within one filesystem. Alongside the inputs
 it holds the post-processed `curves_calculated.csv`, `curves_reference.csv` and `results.json`, and at its
 root the `dycov_run.log` of the execution.
 
+`--curves-only` (`validate`, `performance`; `Parameters.is_curves_only`) stops each test once
+`has_required_curves` has written its curves: `Benchmark` gives it the outcome of the simulation
+(`Compliance.Simulated` or a failure) without running the checks, and `Validation` logs the summary
+(`report.log_summary`) without the figures or the PDF. The tree is the same minus `results.json` and the
+report, which is all the anonymizer needs; the curve regeneration of the examples runs this way.
+
 Output naming (`curves/naming.py`): internals use `BusPDR_BUS_*` everywhere, but Zone 1
 outputs (saved CSVs, report/figure labels) rename the bus to `InternalNode1` — PDR is
 reserved for the real connection point (issue #275). The importer accepts both namings
-in Zone 1 reference-curve dictionaries.
+in Zone 1 reference-curve dictionaries. The curves of a unit are named after the DTR nodes
+(`*_GEN_VoltageNode2`, `*_GEN_ActiveCurrentNode2`, `*_GEN_ActivePowerControlledNode`…), and
+`naming.from_legacy_name` lets the importer read, in any zone, the names they had before
+(`InjTerminal`, `ControlledPu`).
 
 ## Grid Forming (`gfm/`)
 

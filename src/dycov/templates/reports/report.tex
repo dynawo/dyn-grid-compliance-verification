@@ -100,6 +100,13 @@
 \BLOCK{else}
 \lhead{Results from running DTR tests~\cite{DTRhome}, using \Dynawo~\cite{Dynawo}.}
 \BLOCK{endif}
+% A figure of a test that did not run is not on disk. The one that is missing takes the
+% placeholder, so the report is built either way and no list of figures is kept.
+\let\dycovgraphics\includegraphics
+\renewcommand{\includegraphics}[2][]{%
+  \IfFileExists{#2}{\dycovgraphics[#1]{#2}}{%
+    \IfFileExists{#2.pdf}{\dycovgraphics[#1]{#2.pdf}}{%
+      \dycovgraphics[#1]{fig_placeholder.pdf}}}}
 \begin{document}
 
     \maketitle

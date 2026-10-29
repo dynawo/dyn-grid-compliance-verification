@@ -127,8 +127,8 @@ def _get_ppm_curves_template(xfmrs: list, gen_ppms: list) -> str:
         curves_dictionary += (
             f"{gen_ppm.get('id')}_GEN_MagnitudeControlledByAVRPu = \n"
             f"{gen_ppm.get('id')}_GEN_VoltageSetpointPu = \n"
-            f"{gen_ppm.get('id')}_GEN_ActiveCurrentInjTerminal = \n"
-            f"{gen_ppm.get('id')}_GEN_ReactiveCurrentInjTerminal = \n"
+            f"{gen_ppm.get('id')}_GEN_ActiveCurrentNode2 = \n"
+            f"{gen_ppm.get('id')}_GEN_ReactiveCurrentNode2 = \n"
         )
 
     curves_dictionary += (
