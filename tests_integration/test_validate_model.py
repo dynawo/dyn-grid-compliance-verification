@@ -38,11 +38,17 @@ def test_model_validation_ppm_dynawo_model():
         Compliance.NotApplicableTest,  # PCS_RTE-I16z3.QSetPointStep.Inc10
         Compliance.NotApplicableTest,  # PCS_RTE-I16z3.QSetPointStep.Dec20
         Compliance.Compliant,  # PCS_RTE-I16z3.ThreePhaseFault.TransientBolted
+        Compliance.Compliant,  # PCS_RTE-I16z3.ThreePhaseFault.TransientImpedant
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageDip.Qzero
-        Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMax
-        Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMin
+        Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.Qzero
         Compliance.Compliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250ms
         Compliance.Compliant,  # PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4
+        Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.Pmin
+        Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.P50
+        Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.Pmax
+        Compliance.Compliant,  # PCS_RTE-F16z3.USetPointStep.Pmin
+        Compliance.Compliant,  # PCS_RTE-F16z3.USetPointStep.P50
+        Compliance.Compliant,  # PCS_RTE-F16z3.USetPointStep.Pmax
     ] == compliance
 
 
@@ -95,12 +101,12 @@ def test_model_validation_bess_dynawo_model():
         Compliance.NotApplicableTest,  # PCS_RTE-I16z3.QSetPointStep.Dec20Consumption
         Compliance.Compliant,  # PCS_RTE-I16z3.ThreePhaseFault.TransientBoltedInjection
         Compliance.Compliant,  # PCS_RTE-I16z3.ThreePhaseFault.TransientBoltedConsumption
+        Compliance.Compliant,  # PCS_RTE-I16z3.ThreePhaseFault.TransientImpedantInjection
+        Compliance.Compliant,  # PCS_RTE-I16z3.ThreePhaseFault.TransientImpedantConsumption
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageDip.QzeroInjection
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageDip.QzeroConsumption
-        Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMaxInjection
-        Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMinInjection
-        Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMaxConsumption
-        Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMinConsumption
+        Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QzeroInjection
+        Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QzeroConsumption
         Compliance.Compliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250msInjection
         Compliance.Compliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250msConsumption
         Compliance.Compliant,  # PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Injection
