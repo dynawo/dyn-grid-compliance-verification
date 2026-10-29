@@ -266,6 +266,9 @@ class ModelProducer(Producer):
         zone, self._zone = self._zone, 3
         producer_config = self.__read_producer_ini()
         self._zone = zone
+        _check_parameters_definition(
+            producer_config, "DEFAULT", self._sim_type == MODEL_VALIDATION_BESS
+        )
         return generator_variables.get_generator_category(
             float(producer_config.get("DEFAULT", "u_nom")),
             float(producer_config.get("DEFAULT", "p_max_injection")),

@@ -214,6 +214,9 @@ def test_get_filenames_ignores_a_zone_name_above_the_curves_directory(tmp_path, 
     assert producer.get_filenames() == ["Producer"]
 
 
+_CONSUMPTION = "p_max_consumption = 80\n"
+
+
 def _producer_reading_its_zone3(tmp_path: Path, zone3_ini: str) -> ModelProducer:
     curves_path = _curves_tree(tmp_path)
     (curves_path / "Zone3" / "Producer.ini").write_text(zone3_ini)
@@ -228,16 +231,35 @@ def test_a_storage_installation_takes_the_category_the_dtr_gives_its_zone3(
     tmp_path, p_max_injection, category
 ):
     """A storage installation at 225 kV is of type B below 18 MW, C below 50 MW and D above."""
-    zone3_ini = _PRODUCER_INI.replace("= 80", f"= {p_max_injection}")
+    zone3_ini = _PRODUCER_INI.replace("= 80", f"= {p_max_injection}") + _CONSUMPTION
     producer = _producer_reading_its_zone3(tmp_path, zone3_ini)
     producer._sim_type = MODEL_VALIDATION_BESS
 
     assert producer._ModelProducer__read_installation_category() == category
 
 
+@pytest.mark.parametrize(
+    "zone3_ini, message",
+    [
+        (_PRODUCER_INI.replace("u_nom = 225\n", ""), "must specify the u_nom"),
+        (_PRODUCER_INI.replace("u_nom =", "u_nom_at_PDR ="), "dycov migrate_inputs"),
+    ],
+)
+def test_the_category_of_the_installation_asks_for_what_its_zone3_lacks(
+    tmp_path, zone3_ini, message
+):
+    """Curves delivered without a model reach the category before anything else reads their
+    Zone 3, so it is there that a missing or retired parameter is told."""
+    producer = _producer_reading_its_zone3(tmp_path, zone3_ini)
+    producer._sim_type = MODEL_VALIDATION_PPM
+
+    with pytest.raises(ValueError, match=message):
+        producer._ModelProducer__read_installation_category()
+
+
 def test_the_category_of_the_installation_ignores_the_zone_in_preparation(tmp_path):
     """A unit of Zone 1 is smaller than its installation, and the fiche follows the latter."""
-    producer = _producer_reading_its_zone3(tmp_path, _PRODUCER_INI)
+    producer = _producer_reading_its_zone3(tmp_path, _PRODUCER_INI + _CONSUMPTION)
     producer._sim_type = MODEL_VALIDATION_BESS
     producer._zone = 1
 
