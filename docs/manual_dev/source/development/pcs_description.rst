@@ -75,15 +75,16 @@ of the 100 MVA base of the simulation), ``Udim`` and ``Unom`` (voltages, in
 pu of the nominal voltage at the PDR), and ``line_XPu`` (the reactance
 computed for the operating condition). The tests of the Fiche I18 are sized
 by ``Xeff``, the effective reactance of a Grid Forming unit, which the INI file
-of the producer declares in its ``[GFM Parameters]`` section, and by ``Xgrid``,
-the short-circuit reactance of the grid of the operating condition (``1/SCR``),
-both in pu of the nominal apparent power of the unit, the base the fiche adds
-them in; each one is only a magnitude when it is known. ``Pmax`` and its two
-aliases resolve to the same value; writing ``PmaxConsumption`` in ``pdr_P``
-marks the operating
-condition as a consumption one, which flips the sign of every ``Pmax`` of
-that condition. A definition that names an unknown magnitude aborts the run,
-naming the file and line it was read from.
+of ``Zone1/`` of the producer declares in its ``[GFM Parameters]`` section,
+and by ``Xgrid``, the short-circuit reactance of the grid of the operating
+condition (``1/SCR``, or that of its line when it gives no ``SCR``), both in
+pu of the nominal apparent power of the unit, the base the fiche adds them in;
+each one is only a magnitude when it is known. ``Pmax`` and its two aliases
+resolve to the same value; writing ``PmaxConsumption`` in ``pdr_P`` marks the
+operating condition as a consumption one, which flips the sign of every
+``Pmax`` of that condition. A definition that names an unknown magnitude ends
+the test that reads it as an invalid one, with an error naming the file and
+line it was read from.
 
 Voltage levels
 ^^^^^^^^^^^^^^
@@ -128,6 +129,12 @@ The PCS section
   Family of ``[GridCode]`` tolerances applied to the controlled magnitude of
   a setpoint test: absent for the I16 table, ``FT`` for the F16 one. See
   the *Compliance tests* chapter of the user manual.
+
+``only_with_reference_condition``
+  The condition under which the DTR asks for the operating conditions marked
+  ``only_with_reference``, in the few words the log quotes when one of them is
+  left out for lack of its reference curve: ``current limitation`` for the
+  version Type C/D of the Fiche I16.
 
 .. code-block:: ini
 
@@ -268,11 +275,12 @@ The operating-condition section
   The tests of the Fiche I18 that the Fiche I16.2 simulates name it.
 
 ``only_with_reference``
-  ``true`` when the DTR asks for the test only if the producer records it:
-  the operating condition is then run when its reference curve is delivered,
-  and left out of the verification otherwise. The Fiche I16.2 asks for the
-  tests of the Fiche I18 at OC2 and OC3, and at the others only when they
-  drive the unit into current limitation.
+  ``true`` when the DTR asks for the test only under a condition the tool does
+  not check on the model, which the producer then shows by delivering its
+  reference curve: the operating condition is run when that curve is
+  delivered, and left out of the verification otherwise. The Fiche I16.2 asks
+  for the tests of the Fiche I18 at OC2 and OC3, and at the others only when
+  they drive the unit into current limitation.
 
 The ``.Model`` section
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -416,13 +424,13 @@ The ``.Event`` section
 
 ``grid_frequency0``, ``grid_rocof``
   Frequency of the infinite bus before the event (Hz) and its rate of change
-  during it (Hz/s), for ``fault_duration`` seconds, which the units take as their
-  frequency reference through the ``InfiniteBus`` Omega model. A unit whose model
-  has no input for that reference sees the frequency as the rotation of the
-  voltage of the infinite bus instead, whose phase then turns with it. Dynawo
-  initialises a model at the nominal frequency, so the grid reaches
-  ``grid_frequency0`` with a ramp over the first half of the time before the
-  event.
+  during it (Hz/s), for ``fault_duration`` seconds, which the units take as
+  their frequency reference through the ``InfiniteBus`` Omega model. A unit
+  whose model has no input for that reference sees the frequency as the
+  rotation of the voltage of the infinite bus instead, whose phase then turns
+  with it. Dynawo initialises a model at the nominal frequency, so the grid
+  reaches ``grid_frequency0`` with a ramp over the first half of the time
+  before the event.
 
 The validation sections
 ^^^^^^^^^^^^^^^^^^^^^^^

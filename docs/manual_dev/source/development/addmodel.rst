@@ -204,21 +204,22 @@ The generic keywords for Storage models are a subset of the Power Park
 keywords (initialization, frequency, voltage setpoint, currents, setpoints),
 with the same applicability conditions and the same WECC family control flags.
 
-The Grid Forming converters of Dynawo (``GridFormingConverterDroopControl`` and
-``GridFormingEpri``, family ``GFM``) have no control flags: the family lists
-``FrequencyDroop``, the active power droop, as the parameter every model of the
-family has, and no control mode, so they take every test. Both reach their
-terminal through an impedance of their own, which no parameter switches off
-(``ConverterLVControl = false``). The droop converter takes its references at
-its filter capacitor, behind that impedance (``SetpointsBehindTransformer =
-true``): the initial value of a stepped setpoint is then computed there, through
-``TransformerResistance`` and ``TransformerReactance``, and not at the terminal.
-The EPRI converter takes them at its terminal, and has no input for the
-frequency reference of the network (``NetworkFrequencyReference``): it sees the
-frequency of the grid only through the phase of its voltage. The tests of the
-Fiche I16.2 drive the frequency from the table of the infinite bus, which then
-turns its phase with it, so they reach such a unit; those that drive it through
-an Omega model, the frequency ramp and the islanding of Zone 3, do not.
+The Grid Forming converters of Dynawo the tool supports
+(``GridFormingConverterDroopControl`` and ``GridFormingEpri``, family ``GFM``)
+have no control flags: the family lists ``FrequencyDroop``, the active power
+droop, as the parameter every model of the family has, and no control mode, so
+they take every test. Both reach their terminal through an impedance of their
+own, which no parameter switches off (``ConverterLVControl = false``). The
+droop converter takes its references at its filter capacitor, behind that
+impedance (``SetpointsBehindTransformer = true``): the initial value of a
+stepped setpoint is then computed there, through ``TransformerResistance`` and
+``TransformerReactance``, and not at the terminal. The EPRI converter takes
+them at its terminal, and has no input for the frequency reference of the
+network (``NetworkFrequencyReference``): it sees the frequency of the grid only
+through the phase of its voltage. The tests of the Fiche I16.2 drive the
+frequency from the table of the infinite bus, which then turns its phase with
+it, so they reach such a unit; those that drive it through an Omega model, the
+frequency ramp and the islanding of Zone 3, do not.
 
 
 Line

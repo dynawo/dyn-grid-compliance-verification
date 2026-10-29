@@ -62,7 +62,10 @@ The issue #551 holds this part.
   revisions the tool implements. The configuration the tool ships gives `current` the newest
   revision, so a run that says nothing validates against the norm in force.
 * `--dtr <YYYYMMDD>` overrides `current` for one execution, so the same producer runs against two
-  revisions one after the other. The curves do not change; only the criteria do.
+  revisions one after the other. The curves of a test both revisions share do not change, only
+  its criteria do; a test one of them adds or changes, such as those of the Fiche I16.2 of a
+  storage installation of type C or D under the revision `20260723`, needs reference curves of
+  its own.
 * A run that asks for a revision that is not in `available` stops with an error. The tool never
   falls back to another norm in silence.
 
@@ -78,6 +81,9 @@ src/dycov/templates/reports/<kind>/<PCS>/...             the base, the whole rep
 
 src/dycov/templates/revisions/<YYYYMMDD>/
     PCS/<kind>/<PCS>/PCSDescription.ini                  what that revision writes differently
+    PCS/<kind>/<PCS>/Type<categories>.ini                its version of the fiche for some
+                                                         categories of unit, if it splits it
+    PCS/<kind>/*aliases*.ini                             the aliases its versions inherit
     PCS/<kind>/<PCS>/<benchmark>/Table*.txt              the voltage tables it changes
     reports/<kind>/<PCS>/report.*.tex                    the templates it changes or adds
     revision_art_5_1_1.ini                               what belongs to no PCS,
@@ -85,11 +91,13 @@ src/dycov/templates/revisions/<YYYYMMDD>/
 ```
 
 The mirror is the whole rule: the tool takes any path under `templates/` and inserts
-`revisions/<YYYYMMDD>` after it, so a subtree added later needs no new code. The files that
-mirror nothing are the `revision_art_*.ini`, which hold the sections of a revision that belong
-to no PCS, such as the thresholds of `[GridCode]`. There is one per article of the DTR the
-revision changes, so that a reader sees which article moved: the categories of a unit come from
-the article 5.1.1, and the criteria of a fiche from the article 8.3.3.
+`revisions/<YYYYMMDD>` after it, so a subtree added later needs no new code. A file the base does
+not have is one the revision adds: a version of a fiche by category, the aliases it inherits, a
+template of a test it adds. The files that belong to no directory of the base are the
+`revision_art_*.ini`, which hold the sections of a revision that belong to no PCS, such as the
+thresholds of `[GridCode]`. There is one per article of the DTR the revision changes, so that a
+reader sees which article moved: the categories of a unit come from the article 5.1.1, and the
+criteria of a fiche from the article 8.3.3.
 
 A file holds what changes, and not the whole description, because the base answers for the rest.
 The PCS configuration splits into two parsers, the base and the revision, so that the precedence
@@ -106,15 +114,16 @@ a declared-tests fiche already takes. The word is needed because an empty value 
 layer that writes one leaves the layer below to answer. The same word withdraws one test of a
 fiche, in the list of its operating conditions.
 
-**A fiche a revision splits by category** keeps one description in the delta, the one of the
-categories the revision does not single out, and a version for the others beside it, named after
-them: `Type<categories>.ini`. The revision `20260723` splits the Fiche I16 of a storage
+**A fiche a revision splits by category** keeps, for the categories the revision does not single
+out, the description the revision gives the PCS (its delta, or the shipped one when the revision
+writes no delta of it), and puts a version for the others in the directory of the delta, named
+after them: `Type<categories>.ini`. The revision `20260723` splits the Fiche I16 of a storage
 installation this way, into the Fiche I16.1 for type B and the Fiche I16.2, `TypeCD.ini`, for
-types C and D. The category is the one the DTR gives the whole installation, from its Zone 3, and
-the version is part of what the revision writes for the PCS: it shares the layer of the delta and
-is read after it, so it only carries what the categories it names do differently. A revision that
-does not split the fiche has no version, so a run that follows it gives every category the same
-fiche.
+types C and D; zone 1 has no delta, so its version stands alone in that directory. The category
+is the one the DTR gives the whole installation, from its Zone 3, and the version is part of what
+the revision writes for the PCS: it shares the layer of the delta and is read after it, so it only
+carries what the categories it names do differently. A revision that does not split the fiche has
+no version, so a run that follows it gives every category the same fiche.
 
 ## What the tool already gives a delta
 

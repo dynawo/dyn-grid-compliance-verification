@@ -22,13 +22,14 @@ and organized into six layers, in decreasing order of priority:
    for the PCS, under ``src/dycov/templates/revisions/<YYYYMMDD>/PCS/``: the
    delta of its description, and the version of the fiche the revision gives
    some categories of unit, when it gives one. That version is a
-   ``Type<categories>.ini`` beside the delta, which patches it for the
-   categories it names: ``TypeCD.ini`` of ``PCS_RTE-I16z1`` and
-   ``PCS_RTE-I16z3`` in the revision ``20260723``, the Fiche I16.2 of a storage
-   installation of type C or D. The category is the one the DTR gives the
-   installation, from the connection voltage and the maximum power at
-   injection of the Zone 3 INI file of a model validation. The base revision
-   has no delta, and so no version either.
+   ``Type<categories>.ini`` in the directory of the delta, which patches the
+   description the revision gives the PCS for the categories it names:
+   ``TypeCD.ini`` of ``PCS_RTE-I16z1`` and ``PCS_RTE-I16z3`` in the revision
+   ``20260723``, the Fiche I16.2 of a storage installation of type C or D.
+   The category is the one the DTR gives the installation, from the
+   connection voltage and the maximum power at injection of the Zone 3 INI
+   file of a model validation. The base revision has no delta, and so no
+   version either.
 4. :ref:`PCS Configuration <pcsconf>` — settings defined per PCS in
    ``src/dycov/templates/PCS/``. These should only be modified when a DTR
    update changes the PCS definition.
@@ -422,12 +423,15 @@ Signal processing parameters:
   detection. A signal is in steady state when it enters this band and stays
   inside it until the end of the simulation; the band never narrows below
   ``thr_ss_tol`` of the nominal 1 pu magnitude.
-* ``zone1_compared_at_node1`` — ``true`` when a fiche observes the
-  references of Zone 1 at InternalNode1 alone, the output of the unit after
-  its transformer: Zone 1 then compares the voltage, the active and reactive
-  power and the active and reactive current there, instead of the six curves
-  of the Fiche I16.1. The version Type C/D of the Fiche I16 (Fiche I16.2)
-  sets it, since its references are the results of the Fiche I18.
+
+Compared curves:
+
+* ``zone1_compared_at_node1`` — ``true`` (default ``false``) when a fiche
+  observes the references of Zone 1 at InternalNode1 alone, the output of the
+  unit after its transformer: Zone 1 then compares the voltage, the active and
+  reactive power and the active and reactive current there, instead of the six
+  curves every other Zone 1 compares. The version Type C/D of the Fiche I16
+  (Fiche I16.2) sets it, since its references are the results of the Fiche I18.
 
 Step-response time characteristic thresholds:
 

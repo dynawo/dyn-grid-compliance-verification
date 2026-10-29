@@ -61,6 +61,12 @@ Three keys of the operating condition decide what the tests look at:
   pu of it. For a fault (``bolted_fault`` or ``hiz_fault``) the errors are
   expressed in pu of the magnitude.
 
+An event of the grid that steps no setpoint, as in the tests of the Fiche I18
+that the version Type C/D of the Fiche I16 simulates, names instead the
+magnitude its setpoint-tracking test follows with ``tracked_magnitude``, and
+its errors, with no step to refer them to, are expressed in the per unit of
+the curve of that magnitude.
+
 The error metrics, computed per window on the difference between the
 simulated and the reference curve, are the ones of IEC 61400-27-2: **ME**,
 the mean error; **MAE**, the mean absolute error; **MXE**, the maximum
@@ -84,7 +90,9 @@ compared curves are the voltage, the active and reactive power and the
 active and reactive current at the PDR, and the network frequency; in Zone 1
 they are the voltage at InternalNode1 and InternalNode2, the active and
 reactive power at the point the converter controls, and the currents Ip and
-Iq at InternalNode2.
+Iq at InternalNode2, except in the version Type C/D of the Fiche I16, which
+compares the voltage, the active and reactive power and the active and
+reactive current at InternalNode1.
 
 Step-response characteristics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -126,13 +134,15 @@ Tracking of the controlled magnitude
 ``setpoint_tracking_controlled_magnitude``
   ME, MAE and MXE of the controlled magnitude in each window, in pu of the
   step. The thresholds are a family of ``[GridCode]`` keys named by the
-  ``setpoint_tracking_thresholds`` key of the PCS: ``thr_reftrack_<metric>_<window>``
-  when the PCS names none (PCS I16: 0.05/0.02/0.03 before and after the
-  event, 0.08/0.05/0.07 during it, for MXE/ME/MAE) and
-  ``thr_FT_reftrack_<metric>_<window>`` for ``FT`` (PCS F16: 0.05/0.03/0.04
-  and 0.10/0.05/0.07). Needs a setpoint step. Activating it also narrows the
-  exclusion intervals of the windows to ``t_windowLPF_excl_start``, since a
-  step has no transient to leave out.
+  ``setpoint_tracking_thresholds`` key of the PCS:
+  ``thr_reftrack_<metric>_<window>`` when the PCS names none (PCS I16:
+  0.05/0.02/0.03 before and after the event, 0.08/0.05/0.07 during it, for
+  MXE/ME/MAE) and ``thr_FT_reftrack_<metric>_<window>`` for ``FT`` (PCS F16:
+  0.05/0.03/0.04 and 0.10/0.05/0.07). Needs a setpoint step, or a
+  ``tracked_magnitude``. Activating it also narrows the exclusion intervals of
+  the windows to ``t_windowLPF_excl_start``, since a step has no transient to
+  leave out; its 20 ms are also those the Fiche I16.2 excludes after the event
+  of a test of the Fiche I18.
 
 ``setpoint_tracking_active_power``, ``setpoint_tracking_reactive_power``
   The same metrics and thresholds applied to the active or the reactive power

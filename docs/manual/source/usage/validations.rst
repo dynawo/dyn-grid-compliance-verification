@@ -25,6 +25,11 @@ to the DTR's PCS structure. The following tests are currently implemented:
     Ride-Through (like I5), V-sag Ride-Through (like I6), V-surge Ride-Through
     (like I7), Ramp Response to Grid Frequency, and Islanding (like I10).
 
+* **RMS model validation (BESS)**: PCS I16, with the same two zones. From the
+  revision of the DTR of 20260723, a storage installation of type B takes the
+  Fiche I16.1 and one of type C or D the Fiche I16.2, which simulates in Zone 1
+  the tests of the Fiche I18 (see :ref:`pcs-i16-types`).
+
 * **RMS model validation against on-site measurements (Power Parks and
   BESS)**: PCS F16, the second phase of PCS I16, on Zone 3 only, with the
   tests the producer recorded during the commissioning of the installation.
@@ -191,7 +196,8 @@ side of the unit's transformer, whether the model holds that transformer or not
 — where the voltage never reaches zero during a fault; samples where it is not
 available are discarded rather than turned into a current.
 
-Zone 1 compares six curves, in every one of its benchmarks: the voltage at
+Zone 1 compares six curves in every one of its benchmarks, except in the
+version Type C/D of the Fiche I16 described below: the voltage at
 InternalNode1, the voltage at InternalNode2, the active and reactive power at
 the point controlled by the converter, and the currents Ip and Iq at
 InternalNode2. The two voltages carry no DTR threshold, so no compliance
@@ -350,48 +356,64 @@ defined by an operating point (OP), event parameters, and grid parameters.
 
 .. _pcs-i16-types:
 
+Versions of PCS I16 for storage
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 From the revision of the DTR of 20260723, the Fiche I16 of a storage
 installation comes in two versions, by the category of the installation, which
 the tool computes as the DTR does from the connection voltage and the maximum
 power at injection of the INI file of Zone 3. The tables above are those of the
-version for type B (Fiche I16.1), and of every Power Park Module. The version
-for types C and D (Fiche I16.2), for the storage units the Fiche I18 asks to be
-Grid Forming, differs from it in that:
+base revision as the fiche of a PPM gives them; that of a storage unit runs
+three of the Zone 1 tests absorbing :math:`P_{max}` (the fault at SCR 10, the
+impedant fault of 500 ms and the step of the voltage setpoint) and the drop of
+the grid voltage absorbing :math:`0.5\,P_{max}`. Under the revision 20260723 a
+storage installation of type B takes the Fiche I16.1, which is those tables
+with the changes the delta of that revision writes. The version for types C and
+D (Fiche I16.2), for the storage units the Fiche I18 asks to be Grid Forming,
+differs from the Fiche I16.1 in that:
 
 * Zone 1 runs the setpoint steps on a grid of short-circuit ratio 2, has
-  neither the faults nor the steps of the grid voltage, and simulates the tests
-  of the Fiche I18 (Grid Forming), described below;
+  neither the faults nor the steps of the grid voltage of type B, and simulates
+  the tests of the Fiche I18 (Grid Forming), described below;
 * Zone 1 compares the curves of InternalNode1, the voltage, the active and
   reactive power and the active and reactive current there, because the fiche
   observes the results of the Fiche I18 at the output of the unit, after its
   transformer;
-* Zone 3 repeats the setpoint steps of the Fiche I2 and the Fiches I6, I7 and
-  I10, so it has neither the fault of the Fiche I5 nor the ramp of the grid
-  frequency;
+* Zone 3 repeats the step of the voltage setpoint of the Fiche I2, with the
+  steps of the active and reactive power setpoints in its conditions, and the
+  Fiches I6, I7 and I10, so it has no fault of the Fiche I5; nor does it run
+  the ramp of the grid frequency, the case of Zone 1 that type B runs in
+  Zone 3, which the Fiche I16.2 does not have;
 * the curves are filtered at 30 Hz instead of 15 Hz, given the response
   dynamics of Grid Forming units, with a common sampling interval of 1 ms.
 
-The version Type C/D is a ``TypeCD.ini`` beside the delta of each PCS in the
-revision ``20260723``, which patches it: every section and key it leaves out is
-that of type B. A run that selects an earlier revision of the DTR validates a
-storage installation of any type against the Fiche I16 of that revision, which
-has no Fiche I18 to repeat.
+The version Type C/D is a ``TypeCD.ini`` in the directory of the delta of each
+PCS in the revision ``20260723``, which patches the description of type B that
+revision gives the PCS, its delta when it writes one: every section and key the
+version leaves out is that of type B. A run that selects an earlier revision
+of the DTR validates a storage installation of any type against the Fiche I16
+of that revision, which has no Fiche I18 to repeat. The examples
+``BESS/GridFormingDroop`` and ``BESS/GridFormingEpri`` are storage
+installations of type C, a Grid Forming converter of Dynawo in Zone 1, and
+``BESS/WECC`` one of type B.
 
 The tests of the Fiche I18 keep the names of its scenarios, and each one is run
 from the operating points of the fiche, at InternalNode1, the active power in pu
 of Pn, the rating of the converter that the fiche takes as its base: the nominal
 apparent power of the unit, and not its ``p_max_injection``:
 
-.. list-table::
+.. list-table:: Tests of the Fiche I18 in Zone 1 of the version Type C/D.
    :header-rows: 1
    :widths: 22 40 18 20
+   :class: longtable
 
    * - Tests
      - Event at the infinite bus
      - SCR
      - Operating points
    * - ``S_VolAngStep1``–``12``
-     - phase jump of :math:`\pm0.3` or :math:`\pm0.6\,(X_{eff}+X_{grid})` rad
+     - phase jump of :math:`\pm0.3\,(X_{eff}+X_{grid})` or
+       :math:`\pm0.6\,(X_{eff}+X_{grid})` rad
      - 2, 10, 20
      - OC1–OC5
    * - ``S_VolAmpStep1``–``6``
@@ -400,7 +422,7 @@ apparent power of the unit, and not its ``p_max_injection``:
      - OC1–OC7
    * - ``S_SCRup1``, ``S_SCRdown1``
      - a line in parallel with the grid closes (2 → 20) or opens (20 → 2)
-     - 2 ↔ 20
+     - 2, 20
      - OC1–OC5
    * - ``S_Rocof1``–``12``
      - ramps of the frequency from 49.5 or 50.5 Hz, at :math:`\pm0.5` Hz/s for
@@ -415,14 +437,29 @@ apparent power of the unit, and not its ``p_max_injection``:
 
 The operating points are OC1 (:math:`P = 0`), OC2 (:math:`0.5\,P_n`), OC3
 (:math:`-0.5\,P_n`), OC4 (:math:`0.95\,P_n`), OC5 (:math:`-0.95\,P_n`), OC6
-(:math:`Q = -Q_{max}`) and OC7 (:math:`Q = Q_{max}`), with :math:`Q = 0` and
-:math:`U = U_n` otherwise. :math:`X_{eff}` is the effective reactance of the
-unit, which the INI file of ``Zone1/`` declares as ``Xeff`` in its
-``[GFM Parameters]`` section, and :math:`X_{grid} = 1/SCR`, both in pu of the
-nominal apparent power of the unit. The fiche asks for every test with OC2 and
-OC3, and for the others only when they drive the unit into current limitation:
-an operating condition other than those two runs when the producer delivers its
-reference curve, and is left out of the verification otherwise.
+(:math:`P = 0`, :math:`Q = -Q_{max}`) and OC7 (:math:`P = 0`,
+:math:`Q = Q_{max}`), with :math:`Q = 0` and :math:`U = U_n` otherwise.
+:math:`X_{eff}` is the effective reactance of the unit, which the INI file of
+``Zone1/`` declares as ``Xeff`` in its ``[GFM Parameters]`` section, and
+:math:`X_{grid} = 1/SCR`, both in pu of the nominal apparent power of the unit.
+The fiche asks for every test with OC2 and OC3, and for the others only when
+they drive the unit into current limitation: an operating condition other than
+those two runs when the producer delivers its reference curve, and is left out
+of the verification otherwise.
+
+Some scenarios of the Fiche I18 are not run as its tables give them, until RTE
+confirms how to read them. Its unbalanced faults (``S_Fault1`` to ``S_Fault3``)
+are left out: the model is validated on the positive sequence alone, as the
+Fiche I16.2 states. ``S_Fault7``, which its list of tests names and its table
+of faults does not define, is left out too. And ``S_VolAngStep12`` jumps by
+:math:`-0.6\,(X_{eff}+X_{grid})`, the opposite of ``S_VolAngStep11``, as every
+even step of the series does, where the table of the fiche prints the same
+positive jump as for ``S_VolAngStep11``. The phase jumps and the voltage steps
+are sized with the :math:`X_{eff}` of the unit, while the values the tables of
+the fiche print are those of its example unit, of :math:`X_{eff} = 0.27`. The
+active power of the operating points is taken in pu of the nominal apparent
+power of the unit, the base the Fiche I18 takes, where the Fiche I16.2 and the
+Fiche I11 call Pn the maximum power of Zone 1.
 
 A unit whose model has no input for the frequency reference of the network,
 such as the EPRI Grid Forming converter of Dynawo, sees the frequency of the
@@ -437,7 +474,9 @@ InternalNode1, or the reactive current there for a step of the grid voltage,
 which each test names with ``tracked_magnitude``; since the event steps no
 setpoint, the errors are in pu and not relative to a step. The faults are
 checked with the criteria of the faults of type B, on the curves of
-InternalNode1.
+InternalNode1. Until RTE confirms the criteria of the tests of the Fiche I18
+that are not faults, they take neither the reaction, rise and settling times
+nor the overshoot of a setpoint step, since their event changes no setpoint.
 
 Dynawo initialises a model at the nominal frequency, so a ramp of the frequency
 starting at 49.5 or 50.5 Hz reaches that frequency with a slow ramp over the

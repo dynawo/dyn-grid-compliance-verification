@@ -100,7 +100,10 @@ RTE defines two variants of PCS‑I16 depending on the installation type:
 
 Both variants:
 - use the same Zone 1 / Zone 3 structure,
-- apply the same comparison methodology,
+- apply the same comparison methodology, which the version of PCS‑I16 for a
+  storage installation of type C or D adapts: it compares Zone 1 at
+  InternalNode1, filters at 30 Hz and tracks the tests of the Fiche I18 on a
+  current,
 - rely on the same families of compliance indicators.
 
 However, the **set of tests and operating points differs**, notably to account
@@ -111,7 +114,9 @@ versions, by the category the DTR gives the installation, which DyCoV computes
 from the connection voltage and the maximum power at injection of its Zone 3:
 the Fiche I16.1 for type B, and the Fiche I16.2 for types C and D, the storage
 units the Fiche I18 asks to be Grid Forming. The Fiche I16.2 simulates the tests
-of the Fiche I18 in Zone 1, and compares them at InternalNode1.
+of the Fiche I18 in Zone 1, and compares every test of Zone 1 at InternalNode1.
+The examples `BESS/GridFormingDroop` and `BESS/GridFormingEpri` are storage
+installations of type C, and `BESS/WECC` one of type B.
 
 DyCoV supports RMS validation for both variants.
 
@@ -262,7 +267,10 @@ For **PPM**, this includes:
 
 For **BESS**, the same structure applies, with operating points that explicitly
 include **positive and negative power injection** to reflect bidirectional
-operation.
+operation. A storage installation of type C or D, under the revision of
+20260723, runs instead the setpoint steps on a grid of short-circuit ratio 2
+and the tests of the Fiche I18: phase jumps, voltage steps, jumps of the
+short-circuit ratio, rates of change of the frequency and three-phase faults.
 
 ---
 
@@ -277,15 +285,21 @@ provided in previous submissions.
 Additional tests are required to validate plant‑level or supervisory control,
 including large active and reactive power setpoint variations.
 
+For a storage installation of type C or D, from the revision of the DTR of
+20260723, Zone 3 has neither the fault of the Fiche I5 nor the ramp of the grid
+frequency.
+
 ---
 
 ## 7. Comparison methodology
 
-Each zone compares a fixed set of curves, in every one of its benchmarks:
+Each zone compares a fixed set of curves:
 
-- **Zone 1**: the voltage at InternalNode1, the voltage at InternalNode2,
-  the active and reactive power at the point controlled by the converter,
-  and the currents Ip and Iq at InternalNode2 (six curves).
+- **Zone 1**: the voltage at InternalNode1, the voltage at InternalNode2, the
+  active and reactive power at the point controlled by the converter, and the
+  currents Ip and Iq at InternalNode2 (six curves); the Fiche I16.2 of a
+  storage installation of type C or D compares instead the voltage, the active
+  and reactive power and the currents Ip and Iq at InternalNode1 (five curves).
 - **Zone 3**: the voltage, active and reactive power, and currents Ip and Iq
   at the PDR bus, plus the network frequency (six curves).
 

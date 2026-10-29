@@ -60,11 +60,10 @@ copies the producer's table files into the working directory with its DYD and PA
 **Config value definitions** (any multiplier-based `PCSDescription.ini` value): resolved data-driven,
 not per-key. `value_registry.unit_characteristics(producer, u_dim)` is the single registry of base
 magnitudes (`Pmax`/`PmaxInjection`/`PmaxConsumption`/`Qmax`/`Qmin`/`Snom`/`Udim`/`Unom=1.0`/`line_XPu`,
-powers in s_nref pu, voltage in Unom pu; plus `Xeff`, the producer's `[GFM Parameters] Xeff`, and
-`Xgrid`, the `1/SCR` of the OC, in pu of the unit's Snom and present only when known);
+powers in s_nref pu, voltage in Unom pu; plus `Xeff` (`[GFM Parameters]` of the producer) and
+`Xgrid` (the `1/SCR` of the OC or its line's reactance), in the unit's Snom pu, only when known);
 `resolve_value_definition(defn, chars, sign, origin)` evaluates `[±mult*]Name`|`[±mult*](Name+Name)`
-|numeric against it;
-`origin=(section, key)` makes a rejected definition name its config file+line
+|numeric against it; `origin=(section, key)` makes a rejected definition name its config file+line
 (`config.describe_option`). Every
 non-GFM value read pulls from that one registry: `_get_pdr` + `_complete_loads` (`model_setup.py`; loads
 resolve voltage against a kV variant then ÷u_nom), `ProducerCurves.get_unit_characteristics`/`obtain_value`
@@ -72,50 +71,51 @@ resolve voltage against a kV variant then ÷u_nom), `ProducerCurves.get_unit_cha
 `reference_step_size` scaling (`figure.py`; `report.py` overrides `Unom`→kV). Adding a base = adding a
 registry entry. `obtain_value` only resolves definitions that reference a magnitude (a `*`, or a
 possibly signed registry name); anything else is a Dynawo parameter value passed through verbatim.
-A rejected definition aborts the run — `obtain_simulated_curve` turns only `SimulationOutcomeError`
-(the bisection outcomes, `model/parameters.py`) into a failed `SimulationResult`.
+A definition rejected while a test is simulated ends that test as `Invalid test`, since
+`obtain_simulated_curve` turns only `SimulationOutcomeError` (the bisection outcomes,
+`model/parameters.py`) into a failed `SimulationResult` and the rest reaches `Benchmark.validate`.
 Out of scope: GFM (own parsing of `mult*(Xeff+Xgrid)`, `extract_defined_value` for p0/q0)
 and `line_XPu` (DTR reactance-table base `a`/`b`).
 
 **Storage of types C and D (I16.2)**: the revision `20260723` splits the Fiche I16 of a storage
-installation into I16.1 for type B, which its delta writes, and I16.2 for types C and D, a version
-`Type<categories>.ini` beside that delta (`revisions/20260723/PCS/model/BESS/PCS_RTE-I16z{1,3}/
-TypeCD.ini`, its templates in the mirrored `reports/`); the base revision has none, I18 not
-existing. `Pcs` picks it by the category of the installation (`ModelProducer.
-get_installation_category`: `get_generator_category` on the Zone 3 INI, whatever zone runs;
-`_version_for_category`), and `load_pcs_config` reads it into the delta layer after the delta,
-which it patches key by key. Zone 1 of TypeCD runs the setpoint steps on SCR 2 and the tests of the
-Fiche I18 under their scenario names (`S_VolAngStep*`, `S_VolAmpStep*`, `S_SCRup1/down1`,
-`S_Rocof*`, `S_Fault4-6`), whose shared settings are the `I18*` aliases of the
+installation into I16.1 for type B, the base fiche with what its delta writes (in Zone 3 alone), and
+I16.2 for types C and D, a version `Type<categories>.ini` in the directory of the delta of each PCS
+(`revisions/20260723/PCS/model/BESS/PCS_RTE-I16z{1,3}/TypeCD.ini`, its templates in the mirrored
+`reports/`); the base revision has none, I18 not existing. `Pcs` picks it by the category of the
+installation (`ModelProducer.get_installation_category`: `get_generator_category` on the Zone 3 INI,
+whatever zone runs; `_version_for_category`), and `load_pcs_config` reads it into the delta layer
+after the delta, which it patches key by key. Zone 1 of TypeCD runs the setpoint steps on SCR 2 and
+the tests of the Fiche I18 under their scenario names (`S_VolAngStep*`, `S_VolAmpStep*`,
+`S_SCRup1/down1`, `S_Rocof*`, `S_Fault4-6`), whose shared settings are the `I18*` aliases of the
 `config_aliases.ini` of the delta, and compares the curves of InternalNode1 alone, where the fiche
 observes the results of I18 (`[GridCode] zone1_compared_at_node1`, which turns
-`compared_curves.for_zone(1)` into V, P, Q, Ip and Iq of `BusPDR`). Their events: the default `TableInfiniteBus.txt` of
-`GridVWDisturbance_1Line_InfBusFromTab` (`TableFile`: `grid_phase_jump`, `grid_voltage_step`,
-`grid_frequency0`/`grid_rocof` on the `OmegaRefPu` of the bus, which the `InfiniteBus` Omega model
-hands the units, after a pre-event ramp to the initial frequency), and
+`compared_curves.for_zone(1)` into V, P, Q, Ip and Iq of `BusPDR`). Their events: the default
+`TableInfiniteBus.txt` of `GridVWDisturbance_1Line_InfBusFromTab` (`TableFile`: `grid_phase_jump`,
+`grid_voltage_step`, `grid_frequency0`/`grid_rocof` on the `OmegaRefPu` of the bus, which the
+`InfiniteBus` Omega model hands the units, after a pre-event ramp to the initial frequency), and
 `SCRStepUp/Down_2Lines_InfBus`, a parallel line sized by `switched_SCR`
 (`ModelSetup._get_switched_line`) that a `BooleanTable` (`TableSwitchedLine.txt`) holds open until
-it closes (`line_SwitchOffSignal20 = true`, skipped by `get_line_values`) or an event opens. An OC marked `only_with_reference` runs only when its reference curve
-is there (`Benchmark.__is_run`, `manage_files.has_curves`): every I18 test but OC2/OC3. Criterion 5
-tracks the `tracked_magnitude` an OC names (`ModelValidator.__tracked_magnitude`,
-`compared_curves.setpoint_label` taking a label) when its event steps no setpoint. Every page of
-the TypeCD Zone 1 report is the shared `report.I16z1.TypeCD.Test.tex`, which prints the conditions
-of the test from its description (`report/tables/conditions.py`). The Grid Forming converters of
-Dynawo (`GridFormingConverterDroopControl`, `GridFormingEpri`, family `GFM` in `Storage.ini`) state
-in the dictionary flags no parameter holds (`ConverterLVControl = false`,
+it closes (`line_SwitchOffSignal20 = true`, skipped by `get_line_values`) or an event opens. An OC
+marked `only_with_reference` runs only when its reference curve is there (`Benchmark.__is_run`,
+`manage_files.has_curves`): every I18 test but OC2/OC3. Criterion 5 tracks the `tracked_magnitude`
+an OC names (`ModelValidator.__tracked_magnitude`, `compared_curves.setpoint_label` taking a label)
+when its event steps no setpoint. Every page of the TypeCD Zone 1 report is the shared
+`report.I16z1.TypeCD.Test.tex`, which prints the conditions of the test from its description
+(`report/tables/conditions.py`). The Grid Forming converters of Dynawo the tool supports
+(`GridFormingConverterDroopControl`, `GridFormingEpri`, family `GFM` in `Storage.ini`) state in the
+dictionary flags no parameter holds (`ConverterLVControl = false`,
 `SetpointsBehindTransformer = true` for the droop one, `translator.get_stated_flag`): the start
-value of a stepped setpoint is then the one behind its transformer
-(`GenParams.reference_impedance`, `ModelSetup._reference_operating_point`). The droop one keeps
-that transformer inside and gives the power on its converter side in the base of the unit, so its
-Node2 curves are read at its terminal, as those of the IEC plants of zone 3. The EPRI one has no
-`NetworkFrequencyReference`, which `omega_file` then leaves unconnected: for a unit without it,
-`TableFile` turns the `TableUPhase` of the infinite bus with the frequency of `TableOmegaRefPu`
-(the I16.2 RoCoF), while the Omega-model events (Zone 3 frequency ramp, islanding) do not reach
-it. The I18 OCs are in pu of the unit's `Snom`, the converter rating the Fiche I18 takes as
-base. The examples `BESS/GridFormingDroop` and `BESS/GridFormingEpri` are type C
-installations: a Dynawo GFM converter in Zone 1, a WECC plant of 40 MW at 225 kV in Zone 3, which
-neither GFM model rides through (the droop one loses synchronism in the dips); `BESS/WECC`, of
-15 MW, is a type B one.
+value of a stepped setpoint is then the one behind its transformer (`GenParams.reference_impedance`,
+`ModelSetup._reference_operating_point`). The droop one keeps that transformer inside and gives the
+power on its converter side in the base of the unit, so its Node2 curves are read at its terminal,
+as those of the IEC plants of zone 3. The EPRI one has no `NetworkFrequencyReference`, which
+`omega_file` then leaves unconnected: for a unit without it, `TableFile` turns the `TableUPhase` of
+the infinite bus with the frequency of `TableOmegaRefPu` (the I16.2 RoCoF), while the Omega-model
+events (Zone 3 frequency ramp, islanding) do not reach it. The I18 OCs are in pu of the unit's
+`Snom`, the converter rating the Fiche I18 takes as base. The examples `BESS/GridFormingDroop` and
+`BESS/GridFormingEpri` are type C installations: a Dynawo GFM converter in Zone 1 and a WECC plant
+of 40 MW at 225 kV in Zone 3, because neither GFM model rides through every test of Zone 3 (the
+droop one loses synchronism in the dips); `BESS/WECC`, of 15 MW, is a type B one.
 
 **Declared tests (F16)**: the DTR Fiche F16 fixes no test and applies to Zone 3 only, so
 `PCS_RTE-F16z3` ships with an empty `[PCS-Benchmarks]` and, next to it, the `F16Description.ini`
@@ -204,7 +204,12 @@ The Results tree (`-o` output dir: `<Results>/…/Producer/<PCS>/<benchmark>/<oc
 the `-o` (`Parameters`: `<temporal_path>_<user>_*` in its parent, the current dir without one), so that
 move is a rename within one filesystem. Alongside the inputs
 it holds the post-processed `curves_calculated.csv`, `curves_reference.csv` and `results.json`, and at its
-root the `dycov_run.log` of the execution.
+root the `dycov_run.log` of the execution. Between the validation of a test and its report, the
+curves the report draws (the filtered ones, not those CSVs) wait in its `curves_set_aside.pkl`
+(`manage_files.set_curves_aside`, called by `Benchmark.validate`, which also has the curves
+manager let go of its last test), so a PCS holds the curves of no test in memory; the report takes
+each back as it draws it (`take_curves_back`), and `_validate_pcs` discards the rest
+(`discard_curves_set_aside`) before the tree moves to the `-o`.
 
 `--curves-only` (`validate`, `performance`; `Parameters.is_curves_only`) stops each test once
 `has_required_curves` has written its curves: `Benchmark` gives it the outcome of the simulation
