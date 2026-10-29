@@ -141,7 +141,7 @@ class GFMProducer(Producer):
         generator_type = self._config.get("DEFAULT", "generator_type", fallback="").strip()
         if generator_type not in _GENERATOR_TYPES:
             raise ValueError(
-                f"The producer INI in '{self.get_producer_path()}' declares generator_type = "
+                f"The producer INI '{self._producer_ini}' declares generator_type = "
                 f"'{generator_type}' in its [DEFAULT] section; it must be one of "
                 f"{', '.join(_GENERATOR_TYPES)}, as the Grid Forming tests depend on it"
             )

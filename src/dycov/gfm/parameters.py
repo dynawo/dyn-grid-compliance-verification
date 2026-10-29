@@ -15,6 +15,7 @@ from dycov.configuration.cfg import config
 from dycov.core.parameters import Parameters
 from dycov.files import value_registry
 from dycov.gfm.producer import GFMProducer
+from dycov.logging import dycov_logging
 
 
 class GFMParameters:
@@ -55,6 +56,8 @@ class GFMParameters:
         self._emt = emt
         self._producer_curves = producer_curves
         self._envelopes = envelopes
+        # What the producer declares holds for every test, and is reported once
+        self._reported_declarations = set()
 
     def set_section(self, pcs_name: str, bm_name: str, oc_name: str) -> None:
         """
@@ -202,36 +205,55 @@ class GFMParameters:
 
     def get_effective_reactance(self) -> float:
         """
-        Retrieves the effective reactance (Xeff).
+        Retrieves the effective reactance (Xeff). A fiche may fix it in its PCS: the Fiche I18
+        sets 0.27 pu, which RTE may raise in the convention d'exploitation, so the value of the
+        producer is used only when it is higher.
 
         Returns
         -------
         float
             The effective reactance value in pu.
         """
-        return float(self._producer._config.get("GFM Parameters", "Xeff"))
+        declared = self._producer.get_config().getfloat("GFM Parameters", "Xeff", fallback=None)
+        fixed = self.__get_value("Xeff")
+        if not fixed:
+            if declared is None:
+                raise ValueError(
+                    f"{self._producer.get_producer_path()} declares no Xeff in its "
+                    "[GFM Parameters] section"
+                )
+            return declared
+        fixed = float(fixed)
+        if declared is not None and declared < fixed:
+            self.__report_once(
+                "Xeff",
+                f"The Xeff of {declared} pu the producer declares is below the {fixed} pu the "
+                f"PCS fixes: {fixed} pu is used",
+            )
+        return fixed if declared is None else max(fixed, declared)
 
     def get_damping_constant(self) -> float:
         """
-        Retrieves the damping constant (D).
+        Retrieves the damping constant (D), which the PCS may fix in place of the producer.
 
         Returns
         -------
         float
             The damping constant.
         """
-        return float(self._producer._config.get("GFM Parameters", "D"))
+        return self._get_optional_float("D")
 
     def get_inertia_constant(self) -> float:
         """
-        Retrieves the inertia constant (H).
+        Retrieves the inertia constant (H), which the PCS may fix in place of the producer: the
+        Fiche I18 sets TR = 10 s, an H of 5 s.
 
         Returns
         -------
         float
             The inertia constant in seconds.
         """
-        return float(self._producer._config.get("GFM Parameters", "H"))
+        return self._get_optional_float("H")
 
     def get_nominal_apparent_power(self) -> float:
         """
@@ -270,12 +292,8 @@ class GFMParameters:
         """
         # The INI file of a verification declares the consumption of a storage unit as
         # p_max_consumption, that of an envelope generation as a negative p_min_injection
-        producer_config = self._producer.get_config()
-        if producer_config.has_option("DEFAULT", "p_max_consumption"):
-            p_min = -producer_config.getfloat("DEFAULT", "p_max_consumption")
-        else:
-            p_min = producer_config.getfloat("DEFAULT", "p_min_injection")
-        return p_min / self.get_nominal_apparent_power()
+        option, p_min = self.__unit_power("p_max_consumption", "p_min_injection")
+        return -p_min if option == "p_max_consumption" else p_min
 
     def get_max_active_power(self) -> float:
         """
@@ -286,10 +304,7 @@ class GFMParameters:
         float
             The maximum active power in pu.
         """
-        return (
-            float(self._producer._config.get("DEFAULT", "p_max_injection"))
-            / self.get_nominal_apparent_power()
-        )
+        return self.__unit_power("p_max_injection")[1]
 
     def get_initial_reactive_power(self) -> float:
         """
@@ -318,10 +333,7 @@ class GFMParameters:
         float
             The minimum reactive power in pu.
         """
-        return (
-            float(self._producer._config.get("DEFAULT", "q_min"))
-            / self.get_nominal_apparent_power()
-        )
+        return self.__unit_power("q_min")[1]
 
     def get_max_reactive_power(self) -> float:
         """
@@ -332,10 +344,62 @@ class GFMParameters:
         float
             The maximum reactive power in pu.
         """
-        return (
-            float(self._producer._config.get("DEFAULT", "q_max"))
-            / self.get_nominal_apparent_power()
-        )
+        return self.__unit_power("q_max")[1]
+
+    def __unit_power(self, *options: str) -> tuple[str, float]:
+        """A power of the unit under test, in pu of its Snom, and the name it is declared under.
+        In a performance verification [DEFAULT] describes the whole installation, and a power
+        above the rating of the converter is one of its limits that [GFM Parameters] does not
+        restate for the PGU."""
+        option, value = self.__unit_option(*options)
+        snom = self.get_nominal_apparent_power()
+        if self._producer_curves is not None and abs(float(value)) > snom:
+            self.__report_once(
+                option,
+                f"The {option} of {value} the producer declares for the PGU exceeds its Snom of "
+                f"{snom} MVA: the [GFM Parameters] section is to declare the limits of the PGU "
+                "when they differ from those of the installation",
+            )
+        return option, float(value) / snom
+
+    def __report_once(self, declaration: str, message: str) -> None:
+        if declaration not in self._reported_declarations:
+            self._reported_declarations.add(declaration)
+            dycov_logging.get_logger("GFMParameters").warning(message)
+
+    def __unit_option(self, *options: str) -> tuple[str, str]:
+        """A power of the unit under test. The [GFM Parameters] section describes the PGU and
+        overrides [DEFAULT], which describes the whole installation when the INI file also
+        serves the tests of the PDR, such as those of a performance verification.
+
+        Parameters
+        ----------
+        *options : str
+            The names the power may be declared under, as [DEFAULT] writes them, the preferred
+            one first.
+
+        Returns
+        -------
+        tuple[str, str]
+            The name the power is declared under and its value, in MW or MVAr.
+
+        Raises
+        ------
+        ValueError
+            If neither section declares the power.
+        """
+        producer_config = self._producer.get_config()
+        defaults = producer_config.defaults()
+        if producer_config.has_section("GFM Parameters"):
+            pgu = producer_config["GFM Parameters"]
+            for option in options:
+                # Every option of [DEFAULT] shows in the section too
+                if option in pgu and pgu.get(option, raw=True) != defaults.get(option):
+                    return option, pgu[option]
+        for option in options:
+            if option in defaults:
+                return option, producer_config.get("DEFAULT", option)
+        raise ValueError(f"The INI file of the producer declares no {' nor '.join(options)}")
 
     def get_initial_voltage(self) -> float:
         """
@@ -623,8 +687,26 @@ class GFMParameters:
             try:
                 return float(scr)
             except Exception:
+                self.__warn_of_the_new_scr_max(scr)
                 return config.get_float("GFM", scr, 0.0)
         return config.get_float("GFM", "SCRmax", 0.0)
+
+    def __warn_of_the_new_scr_max(self, scr: str) -> None:
+        """A description of the user written for the SCRmax of 10 the tool had before the DTR
+        Fiche I18 now gets the 20 of the fiche."""
+        if scr != "SCRmax":
+            return
+        section = next(
+            (section for section in self._eval_sections if config.has_option(section, "SCR")),
+            None,
+        )
+        if section is not None and config.is_set_by_user(section, "SCR"):
+            dycov_logging.warn_once(
+                "GFMParameters",
+                f"The SCR of [{section}] of the user's configuration names SCRmax, which is now "
+                "20, the maximum short-circuit ratio of the DTR Fiche I18; the 10 it was before "
+                "is SCRmed",
+            )
 
     def get_initial_scr(self) -> float:
         """
@@ -748,6 +830,23 @@ class GFMParameters:
             except ValueError:
                 return None
         return None
+
+    def get_envelope_magnitude(self, default: str) -> str:
+        """
+        Retrieves the magnitude the envelopes of the test bound, when the PCS names one in place
+        of the one its calculator bounds by default.
+
+        Parameters
+        ----------
+        default : str
+            The magnitude the calculator bounds when the PCS names none.
+
+        Returns
+        -------
+        str
+            The name of the magnitude, such as "P" or "Ip".
+        """
+        return self.__get_value("envelope_magnitude") or default
 
     def get_max_current(self) -> Optional[float]:
         """

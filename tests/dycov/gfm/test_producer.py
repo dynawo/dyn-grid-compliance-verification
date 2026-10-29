@@ -122,7 +122,7 @@ def test_maximum_current_bounds_the_envelopes_only_when_declared(declared, expec
     [
         # The INI file of an envelope generation
         ("p_min_injection = -90\n", -0.9),
-        # The INI file of the Zone 1 unit of a model validation
+        # The INI file of the unit of a performance verification
         ("p_min_injection = 10\np_max_consumption = 80\n", -0.8),
     ],
 )

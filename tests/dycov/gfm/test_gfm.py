@@ -22,6 +22,7 @@ from dycov.configuration.cfg import config
 from dycov.gfm.gfm import GridForming
 from dycov.gfm.parameters import GFMParameters
 from dycov.gfm.producer import GFMProducer
+from dycov.logging import clear_test_context, set_test_context
 from dycov.model.compliance import Compliance
 
 _PCS, _BM, _OC = "PCS_RTE-I18z1", "S_VolAngStep1", "OC2"
@@ -46,7 +47,7 @@ _EVENT_IN_CURVES = 1.0
 def i18_description():
     description = (
         Path(dycov.__file__).resolve().parent
-        / "templates/PCS/gfm/BESS"
+        / "templates/revisions/20260723/PCS/gfm/BESS"
         / _PCS
         / "PCSDescription.ini"
     )
@@ -81,17 +82,21 @@ def _generate(parameters, working_path):
 def _write_producer_curves(curves_path: Path, envelopes_csv: Path):
     """The ideal response of the envelopes, delivered as the producer curves of the test."""
     envelopes = pd.read_csv(envelopes_csv, sep=";")
-    time = np.arange(0.0, 5.0, 0.001)
-    ip = np.interp(time, envelopes["Time (s)"], envelopes["Ip PGU (pu)"])
+    time = envelopes["Time (s)"].to_numpy()
     curves_path.mkdir(parents=True)
     (curves_path / "CurvesFiles.ini").write_text(
         "[Curves-Dictionary]\ntime = t\n\n[Curves-Dictionary-Zone1]\n"
-        "InternalNode1_BUS_ActiveCurrent = ip\nInternalNode1_BUS_ReactiveCurrent = iq\n\n"
-        "[Curves-Dictionary-Zone3]\n"
+        "InternalNode1_BUS_ActiveCurrent = ip\nInternalNode1_BUS_ReactiveCurrent = iq\n"
+        "InternalNode1_BUS_Voltage = u\n\n[Curves-Dictionary-Zone3]\n"
     )
-    pd.DataFrame({"t": time + _EVENT_IN_CURVES, "ip": ip, "iq": np.zeros_like(time)}).to_csv(
-        curves_path / f"{_TEST}.csv", sep=";", index=False
-    )
+    pd.DataFrame(
+        {
+            "t": time + _EVENT_IN_CURVES,
+            "ip": envelopes["Ip PGU (pu)"],
+            "iq": np.zeros_like(time),
+            "u": np.ones_like(time),
+        }
+    ).to_csv(curves_path / f"{_TEST}.csv", sep=";", index=False)
     (curves_path / f"{_TEST}.dict").write_text(
         f"[Curves-Metadata]\nsim_t_event_start = {_EVENT_IN_CURVES}\n\n[Curves-Dictionary]\n"
     )
@@ -150,3 +155,124 @@ def test_a_test_missing_from_the_envelopes_given_has_no_envelopes(tmp_path, i18_
     )
 
     assert test_report.compliance == Compliance.WithoutEnvelopes
+
+
+def _set_section(parameters):
+    parameters.set_section(_PCS, _BM, _OC)
+    return parameters
+
+
+def test_the_fiche_fixes_the_effective_reactance_and_the_inertia(tmp_path, i18_description):
+    parameters = _set_section(
+        _parameters(tmp_path, _UNIT + _GFM_PARAMETERS.replace("Xeff = 0.27", "Xeff = 0.15"))
+    )
+
+    assert parameters.get_effective_reactance() == pytest.approx(0.27)
+    assert parameters.get_inertia_constant() == pytest.approx(5.0)
+
+
+def test_a_higher_effective_reactance_of_the_producer_is_kept(tmp_path, i18_description):
+    parameters = _set_section(
+        _parameters(tmp_path, _UNIT + _GFM_PARAMETERS.replace("Xeff = 0.27", "Xeff = 0.35"))
+    )
+
+    assert parameters.get_effective_reactance() == pytest.approx(0.35)
+
+
+def test_the_pgu_is_described_apart_from_the_installation(tmp_path, i18_description):
+    pgu = "p_max_injection = 4.5\np_max_consumption = 4.5\nq_max = 2\nq_min = -2\n"
+    installation = _UNIT.replace("p_max_injection = 100", "p_max_injection = 40")
+    parameters = _set_section(
+        _parameters(
+            tmp_path, installation + _GFM_PARAMETERS.replace("Snom = 100", "Snom = 5") + pgu
+        )
+    )
+
+    assert parameters.get_max_active_power() == pytest.approx(0.9)
+    assert parameters.get_min_active_power() == pytest.approx(-0.9)
+    assert parameters.get_max_reactive_power() == pytest.approx(0.4)
+    assert parameters.get_min_reactive_power() == pytest.approx(-0.4)
+
+
+def test_the_minimum_power_of_the_pgu_wins_over_the_consumption_of_the_installation(
+    tmp_path, i18_description
+):
+    installation = _UNIT.replace("p_max_consumption = 100", "p_max_consumption = 45")
+    pgu = _GFM_PARAMETERS.replace("Snom = 100", "Snom = 5") + "p_min_injection = -6\n"
+    parameters = _set_section(_parameters(tmp_path, installation + pgu))
+
+    assert parameters.get_min_active_power() == pytest.approx(-1.2)
+
+
+def test_a_verification_warns_of_a_pgu_given_the_limits_of_the_installation(
+    tmp_path, i18_description, caplog
+):
+    pgu = _GFM_PARAMETERS.replace("Snom = 100", "Snom = 5")
+    parameters = _set_section(
+        _parameters(tmp_path, _UNIT + pgu, producer_curves=tmp_path / "Curves")
+    )
+
+    parameters.get_max_active_power()
+    parameters.get_max_active_power()
+
+    warnings = [record for record in caplog.records if "p_max_injection of 100" in record.message]
+    assert len(warnings) == 1
+
+
+def test_the_effective_reactance_below_the_fiche_is_warned_of_once(
+    tmp_path, i18_description, caplog
+):
+    parameters = _parameters(
+        tmp_path, _UNIT + _GFM_PARAMETERS.replace("Xeff = 0.27", "Xeff = 0.15")
+    )
+    try:
+        for oc in ("OC2", "OC3"):
+            set_test_context(pcs=_PCS, benchmark=_BM, oc=oc, producer="Producer")
+            parameters.set_section(_PCS, _BM, oc)
+            parameters.get_effective_reactance()
+    finally:
+        clear_test_context()
+
+    assert sum("Xeff of 0.15" in record.message for record in caplog.records) == 1
+
+
+def test_a_unit_whose_parameters_are_incomplete_has_an_invalid_test(tmp_path, i18_description):
+    test_report = _generate(
+        _parameters(tmp_path, _UNIT + _GFM_PARAMETERS.replace("Snom = 100\n", "")),
+        tmp_path / "test",
+    )
+
+    assert test_report.compliance == Compliance.InvalidTest
+
+
+@pytest.mark.parametrize("magnitude, expected", [(None, "P"), ("Ip", "Ip")])
+def test_the_rocof_bounds_the_power_unless_the_pcs_names_the_current(
+    tmp_path, monkeypatch, magnitude, expected
+):
+    parameters = _parameters(tmp_path, _UNIT + _GFM_PARAMETERS)
+    monkeypatch.setattr(
+        GFMParameters,
+        "_GFMParameters__get_value",
+        lambda self, option: magnitude if option == "envelope_magnitude" else None,
+    )
+
+    assert parameters.get_envelope_magnitude("P") == expected
+
+
+def test_a_user_description_naming_the_old_scr_max_is_warned(tmp_path, caplog):
+    description = (
+        Path(dycov.__file__).resolve().parent
+        / "templates/revisions/20260723/PCS/gfm/BESS"
+        / _PCS
+        / "PCSDescription.ini"
+    )
+    user_description = tmp_path / "PCSDescription.ini"
+    user_description.write_text(f"[{_TEST}]\nSCR = SCRmax\n")
+    config.load_pcs_config(description, user_description)
+    try:
+        parameters = _set_section(_parameters(tmp_path, _UNIT + _GFM_PARAMETERS))
+
+        assert parameters.get_scr() == pytest.approx(20.0)
+    finally:
+        config.load_pcs_config(None)
+    assert any("names SCRmax" in record.getMessage() for record in caplog.records)

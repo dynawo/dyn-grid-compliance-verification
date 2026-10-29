@@ -71,7 +71,13 @@ class GridForming:
         parameters.set_section(pcs_name, bm_name, oc_name)
         title = f"{pcs_name}.{bm_name}.{oc_name}"
 
-        envelopes = self._obtain_envelopes(working_path, parameters, pcs_name, title)
+        try:
+            envelopes = self._obtain_envelopes(working_path, parameters, pcs_name, title)
+            compliance = Compliance.WithoutEnvelopes
+        except (ValueError, configparser.Error) as e:
+            LOGGER.error(f"The envelopes of {title} cannot be obtained. {e}")
+            envelopes = None
+            compliance = Compliance.InvalidTest
         if envelopes is None:
             return GFMTestReport(
                 producer_name=producer_name,
@@ -80,7 +86,7 @@ class GridForming:
                 operating_condition=oc_name,
                 magnitude="",
                 parameters=[],
-                compliance=Compliance.WithoutEnvelopes,
+                compliance=compliance,
                 envelope=None,
                 modes=[],
             )
@@ -345,7 +351,7 @@ class GridForming:
                 envelopes.lower,
                 envelopes.upper,
             )
-        except (OSError, ValueError, configparser.Error) as e:
+        except (OSError, ValueError, TypeError, KeyError, configparser.Error) as e:
             # The envelopes are still delivered: only the producer curves cannot be judged
             LOGGER.error(f"The producer curves of {title} cannot be checked. {e}")
             return curves_compliance.CurvesCheck(Compliance.InvalidTest, None, None, [])
@@ -518,9 +524,9 @@ class GridForming:
             )
         if "Xeff" in params_list:
             text_params_info.append(f"Xeff = {parameters.get_effective_reactance():.3f} pu")
-        if "D" in params_list:
+        if "D" in params_list and parameters.get_damping_constant() is not None:
             text_params_info.append(f"D = {parameters.get_damping_constant():.3f}")
-        if "H" in params_list:
+        if "H" in params_list and parameters.get_inertia_constant() is not None:
             text_params_info.append(f"H = {parameters.get_inertia_constant():.3f} s")
         if "Epsilon" in params_list:
             text_params_info.append(f"Epsilon = {calculator._epsilon:.3f}")

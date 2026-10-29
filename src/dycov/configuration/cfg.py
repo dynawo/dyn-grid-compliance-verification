@@ -18,6 +18,7 @@ from dycov.logging import dycov_logging
 
 _NORM_SECTIONS = (
     "GridCode",
+    "GFM",
     "PCS-Benchmarks",
     "PCS-OperatingConditions",
     "Performance-Validations",
@@ -513,6 +514,27 @@ class Config:
             if self.has_option(section, candidate):
                 return candidate
         return None
+
+    def is_set_by_user(self, section: str, key: str) -> bool:
+        """Whether the configuration of the user, or a description of a PCS it holds, sets an
+        option.
+
+        Parameters
+        ----------
+        section: str
+            Section header.
+        key: str
+            Key within the section.
+
+        Returns
+        -------
+        bool
+            True if a layer of the user defines the option.
+        """
+        return any(
+            self._has_valid_option(layer, section, key)
+            for layer in (self._pcs_user_config, self._user_config)
+        )
 
     def overridden_norm_options(self) -> list[tuple[str, str]]:
         """Options the DTR fixes that the configuration of the user changed.
