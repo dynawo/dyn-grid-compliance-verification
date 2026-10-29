@@ -54,7 +54,7 @@ if [[ $# -lt 2 || $# -gt 3 ]]; then
     echo "Usage: $0 VERSION DYNAWO_DIR [--dry-run]"
     echo "  VERSION     e.g. v0.9.3"
     echo "  DYNAWO_DIR  path to the Dynawo installation directory"
-    echo "  --dry-run   skip Git checks"
+    echo "  --dry-run   skip Git checks and the package version check"
     exit 1
 fi
 
@@ -208,8 +208,9 @@ cp "$LINUX_INSTALL" "$LINUX_INSTALL_OUT"
 sed -i '/^[[:space:]]*cd "\$TMP_LOCAL_REPO"[[:space:]]*$/d' "$LINUX_INSTALL_OUT"
 sed -i '/git fetch .*--tags/d' "$LINUX_INSTALL_OUT"
 
-# Update TARGET_BRANCH (with 'v' prefix, matches the git tag)
-sed -i -E "s|^TARGET_BRANCH=.*|TARGET_BRANCH=\"${VERSION}\"|" "$LINUX_INSTALL_OUT"
+# The published installer installs its own release, sources and assets alike, and not whichever
+# release is the latest when it runs: the checksums it carries are those of this release's assets.
+sed -i -E "s|^TARGET_RELEASE=.*|TARGET_RELEASE=\"${VERSION}\"|" "$LINUX_INSTALL_OUT"
 
 # Update the checksums with those of the zips generated in Steps 1 and 1b
 sed -i -E "s|^DYNAWO_SHA256SUM=.*|DYNAWO_SHA256SUM=\"${DYNAWO_SHA256}\"|" "$LINUX_INSTALL_OUT"
@@ -217,7 +218,7 @@ sed -i -E "s|^EXAMPLES_SHA256SUM=.*|EXAMPLES_SHA256SUM=\"${EXAMPLES_SHA256}\"|" 
 
 info "linux_install.sh updated."
 info "--- Relevant lines ---"
-grep -E "^(TARGET_BRANCH|DYNAWO_SHA256SUM|EXAMPLES_SHA256SUM)=" "$LINUX_INSTALL_OUT"
+grep -E "^(TARGET_RELEASE|DYNAWO_SHA256SUM|EXAMPLES_SHA256SUM)=" "$LINUX_INSTALL_OUT"
 echo "----------------------"
 
 ###############################################################################
@@ -260,8 +261,11 @@ info " - PDF:  $MANUAL_BUILD_DIR/latex/dycov.pdf"
 ###############################################################################
 step "Step 4: Building Docker image..."
 
+declare -a dry_run_option=()
+[[ "$DRY_RUN" == true ]] && dry_run_option=(--dry-run)
+
 cd "$REPO_ROOT/installers/docker"
-bash build.sh "$VERSION" "$DYNAWO_DIR" ${DRY_RUN:+--dry-run}
+bash build.sh "$VERSION" "$DYNAWO_DIR" "${dry_run_option[@]}"
 info "Docker image built."
 
 ###############################################################################

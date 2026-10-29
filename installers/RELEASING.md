@@ -64,8 +64,8 @@ before the tag.
 That single command covers every curve the examples ship: it runs each Model example in a home
 directory of its own, so that no local configuration filters what is verified, runs in
 performance mode the three models whose curves the Performance examples ship, anonymizes the
-results and replaces every CSV under the `ReferenceCurves` directories and under
-`examples/Model/ProducerCurves` and `examples/Performance/ProducerCurves`. It needs the
+results and writes whole every `ReferenceCurves` directory and `examples/Model/ProducerCurves`
+and `examples/Performance/ProducerCurves`, curves and dictionaries alike. It needs the
 virtualenv active and a Dynawo launcher
 (`-l` selects another one), and it runs every test of every example, so it is the longest step
 of a release. See [../tools/scripts/README.md](../tools/scripts/README.md) for its options.
@@ -74,9 +74,11 @@ Read its guard before trusting the outcome: the command compares the tests the r
 against those the PCS of the examples declare, and stops without touching the repository when
 they differ, because half a regeneration is worse than none.
 
-The curves themselves are not committed — they ship as the `dycov_examples.zip` asset the build
-script packs from this working tree — but the dictionaries whose event it brought up to date are,
-and the build script refuses to run with a dirty working tree, so commit those before tagging.
+Nothing it writes is committed: the curve directories are ignored whole, and they ship as the
+`dycov_examples.zip` asset the build script packs from this working tree. What a regeneration can
+leave to commit lies elsewhere: the end-to-end tests of `tests_integration/` assert the verdicts
+of several examples run against their curves, so a verdict the new curves move is updated there,
+and the build script refuses to run with a dirty working tree, so commit that before tagging.
 
 ### 2. Close the changelog entry
 
@@ -106,8 +108,9 @@ clean.
 ./installers/prepare_release.sh v0.9.3 /path/to/dynawo
 ```
 
-`--dry-run` skips the Git checks (tag, HEAD, clean tree) and is only meant for testing the
-script itself; everything else — including the Docker build — still runs.
+`--dry-run` skips the Git checks (tag, HEAD, clean tree) and the comparison of the package
+version with the tag, and is only meant for testing the script itself; everything else —
+including the Docker build — still runs.
 
 **Requirements on the build machine:** `docker`, `zip`, and `uv` (used to create the
 throw-away virtualenv for the manuals), plus a LaTeX toolchain for `make latexpdf`,
@@ -121,7 +124,7 @@ that it reads the same without a network.
 | 0 | Verifies the Git state (tag exists, HEAD on the tag, clean tree), that the examples hold their curves and nothing else that Git ignores, and that every expected installer file is present. |
 | 1 | Zips `DYNAWO_DIR` into `Dynawo_omc_v2.0.0.zip` and places it in the output directory. |
 | 1b | Zips the examples into `dycov_examples.zip`: the tracked tree from Git, so no local artifact reaches the asset, and the curves from the working tree, which Git does not carry. |
-| 2 | Copies `linux_install.sh` to the output directory, pinning `TARGET_BRANCH` to the tag and setting `DYNAWO_SHA256SUM` and `EXAMPLES_SHA256SUM` to the checksums of the zips from Steps 1 and 1b. |
+| 2 | Copies `linux_install.sh` to the output directory, pinning `TARGET_RELEASE` to the tag, so that it installs the sources and the assets of this release and not those of the latest one, and setting `DYNAWO_SHA256SUM` and `EXAMPLES_SHA256SUM` to the checksums of the zips from Steps 1 and 1b. |
 | 3 | Builds the user manual (`docs/manual`) in a temporary `uv` virtualenv: HTML and PDF. |
 | 4 | Builds the Docker image (`dycov:latest` and `dycov:VERSION`) via `docker/build.sh`. |
 | 5 | Exports the image to `dycov_rawimage.tar.gz` via `docker/export_image.sh`. |

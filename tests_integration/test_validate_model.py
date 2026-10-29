@@ -38,11 +38,17 @@ def test_model_validation_ppm_dynawo_model():
         Compliance.NotApplicableTest,  # PCS_RTE-I16z3.QSetPointStep.Inc10
         Compliance.NotApplicableTest,  # PCS_RTE-I16z3.QSetPointStep.Dec20
         Compliance.Compliant,  # PCS_RTE-I16z3.ThreePhaseFault.TransientBolted
+        Compliance.Compliant,  # PCS_RTE-I16z3.ThreePhaseFault.TransientImpedant
         Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageDip.Qzero
-        Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMax
-        Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.QMin
+        Compliance.Compliant,  # PCS_RTE-I16z3.GridVoltageSwell.Qzero
         Compliance.Compliant,  # PCS_RTE-I16z3.GridFreqRamp.W500mHz250ms
         Compliance.Compliant,  # PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4
+        Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.Pmin
+        Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.P50
+        Compliance.Compliant,  # PCS_RTE-F16z3.PSetPointStep.Pmax
+        Compliance.Compliant,  # PCS_RTE-F16z3.USetPointStep.Pmin
+        Compliance.Compliant,  # PCS_RTE-F16z3.USetPointStep.P50
+        Compliance.Compliant,  # PCS_RTE-F16z3.USetPointStep.Pmax
     ] == compliance
 
 

@@ -7,6 +7,56 @@ the issue each one points at holds the explanation.
 
 ## Unreleased
 
+### Storage installations of types C and D are validated against the Fiche I16.2
+
+The revision of the DTR of 20260723 gives a storage installation of type C or D its own version of
+the Fiche I16, the Fiche I16.2. Its Zone 1 runs the setpoint steps on a grid of short-circuit
+ratio 2 and simulates the tests of the Fiche I18 (Grid Forming); its Zone 3 has neither the fault
+of the Fiche I5 nor the ramp of the grid frequency; both filter the curves at 30 Hz, on a common
+sampling interval of 1 ms.
+
+DyCoV applies it to the installations the DTR puts in category C or D, which the tool computes
+from the connection voltage and the maximum power at injection of the INI file of `Zone3/`, so
+nothing has to be declared for it. A run that follows an earlier revision gives them the Fiche I16
+of that revision, which has no Fiche I18 to repeat.
+
+The fiche observes the references of Zone 1, the results of the Fiche I18, at the output of the
+unit after its transformer, so Zone 1 compares the curves of InternalNode1 alone, and its
+reference dictionaries declare them: `InternalNode1_BUS_Voltage`,
+`InternalNode1_BUS_ActivePower`, `InternalNode1_BUS_ReactivePower`,
+`InternalNode1_BUS_ActiveCurrent` and `InternalNode1_BUS_ReactiveCurrent`.
+
+The fiche asks for every test of the Fiche I18 at its operating conditions OC2 and OC3, and at the
+others only when they drive the unit into current limitation: the tool runs one of those when its
+reference curve is delivered, and leaves it out otherwise. Until RTE confirms how to read them,
+the unbalanced faults of the Fiche I18 are left out, and so is its `S_Fault7`, which no profile
+defines, and `S_VolAngStep12` jumps the other way from `S_VolAngStep11`; the phase jumps and the
+voltage steps are sized with the `Xeff` of the unit, where the tables of the fiche print the
+values of its example unit, of `Xeff` 0.27; and the active power of the operating points is taken
+in pu of the nominal apparent power of the unit, the base the Fiche I18 takes, where the Fiche
+I16.2 and the Fiche I11 call Pn the maximum power of Zone 1.
+
+The phase jumps and the voltage steps of the Fiche I18 are sized by the effective reactance of the
+unit, so the INI file of `Zone1/` of such an installation declares it, in pu of the nominal
+apparent power of the unit:
+
+    [GFM Parameters]
+    Xeff = 0.2
+
+Two of the Grid Forming converters of Dynawo, the droop one and the EPRI one, can be the Zone 1
+unit: the examples `BESS/GridFormingDroop` and `BESS/GridFormingEpri` are such installations, of
+type C, with a WECC plant of 40 MW at 225 kV in Zone 3. The `BESS/WECC` example, whose plant had
+that same size and so was of type C too, is now of 15 MW, a type B: under this revision a
+storage installation of type C has to be Grid Forming, and its unit is not.
+
+### Fixed
+
+- The report of a PCS of many tests no longer holds the curves of all of them in memory, which
+  made the full report of the Zone 1 of a storage installation of type C or D exceed 6 GB: the
+  curves of each test wait on disk until the report draws them.
+
+## 1.3.0 — 2026-10-29
+
 ### Built on Dynawo 2.0.0
 
 This release ships and requires Dynawo 2.0.0. The previous one shipped a Dynawo 1.8.0 nightly in
@@ -91,11 +141,47 @@ cover this upgrade on their own:
 - none of them writes the capability-curve file, which has to be supplied by hand whichever route
   is taken.
 
+### The magnitudes of `Producer.ini` lose their `_at_PDR` suffix
+
+The magnitudes a producer declares — `p_max_injection`, `p_max_consumption`, `p_min_injection`,
+`p_min_consumption`, `u_nom`, `q_max` and `q_min` — no longer carry the `_at_PDR` suffix: each one
+holds at the point of the zone it describes, the internal node in zone 1 and the PDR in zone 3. A
+`Producer.ini` that still uses the previous names stops the run with an error naming the key.
+
+`dycov migrate_inputs <inputs>` renames them, in a single file or in every INI under a directory.
+Only the names change, so values, comments and layout stay as they are, and `--dry-run` reports
+what it would rename without writing. Inputs generated from a workbook with `dycov excel2inputs`
+already use the new names.
+
+### The revision of the DTR a run validates against
+
+A run validates against a revision of the DTR, named after the date of the edition that carries
+it. The `[DTR]` section of the configuration chooses it with `current`, and
+`dycov --dtr <YYYYMMDD> <command>` overrides it for one execution; a revision the tool does not
+implement stops the run. The report, the summary of the log and every `results.json` state the
+revision used. A PCS measured with criteria the user changed in the configuration is marked in the
+summary, with the options changed, because its verdict is then not a conformity check.
+
+Two revisions are implemented: `20240215`, the base the catalogue of the tool holds, and
+`20260723`, which carries revision 3.6 of article 8.3.3, in force since 04/05/2026. A run that
+names none follows `20260723`, so some verdicts differ from those of the previous release:
+
+- the fiche I5 adds a transient impedant three-phase fault, and so does the fiche I16 zone 3;
+- the voltage dips of the fiches I6 and I16 zone 3 start at Un;
+- the voltage swell of the fiches I7 and I16 zone 3 is run at Q = 0 and from Un, in place of its
+  operating points at Qmax and Qmin (in injection and in consumption for a storage unit);
+- the reaction time is reported without a verdict;
+- at 110 kV and above, a unit that does not store energy is of type D from 30 MW instead of from
+  any power.
+
+`dycov --dtr 20240215` measures against the revision of 15/02/2024, with the corrections of the
+next section.
+
 ### The values of the DTR of 15/02/2024
 
-DyCoV says which revision of the DTR it implements: the one of 15/02/2024, which carries revision
-3.3 of article 8.3.3. A later revision enters the tool as a delta over that one, and
-`docs/design/DTR_revisions.md` says how. Nothing of that mechanism is in this release.
+The revision of 15/02/2024, which carries revision 3.3 of article 8.3.3, is the base of the
+catalogue the tool ships: every later revision enters as a delta over it, and
+`docs/design/DTR_revisions.md` says how.
 
 Several values did not match that revision, or any other one. They are corrected, so a test that
 reads one of them may now give another verdict:
@@ -162,53 +248,41 @@ inside the unit model (`WT_ConverterLVControl = false`). Their models give no po
 the tool computes them from the voltage and the current there. In the IEC plant models of zone 3
 the Node2 curves are still read on the grid side of that transformer.
 
-### Storage installations of types C and D are validated against the Fiche I16.2
+### The on-site tests of the Fiche F16
 
-The revision of the DTR of 20260723 gives a storage installation of type C or D its own version of
-the Fiche I16, the Fiche I16.2. Its Zone 1 runs the setpoint steps on a grid of short-circuit
-ratio 2 and simulates the tests of the Fiche I18 (Grid Forming); its Zone 3 has neither the fault
-of the Fiche I5 nor the ramp of the grid frequency; both filter the curves at 30 Hz, on a common
-sampling interval of 1 ms.
+`PCS_RTE-F16z3` validates the model of zone 3 against the records of the commissioning tests at
+the PDR, the second phase of the validation after the fiche I16. The fiche fixes no test of its
+own, so the PCS ships without any, and the producer declares the tests it recorded in an
+`F16Description.ini` delivered with the reference curves. The tool leaves a template of that file
+among the templates of the user. Only the operating conditions whose records are delivered are
+run, with the error thresholds of the fiche (`thr_FT_reftrack_*` in `[GridCode]`), and the
+workbook gives the minimum powers of the tests. `docs/tutorials/f16_declaring_recorded_tests.md`
+walks through a declaration.
 
-DyCoV applies it to the installations the DTR puts in category C or D, which the tool computes
-from the connection voltage and the maximum power at injection of the INI file of `Zone3/`, so
-nothing has to be declared for it. A run that follows an earlier revision gives them the Fiche I16
-of that revision, which has no Fiche I18 to repeat.
+A producer validated against F16 alone delivers its `Zone3/` model: `Zone1/` is required only
+when a PCS of zone 1 is validated.
 
-The fiche observes the references of Zone 1, the results of the Fiche I18, at the output of the
-unit after its transformer, so Zone 1 compares the curves of InternalNode1 alone, and its
-reference dictionaries declare them: `InternalNode1_BUS_Voltage`,
-`InternalNode1_BUS_ActivePower`, `InternalNode1_BUS_ReactivePower`,
-`InternalNode1_BUS_ActiveCurrent` and `InternalNode1_BUS_ReactiveCurrent`.
+### Running the tool
 
-The fiche asks for every test of the Fiche I18 at its operating conditions OC2 and OC3, and at the
-others only when they drive the unit into current limitation: the tool runs one of those when its
-reference curve is delivered, and leaves it out otherwise. Until RTE confirms how to read them,
-the unbalanced faults of the Fiche I18 are left out, and so is its `S_Fault7`, which no profile
-defines, and `S_VolAngStep12` jumps the other way from `S_VolAngStep11`; the phase jumps and the
-voltage steps are sized with the `Xeff` of the unit, where the tables of the fiche print the
-values of its example unit, of `Xeff` 0.27; and the active power of the operating points is taken
-in pu of the nominal apparent power of the unit, the base the Fiche I18 takes, where the Fiche
-I16.2 and the Fiche I11 call Pn the maximum power of Zone 1.
+- `--curves-only`, on `validate` and `performance` with a model, runs the simulations and keeps
+  their curves without the checks, the figures or the report.
+- Each execution writes its own log, `dycov_run.log`, at the root of its results.
+- The working directory of a run is created next to its output directory instead of in the
+  current one, so the directory that holds the output has to be writable.
+- Dynawo logs at the level of `[Dynawo] log_level`, `WARN` by default and `DEBUG` when DyCoV runs
+  in debug, instead of one line per time step.
+- The log says how long each test took and how it ended, and each retry of the solver says what
+  it changed and why the previous attempt failed.
 
-The phase jumps and the voltage steps of the Fiche I18 are sized by the effective reactance of the
-unit, so the INI file of `Zone1/` of such an installation declares it, in pu of the nominal
-apparent power of the unit:
+### The curves of the examples ship with the release
 
-    [GFM Parameters]
-    Xeff = 0.2
-
-Two of the Grid Forming converters of Dynawo, the droop one and the EPRI one, can be the Zone 1
-unit: the examples `BESS/GridFormingDroop` and `BESS/GridFormingEpri` are such installations, of
-type C, with a WECC plant of 40 MW at 225 kV in Zone 3. The `BESS/WECC` example, whose plant had
-that same size and so was of type C too, is now of 15 MW, a type B: under this revision a
-storage installation of type C has to be Grid Forming, and its unit is not.
+The reference and producer curves of the examples are no longer in the repository: each release
+publishes them as its `dycov_examples.zip` asset, which the installer and the image already carry.
+A clone of the sources has the examples without their curves, and
+`tools/scripts/fetch_example_curves.sh` brings in those of the release the clone descends from.
 
 ### Fixed
 
-- The report of a PCS of many tests no longer holds the curves of all of them in memory, which
-  made the full report of the Zone 1 of a storage installation of type C or D exceed 6 GB: the
-  curves of each test wait on disk until the report draws them.
 - The maximum power declared for an IEC plant is checked against its model's, as for WECC, and a
   declaration above it now stops the run: the check read a parameter IEC models lack (#649).
 - IEC plants whose controller measures at the PCC start in steady state, and no longer from a
@@ -221,3 +295,5 @@ storage installation of type C has to be Grid Forming, and its unit is not.
   longer has a voltage deadband, on whose edge the WECCVoltageSource4 swell kept the solver (#626).
 - The IEC 2020 examples simulate again: their plant controller declares the three lead-lag pairs
   Dynawo 2.0.0 asks for (#633).
+- The report of a setpoint tracking test whose event lasts gives the thresholds of the event
+  window under its own column, and those of the window after it under theirs (#657).
