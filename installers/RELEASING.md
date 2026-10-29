@@ -106,8 +106,9 @@ clean.
 ./installers/prepare_release.sh v0.9.3 /path/to/dynawo
 ```
 
-`--dry-run` skips the Git checks (tag, HEAD, clean tree) and is only meant for testing the
-script itself; everything else — including the Docker build — still runs.
+`--dry-run` skips the Git checks (tag, HEAD, clean tree) and the comparison of the package
+version with the tag, and is only meant for testing the script itself; everything else —
+including the Docker build — still runs.
 
 **Requirements on the build machine:** `docker`, `zip`, and `uv` (used to create the
 throw-away virtualenv for the manuals), plus a LaTeX toolchain for `make latexpdf`,
