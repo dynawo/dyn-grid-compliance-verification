@@ -47,6 +47,11 @@
 % Short-hand column specifier for tables (uses dcolumn):
 \newcolumntype{d}[1]{D{.}{.}{#1}}
 
+% A section may hold over a hundred tests, whose numbers would run into their titles
+\makeatletter
+\renewcommand*\l@subsection{\@dottedtocline{2}{1.5em}{3.2em}}
+\makeatother
+
 % Fancy header
 \fancyhf{}
 
@@ -119,7 +124,9 @@
     \section{Summary}
     {{summary_description}}
 
-    \begin{longtable}{l l l l l}
+    % The longest names of the tests and of the results do not fit the page at the size of the text
+    {\footnotesize\setlength{\tabcolsep}{5pt}
+    \begin{longtable}{@{}l l l l >{\raggedright\arraybackslash}p{2.4cm}@{}}
         \toprule
         Producer & Pcs & Benchmark & Operating Condition & Overall Result \\
         \midrule
@@ -129,6 +136,7 @@
         \BLOCK{endfor}
         \bottomrule
     \end{longtable}
+    }
 
     \BLOCK{for report in reports}
     \newpage

@@ -74,6 +74,12 @@ def test_summary_of_an_envelope_generation_gives_no_verdict():
     ]
 
 
+def test_summary_of_an_envelope_generation_tells_a_test_it_could_not_generate():
+    [row] = gfm_report._summary_rows([_test(compliance=Compliance.InvalidTest)])
+
+    assert row[-1] == Compliance.InvalidTest.to_str()
+
+
 def test_page_of_a_generated_test():
     values = gfm_report._test_map(_test(), outputs_by_producer=False)
 
@@ -103,7 +109,7 @@ def test_page_of_a_checked_test():
     assert values["checked"]
     assert values["envelope"][:4] == ["Ip", "0.000", "4.998", "0.0000"]
     assert [row[-1] for row in values["modes"]] == [r"\textcolor{red}{ False }", "{ True }"]
-    # The output of a model validation keeps a directory by producer
+    # The output of a performance verification keeps a directory by producer
     assert "run:../Producer/PCS_RTE-I18z1/S_VolAngStep1/OC2/" in values["link"]
 
 
@@ -136,6 +142,38 @@ def test_create_pdf_renders_every_test_of_every_pcs(monkeypatch, tmp_path):
     assert r"\input{Producer.report.PCS_RTE-I18z1.S_VolAngStep1.OC3}" in section
     assert r"\section{Results for PCS I18 (Producer)}" in section
     assert (latex_path / "Producer.report.PCS_RTE-I18z1.S_VolAngStep1.OC2.tex").exists()
+
+
+def test_create_pdf_gives_a_page_only_to_the_tests_whose_envelopes_were_generated(
+    monkeypatch, tmp_path
+):
+    def fake_pdflatex(working_path, name):
+        (working_path / f"{name}.pdf").write_text("pdf")
+        return type("Proc", (), {"returncode": 0, "stderr": b""})()
+
+    monkeypatch.setattr(report, "run_pdflatex", fake_pdflatex)
+    invalid = _test(compliance=Compliance.InvalidTest, oc="OC3")
+    pcs_reports = [
+        PcsReport("Producer", "PCS_RTE-I18z1", "report.RTE-I18z1.tex", [_test(), invalid])
+    ]
+
+    gfm_report.create_pdf(pcs_reports, _Parameters(tmp_path))
+
+    latex_path = tmp_path / "working" / "Latex"
+    section = (latex_path / "Producer.report.RTE-I18z1.tex").read_text()
+    assert Compliance.InvalidTest.to_str() in (latex_path / "report.tex").read_text()
+    assert "S_VolAngStep1.OC2" in section
+    assert "S_VolAngStep1.OC3" not in section
+
+
+def test_create_pdf_writes_no_report_when_no_envelope_was_generated(monkeypatch, tmp_path):
+    monkeypatch.setattr(report, "run_pdflatex", lambda *args: pytest.fail("pdflatex ran"))
+    invalid = _test(compliance=Compliance.InvalidTest)
+    pcs_reports = [PcsReport("Producer", "PCS_RTE-I18z1", "report.RTE-I18z1.tex", [invalid])]
+
+    gfm_report.create_pdf(pcs_reports, _Parameters(tmp_path))
+
+    assert not (tmp_path / "Results" / "Reports").exists()
 
 
 def test_a_section_without_tests_to_show_is_not_written(tmp_path):

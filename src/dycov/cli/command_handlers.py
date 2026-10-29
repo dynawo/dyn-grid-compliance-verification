@@ -635,14 +635,23 @@ def _generate_gfm_envelopes(
         # Determine if the parameters are valid.
         if not params.is_valid():
             return -1
+        if not params.declares_unit_parameters():
+            dycov_logging.get_logger("CommandHandlers").error(
+                f"{producer_ini} declares no [GFM Parameters] section: there are no parameters "
+                "to generate the envelopes from"
+            )
+            return 1
 
         use_parallel = config.get_boolean("Global", "parallel_pcs_validation", True)
         num_processes = config.get_int("Global", "parallel_num_processes", 4)
 
         gfm = GFMGeneration(params)
         start_time = time.time()
-        gfm.generate(use_parallel=use_parallel, num_processes=num_processes)
+        generated = gfm.generate(use_parallel=use_parallel, num_processes=num_processes)
         end_time = time.time()
+        if not generated:
+            dycov_logging.get_logger("CommandHandlers").error("No envelope was generated")
+            return 1
 
         dycov_logging.get_logger("CommandHandlers").info(
             f"Generation completed in {end_time - start_time:.2f} seconds."

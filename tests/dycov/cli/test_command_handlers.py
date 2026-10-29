@@ -13,6 +13,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from dycov.cli.command_handlers import (
+    _generate_gfm_envelopes,
     handle_excel2inputs_command,
     handle_performance_command,
     handle_validate_command,
@@ -457,3 +458,18 @@ def test_performance_refuses_a_workbook_together_with_curves(mocker, tmp_path):
 
     parser.error.assert_called_once()
     generate.assert_not_called()
+
+
+def test_an_envelope_generation_without_parameters_fails(tmp_path):
+    producer_ini = tmp_path / "Producer.ini"
+    producer_ini.write_text("[DEFAULT]\ngenerator_type = BESS\np_max_injection = 40\n")
+
+    result = _generate_gfm_envelopes(
+        output_dir=tmp_path / "Results",
+        producer_ini=producer_ini,
+        emt=False,
+        user_pcs=None,
+        only_dtr=True,
+    )
+
+    assert result == 1

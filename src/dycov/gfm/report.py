@@ -91,14 +91,14 @@ def create_pdf(pcs_reports: list[PcsReport], parameters: GFMParameters) -> None:
     tests = []
     for pcs_report in pcs_reports:
         pcs_input = prepare_pcs_report(
-            pcs_report, latex_path, sim_type_str, outputs_by_producer=False
+            _with_generated_tests(pcs_report), latex_path, sim_type_str, outputs_by_producer=False
         )
         if pcs_input:
             reports.append(pcs_input)
-            tests += pcs_report.tests
+        tests += pcs_report.tests
 
-    if not tests:
-        logger.warning("No test was generated, so there is no report to create")
+    if not reports:
+        logger.warning("No envelope was generated, so there is no report to create")
         return
 
     report.get_template(latex_path, REPORT_NAME).stream(
@@ -123,6 +123,14 @@ def create_pdf(pcs_reports: list[PcsReport], parameters: GFMParameters) -> None:
         logger.debug(proc.stderr.decode("utf-8", errors="replace"))
         raise LatexReportException("pdflatex did not produce the final report.")
     logger.info(f"PDF report done in {reports_path}")
+
+
+def _with_generated_tests(pcs_report: PcsReport) -> PcsReport:
+    # A test of an envelope generation has a compliance only when its envelopes could not be
+    # obtained, and then it has no page to show
+    return pcs_report._replace(
+        tests=[test for test in pcs_report.tests if test.compliance is None]
+    )
 
 
 def prepare_pcs_report(
@@ -275,12 +283,11 @@ def _summary_description(parameters: GFMParameters) -> str:
 
 
 def _summary_rows(tests: list[GFMTestReport]) -> list[list[str]]:
-    # The run delivers envelopes, and gives no verdict
     return [
         [
             text.replace("_", r"\_")
             for text in (test.producer_name, test.pcs, test.benchmark, test.operating_condition)
         ]
-        + ["Envelopes generated"]
+        + ["Envelopes generated" if test.compliance is None else test.compliance.to_str()]
         for test in tests
     ]
