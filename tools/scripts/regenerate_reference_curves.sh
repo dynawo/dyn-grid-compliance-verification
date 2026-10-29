@@ -73,7 +73,7 @@ failures="$working_path/failed_examples.txt"
 :>| "$failures"
 
 # Every example reports where it is, and with a console in front of us that is what is shown:
-# the whole list at once, redrawn in place, instead of sixteen conversations interleaved.
+# the whole list at once, redrawn in place, instead of a conversation per example interleaved.
 DYCOV_STATE_DIR="$working_path/state"
 export DYCOV_STATE_DIR
 rm -rf "${DYCOV_STATE_DIR:?}"

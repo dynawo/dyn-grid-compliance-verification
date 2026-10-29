@@ -25,6 +25,7 @@ MODEL_EXAMPLES_WECC=(
     "Wind/WECC4A"
     "Wind/WECC4B"
 )
+
 MODEL_EXAMPLES_GFM=(
     "BESS/GridFormingDroop"
     "BESS/GridFormingEpri"

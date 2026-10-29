@@ -21,7 +21,7 @@
 
 # `test_tool.sh` — Integration Runner for **dycov**
 
-This script orchestrates automated runs of **dycov** to **validate models**, **verify performance**, and **generate envelopes** across the project’s examples. It supports filtering by **IEC** and **WECC** families, controls input/output locations, and runs tasks **in parallel** to speed up execution. At the end of the run, it also **summarizes Overall Result counts** and produces CSV and optional charts.
+This script orchestrates automated runs of **dycov** to **validate models**, **verify performance**, and **generate envelopes** across the project’s examples. It supports filtering by **IEC**, **WECC** and **Grid Forming** families, controls input/output locations, and runs tasks **in parallel** to speed up execution. At the end of the run, it also **summarizes Overall Result counts** and produces CSV and optional charts.
 
 > **Path:** `tools/scripts/test_tool.sh`  
 > **Phases:**
@@ -55,7 +55,7 @@ tools/scripts/test_tool.sh
 
 Running with **no options** will:
 
-*   Include both **IEC** and **WECC** models (defaults).
+*   Include the **IEC**, **WECC** and **Grid Forming** models (defaults).
 *   Run **Validation + Performance + Envelope Generation** (all enabled by default).
 *   Use `./examples` as input and `../Results` as output.
 *   Write the run log to `../Results/test_tool.log`.
@@ -100,7 +100,7 @@ Running with **no options** will:
 *   **WECC Wind**: `WECC31`, `WECC32`, `WECC4A`, `WECC4B` (`WECC4`, the multi-generator example, is not usable yet and is left out)
 *   **WECC PV**: `WECCCurrentSource`, `WECCVoltageSource1`, `WECCVoltageSource2`, `WECCVoltageSource3`, `WECCVoltageSource4`
 *   **WECC BESS**: `WECC`
-*   **Grid Forming BESS**: `GridFormingDroop` and `GridFormingEpri`, installations of type C validated against the Fiche I16.2: their Zone 1 unit is the droop and the EPRI Grid Forming converter of Dynawo, and their Zone 3 plant that of the `WECC` example
+*   **Grid Forming BESS**: `GridFormingDroop` and `GridFormingEpri`, installations of type C validated against the Fiche I16.2: their Zone 1 unit is the droop and the EPRI Grid Forming converter of Dynawo, and their Zone 3 a WECC storage plant of 40 MW at 225 kV, the size that makes them type C
 *   Paths per model:
     *   Input: `${examples_path}/Model/<Family>/<Model>/Dynawo`
     *   References: `${examples_path}/Model/<Family>/<Model>/ReferenceCurves`
@@ -147,7 +147,7 @@ Running with **no options** will:
 ## 6) Examples
 
 ```bash
-# Full run (IEC + WECC; all validations; default paths)
+# Full run (IEC + WECC + Grid Forming; all validations; default paths)
 tools/scripts/test_tool.sh
 
 # Clean run (remove previous results, then run everything)

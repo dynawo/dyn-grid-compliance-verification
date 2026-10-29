@@ -71,7 +71,6 @@ def installation_category(example: str, revision: str) -> str:
     as the revision of the DTR the run followed draws the line between the categories."""
     producer = configparser.ConfigParser(inline_comment_prefixes=("#",))
     producer.read(Path("examples/Model", example, "Dynawo", "Zone3", "Producer.ini"))
-    config.set_value("DTR", "current", revision)
     config.load_dtr_delta_config(revision)
     return generator_variables.get_generator_category(
         producer.getfloat("DEFAULT", "u_nom"),
@@ -82,14 +81,17 @@ def installation_category(example: str, revision: str) -> str:
 
 def version_of(description: Path, revision: str, category: str) -> list:
     """The version of a PCS the revision writes for the category of the installation, which
-    patches its delta, as the tool picks it: a Type<categories>.ini beside the delta whose name
-    holds the category."""
+    patches the description the revision gives the PCS, as the tool picks it: a
+    Type<categories>.ini in the directory of the delta of the PCS whose name holds the
+    category."""
     try:
         inside = description.parent.relative_to(PACKAGE_TEMPLATES)
     except ValueError:
         return []
 
-    versions = sorted((PACKAGE_TEMPLATES / "revisions" / revision / inside).glob("Type*.ini"))
+    versions = sorted(
+        (PACKAGE_TEMPLATES / "revisions" / revision / inside).glob("Type*.[iI][nN][iI]")
+    )
     return [version for version in versions if category in version.stem[len("Type") :]][:1]
 
 
