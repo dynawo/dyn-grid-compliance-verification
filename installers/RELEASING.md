@@ -121,7 +121,7 @@ that it reads the same without a network.
 | 0 | Verifies the Git state (tag exists, HEAD on the tag, clean tree), that the examples hold their curves and nothing else that Git ignores, and that every expected installer file is present. |
 | 1 | Zips `DYNAWO_DIR` into `Dynawo_omc_v2.0.0.zip` and places it in the output directory. |
 | 1b | Zips the examples into `dycov_examples.zip`: the tracked tree from Git, so no local artifact reaches the asset, and the curves from the working tree, which Git does not carry. |
-| 2 | Copies `linux_install.sh` to the output directory, pinning `TARGET_BRANCH` to the tag and setting `DYNAWO_SHA256SUM` and `EXAMPLES_SHA256SUM` to the checksums of the zips from Steps 1 and 1b. |
+| 2 | Copies `linux_install.sh` to the output directory, pinning `TARGET_RELEASE` to the tag, so that it installs the sources and the assets of this release and not those of the latest one, and setting `DYNAWO_SHA256SUM` and `EXAMPLES_SHA256SUM` to the checksums of the zips from Steps 1 and 1b. |
 | 3 | Builds the user manual (`docs/manual`) in a temporary `uv` virtualenv: HTML and PDF. |
 | 4 | Builds the Docker image (`dycov:latest` and `dycov:VERSION`) via `docker/build.sh`. |
 | 5 | Exports the image to `dycov_rawimage.tar.gz` via `docker/export_image.sh`. |
