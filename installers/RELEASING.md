@@ -64,8 +64,8 @@ before the tag.
 That single command covers every curve the examples ship: it runs each Model example in a home
 directory of its own, so that no local configuration filters what is verified, runs in
 performance mode the three models whose curves the Performance examples ship, anonymizes the
-results and replaces every CSV under the `ReferenceCurves` directories and under
-`examples/Model/ProducerCurves` and `examples/Performance/ProducerCurves`. It needs the
+results and writes whole every `ReferenceCurves` directory and `examples/Model/ProducerCurves`
+and `examples/Performance/ProducerCurves`, curves and dictionaries alike. It needs the
 virtualenv active and a Dynawo launcher
 (`-l` selects another one), and it runs every test of every example, so it is the longest step
 of a release. See [../tools/scripts/README.md](../tools/scripts/README.md) for its options.
@@ -74,9 +74,11 @@ Read its guard before trusting the outcome: the command compares the tests the r
 against those the PCS of the examples declare, and stops without touching the repository when
 they differ, because half a regeneration is worse than none.
 
-The curves themselves are not committed — they ship as the `dycov_examples.zip` asset the build
-script packs from this working tree — but the dictionaries whose event it brought up to date are,
-and the build script refuses to run with a dirty working tree, so commit those before tagging.
+Nothing it writes is committed: the curve directories are ignored whole, and they ship as the
+`dycov_examples.zip` asset the build script packs from this working tree. What a regeneration can
+leave to commit lies elsewhere: the end-to-end tests of `tests_integration/` assert the verdicts
+of several examples run against their curves, so a verdict the new curves move is updated there,
+and the build script refuses to run with a dirty working tree, so commit that before tagging.
 
 ### 2. Close the changelog entry
 
