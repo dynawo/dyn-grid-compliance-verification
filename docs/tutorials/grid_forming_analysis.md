@@ -54,16 +54,16 @@ DyCoV currently supports GFM envelope generation for
 Each case corresponds to a well-defined analytical formulation
 and a specific class of grid disturbance:
 
-- **Amplitude Step** — reactive current and reactive power envelopes
-  in response to a grid voltage amplitude step.
-- **Phase Jump** — active power response to a sudden change
-  in the grid voltage phase angle.
+- **Amplitude Step** — reactive current envelopes in response to a grid
+  voltage amplitude step.
+- **Phase Jump** — active current response to a sudden change in the grid
+  voltage phase angle.
 - **RoCoF** (Rate of Change of Frequency) — active power response to a
-  frequency ramp; finite-duration events are modeled by superimposing
-  step responses.
-- **SCR Jump** — stability and power response following a sudden change
-  in the Short Circuit Ratio (grid impedance), differentiated between
-  overdamped and underdamped responses.
+  frequency ramp, or active current response for the Fiche I18;
+  finite-duration events are modeled by superimposing step responses.
+- **SCR Jump** — active current response following a sudden change in the
+  Short Circuit Ratio (grid impedance), differentiated between overdamped and
+  underdamped responses.
 
 The supported cases are implemented directly in DyCoV
 and exposed through the GFM workflow.
@@ -105,11 +105,15 @@ section of `Producer.ini`:
 | `u_nom` | Nominal voltage at the PDR bus (kV). Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore) |
 | `p_max_injection` | Maximum active power injection (MW) |
 | `p_min_injection` | Minimum active power injection (MW, negative for absorption) |
-| `p_max_consumption` | Maximum consumption (MW), as the INI file of a model validation declares it; when present, it gives the minimum active power instead of `p_min_injection` |
+| `p_max_consumption` | Maximum consumption (MW), as the INI file of a performance verification declares it; when present, it gives the minimum active power instead of `p_min_injection` |
 | `q_max` | Maximum reactive power (MVar) |
 | `q_min` | Minimum reactive power (MVar) |
 
-The remaining parameters are defined inside the `[GFM Parameters]` section.
+The remaining parameters are defined inside the `[GFM Parameters]` section,
+which may also declare the powers above when the unit under test, the PGU,
+differs from the installation `[DEFAULT]` describes (see
+[section 11](#11-checking-the-curves-of-a-storage-unit)): its values are used
+instead.
 
 **Nominal quantities:**
 
@@ -121,14 +125,15 @@ The remaining parameters are defined inside the `[GFM Parameters]` section.
 
 | Parameter | Description |
 |-----------|-------------|
-| `Xeff` | Effective reactance (pu) |
+| `Xeff` | Effective reactance (pu). The DTR Fiche I18 fixes 0.27 pu: its envelopes use the `Xeff` of the unit only when higher |
+| `Imax` | Optional short-duration maximum current (pu of `Snom`), which the Fiche I18 asks the manufacturer to define; when declared, it bounds every envelope |
 
 **Standard control parameters** (used when operating in Standard mode):
 
 | Parameter | Description |
 |-----------|-------------|
 | `D` | Damping coefficient |
-| `H` | Inertia constant (s) |
+| `H` | Inertia constant (s). The Fiche I18 fixes 5 s (TR = 10 s): its envelopes use that value, in Hybrid mode too, whatever the file says |
 
 **Hybrid control parameters** (used when operating in Hybrid mode):
 
@@ -145,7 +150,7 @@ The remaining parameters are defined inside the `[GFM Parameters]` section.
 |-----------|-------------|
 | `save_all_envelopes` | If `true`, the CSV output includes all intermediate envelopes (individual overdamped and underdamped traces) in addition to the final merged envelope |
 | `emt_delay` | Time shift (s) applied to the envelopes when running in EMT mode (`-e`); defaults to 0.02 when absent |
-| `emt` | If `true`, the curves of the unit come from EMT simulations and its envelopes are always for them, as the model validation generates them; defaults to `false` |
+| `emt` | If `true`, the curves of the unit come from EMT simulations and its envelopes are always generated in EMT mode, by `generate_gfm_envelopes` and by the performance verification alike; defaults to `false` |
 
 > **Note**
 > `RatioMin` and `RatioMax` — the bounds applied to parameter variations for
@@ -292,7 +297,7 @@ Where:
 For each combination of PCS, scenario and operating condition, DyCoV generates:
 
 - **CSV file** containing the numerical time series of the admissible
-  envelopes (upper and lower bounds for the relevant signal: $P$, $Q$, or $I_q$).
+  envelopes (upper and lower bounds for the relevant signal: $P$, $I_p$ or $I_q$).
   When `save_all_envelopes = true`, the file also includes the intermediate
   overdamped and underdamped traces.
 - **PNG figure** providing a static visualization of the envelopes alongside
@@ -304,10 +309,10 @@ For each combination of PCS, scenario and operating condition, DyCoV generates:
   parameters used for that calculation, including internally derived values
   such as the damping ratio $\varepsilon$, one for each damping regime in
   Hybrid mode. Intended for full traceability.
-- **`results.json`** describing the envelopes: the current they bound,
+- **`results.json`** describing the envelopes: the magnitude they bound,
   whether they are for EMT simulations, the duration of the event and the
-  parameters of the test. The model validation reads it back, with the CSV
-  file, when it is given the envelopes.
+  parameters of the test. The performance verification reads it back, with
+  the CSV file, when it is given the envelopes.
 
 The **PDF report** in `Reports/` gathers every test, with a page per test: its
 parameters, its envelope figure and a link to the HTML one.
@@ -364,14 +369,19 @@ After GFM analysis, you may:
 
 ## 11. Checking the curves of a storage unit
 
-The performance verification of a storage given its curves, `dycov performance
--c`, runs the tests of the DTR Fiche I18 along with those of the other fiches,
-as `PCS_RTE-I18z1`. They are not simulated, and a run on a Dynawo model leaves
-them out: the curves of each test, among the curves of the producer
+The performance verification of a storage installation of type C or D given
+its curves, `dycov performance -c`, runs the tests of the DTR Fiche I18 along
+with those of the other fiches, as `PCS_RTE-I18z1`; the fiche is one the
+revision 20260723 of the DTR adds, so a run on an earlier revision leaves it
+out. The tests are not simulated, and a run on a Dynawo model leaves them out
+too: the curves of each test, among the curves of the producer
 (`ProducerCurves/<producer>/PCS_RTE-I18z1.<scenario>.<OC>.csv` and its `.dict`),
 are checked against the envelopes of the test and the damping criterion of the
-fiche. The fiche tests a single converter, the PGU, so the `Producer.ini`
-describes it. The envelopes come from one of two places:
+fiche. The `[DEFAULT]` section of the `Producer.ini` describes the
+installation, from which its type follows, and the `[GFM Parameters]` section
+the single converter the fiche tests, the PGU: its `Snom` and, when they
+differ from those of the installation, its powers. The envelopes come from one
+of two places:
 
 * the output of `dycov generate_gfm_envelopes`, given with `-g`, as the fiche
   has RTE send them to the producer. It holds a subdirectory per producer,

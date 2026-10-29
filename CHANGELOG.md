@@ -162,6 +162,39 @@ inside the unit model (`WT_ConverterLVControl = false`). Their models give no po
 the tool computes them from the voltage and the current there. In the IEC plant models of zone 3
 the Node2 curves are still read on the grid side of that transformer.
 
+### The Grid Forming tests of the DTR Fiche I18
+
+The performance verification of a storage installation of type C or D, given its curves (`-c`),
+checks the tests of the Fiche I18 that the revision 20260723 of the DTR adds: the curves of each
+test against its envelope, generated from the `[GFM Parameters]` of the INI file of the producer
+or read from the output of `dycov generate_gfm_envelopes` given with `-g`, and the damping of
+their oscillations. A run on a model leaves those tests out, as does a run on an earlier revision
+or for an installation of another type. The curves of a test hold the active and reactive
+currents and the voltage at the terminals of the converter (the PGU), and cover the whole envelope.
+
+The INI file of a Grid Forming unit declares what it is, `generator_type = BESS` or `PPM`, and
+`dycov generate_gfm_envelopes` stops without it: a storage unit gets the Fiche I18, a power park
+module the four tests agreed with RTE before it, whose envelopes do not change unless the unit
+declares an `Imax`. The command now writes a PDF report of the envelopes, the INI dump of every
+test and a `results.json` describing its envelopes, which the performance verification reads back
+with `-g`, and stops when the file gives nothing to generate them from.
+
+The `[GFM Parameters]` section describes the PGU, apart from the installation that `[DEFAULT]`
+describes in a performance verification: its `Snom` and, when they differ, its
+`p_max_injection`, `p_max_consumption`, `q_max` and `q_min`. It may also declare `Imax`, the
+short-duration maximum current the fiche asks the manufacturer to define, which bounds every
+envelope, and `emt = true` when the curves of the unit come from EMT simulations. The Fiche I18
+fixes the effective reactance, 0.27 pu, and the inertia, H = 5 s, of its envelopes; a higher
+`Xeff` of the producer is used instead, and the values RTE sets otherwise go in a description of
+the user (`Xeff`, and `H`, `H_Overdamped` and `H_Underdamped` for the inertia).
+
+The Grid Forming templates of the user move by kind of unit, as the tool's do: a PCS under
+`templates/PCS/gfm/` or `templates/reports/gfm/` goes under `gfm/PPM/` or `gfm/BESS/`, and the
+tool warns of one left where it was. `SCRmax` of `[GFM]` is now 20, the maximum short-circuit
+ratio of the fiche, and the 10 it was before is `SCRmed`: a description of the user that names
+`SCRmax` is warned of. The curves of the Grid Forming tests are filtered at 30 Hz, the `cutoff`
+of `[GFM]`.
+
 ### Fixed
 
 - The maximum power declared for an IEC plant is checked against its model's, as for WECC, and a

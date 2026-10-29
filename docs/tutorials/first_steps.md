@@ -99,7 +99,8 @@ for GFM units.
 *   PNG plots showing envelopes and associated signals.
 *   HTML file providing an interactive visualization of the same content.
 
-This workflow does not generate PDF reports at this stage.
+*   A PDF report with a page for each test, and the parameters of each test
+    in `results.json`.
 
 ---
 

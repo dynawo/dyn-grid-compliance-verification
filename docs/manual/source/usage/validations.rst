@@ -503,7 +503,9 @@ PCS I18
 ^^^^^^^
 
 PCS I18 checks the Grid Forming capability of a storage unit of type C or D
-at its PGU terminals, the Node 1 of the Zone 1. Its tests are not simulated
+at its PGU terminals, the Node 1 of the Zone 1, from the revision of the DTR
+of 20260723, which adds the fiche: a run on an earlier revision, or for an
+installation of another type, leaves it out. Its tests are not simulated
 with Dynawo, so a verification run on a model leaves them out: the producer
 delivers the curves of each test (``dycov performance -c``), and DyCoV checks
 them against the envelopes of the test and the damping criterion of the

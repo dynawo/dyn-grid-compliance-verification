@@ -18,11 +18,12 @@ the uncertainty band of the GFM response.
 
 The module handles four disturbance families:
 
-* **Phase Jump** — active power response to a sudden grid voltage angle change.
+* **Phase Jump** — active current response to a sudden grid voltage angle change.
 * **Amplitude Step** — reactive current response to a grid voltage amplitude step.
 * **RoCoF** (Rate of Change of Frequency) — active power response to a
-  frequency ramp.
-* **SCR Jump** (Short-Circuit Ratio Jump) — active power response to a sudden
+  frequency ramp, or active current response when the PCS names it with
+  ``envelope_magnitude``, as the Fiche I18 does.
+* **SCR Jump** (Short-Circuit Ratio Jump) — active current response to a sudden
   change in grid impedance.
 
 For each disturbance, the module exports semicolon-separated **CSV files**
@@ -125,11 +126,12 @@ removes unnecessary steady-state portions from the plots to keep them focused
 on the transient of interest. Next to the CSV file, ``results.json``
 describes the envelopes (the current they bound, EMT or RMS, the duration of
 the event and the parameters of the test), which ``read_envelopes`` reads
-back with the CSV file when a model validation is given the envelopes.
+back with the CSV file when a performance verification is given the envelopes.
 
 ``report.py`` writes the page of each test and the section of each PCS:
 ``create_pdf`` compiles the report of an envelope generation, and
-``prepare_pcs_report`` adds a section to the report of a model validation.
+``prepare_pcs_report`` adds a section to the report of a performance
+verification.
 
 The ``verification/`` subpackage holds ``curves_compliance.py``, which checks
 the producer curves of a test against its envelopes and the damping criterion
@@ -159,8 +161,9 @@ from invocation to output:
 6. ``calculator_factory`` returns the correct calculator instance.
 7. The calculator's ``calculate_envelopes()`` method performs the computation.
 8. Results are passed to ``outputs.py`` to generate CSV, PNG, and HTML files.
-9. The generated files are copied to the output directory, and the temporary
-   working directories are removed.
+9. ``report.create_pdf`` compiles the PDF report from the pages of the tests.
+10. The generated files are copied to the output directory, and the temporary
+    working directories are removed.
 
 
 .. _gfm_abc:

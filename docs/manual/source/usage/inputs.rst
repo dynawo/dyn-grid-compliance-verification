@@ -141,16 +141,30 @@ A typical file looks like this:
    D = 20.0
    # Inertia constant (in seconds)
    H = 3.5
-   # Effective reactance from the inverter to the PDR (in pu)
+   # Effective reactance from the inverter to the PGU terminals (in pu of Snom)
    Xeff = 0.15
-   # Nominal apparent power (in MVA)
+   # Nominal apparent power of the PGU (in MVA)
    Snom = 110.0
-   # Optional: short-duration maximum current (in pu of Snom), which bounds
-   # every envelope as the DTR Fiche I18 requires
+   # Optional: the limits of the PGU, when [DEFAULT] describes the whole
+   # installation, as in a performance verification (in MW and MVAr)
+   p_max_injection = 100.0
+   q_max = 50.0
+   q_min = -50.0
+   # Optional: short-duration maximum current (in pu of Snom), which the
+   # DTR Fiche I18 asks the manufacturer to define and bounds every envelope by
    Imax = 1.2
    # Optional: the curves of the unit come from EMT simulations, so its
    # envelopes are for them (false when absent)
    emt = false
+
+The DTR Fiche I18 fixes the effective reactance, 0.27 pu, and the inertia,
+TR = 10 s (an ``H`` of 5 s), of the ideal converter its envelopes are drawn
+from, which RTE may change in the convention d'exploitation: its PCS declares
+them, so the envelopes of the fiche use that ``H`` whatever the file says, and
+its ``Xeff`` unless the file declares a higher one. A description of the user
+for ``PCS_RTE-I18z1`` holds the values RTE sets otherwise: ``Xeff``, and the
+inertia as ``H`` and, for the Hybrid mode, ``H_Overdamped`` and
+``H_Underdamped``, the three keys the PCS declares.
 
 For **Hybrid mode** (combining overdamped and underdamped envelopes), the
 ``[GFM Parameters]`` section should instead define separate damping and
@@ -374,9 +388,11 @@ distinction. A single ``Producer.ini`` covers the entire case:
 
 For a storage, the directory of a producer may also hold the curves of its
 Grid Forming tests (``PCS_RTE-I18z1.<scenario>.<OC>``), the currents and the
-voltage at the PGU terminals that are checked against envelopes; its
-``Producer.ini`` then describes the PGU (see :ref:`Grid Forming tests in the
-performance verification <gfm_performance>`).
+voltage at the PGU terminals that are checked against envelopes; the
+``[DEFAULT]`` section of its ``Producer.ini`` still describes the installation,
+which decides whether those tests apply, and its ``[GFM Parameters]`` section
+describes the PGU (see :ref:`Grid Forming tests in the performance
+verification <gfm_performance>`).
 
 
 .. _topologies:

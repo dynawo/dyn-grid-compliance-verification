@@ -165,8 +165,9 @@ one of them.
 
 Which options belong to the norm is not a judgement. They are the ones the shipped description
 of the PCS and the delta of the revision define, plus the sections of the default configuration
-that hold what the DTR fixes and not how the tool runs: `[GridCode]`, the lists of benchmarks
-and of operating conditions, and the lists of validations. A log level or a setting of the
+that hold what the DTR fixes and not how the tool runs: `[GridCode]`, `[GFM]` (the criteria and
+the short-circuit ratios of the Grid Forming tests), the lists of benchmarks and of operating
+conditions, and the lists of validations. A log level or a setting of the
 solver marks nothing.
 
 ## How a revision redefines the categories

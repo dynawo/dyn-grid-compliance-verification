@@ -20,7 +20,9 @@ It implements three main workflows:
 
   - *Synchronous Machines*: PCSs I2, I3, I4, I6, I7, I8, and I10.
   - *Power Park Modules*: PCSs I2, I5, I6, I7, and I10.
-  - *Battery Energy Storage Systems*: PCSs I2, I5, I6, I7, and I10.
+  - *Battery Energy Storage Systems*: PCSs I2, I5, I6, I7, and I10, and, for
+    an installation of type C or D given its curves, the Grid Forming tests of
+    the PCS I18 that the revision 20260723 of the DTR adds.
 
 * **Grid-Forming (GFM) envelope generation** — analytically computes
   admissible dynamic response envelopes for Grid-Forming units under specific
