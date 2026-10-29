@@ -54,7 +54,7 @@ if [[ $# -lt 2 || $# -gt 3 ]]; then
     echo "Usage: $0 VERSION DYNAWO_DIR [--dry-run]"
     echo "  VERSION     e.g. v0.9.3"
     echo "  DYNAWO_DIR  path to the Dynawo installation directory"
-    echo "  --dry-run   skip Git checks"
+    echo "  --dry-run   skip Git checks and the package version check"
     exit 1
 fi
 
@@ -261,8 +261,11 @@ info " - PDF:  $MANUAL_BUILD_DIR/latex/dycov.pdf"
 ###############################################################################
 step "Step 4: Building Docker image..."
 
+declare -a dry_run_option=()
+[[ "$DRY_RUN" == true ]] && dry_run_option=(--dry-run)
+
 cd "$REPO_ROOT/installers/docker"
-bash build.sh "$VERSION" "$DYNAWO_DIR" ${DRY_RUN:+--dry-run}
+bash build.sh "$VERSION" "$DYNAWO_DIR" "${dry_run_option[@]}"
 info "Docker image built."
 
 ###############################################################################
