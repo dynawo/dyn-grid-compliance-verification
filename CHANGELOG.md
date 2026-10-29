@@ -176,3 +176,5 @@ the Node2 curves are still read on the grid side of that transformer.
   longer has a voltage deadband, on whose edge the WECCVoltageSource4 swell kept the solver (#626).
 - The IEC 2020 examples simulate again: their plant controller declares the three lead-lag pairs
   Dynawo 2.0.0 asks for (#633).
+- The report of a setpoint tracking test whose event lasts gives the thresholds of the event
+  window under its own column, and those of the window after it under theirs (#657).

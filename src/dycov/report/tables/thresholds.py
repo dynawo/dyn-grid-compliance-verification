@@ -27,7 +27,7 @@ def _setpoint_tracking_thresholds(
     after_me = windows_thresholds["after"]["me"]
     after_mae = windows_thresholds["after"]["mae"]
     name = str(results["setpoint_tracking_" + measurement + "_name"])
-    if "during_mxe_" + measurement + "_value" in results:
+    if "during_mxe_tc_" + measurement + "_value" in results:
         during_mxe = windows_thresholds["during"]["mxe"]
         during_me = windows_thresholds["during"]["me"]
         during_mae = windows_thresholds["during"]["mae"]
