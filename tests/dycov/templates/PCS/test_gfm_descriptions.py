@@ -23,7 +23,10 @@ import pytest
 import dycov
 from dycov.configuration.cfg import config
 
-_GFM_TEMPLATES = Path(dycov.__file__).resolve().parent / "templates" / "PCS" / "gfm"
+_TEMPLATES = Path(dycov.__file__).resolve().parent / "templates"
+_GFM_TEMPLATES = _TEMPLATES / "PCS" / "gfm"
+# The Fiche I18 is added by the revision 20260723 of the DTR, whose delta alone describes it
+_I18_TEMPLATES = _TEMPLATES / "revisions" / "20260723" / "PCS" / "gfm" / "BESS"
 _XEFF = 0.27
 
 # Scenario: (DTR value, SCR) for tests 1 and 2, (initial frequency, RoCoF, duration, SCR) for 4
@@ -75,11 +78,12 @@ def _parser(path: Path) -> configparser.ConfigParser:
 
 
 def _description(technology: str, pcs: str) -> configparser.ConfigParser:
-    return _parser(_GFM_TEMPLATES / technology / pcs / "PCSDescription.ini")
+    templates = _I18_TEMPLATES if technology == "BESS" else _GFM_TEMPLATES / technology
+    return _parser(templates / pcs / "PCSDescription.ini")
 
 
 def _aliases() -> configparser.ConfigParser:
-    return _parser(_GFM_TEMPLATES / "BESS" / "config_aliases.ini")
+    return _parser(_I18_TEMPLATES / "config_aliases.ini")
 
 
 def _benchmarks(parser: configparser.ConfigParser, pcs: str) -> list[str]:
@@ -97,12 +101,17 @@ def _times_total_reactance(definition: str, scr: float) -> float:
 
 
 def test_a_bess_is_given_the_fiche_as_one_pcs_of_zone_1():
-    shipped = sorted(path.name for path in (_GFM_TEMPLATES / "BESS").glob("PCS_*"))
+    shipped = sorted(path.name for path in _I18_TEMPLATES.glob("PCS_*"))
     parser = _description("BESS", _I18)
 
     assert shipped == [_I18]
     assert parser.getint(_I18, "zone") == 1
     assert parser.getint(_I18, "id") == 18
+
+
+def test_the_fiche_exists_only_under_the_revision_that_adds_it():
+    assert not list(_GFM_TEMPLATES.glob(f"*/{_I18}"))
+    assert not list((_TEMPLATES / "reports" / "gfm").glob(f"*/{_I18}"))
 
 
 def test_a_ppm_keeps_the_four_pcs_agreed_before_the_fiche():

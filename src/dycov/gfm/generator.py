@@ -17,6 +17,7 @@ from dycov.gfm import report
 from dycov.gfm.parameters import GFMParameters
 from dycov.gfm.report import PcsReport
 from dycov.logging import dycov_logging, worker_initializer
+from dycov.model.compliance import Compliance
 from dycov.model.pcs import Pcs
 
 
@@ -73,6 +74,11 @@ class GFMGeneration:
         self._templates_path = Path(config.get_value("Global", "templates_path"))
         self.__initialize_working_environment()
         self._validation_pcs = self.__get_validation_pcs()
+        if not self._validation_pcs:
+            dycov_logging.get_logger("GFMGeneration").error(
+                f"The DTR revision {config.get_value('DTR', 'current')} gives the units of "
+                f"{self._parameters.get_producer().get_sim_type_str()} no Grid Forming PCS"
+            )
         self._pcs_list = self.__prepare_pcs_list()
 
     def __initialize_working_environment(self) -> None:
@@ -134,15 +140,13 @@ class GFMGeneration:
         if not validation_pcs:
             validation_pcs.update(config.get_list("Global", validation_key))
         if not validation_pcs:
+            shipped = tool_path / self._templates_path
+            sources = [shipped, manage_files.dtr_delta_path(shipped)]
             if not self._parameters.get_only_dtr():
-                validation_pcs.update(
-                    manage_files.list_directories(
-                        config.get_config_dir() / self._templates_path / validation_path
-                    )
-                )
-            validation_pcs.update(
-                manage_files.list_directories(tool_path / self._templates_path / validation_path)
-            )
+                sources.append(config.get_config_dir() / self._templates_path)
+            for source in sources:
+                if source is not None and (source / validation_path).is_dir():
+                    validation_pcs.update(manage_files.list_directories(source / validation_path))
 
         # Exclude alias references to avoid redundant or recursive generation
         for item in list(validation_pcs):
@@ -165,7 +169,7 @@ class GFMGeneration:
             for pcs_name in self._validation_pcs
         ]
 
-    def generate(self, use_parallel: bool = False, num_processes: int = 4) -> None:
+    def generate(self, use_parallel: bool = False, num_processes: int = 4) -> bool:
         """
         Executes the envelope generation process for all configured PCS.
 
@@ -175,6 +179,11 @@ class GFMGeneration:
             Whether to run using multiprocessing. Defaults to False.
         num_processes : int, optional
             Number of CPU cores to utilize. Defaults to 4.
+
+        Returns
+        -------
+        bool
+            True if the envelopes of at least one test were generated.
         """
         if use_parallel:
             dycov_logging.get_logger("GFMGeneration").info(
@@ -205,3 +214,9 @@ class GFMGeneration:
                     pcs_name,
                 )
             manage_files.remove_dir(self._parameters.get_working_dir())
+
+        return any(
+            test.compliance not in (Compliance.WithoutEnvelopes, Compliance.InvalidTest)
+            for pcs_report in pcs_reports
+            for test in pcs_report.tests
+        )

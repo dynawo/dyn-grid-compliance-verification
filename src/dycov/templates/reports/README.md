@@ -1,6 +1,6 @@
 # reports
 
-Contains the LaTex report files of the PCS. And it is made up of 3 directories:
+Contains the LaTex report files of the PCS. It is made up of these directories:
 * **model/PPM**: DyCoV Model Validation tests (Power Parks)
 * **performance/PPM**: Electric Performance tests (Power Parks)
 * **performance/SM**: Electric Performance tests (Synchronous Machines)

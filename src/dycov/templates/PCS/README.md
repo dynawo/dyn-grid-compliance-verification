@@ -1,12 +1,13 @@
 # PCS 
 
-Contains the configuration files with the description of the PCS. And it is
-made up of 3 directories:
+Contains the configuration files with the description of the PCS. It is made up
+of these directories:
 * **model/PPM**: DyCoV Model Validation tests (Power Parks)
 * **performance/PPM**: Electric Performance tests (Power Parks)
 * **performance/SM**: Electric Performance tests (Synchronous Machines)
-* **gfm/BESS**: Grid Forming tests of the DTR Fiche I18 (Storage units), as one Zone 1 PCS that
-  the performance verification of a storage runs as well
+* **gfm/BESS**: Grid Forming tests of the DTR Fiche I18 (Storage units of types C and D), as one
+  Zone 1 PCS that the performance verification of a storage runs as well. The revision 20260723
+  of the DTR adds the fiche, so the tool describes it under `revisions/20260723/PCS/gfm/BESS`
 * **gfm/PPM**: Grid Forming tests agreed before the Fiche I18 (Power Parks)
 
 # Modify an existing PCS

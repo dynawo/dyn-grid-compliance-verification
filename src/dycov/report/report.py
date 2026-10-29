@@ -256,7 +256,7 @@ def copy_pcs_latex_files(
         )
         manage_files.copy_latex_files(latex_delta_path, working_path, prefix)
 
-    if not (latex_tool_path.exists() or latex_user_path.exists()):
+    if not (latex_tool_path.exists() or latex_user_path.exists() or latex_delta_path):
         dycov_logging.get_logger("Report").error(f"{pcs_name}: Latex Template do not exist")
 
 
