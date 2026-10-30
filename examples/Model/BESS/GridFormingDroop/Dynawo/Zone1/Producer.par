@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+  <set id="Bess">
+    <!-- Base unit: SNom -->
+    <par type="DOUBLE" name="converter_SNom" value="5.0"/>
+    <par type="DOUBLE" name="converter_Cdc" value="0.01"/>
+    <!-- LCL filter, the grid side being the transformer of the unit (base unit: UNom, SNom) -->
+    <par type="DOUBLE" name="converter_RFilter" value="0.005"/>
+    <par type="DOUBLE" name="converter_LFilter" value="0.15"/>
+    <par type="DOUBLE" name="converter_CFilter" value="0.066"/>
+    <par type="DOUBLE" name="converter_RTransformer" value="0.01"/>
+    <par type="DOUBLE" name="converter_LTransformer" value="0.2"/>
+    <!-- Virtual impedance, the current limitation -->
+    <par type="DOUBLE" name="control_KpVI" value="0.67"/>
+    <par type="DOUBLE" name="control_XRratio" value="5"/>
+    <!-- Base unit: UNom, SNom -->
+    <par type="DOUBLE" name="control_IMaxVI" value="1"/>
+    <!-- Current and voltage loops -->
+    <par type="DOUBLE" name="control_Kpc" value="0.7388"/>
+    <par type="DOUBLE" name="control_Kic" value="1.19"/>
+    <par type="DOUBLE" name="control_Kpv" value="0.52"/>
+    <par type="DOUBLE" name="control_Kiv" value="1.161022"/>
+    <par type="DOUBLE" name="control_RFilter" value="0.005"/>
+    <par type="DOUBLE" name="control_LFilter" value="0.15"/>
+    <par type="DOUBLE" name="control_CFilter" value="0.066"/>
+    <!-- Droops -->
+    <par type="DOUBLE" name="control_Mq" value="0.2"/>
+    <par type="DOUBLE" name="control_Wf" value="60"/>
+    <par type="DOUBLE" name="control_Mp" value="0.05"/>
+    <par type="DOUBLE" name="control_Wff" value="16.66"/>
+    <par type="DOUBLE" name="control_Kff" value="0.0"/>
+    <!-- DC voltage control -->
+    <par type="DOUBLE" name="control_Kpdc" value="50"/>
+  </set>
+</parametersSet>

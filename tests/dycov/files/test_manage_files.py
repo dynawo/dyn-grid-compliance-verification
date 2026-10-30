@@ -26,15 +26,19 @@ from dycov.files.manage_files import (
     copy_from_path,
     create_config_file,
     create_dir,
+    discard_curves_set_aside,
     get_dynawo_version,
     get_latex_version,
     get_uv_version,
+    has_curves,
     list_directories,
     move_report,
     read_curves,
     remove_dir,
     rename_path,
+    set_curves_aside,
     should_copy,
+    take_curves_back,
 )
 
 # ---------------------------------------------------------------------------
@@ -532,6 +536,34 @@ def test_check_output_dir_no_overwrite(tmp_path):
     assert res is True
 
 
+def test_a_test_has_curves_when_its_file_and_its_dictionary_are_there(tmp_path):
+    _write_curves_ini(tmp_path)
+    _write_curve_pair(tmp_path, CANONICAL_NAME)
+
+    assert has_curves(tmp_path, CANONICAL_NAME) is True
+    assert has_curves(tmp_path, "PCS_RTE-I2.USetPointStep.BReactance") is False
+
+
+def test_a_test_has_the_curves_the_index_renames_for_it(tmp_path):
+    _write_curves_ini(tmp_path, "records/measured.csv")
+    _write_curve_pair(tmp_path / "records", "measured")
+
+    assert has_curves(tmp_path, CANONICAL_NAME) is True
+
+
+def test_a_curve_without_its_dictionary_is_no_curve(tmp_path):
+    _write_curves_ini(tmp_path)
+    (tmp_path / f"{CANONICAL_NAME}.csv").write_text("time;P\n0;1\n")
+
+    assert has_curves(tmp_path, CANONICAL_NAME) is False
+
+
+def test_a_directory_without_index_has_no_curves(tmp_path):
+    _write_curve_pair(tmp_path, CANONICAL_NAME)
+
+    assert has_curves(tmp_path, CANONICAL_NAME) is False
+
+
 def _given_revision(monkeypatch, revision, base="20240215"):
     """Config is frozen, so the double replaces the method on the class."""
     from dycov.configuration.cfg import Config
@@ -586,3 +618,50 @@ def test_the_base_revision_has_no_delta_directory(monkeypatch, tmp_path):
     assert (
         manage_files.dtr_delta_path(tmp_path / "templates" / "PCS" / "SM" / "PCS_RTE-I6") is None
     )
+
+
+def _results_with_curves() -> dict:
+    curves = pd.DataFrame({"time": [0.0, 0.001], "BusPDR_BUS_Voltage": [1.0, 0.99]})
+    return {
+        "compliance": True,
+        "curves": curves,
+        "reference_curves": curves * 2,
+        "curves_error": {"before": 0.0},
+    }
+
+
+def test_the_curves_of_a_test_wait_on_disk_until_its_report_takes_them_back(tmp_path):
+    results = _results_with_curves()
+
+    set_aside = set_curves_aside(results, tmp_path)
+
+    assert set(set_aside) == {"compliance", "curves_set_aside"}
+    assert set_aside["curves_set_aside"].exists()
+
+    taken_back = take_curves_back(set_aside)
+
+    assert not set_aside["curves_set_aside"].exists()
+    assert set(taken_back) == {"compliance", "curves", "reference_curves"}
+    pd.testing.assert_frame_equal(taken_back["curves"], results["curves"])
+    pd.testing.assert_frame_equal(taken_back["reference_curves"], results["reference_curves"])
+
+
+def test_a_test_without_curves_keeps_its_results_as_they_are(tmp_path):
+    failed = {"compliance": False, "curves": None}
+
+    assert set_curves_aside(failed, tmp_path) is failed
+    assert take_curves_back(failed) is failed
+    assert not list(tmp_path.iterdir())
+
+
+def test_the_curves_no_report_took_back_are_discarded(tmp_path):
+    first, second = tmp_path / "Bench" / "OC1", tmp_path / "Bench" / "OC2"
+    first.mkdir(parents=True)
+    second.mkdir()
+    take_curves_back(set_curves_aside(_results_with_curves(), first))
+    set_curves_aside(_results_with_curves(), second)
+
+    discard_curves_set_aside(tmp_path)
+
+    assert not list(first.iterdir())
+    assert not list(second.iterdir())

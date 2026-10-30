@@ -8,6 +8,7 @@
 #     demiguelm@aia.es
 #
 from pathlib import Path
+from typing import Optional
 
 from dycov.curves.curves import ProducerCurves
 from dycov.curves.dynawo.io.file_variables import FileVariables
@@ -40,6 +41,8 @@ class ParFile(FileVariables):
         tool_variables = [
             "line_XPu",
             "line_RPu",
+            "switched_line_XPu",
+            "switched_line_RPu",
             "infiniteBus_U0Pu",
             "bus_UNom",
             "gen_P0Pu",
@@ -68,6 +71,7 @@ class ParFile(FileVariables):
         event_params: dict,
         unom: float,
         pmax: float,
+        switched_line: Optional[complex] = None,
     ) -> None:
         """
         Replaces the file placeholders in the 'TSOModel.par' file with the corresponding values.
@@ -90,11 +94,17 @@ class ParFile(FileVariables):
         pmax: float
             The maximum active power of the plant in MW, negative when it consumes; the
             synchronous condenser of the islanding test is rated at its magnitude.
+        switched_line: Optional[complex]
+            The per unit impedance of the line a test of the short-circuit ratio switches, if
+            it has one.
         """
         variables_dict = replace_placeholders.get_all_variables(working_oc_dir, "TSOModel.par")
 
         variables_dict["line_XPu"] = line_xpu
         variables_dict["line_RPu"] = line_rpu
+        if switched_line is not None:
+            variables_dict["switched_line_XPu"] = switched_line.imag
+            variables_dict["switched_line_RPu"] = switched_line.real
 
         # 'infiniteBus_U0Pu' and 'gen_U0Pu' intentionally share 'tso_gen.u0'.
         variables_dict["infiniteBus_U0Pu"] = tso_gen.u0

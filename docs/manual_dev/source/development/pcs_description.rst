@@ -56,8 +56,9 @@ Value definitions
 -----------------
 
 Every quantity of the operating point and of the event is written as a
-*value definition*: a number in per unit, the name of a base magnitude, or
-``factor*Name`` with an optional sign:
+*value definition*: a number in per unit, the name of a base magnitude,
+``factor*Name`` with an optional sign, or ``factor*(Name+Name)``, a factor of a
+sum of magnitudes, as the DTR Fiche I18 writes its events:
 
 .. code-block:: ini
 
@@ -66,16 +67,24 @@ Every quantity of the operating point and of the event is written as a
    pdr_U = 1.05*Unom
    setpoint_step_value = 0.02*Udim
    line_XPu = 3*b
+   grid_phase_jump = 0.3*(Xeff+Xgrid)
 
 The base magnitudes, case-sensitive, are ``Pmax``, ``PmaxInjection``,
 ``PmaxConsumption``, ``Pmin``, ``Qmax``, ``Qmin`` and ``Snom`` (powers, in pu
 of the 100 MVA base of the simulation), ``Udim`` and ``Unom`` (voltages, in
 pu of the nominal voltage at the PDR), and ``line_XPu`` (the reactance
-computed for the operating condition). ``Pmax`` and its two aliases resolve to
-the same value; writing ``PmaxConsumption`` in ``pdr_P`` marks the operating
-condition as a consumption one, which flips the sign of every ``Pmax`` of
-that condition. A definition that names an unknown magnitude aborts the run,
-naming the file and line it was read from.
+computed for the operating condition). The tests of the Fiche I18 are sized
+by ``Xeff``, the effective reactance of a Grid Forming unit, which the INI file
+of ``Zone1/`` of the producer declares in its ``[GFM Parameters]`` section,
+and by ``Xgrid``, the short-circuit reactance of the grid of the operating
+condition (``1/SCR``, or that of its line when it gives no ``SCR``), both in
+pu of the nominal apparent power of the unit, the base the fiche adds them in;
+each one is only a magnitude when it is known. ``Pmax`` and its two aliases
+resolve to the same value; writing ``PmaxConsumption`` in ``pdr_P`` marks the
+operating condition as a consumption one, which flips the sign of every
+``Pmax`` of that condition. A definition that names an unknown magnitude ends
+the test that reads it as an invalid one, with an error naming the file and
+line it was read from.
 
 Voltage levels
 ^^^^^^^^^^^^^^
@@ -120,6 +129,12 @@ The PCS section
   Family of ``[GridCode]`` tolerances applied to the controlled magnitude of
   a setpoint test: absent for the I16 table, ``FT`` for the F16 one. See
   the *Compliance tests* chapter of the user manual.
+
+``only_with_reference_condition``
+  The condition under which the DTR asks for the operating conditions marked
+  ``only_with_reference``, in the few words the log quotes when one of them is
+  left out for lack of its reference curve: ``current limitation`` for the
+  version Type C/D of the Fiche I16.
 
 .. code-block:: ini
 
@@ -253,6 +268,20 @@ The operating-condition section
   *Not applicable*. ``Others`` applies to any model. It also selects the
   setpoint overlaid on the figures.
 
+``tracked_magnitude``
+  Magnitude the setpoint tracking test follows when the event steps no
+  setpoint, by the label of a compared curve (``active_current``,
+  ``reactive_current``, ``active_power``, ``reactive_power``, ``voltage``).
+  The tests of the Fiche I18 that the Fiche I16.2 simulates name it.
+
+``only_with_reference``
+  ``true`` when the DTR asks for the test only under a condition the tool does
+  not check on the model, which the producer then shows by delivering its
+  reference curve: the operating condition is run when that curve is
+  delivered, and left out of the verification otherwise. The Fiche I16.2 asks
+  for the tests of the Fiche I18 at OC2 and OC3, and at the others only when
+  they drive the unit into current limitation.
+
 The ``.Model`` section
 ^^^^^^^^^^^^^^^^^^^^^^
 
@@ -282,6 +311,15 @@ present the first of this list wins:
 ``SCR``
   Short-circuit ratio of an infinite grid, on the nominal power of the
   installation, with ``X / R = SCR_r_factor``. Used by I16 Zone 1.
+
+``switched_SCR``
+  With ``SCR``, the short-circuit ratio of the grid while the line that a jump
+  of the short-circuit ratio switches is in service: DyCoV sizes that line in
+  parallel with the one of ``SCR``. The grid models ``SCRStepUp_2Lines_InfBus``,
+  which closes it at the event, and ``SCRStepDown_2Lines_InfBus``, which opens
+  it, read it as ``{{switched_line_RPu}}`` and ``{{switched_line_XPu}}``; a line
+  held open from the start by a switch-off signal (``line_SwitchOffSignal20 =
+  true``) is left out of the initialization.
 
 ``Zcc``
   The short-circuit impedance of the voltage level (``HTB<n>_Scc`` of
@@ -380,6 +418,20 @@ The ``.Event`` section
   load of the island at the event, in pu of the 100 MVA base, positive for
   an increase.
 
+``grid_phase_jump``, ``grid_voltage_step``
+  Jump of the phase (rad) and step of the voltage (pu) of the infinite bus at
+  the event, as value definitions. They take no part in the tracking errors.
+
+``grid_frequency0``, ``grid_rocof``
+  Frequency of the infinite bus before the event (Hz) and its rate of change
+  during it (Hz/s), for ``fault_duration`` seconds, which the units take as
+  their frequency reference through the ``InfiniteBus`` Omega model. A unit
+  whose model has no input for that reference sees the frequency as the
+  rotation of the voltage of the infinite bus instead, whose phase then turns
+  with it. Dynawo initialises a model at the nominal frequency, so the grid
+  reaches ``grid_frequency0`` with a ramp over the first half of the time
+  before the event.
+
 The validation sections
 ^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -413,7 +465,14 @@ placeholders DyCoV fills from the configuration: ``simulation_start`` and
 ``simulation_stop`` from ``[Dynawo]``; ``start_event`` and ``end_event``
 from the event; ``bus_u0pu`` (the initial voltage) and ``bus_upu`` (after a
 grid voltage step) from the initialization; ``u_fault``, ``u_clear``,
-``delta_t_rec1/2/3`` and the ``Xv_*`` reactances from the ``.Model`` keys.
+``delta_t_rec1/2/3`` and the ``Xv_*`` reactances from the ``.Model`` keys;
+``bus_uphase``, ``bus_omega0pu``, ``bus_omegapu`` and
+``end_frequency_settling`` from the ``grid_*`` keys of the event.
+The grid model ``GridVWDisturbance_1Line_InfBusFromTab`` ships a table of its
+own, which steps the voltage and its phase and ramps the frequency as those
+keys ask, and holds the grid still without them; a table of the benchmark
+replaces it. ``SCRStepUp_2Lines_InfBus`` ships ``TableSwitchedLine.txt``, the
+switch-off signal that holds its switched line open until the event.
 Two rows at the same instant with different values are turned into a short
 transition of ``transition_points`` rows over ``transition_half_width``
 seconds (``[Dynawo]``).

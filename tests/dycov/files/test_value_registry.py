@@ -34,7 +34,9 @@ def test_extract_defined_value_errors():
             value_registry.extract_defined_value(invalid, "p", 1)
 
 
-def _producer(p_max_pu=0.8, p_min_pu=0.1, q_max_pu=0.5, q_min_pu=-0.5, s_nom_pu=1.8, u_nom=20.0):
+def _producer(
+    p_max_pu=0.8, p_min_pu=0.1, q_max_pu=0.5, q_min_pu=-0.5, s_nom_pu=1.8, u_nom=20.0, x_eff=None
+):
     return SimpleNamespace(
         p_max_pu=p_max_pu,
         p_min_pu=p_min_pu,
@@ -42,6 +44,7 @@ def _producer(p_max_pu=0.8, p_min_pu=0.1, q_max_pu=0.5, q_min_pu=-0.5, s_nom_pu=
         q_min_pu=q_min_pu,
         s_nom_pu=s_nom_pu,
         u_nom=u_nom,
+        x_eff=x_eff,
     )
 
 
@@ -134,3 +137,56 @@ def test_resolve_value_definition_errors_point_to_the_configuration_option(monke
             value_registry.resolve_value_definition(invalid, chars, origin=("PCS.Model", "pdr_P"))
 
         assert _OPTION_LOCATION in str(error.value)
+
+
+def test_the_reactances_of_the_grid_forming_tests_are_there_only_when_known():
+    assert "Xeff" not in value_registry.unit_characteristics(_producer(), u_dim=20.0)
+    assert "Xgrid" not in value_registry.unit_characteristics(_producer(), u_dim=20.0)
+
+    chars = value_registry.unit_characteristics(_producer(x_eff=0.27), u_dim=20.0, x_grid=0.1)
+
+    assert chars["Xeff"] == pytest.approx(0.27)
+    assert chars["Xgrid"] == pytest.approx(0.1)
+
+
+@pytest.mark.parametrize(
+    "definition, expected",
+    [
+        ("0.3*(Xeff+Xgrid)", 0.3 * 0.37),
+        ("-0.15*(Xeff + Xgrid)", -0.15 * 0.37),
+        ("(Xeff+Xgrid)", 0.37),
+        ("-(Xeff+Xgrid)", -0.37),
+    ],
+)
+def test_an_event_of_the_fiche_i18_is_sized_by_a_sum_of_magnitudes(definition, expected):
+    chars = value_registry.unit_characteristics(_producer(x_eff=0.27), u_dim=20.0, x_grid=0.1)
+
+    assert value_registry.resolve_value_definition(definition, chars) == pytest.approx(expected)
+
+
+def test_a_sum_naming_a_reactance_the_producer_does_not_declare_says_where_it_goes():
+    chars = value_registry.unit_characteristics(_producer(), u_dim=20.0, x_grid=0.1)
+
+    with pytest.raises(ValueError) as error:
+        value_registry.resolve_value_definition("0.3*(Xeff+Xgrid)", chars)
+
+    assert "names 'Xeff'" in str(error.value)
+    assert "Zone1/" in str(error.value)
+    assert "[GFM Parameters]" in str(error.value)
+
+
+def test_a_sum_naming_an_unknown_magnitude_names_it():
+    chars = value_registry.unit_characteristics(_producer(x_eff=0.27), u_dim=20.0, x_grid=0.1)
+
+    with pytest.raises(ValueError) as error:
+        value_registry.resolve_value_definition("0.3*(Xeff+Xgird)", chars)
+
+    assert "Unknown magnitude 'Xgird'" in str(error.value)
+
+
+def test_a_sum_is_only_accepted_in_parentheses():
+    chars = value_registry.unit_characteristics(_producer(x_eff=0.27), u_dim=20.0, x_grid=0.1)
+
+    for invalid in ("0.3*Xeff+Xgrid", "0.3*(Xeff)", "0.3*(Xeff-Xgrid)", "(Xeff+Xgrid)*0.3"):
+        with pytest.raises(ValueError):
+            value_registry.resolve_value_definition(invalid, chars)

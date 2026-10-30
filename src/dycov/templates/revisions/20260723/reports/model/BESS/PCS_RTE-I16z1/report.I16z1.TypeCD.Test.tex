@@ -1,0 +1,236 @@
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Fiche I16.2 test %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    % A page shared by every test of the Zone 1 of the version Type C/D, which reads the conditions
+    % of the test from its PCS description, and lays the error tables out for the windows the
+    % test has: before and after its event, and during it when it lasts.
+    {{ waterMarkText }}
+
+    % The names of the tests of the Fiche I18 hold underscores, which detokenize makes printable
+    % without changing the names of the figures they lead to
+    \renewcommand{\DTRPcs}{\detokenize{%
+{{ benchmark }}%
+}}
+    \renewcommand{\PCSname}{PCS_RTE-I16z1}
+    \renewcommand{\OCname}{\detokenize{%
+{{ operatingcondition }}%
+}}
+
+    \BLOCK{ set lasting = rm|length > 0 and rm[0]|length > 7 }
+
+    \subsection{Test \texttt{%
+{{ benchmark|replace('_', '\\_') }}.{{ operatingcondition|replace('_', '\\_') }}%
+}}
+
+    \BLOCK{ if benchmark == 'SetPointStep' }
+    Checks for compliant behavior of the generating unit under a step of one of its setpoints,
+    on a grid of short-circuit ratio 2, as the version Type C/D of the Fiche I16 asks.
+    \GridCircuitZoneSetPoint
+    \BLOCK{ elif benchmark.startswith('S_Fault') }
+    Checks for compliant behavior of the generating unit under the three-phase fault of this
+    test of the Fiche I18 (Grid Forming), which the version Type C/D of the Fiche I16 simulates.
+    \GridCircuitZoneFault
+    \BLOCK{ elif benchmark.startswith('S_SCR') }
+    Checks for compliant behavior of the generating unit under the jump of the short-circuit
+    ratio of this test of the Fiche I18 (Grid Forming), which the version Type C/D of the Fiche I16
+    simulates. The response is tracked on the {{ trackedmagnitude }}, the magnitude the Fiche I18
+    bounds with envelopes.
+    \BLOCK{ if benchmark == 'S_SCRup1' }
+    \GridCircuitZoneSwitchedLine{, out of service before the event, closes at it}{%
+circuit_z1_switched_line_closes.tikz}
+    \BLOCK{ else }
+    \GridCircuitZoneSwitchedLine{, in service before the event, opens at it}{%
+circuit_z1_switched_line_opens.tikz}
+    \BLOCK{ endif }
+    \BLOCK{ else }
+    Checks for compliant behavior of the generating unit under the event of the grid of this
+    test of the Fiche I18 (Grid Forming), which the version Type C/D of the Fiche I16 simulates.
+    The response is tracked on the {{ trackedmagnitude }}, the magnitude the Fiche I18 bounds with
+    envelopes.
+    \GridCircuitZoneSetPoint
+    \BLOCK{ endif }
+
+    \begin{description}
+        \item Conditions of the test, as its PCS description defines them (the operating point
+        at InternalNode1):
+    \end{description}
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+            \textbf{Condition} & \textbf{Definition} \\
+            \midrule
+            \BLOCK{for row in conditions}
+            {{row[0]}}         & {{row[1]}}          \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \subsubsection{Simulation parameters}
+
+    Solver and parameters used in the simulation:
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+           \textbf{Parameter} & \textbf{Value (default)} \\
+            \midrule
+            \BLOCK{for row in solver}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \GridSimulationHeaderZone{
+        \GridCurvesDescriptionNodeOne
+    }
+    \GridCurvesNodeOne
+    \\[2\baselineskip]
+    Go to  {{ link }}
+
+    \subsubsection{Analysis of results}
+
+    \noindent Dynamic behaviour: {{ stabilized }}
+
+    \noindent Analysis of results for PCS \DTRPcs. Values extracted
+    from the simulation:
+    \begin{center}
+        \scriptsize
+        \BLOCK{ if lasting }
+        \begin{tabular}{@{}lccccccccc@{}}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Post-event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in rm}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+        \BLOCK{ else }
+        \begin{tabular}{lcccccc}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Post-event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in rm}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+        \BLOCK{ endif }
+    \end{center}
+
+    \subsubsection{Compliance checks}
+
+    {{ missedColumns }}
+
+    \noindent Compliance thresholds on the curves:
+    \begin{center}
+        \scriptsize
+        \BLOCK{ if lasting }
+        \begin{tabular}{@{}lccccccccc@{}}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Post-event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in thm}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+        \BLOCK{ else }
+        \begin{tabular}{lcccccc}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Post-event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in thm}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+        \BLOCK{ endif }
+    \end{center}
+
+    \noindent Compliance checks on the curves:
+    \begin{center}
+        \scriptsize
+        \BLOCK{ if lasting }
+        \begin{tabular}{@{}lcccccccccc@{}}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Post-event} & \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.      \\
+            \midrule
+            \BLOCK{for row in em}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} & {{row[10]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+        \BLOCK{ else }
+        \begin{tabular}{lccccccc}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Post-event} & \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.     \\
+            \midrule
+            \BLOCK{for row in em}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+        \BLOCK{ endif }
+    \end{center}
+
+    \BLOCK{ if tem|length > 0 }
+    \noindent Compliance checks on the step-response characteristic: \\
+    \begin{minipage}{\linewidth} % because otherwise, the footnote does not show
+        \centering
+        \scriptsize
+        \begin{tabular}{lccccc}
+            \toprule
+            Step-response indicator & Simulated  & Reference  & Rel. Err. (\%) & Threshold (\%) & Compl.     \\
+            \midrule
+            \BLOCK{for row in tem}
+            {{row[0]}}              & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{minipage}
+    \BLOCK{ endif }
+
+    \BLOCK{ if apr|length > 0 }
+    \noindent Compliance checks on the Active Power Recovery:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{cllc}
+            \toprule
+            Variable   & Error      & Threshold   & Check      \\
+            \midrule
+            \BLOCK{for row in apr}
+            {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+    \BLOCK{ endif }
+
+    \noindent In steady state after the event, the absolute average error must not exceed {{steadystatethreshold}}\% (configured value):
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{cllc}
+            \toprule
+            Variable   & MAE        & Final Error & Compliance \\
+            \midrule
+            \BLOCK{for row in ssem}
+            {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}

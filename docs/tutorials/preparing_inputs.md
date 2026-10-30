@@ -367,6 +367,21 @@ Inputs must therefore explicitly distinguish between these two zones. The
 limited with `-p` to a PCS of zone 3 (`PCS_RTE-I16z3`, or the tests declared
 for `PCS_RTE-F16z3`) accepts a `Dynawo/` directory with `Zone3/` alone.
 
+The INI file of `Zone3/` describes the complete installation, so its connection
+voltage and its maximum power at injection give the installation the category,
+A to D, the DTR defines. From the revision of the DTR of 20260723, a storage
+installation of type C or D is validated against another version of PCS‑I16,
+and the category is all DyCoV needs to choose it: nothing is declared for it.
+That version simulates the tests of the Fiche I18 in Zone 1, whose phase jumps
+and voltage steps are sized by the effective reactance of the unit, which the
+INI file of `Zone1/` declares in pu of the nominal apparent power of the unit:
+
+```ini
+[GFM Parameters]
+# Effective reactance of the Grid Forming unit
+Xeff = 0.2
+```
+
 This impacts both the Dynawo‑based workflow
 and the producer‑curve‑based workflow.
 

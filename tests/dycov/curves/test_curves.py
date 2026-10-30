@@ -17,7 +17,9 @@ from dycov.curves.curves import ProducerCurves
 from dycov.files import value_registry
 
 
-def _producer(p_max_pu=0.8, q_max_pu=0.5, q_min_pu=-0.5, s_nom_pu=1.8, u_nom=20.0, zone=3):
+def _producer(
+    p_max_pu=0.8, q_max_pu=0.5, q_min_pu=-0.5, s_nom_pu=1.8, u_nom=20.0, zone=3, x_eff=None
+):
     return SimpleNamespace(
         p_max_pu=p_max_pu,
         p_min_pu=0.1,
@@ -25,6 +27,7 @@ def _producer(p_max_pu=0.8, q_max_pu=0.5, q_min_pu=-0.5, s_nom_pu=1.8, u_nom=20.
         q_min_pu=q_min_pu,
         s_nom_pu=s_nom_pu,
         u_nom=u_nom,
+        x_eff=x_eff,
         get_zone=lambda: zone,
     )
 
@@ -32,10 +35,11 @@ def _producer(p_max_pu=0.8, q_max_pu=0.5, q_min_pu=-0.5, s_nom_pu=1.8, u_nom=20.
 class _Curves(ProducerCurves):
     """Concrete ProducerCurves exercising the real value-definition helpers."""
 
-    def __init__(self, producer, u_dim=20.0, line_Xpu=0.0):
+    def __init__(self, producer, u_dim=20.0, line_Xpu=0.0, x_grid=None):
         self._producer = producer
         self._u_dim = u_dim
         self._line_Xpu = line_Xpu
+        self._x_grid = x_grid
         self._s_nref = 100.0
 
     def get_producer(self):
@@ -113,6 +117,15 @@ def test_obtain_value_names_the_configuration_option(monkeypatch):
         curves.obtain_value("0.5*Pnom", origin=("PCS1.BM1.OC1.Event", "setpoint_step_value"))
 
     assert "'setpoint_step_value' in section [PCS1.BM1.OC1.Event]" in str(error.value)
+
+
+@pytest.mark.parametrize("definition", ["0.3*(Xeff+Xgrid)", "(Xeff+Xgrid)"])
+def test_obtain_value_sizes_an_event_with_the_reactances_of_the_test(definition):
+    curves = _Curves(_producer(x_eff=0.27))
+    curves.complete_unit_characteristics(0.05, x_grid=0.1)
+
+    multiplier = 0.3 if "*" in definition else 1.0
+    assert curves.obtain_value(definition) == pytest.approx(multiplier * 0.37)
 
 
 @pytest.mark.parametrize("opaque", ["SomeSolverName", "KLU", "True", "2", "-1", "1e-6"])

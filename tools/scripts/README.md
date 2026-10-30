@@ -21,7 +21,7 @@
 
 # `test_tool.sh` — Integration Runner for **dycov**
 
-This script orchestrates automated runs of **dycov** to **validate models**, **verify performance**, and **generate envelopes** across the project’s examples. It supports filtering by **IEC** and **WECC** families, controls input/output locations, and runs tasks **in parallel** to speed up execution. At the end of the run, it also **summarizes Overall Result counts** and produces CSV and optional charts.
+This script orchestrates automated runs of **dycov** to **validate models**, **verify performance**, and **generate envelopes** across the project’s examples. It supports filtering by **IEC**, **WECC** and **Grid Forming** families, controls input/output locations, and runs tasks **in parallel** to speed up execution. At the end of the run, it also **summarizes Overall Result counts** and produces CSV and optional charts.
 
 > **Path:** `tools/scripts/test_tool.sh`  
 > **Phases:**
@@ -55,7 +55,7 @@ tools/scripts/test_tool.sh
 
 Running with **no options** will:
 
-*   Include both **IEC** and **WECC** models (defaults).
+*   Include the **IEC**, **WECC** and **Grid Forming** models (defaults).
 *   Run **Validation + Performance + Envelope Generation** (all enabled by default).
 *   Use `./examples` as input and `../Results` as output.
 *   Write the run log to `../Results/test_tool.log`.
@@ -72,8 +72,9 @@ Running with **no options** will:
 -o, --output <path>     Output/results path (default: ../Results)
 -r, --remove            Remove the output path if it exists (clean run)
 
---iec                   Include only IEC families (disables WECC)
---wecc                  Include only WECC families (disables IEC)
+--iec                   Include only IEC families (disables WECC and GFM)
+--wecc                  Include only WECC families (disables IEC and GFM)
+--gfm                   Include only Grid Forming families (disables IEC and WECC)
 
 -v, --validate          Run only the Model Validation
 -p, --performance       Run only the Electrical Performance Verification
@@ -84,8 +85,8 @@ Running with **no options** will:
 
 ### Defaults & interactions
 
-*   Defaults: `iec_models=true`, `wecc_models=true`, `validate=true`, `performance=true`, `generate=true`.
-*   `--iec` disables WECC; `--wecc` disables IEC.
+*   Defaults: `iec_models=true`, `wecc_models=true`, `gfm_models=true`, `validate=true`, `performance=true`, `generate=true`.
+*   `--iec`, `--wecc` and `--gfm` each keep only their own family.
 *   Phase selectors are **exclusive**: choosing one sets the other two to `false`.
 *   `--remove` cleans the output dir before the run.
 
@@ -99,6 +100,7 @@ Running with **no options** will:
 *   **WECC Wind**: `WECC31`, `WECC32`, `WECC4A`, `WECC4B` (`WECC4`, the multi-generator example, is not usable yet and is left out)
 *   **WECC PV**: `WECCCurrentSource`, `WECCVoltageSource1`, `WECCVoltageSource2`, `WECCVoltageSource3`, `WECCVoltageSource4`
 *   **WECC BESS**: `WECC`
+*   **Grid Forming BESS**: `GridFormingDroop` and `GridFormingEpri`, installations of type C validated against the Fiche I16.2: their Zone 1 unit is the droop and the EPRI Grid Forming converter of Dynawo, and their Zone 3 a WECC storage plant of 40 MW at 225 kV, the size that makes them type C
 *   Paths per model:
     *   Input: `${examples_path}/Model/<Family>/<Model>/Dynawo`
     *   References: `${examples_path}/Model/<Family>/<Model>/ReferenceCurves`
@@ -145,7 +147,7 @@ Running with **no options** will:
 ## 6) Examples
 
 ```bash
-# Full run (IEC + WECC; all validations; default paths)
+# Full run (IEC + WECC + Grid Forming; all validations; default paths)
 tools/scripts/test_tool.sh
 
 # Clean run (remove previous results, then run everything)

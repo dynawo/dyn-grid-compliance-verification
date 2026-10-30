@@ -9,7 +9,7 @@ through the tool.
 
 The configuration is written in the standard INI format
 (`Python flavor <https://docs.python.org/3/library/configparser.html>`_)
-and organized into five layers, in decreasing order of priority:
+and organized into six layers, in decreasing order of priority:
 
 1. **User PCS Description** — the ``PCSDescription.ini`` the user writes under
    ``~/.config/dycov/templates/PCS/``, or delivers with the reference curves of
@@ -18,17 +18,32 @@ and organized into five layers, in decreasing order of priority:
    most specific file, it takes precedence over everything else.
 2. **User Configuration** — settings provided by the user in
    ``~/.config/dycov/config.ini``.
-3. **DTR Revision** — the PCS description of a selected DTR revision. This
-   layer is not populated yet.
+3. **DTR Revision of the PCS** — what the selected revision of the DTR writes
+   for the PCS, under ``src/dycov/templates/revisions/<YYYYMMDD>/PCS/``: the
+   delta of its description, and the version of the fiche the revision gives
+   some categories of unit, when it gives one. That version is a
+   ``Type<categories>.ini`` in the directory of the delta, which patches the
+   description the revision gives the PCS for the categories it names:
+   ``TypeCD.ini`` of ``PCS_RTE-I16z1`` and ``PCS_RTE-I16z3`` in the revision
+   ``20260723``, the Fiche I16.2 of a storage installation of type C or D.
+   The category is the one the DTR gives the installation, from the
+   connection voltage and the maximum power at injection of the Zone 3 INI
+   file of a model validation. The base revision has no delta, and so no
+   version either.
 4. :ref:`PCS Configuration <pcsconf>` — settings defined per PCS in
    ``src/dycov/templates/PCS/``. These should only be modified when a DTR
    update changes the PCS definition.
-5. :ref:`Tool Configuration <toolconf>` — global defaults in
+5. **DTR Revision** — what the selected revision writes outside any PCS, one
+   ``revision_art_<article>.ini`` per article of the DTR it changes.
+6. :ref:`Tool Configuration <toolconf>` — global defaults in
    ``src/dycov/configuration/defaultConfig.ini``. These should only be
    modified when a DTR update changes global conditions.
 
 Each file lands in the layer of its origin, so which one wins is a matter of
-precedence and never of the order in which the files happen to be read.
+precedence and never of the order in which the files happen to be read. The
+version of a fiche by category is the one exception: it is part of what its
+revision writes for the PCS, so it shares the layer of the delta, and the tool
+reads it after the delta, which it patches.
 
 
 How the layers combine
@@ -408,6 +423,15 @@ Signal processing parameters:
   detection. A signal is in steady state when it enters this band and stays
   inside it until the end of the simulation; the band never narrows below
   ``thr_ss_tol`` of the nominal 1 pu magnitude.
+
+Compared curves:
+
+* ``zone1_compared_at_node1`` — ``true`` (default ``false``) when a fiche
+  observes the references of Zone 1 at InternalNode1 alone, the output of the
+  unit after its transformer: Zone 1 then compares the voltage, the active and
+  reactive power and the active and reactive current there, instead of the six
+  curves every other Zone 1 compares. The version Type C/D of the Fiche I16
+  (Fiche I16.2) sets it, since its references are the results of the Fiche I18.
 
 Step-response time characteristic thresholds:
 

@@ -7,6 +7,7 @@
 # omsg@aia.es
 # demiguelm@aia.es
 #
+import cmath
 import math
 from pathlib import Path
 from typing import Optional
@@ -21,7 +22,7 @@ from dycov.curves.dynawo.io.par import ParFile
 from dycov.curves.dynawo.io.solvers import SolversFile
 from dycov.curves.dynawo.io.table import TableFile
 from dycov.electrical.generator_variables import generator_variables
-from dycov.electrical.initialization_calcs import init_calcs
+from dycov.electrical.initialization_calcs import behind_series_impedance, init_calcs
 from dycov.electrical.pimodel_parameters import line_pimodel
 from dycov.files import (
     omega_file,
@@ -95,6 +96,7 @@ class ModelSetup:
         # DynawoCurves can read them after the call.
         self.tso_loads: list = []
         self.has_line: bool = False
+        self.switched_line: Optional[complex] = None
         self.curves_dict: dict = {}
         self.pdr: Optional[PdrParams] = None
 
@@ -147,7 +149,9 @@ class ModelSetup:
         config_section = self._cfg_section(pcs_name, bm_name, oc_name, ".Model")
         line_rpu = 0.0
         line_xpu = 0.0
+        x_grid = None
         self.has_line = False
+        self.switched_line = None
         producer = self._owner.get_producer()
 
         if config.has_option(config_section, "line_XPu"):
@@ -185,6 +189,10 @@ class ModelSetup:
                 line_rpu, line_xpu = compute_rx_from_scr(scr, x_over_r=scr_r_factor)
                 line_rpu *= self._s_nref / producer.s_nom
                 line_xpu *= self._s_nref / producer.s_nom
+                x_grid = 1 / scr
+            self.switched_line = self._get_switched_line(
+                config_section, complex(line_rpu, line_xpu), scr_r_factor
+            )
 
         elif config.has_option(config_section, "Zcc"):
             self.has_line = True
@@ -201,8 +209,31 @@ class ModelSetup:
                 line_xpu = ztanphi * zcc / math.sqrt(1 + ztanphi * ztanphi)
                 line_rpu = line_xpu / ztanphi
 
-        self._owner.complete_unit_characteristics(line_xpu)
+        if self.has_line and x_grid is None:
+            x_grid = line_xpu * producer.s_nom / self._s_nref
+        self._owner.complete_unit_characteristics(line_xpu, x_grid)
         return line_rpu, line_xpu
+
+    def _get_switched_line(
+        self, config_section: str, line_zpu: complex, x_over_r: float
+    ) -> Optional[complex]:
+        """
+        The impedance of the line a test of the short-circuit ratio switches, in parallel with
+        that of the grid, which brings the grid to the ``switched_SCR`` of the test while it
+        is in service.
+
+        Returns
+        -------
+        Optional[complex]
+            The impedance (base SnRef), None when the test switches no line.
+        """
+        if not config.has_option(config_section, "switched_SCR"):
+            return None
+        switched_scr = config.get_float(config_section, "switched_SCR", 0.0)
+        dycov_logging.get_logger("ModelSetup").debug(f"\tswitched_SCR={switched_scr}")
+        r_pu, x_pu = compute_rx_from_scr(switched_scr, x_over_r=x_over_r)
+        both_zpu = complex(r_pu, x_pu) * self._s_nref / self._owner.get_producer().s_nom
+        return line_zpu * both_zpu / (line_zpu - both_zpu)
 
     # ------------------------------------------------------------------
     # PDR and load parameters
@@ -466,7 +497,7 @@ class ModelSetup:
                     (
                         -pdr.p * self._s_nref / gen.s_nom
                         if not gen.ppc_local
-                        else -gen.terminals[0].p0 * self._s_nref / gen.s_nom
+                        else self._reference_operating_point(gen)[0].real
                     )
                     for gen in producer.generators
                 ]
@@ -475,13 +506,13 @@ class ModelSetup:
                     (
                         -pdr.q * self._s_nref / gen.s_nom
                         if not gen.ppc_local
-                        else -gen.terminals[0].q0 * self._s_nref / gen.s_nom
+                        else self._reference_operating_point(gen)[0].imag
                     )
                     for gen in producer.generators
                 ]
             elif connect_event_to == "VoltageSetpointPu":
                 pre_value = [
-                    (pdr.u if not gen.ppc_local else gen.terminals[0].u0)
+                    (pdr.u if not gen.ppc_local else self._reference_operating_point(gen)[1])
                     for gen in producer.generators
                 ]
 
@@ -513,8 +544,19 @@ class ModelSetup:
             "connect_to": connect_event_to,
         }
 
+    def _reference_operating_point(self, gen: GenParams) -> tuple[complex, float]:
+        """The power (base SNom, generator convention) and the voltage (base UNom) of a unit
+        where it takes its references."""
+        terminal = gen.terminals[0]
+        v, s = behind_series_impedance(
+            cmath.rect(terminal.u0, terminal.u_phase0),
+            -complex(terminal.p0, terminal.q0) * self._s_nref / gen.s_nom,
+            gen.reference_impedance,
+        )
+        return s, abs(v)
+
     def _resolve_pre_value(self, gen: GenParams, pdr: PdrParams) -> float:
-        base_u = gen.terminals[0].u0 if gen.ppc_local else pdr.u
+        base_u = self._reference_operating_point(gen)[1] if gen.ppc_local else pdr.u
         base_q = gen.terminals[0].q0 if gen.ppc_local else pdr.q
 
         if not gen.use_voltage_droop:
@@ -654,6 +696,7 @@ class ModelSetup:
                 working_oc_dir / _TSO_PAR,
                 line_rpu,
                 line_xpu,
+                self.switched_line,
             )
 
         conn_line = self._get_lines_for_initial_calcs(tso_lines)
@@ -734,6 +777,7 @@ class ModelSetup:
             event_params,
             producer.u_nom,
             producer.p_max_pu * self._s_nref,
+            self.switched_line,
         )
         self._dyd_file.complete_file(working_oc_dir, event_params)
         self._table_file.complete_file(working_oc_dir, tso_gen, event_params)

@@ -92,6 +92,7 @@ class ModelProducer(Producer):
 
         self._filename = None
         self._sim_type = None
+        self._installation_category = None
 
         dycov_logging.get_logger("Producer").debug("Initializing Producer:")
         if self._is_dynawo_model:
@@ -251,6 +252,29 @@ class ModelProducer(Producer):
         else:
             raise ValueError("Model validation does not support the modeled generator type")
 
+        self._installation_category = self.__read_installation_category()
+
+    def __read_installation_category(self) -> str:
+        """Reads the category of the installation, as the DTR defines it, from the INI file of
+        its Zone 3, which describes the complete installation.
+
+        Returns
+        -------
+        str
+            The category of the installation: A, B, C or D.
+        """
+        zone, self._zone = self._zone, 3
+        producer_config = self.__read_producer_ini()
+        self._zone = zone
+        _check_parameters_definition(
+            producer_config, "DEFAULT", self._sim_type == MODEL_VALIDATION_BESS
+        )
+        return generator_variables.get_generator_category(
+            float(producer_config.get("DEFAULT", "u_nom")),
+            float(producer_config.get("DEFAULT", "p_max_injection")),
+            self._sim_type == MODEL_VALIDATION_BESS,
+        )
+
     def __set_dynawo_model_validation_type(self):
         self._zone = 1
         generators_z1 = list()
@@ -372,6 +396,7 @@ class ModelProducer(Producer):
         self.u_nom = float(producer_config.get(default_section, "u_nom"))
         self.topology = producer_config.get(default_section, "topology")
         self.s_nom = float(producer_config.get(default_section, "s_nom", fallback=self._s_nref))
+        self.x_eff = producer_config.getfloat("GFM Parameters", "Xeff", fallback=None)
 
     def __init_model(self) -> None:
         """Initializes the Producer-dependent model."""

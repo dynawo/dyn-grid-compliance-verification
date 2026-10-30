@@ -262,6 +262,28 @@ class Translator:
 
         return sign, translated_name
 
+    def get_stated_flag(self, lib: str, name: str) -> Optional[bool]:
+        """
+        Gets the value the dictionary states for a flag that no parameter of the model holds.
+
+        Parameters
+        ----------
+        lib: str
+            The Dynawo dynamic model name.
+        name: str
+            The tool's name of the flag (e.g., "ConverterLVControl").
+
+        Returns
+        -------
+        Optional[bool]
+            The flag, when the dictionary gives it ``true`` or ``false`` instead of naming the
+            parameter that holds it; None otherwise.
+        """
+        _, translated_name = self.get_dynawo_variable(lib, name)
+        if translated_name is None:
+            return None
+        return {"true": True, "false": False}.get(translated_name.lower())
+
     def get_curve_variable(self, equipment_id: str, lib: str, name: str) -> Optional[str]:
         """
         Gets the Dynawo curve name for a given equipment and variable.

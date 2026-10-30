@@ -33,11 +33,13 @@ def _make_gen(
     voltage_droop: float = 0.0,
     s_nom: float = 100.0,
     ppc_local: bool = True,
+    reference_impedance: complex = 0j,
 ) -> MagicMock:
     terminal = MagicMock()
     terminal.p0 = p0
     terminal.q0 = q0
     terminal.u0 = u0
+    terminal.u_phase0 = 0.0
     terminal.connected_equipment = "XFMR1"
     gen = MagicMock()
     gen.terminals = [terminal]
@@ -45,6 +47,7 @@ def _make_gen(
     gen.voltage_droop = voltage_droop
     gen.s_nom = s_nom
     gen.ppc_local = ppc_local
+    gen.reference_impedance = reference_impedance
     return gen
 
 
@@ -316,6 +319,30 @@ class TestGetEventParameters:
         # pre_value = -(-0.8) * (100/100) = 0.8
         assert result["pre_value"] == [pytest.approx(0.8)]
         assert result["connect_to"] == "ActivePowerSetpointPu"
+
+    @pytest.mark.parametrize(
+        "connect_to, expected",
+        [
+            ("ActivePowerSetpointPu", 0.9 + 0.01 * 0.81),
+            ("ReactivePowerSetpointPu", 0.2 * 0.81),
+            ("VoltageSetpointPu", abs(1.0 + (0.01 + 0.2j) * 0.9)),
+        ],
+    )
+    @patch(f"{_MS}.generator_variables")
+    @patch(f"{_MS}.config")
+    def test_a_unit_with_its_references_behind_its_transformer_starts_them_there(
+        self, mock_config, mock_gv, connect_to, expected
+    ):
+        gen = _make_gen(p0=-0.9, q0=0.0, s_nom=100.0, reference_impedance=0.01 + 0.2j)
+        owner = _make_owner(_make_producer(s_nom=100.0, generators=[gen]))
+        setup = _make_setup(owner, s_nref=100.0)
+        self._setup_config(mock_config, connect_to=connect_to)
+
+        result = setup._get_event_parameters(
+            "PCS1", "BM1", "OC1", pdr=PdrParams(1.0, 0.0, complex(-0.9, 0.0), -0.9, 0.0)
+        )
+
+        assert result["pre_value"] == [pytest.approx(expected)]
 
     @patch(f"{_MS}.generator_variables")
     @patch(f"{_MS}.config")
@@ -605,6 +632,37 @@ class TestGetLine:
         assert rpu == 0.0
 
     @patch(f"{_MS}.config")
+    def test_the_grid_reactance_of_a_scr_is_its_inverse(self, mock_config):
+        mock_config.has_option.side_effect = lambda section, key: key == "SCR"
+        mock_config.get_float.side_effect = lambda s, k, d=None: {
+            "SCR": 10.0,
+            "SCR_r_factor": 10.0,
+        }.get(k, d)
+        setup = _make_setup()
+
+        setup._get_line("PCS1", "BM1", "OC1")
+
+        _, x_grid = setup._owner.complete_unit_characteristics.call_args.args
+        assert x_grid == pytest.approx(0.1)
+        assert setup.switched_line is None
+
+    @patch(f"{_MS}.config")
+    def test_the_switched_line_brings_the_grid_to_its_short_circuit_ratio(self, mock_config):
+        mock_config.has_option.side_effect = lambda section, key: key in ("SCR", "switched_SCR")
+        mock_config.get_float.side_effect = lambda s, k, d=None: {
+            "SCR": 2.0,
+            "switched_SCR": 20.0,
+            "SCR_r_factor": 10.0,
+        }.get(k, d)
+        setup = _make_setup()
+
+        line_rpu, line_xpu = setup._get_line("PCS1", "BM1", "OC1")
+
+        line = complex(line_rpu, line_xpu)
+        both = line * setup.switched_line / (line + setup.switched_line)
+        assert abs(both) == pytest.approx(1 / 20.0)
+
+    @patch(f"{_MS}.config")
     def test_complete_unit_characteristics_called(self, mock_config):
         def has_option(section, key):
             return key == "line_XPu"
@@ -613,7 +671,9 @@ class TestGetLine:
         mock_config.get_value.return_value = "0.2"
         setup = _make_setup()
         setup._get_line("PCS1", "BM1", "OC1")
-        setup._owner.complete_unit_characteristics.assert_called_once_with(pytest.approx(0.2))
+        setup._owner.complete_unit_characteristics.assert_called_once_with(
+            pytest.approx(0.2), pytest.approx(0.2 * 100.0 / 100.0)
+        )
 
 
 # ---------------------------------------------------------------------------

@@ -50,7 +50,7 @@ require_repo_root
 examples_path="./examples"
 write_inputs="python3 $script_dir/example_inputs.py"
 
-declare -a examples=("${MODEL_EXAMPLES_IEC[@]}" "${MODEL_EXAMPLES_WECC[@]}")
+declare -a examples=("${MODEL_EXAMPLES_IEC[@]}" "${MODEL_EXAMPLES_WECC[@]}" "${MODEL_EXAMPLES_GFM[@]}")
 
 for example in "${examples[@]}"; do
     case "$example" in

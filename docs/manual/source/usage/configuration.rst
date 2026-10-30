@@ -43,8 +43,10 @@ The ``[DTR]`` section holds it:
   in silence.
 
 ``--dtr <YYYYMMDD>`` overrides ``current`` for one execution, so the same
-producer runs against two revisions one after the other. Only the criteria
-change, so the curves need no regeneration.
+producer runs against two revisions one after the other. The curves of a test
+both revisions share need no regeneration; a test one of them adds or changes,
+such as those of the Fiche I16.2 of a storage installation of type C or D under
+the revision 20260723, needs reference curves of its own.
 
 The revision to use is the one in force at the date of the *Proposition
 Technique et Financière* of the installation, because the specifications of

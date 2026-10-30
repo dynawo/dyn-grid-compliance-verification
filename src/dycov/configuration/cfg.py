@@ -189,12 +189,16 @@ class Config:
         pcs_path: Optional[Path],
         user_pcs_path: Optional[Path] = None,
         pcs_dtr_delta_path: Optional[Path] = None,
+        pcs_dtr_version_path: Optional[Path] = None,
     ) -> None:
         """Rebuild the Performance Checking Sheet (PCS) description layers from the files
         of a single PCS, discarding whatever a previously prepared PCS had left.
 
         Each file goes into the layer of its origin, so which one wins is a matter of
-        precedence and not of the order in which they are read.
+        precedence and not of the order in which they are read. The one exception is the
+        version of the PCS a revision writes for some categories of unit: it is part of what
+        that revision writes for the PCS, so it shares the layer of the delta, and it is read
+        after the delta because it patches it.
 
         Every layer then resolves the inheritance mechanism using alias files: any file
         named "*aliases*" located two levels above its PCS file. If a section contains an
@@ -210,10 +214,16 @@ class Config:
             Path to the PCS description written by the user.
         pcs_dtr_delta_path: Optional[Path]
             Path to the delta of this PCS for the selected DTR revision.
+        pcs_dtr_version_path: Optional[Path]
+            Path to the version of this PCS the selected DTR revision writes for the category
+            of the installation, when it writes one.
         """
         self._load_pcs_layer(self._pcs_user_config, self._pcs_user_files, user_pcs_path)
         self._load_pcs_layer(
-            self._pcs_dtr_delta_config, self._pcs_dtr_delta_files, pcs_dtr_delta_path
+            self._pcs_dtr_delta_config,
+            self._pcs_dtr_delta_files,
+            pcs_dtr_delta_path,
+            pcs_dtr_version_path,
         )
         self._load_pcs_layer(self._pcs_default_config, self._pcs_default_files, pcs_path)
 
@@ -221,25 +231,28 @@ class Config:
         self,
         parser: configparser.ConfigParser,
         layer_files: list[str],
-        path: Optional[Path],
+        *paths: Optional[Path],
     ) -> None:
-        """Internal helper to replace the contents of one PCS layer with the given file."""
+        """Internal helper to replace the contents of one PCS layer with the given files, each
+        of which patches the ones before it."""
         parser.clear()
         layer_files.clear()
-        if path is None:
-            return
+        for path in paths:
+            if path is None:
+                continue
 
-        dycov_logging.get_logger("Cfg").info("Loading PCS configuration from: %s", path)
-        try:
-            parser.read(path, encoding="utf-8")
-            layer_files.append(str(path))
-            _resolve_inherited_sections(parser, _alias_files(path))
-            dycov_logging.get_logger("Cfg").info("Successfully loaded PCS configuration.")
-        except Exception as e:
-            dycov_logging.get_logger("Cfg").error(
-                "Error loading PCS configuration from %s: %s", path, e
-            )
-            raise
+            dycov_logging.get_logger("Cfg").info("Loading PCS configuration from: %s", path)
+            try:
+                parser.read(path, encoding="utf-8")
+                # The file read last wins, so an option is looked for in it first
+                layer_files.insert(0, str(path))
+                _resolve_inherited_sections(parser, _alias_files(path))
+                dycov_logging.get_logger("Cfg").info("Successfully loaded PCS configuration.")
+            except Exception as e:
+                dycov_logging.get_logger("Cfg").error(
+                    "Error loading PCS configuration from %s: %s", path, e
+                )
+                raise
 
     def get_config_dir(self) -> Path:
         """Returns the configuration directory path.
