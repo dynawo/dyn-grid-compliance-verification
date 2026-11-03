@@ -465,9 +465,9 @@ class TestDycovInitializer:
         self._update(dycov_initializer, previous)
 
         assert (config_dir / "config.ini.OLD.0").read_text() == previous
-        messages = " ".join(str(call) for call in self._mock_logger.method_calls)
-        assert "config.ini.OLD.0" in messages
-        assert "retired_option" in messages
+        warnings = " ".join(str(call) for call in self._mock_logger.warning.call_args_list)
+        assert "config.ini.OLD.0" in warnings
+        assert "retired_option" in warnings
 
     def test_keys_that_differ_only_in_case_are_updated_once(self, dycov_initializer):
         """The tool reads the case of a key, so two of them are two settings, and the file that
@@ -495,12 +495,14 @@ class TestDycovInitializer:
 
     def test_a_setting_takes_the_place_of_its_line_or_closes_its_section(self, dycov_initializer):
         """The template carries some options commented out already, so the profile comments
-        them twice; an option without a line goes before the comments of the next section."""
+        them twice; an option without a line goes after the last lines of its section, before
+        the comments of the next one."""
         config_dir = self.mock_config.get_config_dir.return_value
         self._update(
             dycov_initializer,
-            "[dycov]\nversion = 1.0.0\ntype = basic\n\n[GridCode]\nUdim_400kV = 380\n\n"
-            "[PCS-Benchmarks]\nPCS_RTE-I16z1 = SetPointStep\n",
+            "[dycov]\nversion = 1.0.0\ntype = basic\n\n[Dynawo]\nsim_hMax = 1e-4\n\n"
+            "[GridCode]\nUdim_400kV = 380\nthr_custom = 0.5\n\n"
+            "[PCS-Benchmarks]\nPCS_RTE-I16z1 = SetPointStep\nPCS_RTE-I2 = USetPointStep\n",
         )
 
         text = (config_dir / "config.ini").read_text()
@@ -514,6 +516,11 @@ class TestDycovInitializer:
         assert text.index("PCS_RTE-I16z1 = SetPointStep") < text.index(
             "## # List of Operating conditions"
         )
+        for option in ("sim_hMax = 1e-4", "thr_custom = 0.5", "PCS_RTE-I2 = USetPointStep"):
+            following = text.split(f"\n{option}\n", 1)[1].split("\n[", 1)[0]
+            assert all(
+                not line.strip() or line.startswith("# ## #") for line in following.splitlines()
+            ), option
 
     def test_is_valid_config_file_malformed_returns_false(self, dycov_initializer, tmp_path):
         """A malformed config (duplicated option) is treated as invalid, not a crash."""
