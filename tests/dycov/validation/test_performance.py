@@ -618,6 +618,43 @@ def test_calculate_others_imax_reac_detects_the_active_current_priority_violatio
     assert compliance_values["imax_reac"] == pytest.approx(1.0)
 
 
+def test_calculate_others_imax_reac_without_the_maximum_current_says_which_one_is_missing(
+    monkeypatch,
+):
+    logger = RecordingLogger()
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
+    validator = _make_validator(
+        validations=["imax_reac"],
+        calculated=_make_injection_curves([0.2, 0.3, 0.4, 0.4, 0.4], [0.0] * 5),
+    )
+    validator.set_generators_imax({})
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_others(compliance_values, 1.0)
+
+    assert compliance_values["imax_reac_check"] == "N/A"
+    assert compliance_values["imax_reac"] == -1
+    assert len(logger.warnings) == 1
+    assert "G1_GEN_MaxInjectedCurrentPu" in logger.warnings[0]
+
+
+def test_calculate_others_imax_reac_still_fails_a_generator_whose_maximum_is_declared(
+    monkeypatch,
+):
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", RecordingLogger())
+    curves = _make_injection_curves([0.2, 0.3, 0.4, 0.4, 0.4], [0.0] * 5)
+    curves["G2_GEN_ActiveCurrentNode2"] = [0.1] * 5
+    curves["G2_GEN_ReactiveCurrentNode2"] = [0.0] * 5
+    validator = _make_validator(validations=["imax_reac"], calculated=curves)
+    validator.set_generators_imax({"G1": 0.2})
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_others(compliance_values, 1.0)
+
+    assert compliance_values["imax_reac_check"] is False
+    assert compliance_values["imax_reac"] == pytest.approx(1.0)
+
+
 def test_calculate_gathers_every_enabled_validation():
     validator = _make_validator(
         validations=["time_5U", "AVR_5", "freq_1"],
@@ -1025,6 +1062,18 @@ def test_check_others_imax_reac():
 
     assert results["imax_reac"] == pytest.approx(0.5)
     assert results["imax_reac_check"] is False
+    assert results["compliance"] is False
+
+
+def test_check_others_imax_reac_not_computable_is_reported_and_not_compliant():
+    validator = _make_validator(validations=["imax_reac"])
+    results = {"compliance": True}
+
+    validator._PerformanceValidator__check_others(
+        results, _make_stability(), True, {"imax_reac": -1, "imax_reac_check": "N/A"}
+    )
+
+    assert results["imax_reac_check"] == "N/A"
     assert results["compliance"] is False
 
 
