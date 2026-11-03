@@ -9,6 +9,7 @@
 #
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,6 +22,10 @@ from dycov.logging import dycov_logging
 
 Remedy = Callable[[SolverParams, Path], str]
 """A change tried on the solver, which reports what it changed."""
+
+# Dynawo ends an error with the source file that raised it. The ones that read the PAR and DYD
+# files of the models raise errors in those inputs, which no change of the solver settles.
+_INPUT_ERROR_ORIGIN = re.compile(r"\(\s*(PAR|DYD)\w*\.cpp:\d+\s*\)")
 
 _SMALL_NETWORK_PARAMETERS = {
     "IDA": [
@@ -83,6 +88,9 @@ class SolverRetryStrategy:
         for remedy in self._remedies():
             if result.succeeded or self._retries_exhausted():
                 return result
+            if self._is_input_error(result):
+                self._warn("Not retried: Dynawo rejected the inputs of the model")
+                return result
 
             self._warn(
                 f"Retry {self.settings.attempt_count}/{self.settings.allowed_retries}: "
@@ -105,6 +113,12 @@ class SolverRetryStrategy:
             yield self._add_parameters_small_networks
         if self.settings.enable_solver_flip:
             yield self._flip_solver
+
+    @staticmethod
+    def _is_input_error(result: DynawoResult) -> bool:
+        return bool(result.timeline_error) and bool(
+            _INPUT_ERROR_ORIGIN.search(result.timeline_error)
+        )
 
     def _why_it_failed(self, result: DynawoResult, max_sim_time: float | None) -> str:
         """What the attempt just made reported, to be quoted in the retry message."""
