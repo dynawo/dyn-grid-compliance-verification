@@ -114,7 +114,7 @@ class PerformanceValidator(Validator):
         self,
         thr_ss_tol: float,
         is_non_synchronous: bool,
-    ) -> tuple[bool, int, bool, int, bool, int, bool, int, bool]:
+    ) -> tuple[bool, int, bool, int, bool, int, bool | str, int, bool | str]:
         bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
         # Run stabilization test
         steady_v, first_steady_pos_v = common.is_stable(
