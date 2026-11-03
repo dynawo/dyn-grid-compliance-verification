@@ -167,9 +167,16 @@ class PerformanceValidator(Validator):
         internal_angle_keys = [
             key for key in self._get_calculated_curves().keys() if key.endswith("_InternalAngle")
         ]
+        missing = sorted(
+            f"{unit}_GEN_InternalAngle"
+            for unit in self.__units()
+            if f"{unit}_GEN_InternalAngle" not in internal_angle_keys
+        )
         if not internal_angle_keys:
             _warn_not_computable("The rotor stability", "the internal angle of the units")
             return checks.NOT_COMPUTABLE, 0, checks.NOT_COMPUTABLE
+        if missing:
+            _warn_not_computable("The rotor stability", " and ".join(missing))
 
         for key in internal_angle_keys:
             gen_stable_theta, gen_first_stable_pos_theta = common.is_stable(
@@ -195,7 +202,19 @@ class PerformanceValidator(Validator):
                 "Theta has not met the success criterion"
             )
 
+        if missing:
+            stable_theta = _combined_check([stable_theta, checks.NOT_COMPUTABLE])
+            pass_pi = _combined_check([pass_pi, checks.NOT_COMPUTABLE])
         return stable_theta, first_stable_pos_theta, pass_pi
+
+    def __units(self) -> set:
+        """The generating units of the producer: those of its model, or those its curves name,
+        the machines of the network aside."""
+        if self._producer.is_dynawo_model():
+            return {generator.id for generator in self._producer.generators}
+        columns = self._get_calculated_curves().columns
+        network = {name.split("_GEN_TSO_")[0] for name in columns if "_GEN_TSO_" in name}
+        return {name.split("_GEN_")[0] for name in columns if "_GEN_" in name} - network
 
     def __calculate_simple_times(
         self,
@@ -318,13 +337,16 @@ class PerformanceValidator(Validator):
         not carry it; warns about what is missing, as the regulation cannot be checked without."""
         suffix = "_GEN_MagnitudeControlledByAVRPu"
         curves = self._get_calculated_curves()
+        units = self.__units() | {
+            magnitude[: -len(suffix)] for magnitude in self.__get_filtered_columns(suffix)
+        }
         pairs = []
-        for magnitude in self.__get_filtered_columns(suffix):
-            setpoint = magnitude.replace(suffix, "_GEN_VoltageSetpointPu")
-            if setpoint not in curves:
-                _warn_not_computable("The voltage regulation", setpoint)
-                setpoint = None
-            pairs.append((magnitude, setpoint))
+        for unit in sorted(units):
+            magnitude, setpoint = f"{unit}{suffix}", f"{unit}_GEN_VoltageSetpointPu"
+            missing = [name for name in (magnitude, setpoint) if name not in curves]
+            if missing:
+                _warn_not_computable("The voltage regulation", " and ".join(missing))
+            pairs.append((magnitude, None if missing else setpoint))
         if not pairs:
             _warn_not_computable(
                 "The voltage regulation",
@@ -408,10 +430,22 @@ class PerformanceValidator(Validator):
                 c.replace("_GEN_ReactiveCurrentNode2", ""): c
                 for c in self.__get_filtered_columns("_GEN_ReactiveCurrentNode2")
             }
-            if not active_current or active_current.keys() != reactive_current.keys():
+            units = (
+                self.__units()
+                | set(self._generators_imax)
+                | active_current.keys()
+                | reactive_current.keys()
+            )
+            incomplete = sorted(
+                unit
+                for unit in units
+                if unit not in active_current or unit not in reactive_current
+            )
+            if not units or incomplete:
                 _warn_not_computable(
                     "The reactive current priority",
-                    "both currents of every unit (ActiveCurrentNode2, ReactiveCurrentNode2)",
+                    f"both currents of {', '.join(incomplete) or 'a unit'} "
+                    "(ActiveCurrentNode2, ReactiveCurrentNode2)",
                 )
                 imax_reac_check = checks.NOT_COMPUTABLE
 
