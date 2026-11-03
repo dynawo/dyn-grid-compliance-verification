@@ -897,9 +897,7 @@ class TestSimulateOutcomeAssembly:
 
     def test_success_outcome_within_time(self):
         curves, _, _ = _make_real_curves()
-        result = MagicMock(
-            succeeded=True, sim_time=10.0, curves=pd.DataFrame(), log="", timeline_error=None
-        )
+        result = MagicMock(succeeded=True, sim_time=10.0, curves=pd.DataFrame(), log="")
 
         outcome = self._simulate(curves, result)
 
@@ -907,45 +905,6 @@ class TestSimulateOutcomeAssembly:
         assert outcome.time_exceeds is False
         assert outcome.has_curves is False
         assert outcome.sim_time == pytest.approx(10.0)
-
-    def test_a_retry_mutation_reaches_the_solver_the_report_reads(self):
-        curves, _, _ = _make_real_curves()
-
-        def run(**kwargs):
-            kwargs["solver"].minimum_time_step = 1e-9
-            return MagicMock(
-                succeeded=True, sim_time=1.0, curves=pd.DataFrame(), log="", timeline_error=None
-            )
-
-        with (
-            patch(f"{_MODULE}.SolverRetryStrategy") as strat_cls,
-            patch(f"{_MODULE}.RetrySettings"),
-            patch(f"{_MODULE}.config") as mc,
-        ):
-            mc.get_value.side_effect = _cfg_get_value
-            mc.get_float.side_effect = _cfg_get_float
-            mc.get_int.side_effect = _cfg_get_int
-            strat_cls.return_value.run.side_effect = run
-
-            curves._DynawoCurves__simulate(
-                Path("/out"), Path("/work"), Path("outputs"), "BM1", "OC1"
-            )
-            reported = curves.get_solver()
-
-        assert reported["minStep"].actual == pytest.approx(1e-9)
-        assert reported["minStep"].default == pytest.approx(1e-6)
-
-    def test_failure_outcome_exceeding_time(self):
-        curves, _, _ = _make_real_curves()
-        result = MagicMock(
-            succeeded=False, sim_time=50.0, curves=pd.DataFrame(), log="boom", timeline_error=None
-        )
-
-        outcome = self._simulate(curves, result)
-
-        assert outcome.succeeded is False
-        assert outcome.time_exceeds is True
-        assert outcome.has_curves is False
 
     @pytest.mark.parametrize(
         "timeline_error, rejected",
@@ -973,14 +932,47 @@ class TestSimulateOutcomeAssembly:
 
         assert outcome.rejected_inputs is rejected
 
+    def test_a_retry_mutation_reaches_the_solver_the_report_reads(self):
+        curves, _, _ = _make_real_curves()
+
+        def run(**kwargs):
+            kwargs["solver"].minimum_time_step = 1e-9
+            return MagicMock(succeeded=True, sim_time=1.0, curves=pd.DataFrame(), log="")
+
+        with (
+            patch(f"{_MODULE}.SolverRetryStrategy") as strat_cls,
+            patch(f"{_MODULE}.RetrySettings"),
+            patch(f"{_MODULE}.config") as mc,
+        ):
+            mc.get_value.side_effect = _cfg_get_value
+            mc.get_float.side_effect = _cfg_get_float
+            mc.get_int.side_effect = _cfg_get_int
+            strat_cls.return_value.run.side_effect = run
+
+            curves._DynawoCurves__simulate(
+                Path("/out"), Path("/work"), Path("outputs"), "BM1", "OC1"
+            )
+            reported = curves.get_solver()
+
+        assert reported["minStep"].actual == pytest.approx(1e-9)
+        assert reported["minStep"].default == pytest.approx(1e-6)
+
+    def test_failure_outcome_exceeding_time(self):
+        curves, _, _ = _make_real_curves()
+        result = MagicMock(succeeded=False, sim_time=50.0, curves=pd.DataFrame(), log="boom")
+
+        outcome = self._simulate(curves, result)
+
+        assert outcome.succeeded is False
+        assert outcome.time_exceeds is True
+        assert outcome.has_curves is False
+
     def test_has_curves_when_csv_exists(self, tmp_path):
         curves, _, _ = _make_real_curves()
         csv_dir = tmp_path / "outputs" / "curves"
         csv_dir.mkdir(parents=True)
         (csv_dir / "curves.csv").write_text("time;\n")
-        result = MagicMock(
-            succeeded=True, sim_time=1.0, curves=pd.DataFrame(), log="", timeline_error=None
-        )
+        result = MagicMock(succeeded=True, sim_time=1.0, curves=pd.DataFrame(), log="")
 
         outcome = self._simulate(curves, result, working_dir=tmp_path)
 

@@ -694,26 +694,13 @@ class TestFindHizFault:
         """#700: no impedance settles a model Dynawo rejects, so the test's own simulation
         reports it."""
         engine = self._engine_with_config(mock_config)
-        simulate_fn = MagicMock(return_value=_fail_outcome(rejected_inputs=True))
-        modify_fault = MagicMock()
 
-        with _fake_isolated_copy(engine):
-            with patch.object(engine, "_modify_fault", modify_fault):
-                engine.find_hiz_fault(
-                    Path("/out"),
-                    Path("/work"),
-                    Path("/jobs"),
-                    1.0,
-                    0.15,
-                    0.2,
-                    "BM",
-                    "OC",
-                    simulate_fn,
-                    MagicMock(),
-                )
+        simulate_fn = self._run_until_correct(
+            engine, mock_cvd, [_fail_outcome(rejected_inputs=True)], []
+        )
 
         assert simulate_fn.call_count == 1
-        assert modify_fault.call_count == 1
+        mock_cvd.assert_not_called()
         mock_log.get_logger.return_value.warning.assert_called_once_with(
             "The fault search stops: Dynawo rejected the inputs of the model"
         )
