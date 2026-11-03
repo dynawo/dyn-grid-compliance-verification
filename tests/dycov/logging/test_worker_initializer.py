@@ -210,8 +210,8 @@ def test_closing_the_execution_log_leaves_the_shared_one(run_log, tmp_path):
     assert "run_log_dir" not in dycov_logging.get_handler_settings()
 
 
-# The run traps the end signals in the main process, and a forked worker inherits that trap: the
-# exit it raises is what printed a traceback when it reached a worker running its exit handlers.
+# The run traps the end signals in the main process, and a forked worker inherits that trap,
+# whose exit must not reach the exit handlers the worker may be running
 TERMINATED_POOL_RUN = textwrap.dedent(
     '''
     """A run whose pool is terminated: a worker is told to end while it runs its exit handlers,
@@ -308,6 +308,87 @@ def test_a_terminated_pool_ends_its_workers_quietly_and_their_processes_with_the
 
     assert run.returncode == 0, run.stderr
     assert "Traceback" not in run.stderr and "SystemExit" not in run.stderr, run.stderr
+    assert not orphaned
+
+
+GROUP_SIGNALLED_RUN = textwrap.dedent(
+    '''
+    """A run whose whole process group is told to end, as a closed terminal or a timeout does,
+    while a worker of its pool waits for a task and another runs a process it launched."""
+
+    import multiprocessing
+    import os
+    import subprocess
+    import sys
+    import time
+
+    from dycov.core.graceful_shutdown import install_signal_handlers, terminate_all_children
+    from dycov.curves.dynawo.runtime._process import _proc_registry
+    from dycov.logging import worker_initializer
+
+
+    def on_exit(exit_code):
+        terminate_all_children(timeout=5.0)
+        raise SystemExit(exit_code)
+
+
+    def launch_and_wait(_):
+        child = subprocess.Popen(
+            ["sleep", "60"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            preexec_fn=os.setsid,
+        )
+        _proc_registry.add(child)
+        with open(sys.argv[2], "w") as pids:
+            pids.write(f"{os.getpid()} {child.pid}")
+        time.sleep(60)
+
+
+    if __name__ == "__main__":
+        install_signal_handlers(on_exit=on_exit)
+        context = multiprocessing.get_context(sys.argv[1])
+        with context.Pool(2, initializer=worker_initializer, initargs=(None,)) as pool:
+            pool.map(launch_and_wait, [0])
+    '''
+)
+
+
+@pytest.mark.parametrize(
+    "end_signal, exit_code", [(signal.SIGTERM, 143), (signal.SIGHUP, 1)], ids=["TERM", "HUP"]
+)
+@pytest.mark.parametrize("start_method", ["fork", "forkserver"])
+def test_a_run_whose_process_group_is_told_to_end_ends(
+    tmp_path, start_method, end_signal, exit_code
+):
+    script = tmp_path / "run.py"
+    script.write_text(GROUP_SIGNALLED_RUN, encoding="utf-8")
+    pids = tmp_path / "pids.txt"
+    run = subprocess.Popen(
+        [sys.executable, str(script), start_method, str(pids)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        start_new_session=True,
+    )
+    deadline = time.monotonic() + 60
+    while not (pids.exists() and pids.read_text()) and time.monotonic() < deadline:
+        time.sleep(0.1)
+
+    os.killpg(run.pid, end_signal)
+    try:
+        _, stderr = run.communicate(timeout=30)
+    except subprocess.TimeoutExpired:
+        os.killpg(run.pid, signal.SIGKILL)
+        run.communicate()
+        pytest.fail("the run did not end once its process group was told to")
+    _, child = (int(pid) for pid in pids.read_text().split())
+    time.sleep(0.5)
+    orphaned = _is_running(child)
+    if orphaned:
+        os.kill(child, signal.SIGKILL)
+
+    assert run.returncode == exit_code, stderr
     assert not orphaned
 
 
