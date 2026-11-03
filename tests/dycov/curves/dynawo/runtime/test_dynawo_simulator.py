@@ -9,6 +9,7 @@
 #
 """Tests for what a simulation reports back about a failure."""
 
+import dataclasses
 from pathlib import Path
 
 import pandas as pd
@@ -121,10 +122,27 @@ def test_a_run_whose_curves_stay_within_their_limits_keeps_them(monkeypatch, tmp
     assert result.curves is curves
 
 
-def test_the_limits_of_a_divergence_come_from_the_configuration(monkeypatch, tmp_path):
+@pytest.mark.parametrize(
+    "limits, curve, reached",
+    [
+        (
+            {"divergence_voltage_limit": 0.95, "divergence_power_limit": 50.0},
+            "BusPDR_BUS_Voltage",
+            "beyond 0.95 pu",
+        ),
+        (
+            {"divergence_voltage_limit": 5.0, "divergence_power_limit": 0.8},
+            "BusPDR_BUS_ActivePower",
+            "beyond 0.8 pu",
+        ),
+    ],
+    ids=["voltage", "power"],
+)
+def test_the_limits_of_a_divergence_come_from_the_configuration(
+    monkeypatch, tmp_path, limits, curve, reached
+):
     from dycov.curves.dynawo.runtime import dynawo_simulator
 
-    limits = {"divergence_voltage_limit": 0.95, "divergence_power_limit": 100.0}
     config_type = type(dynawo_simulator.config)
     get_float = config_type.get_float
     monkeypatch.setattr(
@@ -134,12 +152,34 @@ def test_the_limits_of_a_divergence_come_from_the_configuration(monkeypatch, tmp
             limits[key] if key in limits else get_float(self, section, key, default)
         ),
     )
-    curves = pd.DataFrame({"time": [0.0, 1.0], "BusPDR_BUS_Voltage": [1.0, 0.9]})
+    curves = pd.DataFrame({"time": [0.0, 1.0], curve: [0.7, 0.99]})
 
     result = _run_returning(monkeypatch, tmp_path, curves)
 
     assert result.succeeded is False
-    assert "beyond 0.95 pu" in result.log
+    assert f"{curve} reached 0.99 pu, {reached}" in result.log
+
+
+def test_a_run_hands_its_zone_to_the_divergence_check(monkeypatch):
+    handed = {}
+
+    def run_base_dynawo(self, *args, **kwargs):
+        handed.update(kwargs)
+        return DynawoResult(True, None, None, None, 1.0)
+
+    monkeypatch.setattr(DynawoSimulator, "run_base_dynawo", run_base_dynawo)
+
+    DynawoSimulator.run_base(
+        run=dataclasses.replace(RUN, zone=1),
+        output_dir=Path("/results/PCS/BM/OC"),
+        working_oc_dir=Path("/work"),
+        jobs_output_dir=Path("outputs"),
+        bm_name="BM",
+        oc_name="OC",
+        max_sim_time=MAX_SIM_TIME,
+    )
+
+    assert handed["zone"] == 1
 
 
 def test_a_divergence_in_zone_1_names_the_bus_as_the_outputs_do(monkeypatch, tmp_path):

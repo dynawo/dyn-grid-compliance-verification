@@ -10,12 +10,13 @@
 
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 from dycov.curves.dynawo.runtime import retry_strategy as retry_strategy_module
 from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoResult, DynawoSimulator
 from dycov.curves.dynawo.runtime.retry_strategy import RetrySettings, SolverRetryStrategy
-from dycov.curves.dynawo.runtime.run_types import SolverParams
+from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 
 MAX_SIM_TIME = 10.0
 RETRY_HEADINGS = [
@@ -205,29 +206,50 @@ def test_every_attempt_reports_how_long_dynawo_ran(monkeypatch, recording_logger
     ]
 
 
-def test_a_diverged_attempt_is_retried_and_quoted(monkeypatch, recorded_warnings, recorded_writes):
+def test_a_diverged_attempt_is_retried_and_quoted(
+    monkeypatch, tmp_path, recorded_warnings, recorded_writes
+):
     """#675: a run Dynawo ended well after diverging is a failed one, which a retry may cure."""
-    attempts = []
+    from dycov.curves.dynawo.runtime import dynawo_simulator
+    from dycov.curves.dynawo.runtime._process import ProcessOutcome
 
-    def fake_run_base(*args, **kwargs):
-        attempts.append(1)
-        if len(attempts) == 1:
-            return DynawoResult(
-                False,
-                "Simulation diverged: BusPDR_BUS_Voltage reached 4.2e+06 pu",
-                None,
-                None,
-                1.0,
-            )
-        return DynawoResult(True, None, None, None, 1.0)
+    attempts = iter(
+        [
+            pd.DataFrame({"time": [0.0, 1.0], "BusPDR_BUS_Voltage": [1.0, 4.2e6]}),
+            pd.DataFrame({"time": [0.0, 1.0], "BusPDR_BUS_Voltage": [1.0, 0.9]}),
+        ]
+    )
 
-    monkeypatch.setattr(DynawoSimulator, "run_base", staticmethod(fake_run_base))
+    def run_dynawo_process(*args):
+        (tmp_path / "outputs" / "curves").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "outputs" / "curves" / "curves.csv").write_text("time;\n0;\n")
+        return ProcessOutcome(True, "job succeeded", 1.0)
 
-    result = _run(SolverRetryStrategy(RetrySettings()), _ida_solver())
+    monkeypatch.setattr(dynawo_simulator, "run_dynawo_process", run_dynawo_process)
+    monkeypatch.setattr(dynawo_simulator, "create_curves", lambda *args: next(attempts))
+    run = DynawoRunInputs(
+        pcs_name="PCS",
+        launcher_dwo=Path("dynawo.sh"),
+        curves_dict={},
+        generators=[],
+        s_nom=100.0,
+        s_nref=100.0,
+    )
+
+    result = SolverRetryStrategy(RetrySettings()).run(
+        run=run,
+        solver=_ida_solver(),
+        output_dir=tmp_path,
+        working_oc_dir=tmp_path,
+        jobs_output_dir=Path("outputs"),
+        bm_name="BM",
+        oc_name="OC",
+        max_sim_time=MAX_SIM_TIME,
+    )
 
     assert result.succeeded is True
-    assert len(attempts) == 2
-    assert "diverged: BusPDR_BUS_Voltage" in recorded_warnings[0]
+    assert next(attempts, None) is None
+    assert "diverged: BusPDR_BUS_Voltage reached 4.2e+06 pu" in recorded_warnings[0]
 
 
 @pytest.mark.parametrize("successful_attempt", [1, 2, 3, 4])
