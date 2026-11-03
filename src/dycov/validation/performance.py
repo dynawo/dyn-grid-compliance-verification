@@ -830,7 +830,8 @@ class PerformanceValidator(Validator):
                 'stabilized_rotor_angle': bool,  # The rotor angle took part in the
                     stabilization status (if applicable)
                 'imax_reac': float,  # Maximum reactive current (if applicable)
-                'imax_reac_check': bool,  # Maximum reactive current check status (if applicable)
+                'imax_reac_check': bool | str,  # Maximum reactive current check status, N/A
+                    when it cannot be computed (if applicable)
                 'AVR_5_check': bool,  # Plant-level voltage regulation 5% check status
                     (if applicable)
                 'AVR_5': float,  # Plant-level voltage regulation 5% value (if applicable)
