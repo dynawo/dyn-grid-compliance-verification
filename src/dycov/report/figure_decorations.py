@@ -53,7 +53,7 @@ def draw_tolerance_band(
     ----------
     renderer: FigureRenderer
         The figure renderer to use for drawing.
-    band: ToleranceBand
+    band: ToleranceBand | CheckBand
         The tolerance band to draw (CheckBand, FinalValueBand, FrequencyBand, or
         DynamicBand).
     last_val: float

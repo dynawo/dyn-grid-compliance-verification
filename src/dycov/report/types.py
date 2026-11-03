@@ -37,9 +37,9 @@ class FinalValueBand(ToleranceBand):
 
 @dataclass
 class CheckBand:
-    """Band a check of the curve measures it against, as the check recorded it in the results:
-    ``source_key`` names its [lower, upper] limits, either of them None when the check bounds
-    one side only (time_5U, time_10P, time_10Pfloor...)."""
+    """Band a check of the curve measures it against, as the check recorded it in the results
+    (time_5U, time_10P, time_10Pfloor...): ``source_key`` names its [lower, upper] limits, either
+    of them None when the check bounds one side only, as time_10Pfloor does."""
 
     source_key: str
     color: str = "#55a868"
