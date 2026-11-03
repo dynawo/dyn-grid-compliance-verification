@@ -38,10 +38,8 @@ def get_ss_tolerance() -> float:
 
 
 # Absolute tube for small targets avoids unrealistic relative tolerances near zero
-def _show_error(calculated_value: float, reference_value: float, rtol: float, atol: float) -> bool:
-    if rtol * max(abs(calculated_value), abs(reference_value)) > atol and reference_value != 0.0:
-        return True
-    return False
+def _show_error(reference_value: float, rtol: float, atol: float) -> bool:
+    return rtol * abs(reference_value) > atol and reference_value != 0.0
 
 
 def _compute_tube(target: float, percent: float, step: float = 0.0) -> tuple[float, float]:
@@ -84,12 +82,11 @@ def check_time(
         True if the calculated time is within the tolerances of the reference time, False otherwise
 
     """
-    # The deviation is relative to the reference, as the report shows it; when magnitudes are
-    # smaller than atol, it is held to atol instead
+    # The report shows the error relative to the reference wherever the verdict judges it so
     deviation = abs(calculated_time - reference_time)
     allowed = max(rtol * abs(reference_time), atol)
     time_check = deviation <= allowed or math.isclose(deviation, allowed)
-    if _show_error(calculated_time, reference_time, rtol, atol):
+    if _show_error(reference_time, rtol, atol):
         return 100 * (abs(calculated_time - reference_time) / reference_time), time_check
     else:
         return "-", time_check
