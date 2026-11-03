@@ -10,7 +10,9 @@
 """Tests for the preparation of a process pool worker."""
 
 import logging
+import multiprocessing.pool
 import os
+import queue
 import signal
 import subprocess
 import sys
@@ -20,7 +22,7 @@ from logging.handlers import RotatingFileHandler
 
 import pytest
 
-from dycov.logging import dycov_logging, worker_initializer
+from dycov.logging import _end_worker, dycov_logging, worker_initializer
 
 FILE_FORMAT = "%(levelname)s|%(name)s|%(message)s"
 EXECUTION_LOG = "dycov_run.log"
@@ -215,8 +217,10 @@ def test_closing_the_execution_log_leaves_the_shared_one(run_log, tmp_path):
 TERMINATED_POOL_RUN = textwrap.dedent(
     '''
     """A run whose pool is terminated: a worker is told to end while it runs its exit handlers,
-    and another while a process it launched, as it launches Dynawo, is still running."""
+    another as it starts them, and another while a process it launched, as it launches Dynawo,
+    is still running."""
 
+    import atexit
     import multiprocessing
     import os
     import signal
@@ -240,6 +244,10 @@ TERMINATED_POOL_RUN = textwrap.dedent(
         return os.getpid()
 
 
+    def be_told_to_end_on_exit(_):
+        atexit.register(os.kill, os.getpid(), signal.SIGTERM)
+
+
     def launch_and_wait(_):
         child = subprocess.Popen(
             ["sleep", "60"],
@@ -256,6 +264,14 @@ TERMINATED_POOL_RUN = textwrap.dedent(
     if __name__ == "__main__":
         install_signal_handlers(on_exit=on_exit)
         context = multiprocessing.get_context(sys.argv[1])
+
+        pool = context.Pool(
+            1, initializer=worker_initializer, initargs=(None,), maxtasksperchild=1
+        )
+        pool.apply(be_told_to_end_on_exit, (0,))
+        time.sleep(1)
+        pool.terminate()
+        pool.join()
 
         pool = context.Pool(
             1, initializer=worker_initializer, initargs=(None,), maxtasksperchild=1
@@ -392,6 +408,50 @@ def test_a_run_whose_process_group_is_told_to_end_ends(
     assert not orphaned
 
 
+# The end signal of a worker that starts to wait just after it arrives is received, and its
+# handler left pending, without the wait being interrupted; another thread receiving it does the
+# same, deterministically
+WAITING_WORKER_RUN = textwrap.dedent(
+    '''
+    """A worker waiting for a lock whose end signal another of its threads receives."""
+
+    import multiprocessing
+    import signal
+    import threading
+    import time
+
+    from dycov.logging import worker_initializer
+
+
+    def receive_the_end_signal():
+        time.sleep(0.5)
+        signal.pthread_kill(threading.get_ident(), signal.SIGTERM)
+
+
+    if __name__ == "__main__":
+        worker_initializer(None)
+        lock = multiprocessing.Lock()
+        lock.acquire()
+        threading.Thread(target=receive_the_end_signal).start()
+        lock.acquire()
+    '''
+)
+
+
+def test_a_worker_its_end_signal_reaches_while_it_starts_to_wait_ends(tmp_path):
+    script = tmp_path / "run.py"
+    script.write_text(WAITING_WORKER_RUN, encoding="utf-8")
+
+    try:
+        run = subprocess.run(
+            [sys.executable, str(script)], timeout=30, capture_output=True, text=True
+        )
+    except subprocess.TimeoutExpired:
+        pytest.fail("the worker kept waiting once told to end")
+
+    assert run.returncode == 128 + signal.SIGTERM, run.stderr
+
+
 def test_the_worker_does_not_keep_the_end_signals_of_the_main_process():
     trapped = [getattr(signal, name) for name in ("SIGTERM", "SIGHUP", "SIGQUIT")]
     previous = {sig: signal.getsignal(sig) for sig in trapped + [signal.SIGINT]}
@@ -410,3 +470,42 @@ def test_the_worker_does_not_keep_the_end_signals_of_the_main_process():
     finally:
         for sig, handler in previous.items():
             signal.signal(sig, handler)
+
+
+@pytest.fixture
+def ending_calls(monkeypatch):
+    class Exited(BaseException):
+        pass
+
+    calls = []
+
+    def exit_at_once(code):
+        calls.append(code)
+        raise Exited
+
+    monkeypatch.setattr(
+        "dycov.core.graceful_shutdown.terminate_all_children", lambda timeout: None
+    )
+    monkeypatch.setattr(os, "_exit", exit_at_once)
+    return calls, Exited
+
+
+def test_a_worker_out_of_its_task_loop_exits_at_once(ending_calls):
+    calls, exited = ending_calls
+
+    with pytest.raises(exited):
+        _end_worker(signal.SIGTERM, sys._getframe())
+
+    assert calls == [128 + signal.SIGTERM]
+
+
+def test_a_worker_in_its_task_loop_unwinds_it(ending_calls):
+    calls, _ = ending_calls
+    tasks, results = queue.Queue(), queue.Queue()
+    tasks.put((0, 0, lambda: _end_worker(signal.SIGTERM, sys._getframe()), (), {}))
+
+    with pytest.raises(SystemExit) as ended:
+        multiprocessing.pool.worker(tasks, results)
+
+    assert ended.value.code == 128 + signal.SIGTERM
+    assert calls == []
