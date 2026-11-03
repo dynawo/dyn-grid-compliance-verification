@@ -29,7 +29,7 @@ class ToleranceBand:
 
 @dataclass
 class FinalValueBand(ToleranceBand):
-    """Band relative to the last value of the curve (10P, 5P, imax_reac...)"""
+    """Band relative to the last value of the curve (imax_reac)"""
 
     unit: BandUnit = BandUnit.PERCENT
     color: str = "#55a868"
