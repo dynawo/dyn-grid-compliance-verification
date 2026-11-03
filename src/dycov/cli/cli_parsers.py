@@ -134,13 +134,13 @@ def _add_argument(
 
 
 def _add_user_config_argument(parser: argparse.ArgumentParser) -> None:
-    """Adds the '--user-config' argument to override the default user configuration file."""
+    """Adds the '--user-config' argument, a configuration file read on top of the user's own."""
     _add_argument(
         parser,
         "--user-config",
         help_msg=(
-            "Path to a custom user configuration file. Overrides the default user config location."
-            " A file that cannot be read stops the run."
+            "Path to a configuration file read on top of the user's config.ini for this run;"
+            " its options take precedence. A file that cannot be read stops the run."
         ),
         arg_type=Path,
         default=None,
