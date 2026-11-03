@@ -113,6 +113,22 @@ def test_check_time_keeps_the_absolute_tolerance_as_its_floor():
     assert beyond == ("-", False)
 
 
+@pytest.mark.parametrize("calculated", [0.0201, 0.0161], ids=["above", "below"])
+def test_check_time_held_to_its_floor_reports_no_relative_error_on_either_side(calculated):
+    """A deviation of 11 % passes an overshoot of 0.0181 because its floor allows 0.002: the
+    report must not show the 11 % next to the pass, nor treat the two sides apart."""
+    assert common.check_time(calculated, 0.0181, 0.10, 0.002) == ("-", True)
+
+
+def test_check_time_reports_a_relative_error_only_where_it_decides_the_verdict():
+    for reference in (0.005, 0.0181, 0.02, 0.05, 1.0):
+        for factor in (0.5, 0.85, 0.89, 0.95, 1.05, 1.11, 1.2, 1.5):
+            error, time_check = common.check_time(reference * factor, reference, 0.10, 0.002)
+
+            if error != "-":
+                assert time_check is (error <= 10.0 + 1e-9), (reference, factor)
+
+
 # ---------------------------------------------------------------------------
 # Flat response detection
 # ---------------------------------------------------------------------------
