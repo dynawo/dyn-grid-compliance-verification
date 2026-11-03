@@ -17,12 +17,35 @@ import errno
 import os
 import re
 from pathlib import Path
+from typing import Optional
 
 from lxml import etree
 
 from dycov.curves.importer.metadata import CurvesMetadata
 from dycov.files.producer_curves import create_producer_curves
 from dycov.logging import dycov_logging
+
+
+def model_file_regex(extension: str, filename: Optional[str] = None) -> str:
+    """The regular expression of a model file with the given extension, in any case, named
+    filename when one is given. It is matched against the whole path of a file, and reads only
+    what follows the last separator, so the folders above the file play no part.
+
+    Parameters
+    ----------
+    extension : str
+        The extension of the file, without its dot.
+    filename : Optional[str]
+        The name of the file, without its extension; any name when it is empty or None.
+
+    Returns
+    -------
+    str
+        The regular expression to match the path of the file against.
+    """
+    name = re.escape(filename) if filename else r"[^/\\]+"
+    suffix = "".join(f"[{letter.lower()}{letter.upper()}]" for letter in extension)
+    return rf"(?:.*[/\\])?{name}\.{suffix}$"
 
 
 def check_dynawo_model_files(model_path: Path, filename: str = "") -> None:
@@ -44,9 +67,9 @@ def check_dynawo_model_files(model_path: Path, filename: str = "") -> None:
         If any of the required .dyd, .par, or .ini files are missing,
         or if their base names do not match.
     """
-    dyd_pattern = re.compile(rf".*{filename}.[dD][yY][dD]")
-    par_pattern = re.compile(rf".*{filename}.[pP][aA][rR]")
-    ini_pattern = re.compile(rf".*{filename}.[iI][nN][iI]")
+    dyd_pattern = re.compile(model_file_regex("dyd", filename))
+    par_pattern = re.compile(model_file_regex("par", filename))
+    ini_pattern = re.compile(model_file_regex("ini", filename))
 
     has_dyd = None
     has_par = None
