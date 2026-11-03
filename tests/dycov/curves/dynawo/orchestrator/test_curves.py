@@ -874,7 +874,7 @@ class TestPrepareOcValidation:
         mock_sf.find_output_dir.return_value = Path("outputs")
 
         output_dir, jobs_output_dir = curves._DynawoCurves__prepare_oc_validation(
-            Path("/work/Producer/PCS1/BM1/OC1"), "PCS1", "BM1", "OC1"
+            Path("/work/Producer/PCS1/BM1/OC1"), "BM1"
         )
 
         mock_mf.copy_base_case_files.assert_called_once()
@@ -890,10 +890,7 @@ class TestPrepareOcValidation:
         mock_sf.find_output_dir.return_value = Path("outputs")
 
         output_dir, _ = curves._DynawoCurves__prepare_oc_validation(
-            Path("/work/WindFarm/PCS_RTE-I16z3/USetPointStep/AReactance"),
-            "PCS_RTE-I16z3",
-            "USetPointStep",
-            "AReactance",
+            Path("/work/WindFarm/PCS_RTE-I16z3/USetPointStep/AReactance"), "USetPointStep"
         )
 
         assert output_dir == Path("/output/WindFarm/PCS_RTE-I16z3/USetPointStep/AReactance")

@@ -294,7 +294,6 @@ class TestFindBoltedFault:
 
     def _find(self, engine, simulate_fn, reset_fn):
         engine.find_bolted_fault(
-            Path("/out"),
             Path("/work"),
             Path("/jobs"),
             1.0,
@@ -337,6 +336,26 @@ class TestFindBoltedFault:
         final_call_args = mock_rp.fault_par_file.call_args_list[-1]
         assert final_call_args[0][0] == Path("/work")
         assert final_call_args[0][3] == pytest.approx(1e-5)
+
+    @patch("dycov.curves.dynawo.orchestrator.bisection.classify_residual_voltage")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.replace_placeholders")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.config")
+    def test_a_step_names_no_output_dir_its_failure_could_quote(
+        self, mock_config, mock_rp, mock_mf, mock_crv
+    ):
+        """#707: a step runs in a copy removed once it ends, so its failure names no log."""
+        engine = self._engine_with_config(mock_config)
+        mock_crv.return_value = VoltDipResult.DIP_CORRECT
+        simulate_fn = MagicMock(side_effect=[_fail_outcome(), _succeed_outcome()])
+
+        with _fake_isolated_copy(engine):
+            self._find(engine, simulate_fn, MagicMock())
+
+        assert [call.args[:2] for call in simulate_fn.call_args_list] == [
+            (None, Path("/tmp/work")),
+            (None, Path("/tmp/work")),
+        ]
 
     @patch("dycov.curves.dynawo.orchestrator.bisection.classify_residual_voltage")
     @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")
@@ -470,7 +489,6 @@ class TestFindHizFault:
                 with patch.object(engine, "_is_bisection_complete", return_value=True):
                     with pytest.raises(ValueError, match="Fault simulation fails"):
                         engine.find_hiz_fault(
-                            Path("/out"),
                             Path("/work"),
                             Path("/jobs"),
                             1.0,
@@ -496,7 +514,6 @@ class TestFindHizFault:
                 with patch.object(engine, "_is_bisection_complete", return_value=True):
                     with pytest.raises(ValueError, match="Fault dip unachievable"):
                         engine.find_hiz_fault(
-                            Path("/out"),
                             Path("/work"),
                             Path("/jobs"),
                             1.0,
@@ -531,7 +548,6 @@ class TestFindHizFault:
 
             with patch.object(engine, "_is_bisection_complete", side_effect=converge_after_one):
                 engine.find_hiz_fault(
-                    Path("/out"),
                     Path("/work"),
                     Path("/jobs"),
                     1.0,
@@ -559,7 +575,6 @@ class TestFindHizFault:
             with patch.object(engine, "_is_bisection_complete", return_value=True):
                 with patch.object(engine, "_modify_fault"):
                     engine.find_hiz_fault(
-                        Path("/out"),
                         Path("/work"),
                         Path("/jobs"),
                         1.0,
@@ -594,7 +609,6 @@ class TestFindHizFault:
             with patch.object(engine, "_is_bisection_complete", side_effect=converge_on_second):
                 with patch.object(engine, "_modify_fault"):
                     engine.find_hiz_fault(
-                        Path("/out"),
                         Path("/work"),
                         Path("/jobs"),
                         1.0,
@@ -623,7 +637,6 @@ class TestFindHizFault:
                         SimulationOutcomeError, match="Voltage curve missing"
                     ) as error:
                         engine.find_hiz_fault(
-                            Path("/out"),
                             Path("/work"),
                             Path("/jobs"),
                             1.0,
@@ -644,7 +657,6 @@ class TestFindHizFault:
         with _fake_isolated_copy(engine):
             with patch.object(engine, "_modify_fault"):
                 engine.find_hiz_fault(
-                    Path("/out"),
                     Path("/work"),
                     Path("/jobs"),
                     1.0,
@@ -673,6 +685,8 @@ class TestFindHizFault:
         )
 
         assert simulate_fn.call_count == 3
+        # #707: a step runs in a copy removed once it ends, so its failure names no log
+        assert all(call.args[0] is None for call in simulate_fn.call_args_list)
 
     @patch("dycov.curves.dynawo.orchestrator.bisection.classify_voltage_dip")
     @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")
@@ -703,7 +717,6 @@ class TestFindHizFault:
         with _fake_isolated_copy(engine):
             with patch.object(engine, "_modify_fault"):
                 engine.find_hiz_fault(
-                    Path("/out"),
                     Path("/work"),
                     Path("/jobs"),
                     1.0,
