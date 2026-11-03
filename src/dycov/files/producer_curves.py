@@ -9,6 +9,8 @@
 #
 
 import configparser
+import os
+import uuid
 from pathlib import Path
 
 from lxml import etree
@@ -359,19 +361,26 @@ def _write_model_index(unit_path: Path, zones: list, delivery: bool) -> None:
     """Writes the index of the reference curves of one unit, for each zone whose tests it
     records: the Zone 3, the Zone 1, or both when the unit of the Zone 1 has the name of the
     Zone 3 one, as they then share the directory. In a delivery, an index already there is the
-    producer's and stays as it is, and the one written is marked as left to complete."""
+    producer's and stays as it is, and the one written is marked as left to complete. The other
+    tests of the run read the index as it is written, so it is written beside it and only then
+    takes its place, whole."""
     index = unit_path / "CurvesFiles.ini"
     if delivery and index.exists():
         return
     unit_path.mkdir(parents=True, exist_ok=True)
-    with open(index, "w") as f:
-        if delivery:
-            f.write(f"{_LEFT_TO_COMPLETE}\n")
-        f.write("[Curves-Files]\n")
-        f.write("".join(tests for tests, _ in zones))
-        f.write("\n\n")
-        f.write(_MODEL_CURVES_DICTIONARY)
-        f.write("".join(curves for _, curves in zones))
+    written = index.with_name(f".{index.name}.{uuid.uuid4().hex}")
+    try:
+        with open(written, "w") as f:
+            if delivery:
+                f.write(f"{_LEFT_TO_COMPLETE}\n")
+            f.write("[Curves-Files]\n")
+            f.write("".join(tests for tests, _ in zones))
+            f.write("\n\n")
+            f.write(_MODEL_CURVES_DICTIONARY)
+            f.write("".join(curves for _, curves in zones))
+        os.replace(written, index)
+    finally:
+        written.unlink(missing_ok=True)
 
 
 def _get_model_templates(
