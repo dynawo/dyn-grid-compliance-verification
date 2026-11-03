@@ -1,8 +1,8 @@
 #!/bin/bash
 #
-# Puts the curves of the examples in a clone, in place of any it already holds. They are not
-# versioned: a release publishes them as the dycov_examples.zip asset, beside the Dynawo build,
-# and this fetches them.
+# Puts the curves of the examples in a clone, in place of those it holds for every example the
+# asset carries. They are not versioned: a release publishes them as the dycov_examples.zip
+# asset, beside the Dynawo build, and this fetches them.
 #
 # The alternative is regenerate_curves.sh, which produces them from the tool itself and needs
 # Dynawo and a few hours. This needs neither.
