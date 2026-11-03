@@ -160,7 +160,7 @@ class PerformanceValidator(Validator):
             pass_pi,
         )
 
-    def _check_theta_stability(self, thr_ss_tol: float) -> tuple[bool, int, bool]:
+    def _check_theta_stability(self, thr_ss_tol: float) -> tuple[bool | str, int, bool | str]:
         stable_theta = True
         first_stable_pos_theta = len(self._get_calculated_curve_by_name("time"))
         pass_pi = True
@@ -208,13 +208,11 @@ class PerformanceValidator(Validator):
         return stable_theta, first_stable_pos_theta, pass_pi
 
     def __units(self) -> set:
-        """The generating units of the producer: those of its model, or those its curves name,
-        the machines of the network aside."""
+        """The generating units of the producer: those of its model, or those its curves name
+        or its curves dictionary declares, the machines of the network aside."""
         if self._producer.is_dynawo_model():
             return {generator.id for generator in self._producer.generators}
-        columns = self._get_calculated_curves().columns
-        network = {name.split("_GEN_TSO_")[0] for name in columns if "_GEN_TSO_" in name}
-        return {name.split("_GEN_")[0] for name in columns if "_GEN_" in name} - network
+        return naming.units_of(self._get_calculated_curves().columns) | self._declared_units
 
     def __calculate_simple_times(
         self,
@@ -886,17 +884,22 @@ class PerformanceValidator(Validator):
                 'no_disconnection_gen': bool,  # No generator disconnection (if applicable)
                 'no_disconnection_load': bool,  # No load disconnection (if applicable)
                 'static_diff': float,  # Static difference (if applicable)
-                'stabilized': bool,  # Stabilization status (if applicable)
+                'static_diff_check': bool | str,  # Static difference check status, or 'N/A'
+                    without its curves (if applicable)
+                'stabilized': bool | str,  # Stabilization status, or 'N/A' without the internal
+                    angles (if applicable)
                 'stabilized_rotor_angle': bool,  # The rotor angle took part in the
                     stabilization status (if applicable)
                 'imax_reac': float,  # Maximum reactive current (if applicable)
-                'imax_reac_check': bool,  # Maximum reactive current check status (if applicable)
-                'AVR_5_check': bool,  # Plant-level voltage regulation 5% check status
-                    (if applicable)
+                'imax_reac_check': bool | str,  # Maximum reactive current check status, or
+                    'N/A' without the currents (if applicable)
+                'AVR_5_check': bool | str,  # Plant-level voltage regulation 5% check status,
+                    or 'N/A' without its curves (if applicable)
                 'AVR_5': float,  # Plant-level voltage regulation 5% value (if applicable)
                 'AVR_5_crvs': list,  # Plant-level voltage regulation 5% curves (if applicable)
                 'freq1': float,  # Frequency deviation (if applicable)
-                'freq1_check': bool,  # Frequency deviation check status (if applicable)
+                'freq1_check': bool | str,  # Frequency deviation check status, or 'N/A'
+                    without a frequency (if applicable)
             }
         """
         # Validations common to all Pcs
