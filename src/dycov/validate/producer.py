@@ -42,15 +42,19 @@ def _check_renamed_parameters(producer_config, section):
             )
 
 
+def _check_parameters_declared(producer_config, section, parameters):
+    for parameter in parameters:
+        if not producer_config.has_option(section, parameter):
+            raise ValueError(f"The parameter file must specify the {parameter}")
+
+
 def _check_parameters_definition(producer_config, section, needs_consumption):
     _check_renamed_parameters(producer_config, section)
 
     required = _REQUIRED_PARAMETERS
     if needs_consumption:
         required += (_CONSUMPTION_PARAMETER,)
-    for parameter in required + ("topology",):
-        if not producer_config.has_option(section, parameter):
-            raise ValueError(f"The parameter file must specify the {parameter}")
+    _check_parameters_declared(producer_config, section, required + ("topology",))
 
 
 class ModelProducer(Producer):
@@ -182,6 +186,10 @@ class ModelProducer(Producer):
             self._sim_type = ELECTRIC_PERFORMANCE_PPM
         elif bess_models > 0:
             self._sim_type = ELECTRIC_PERFORMANCE_BESS
+            # Its consumption tests run at the maximum power it consumes
+            _check_parameters_declared(
+                self.__read_producer_ini(), "DEFAULT", (_CONSUMPTION_PARAMETER,)
+            )
         else:
             raise ValueError(
                 "Electric performance verification does not support the modeled generator type"
