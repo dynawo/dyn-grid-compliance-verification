@@ -108,7 +108,7 @@ class DycovCLI:
         user_config = getattr(args, "user_config", None)
         if user_config is None:
             return
-        if user_config.is_dir() or not os.access(user_config, os.R_OK):
+        if not os.access(user_config, os.R_OK) or user_config.is_dir():
             parser.error(f"Cannot read the user configuration file {user_config}")
 
     def _apply_diagnostic_mode(self, args):
