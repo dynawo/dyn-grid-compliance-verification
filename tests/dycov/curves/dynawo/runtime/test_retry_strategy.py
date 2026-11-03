@@ -238,8 +238,24 @@ def _failing_with(monkeypatch, timeline_error):
         "source type value could not be interpreted as target ( PARXmlImporter.cpp:63 ) "
         "( PARXmlImporter.cpp:45 )",
         "error while parsing file Producer.dyd : unexpected element ( DYDXmlImporter.cpp:88 )",
+        "parameter voltageSetPointChange has no value ( DYNParameter.hpp:58 )",
+        "failed to retrieve parameter weight_gen cardinality (nbGen) ( DYNSubModel.cpp:458 )",
+        "failed to retrieve multiple variable's cardinality for weight_gen : the nbGen "
+        "cardinality parameter is not set ( DYNSubModel.cpp:512 )",
+        "unable to find lib DYNModelUnknown ( DYNCompiler.cpp:284 )",
+        "invalid dynamic connect between Gen_terminal and Bus_ACPIN : ACPIN is unknown "
+        "( DYNCompiler.cpp:1009 )",
     ],
-    ids=["missing parameter", "unreadable PAR", "unreadable DYD"],
+    ids=[
+        "missing parameter",
+        "unreadable PAR",
+        "unreadable DYD",
+        "parameter without value",
+        "missing cardinality",
+        "cardinality not set",
+        "unknown library",
+        "unknown connection",
+    ],
 )
 def test_an_error_in_the_inputs_of_the_model_is_not_retried(
     monkeypatch, recorded_warnings, recorded_writes, timeline_error
@@ -253,6 +269,7 @@ def test_an_error_in_the_inputs_of_the_model_is_not_retried(
     assert len(attempts) == 1
     assert recorded_writes == []
     assert not [message for message in recorded_warnings if message.startswith("Retry")]
+    assert "Not retried: Dynawo rejected the inputs of the model" in recorded_warnings
 
 
 @pytest.mark.parametrize(
@@ -260,7 +277,7 @@ def test_an_error_in_the_inputs_of_the_model_is_not_retried(
     [
         "KINSOL fails to solve the problem ( DYNSolverKINAlgRestoration.cpp:432 )",
         "no value found for mandatory solver parameter 'hMin' (parameter set 'SIM', "
-        "parameter file 'solvers.par')",
+        "parameter file 'solvers.par') ( DYNSolverImpl.cpp:443 )",
     ],
     ids=["numerical", "solver setting"],
 )

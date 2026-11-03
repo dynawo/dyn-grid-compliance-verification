@@ -897,7 +897,9 @@ class TestSimulateOutcomeAssembly:
 
     def test_success_outcome_within_time(self):
         curves, _, _ = _make_real_curves()
-        result = MagicMock(succeeded=True, sim_time=10.0, curves=pd.DataFrame(), log="")
+        result = MagicMock(
+            succeeded=True, sim_time=10.0, curves=pd.DataFrame(), log="", timeline_error=None
+        )
 
         outcome = self._simulate(curves, result)
 
@@ -911,7 +913,9 @@ class TestSimulateOutcomeAssembly:
 
         def run(**kwargs):
             kwargs["solver"].minimum_time_step = 1e-9
-            return MagicMock(succeeded=True, sim_time=1.0, curves=pd.DataFrame(), log="")
+            return MagicMock(
+                succeeded=True, sim_time=1.0, curves=pd.DataFrame(), log="", timeline_error=None
+            )
 
         with (
             patch(f"{_MODULE}.SolverRetryStrategy") as strat_cls,
@@ -933,7 +937,9 @@ class TestSimulateOutcomeAssembly:
 
     def test_failure_outcome_exceeding_time(self):
         curves, _, _ = _make_real_curves()
-        result = MagicMock(succeeded=False, sim_time=50.0, curves=pd.DataFrame(), log="boom")
+        result = MagicMock(
+            succeeded=False, sim_time=50.0, curves=pd.DataFrame(), log="boom", timeline_error=None
+        )
 
         outcome = self._simulate(curves, result)
 
@@ -941,12 +947,40 @@ class TestSimulateOutcomeAssembly:
         assert outcome.time_exceeds is True
         assert outcome.has_curves is False
 
+    @pytest.mark.parametrize(
+        "timeline_error, rejected",
+        [
+            (
+                "parameter WT_Kpq not found in set merged_Wind_Turbine "
+                "( PARParametersSet.cpp:156 )",
+                True,
+            ),
+            ("KINSOL fails to solve the problem ( DYNSolverKINAlgRestoration.cpp:432 )", False),
+            (None, False),
+        ],
+    )
+    def test_the_outcome_says_whether_dynawo_rejected_the_inputs(self, timeline_error, rejected):
+        curves, _, _ = _make_real_curves()
+        result = MagicMock(
+            succeeded=False,
+            sim_time=1.0,
+            curves=pd.DataFrame(),
+            log="failed",
+            timeline_error=timeline_error,
+        )
+
+        outcome = self._simulate(curves, result)
+
+        assert outcome.rejected_inputs is rejected
+
     def test_has_curves_when_csv_exists(self, tmp_path):
         curves, _, _ = _make_real_curves()
         csv_dir = tmp_path / "outputs" / "curves"
         csv_dir.mkdir(parents=True)
         (csv_dir / "curves.csv").write_text("time;\n")
-        result = MagicMock(succeeded=True, sim_time=1.0, curves=pd.DataFrame(), log="")
+        result = MagicMock(
+            succeeded=True, sim_time=1.0, curves=pd.DataFrame(), log="", timeline_error=None
+        )
 
         outcome = self._simulate(curves, result, working_dir=tmp_path)
 
