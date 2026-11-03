@@ -187,9 +187,9 @@ class ModelProducer(Producer):
         elif bess_models > 0:
             self._sim_type = ELECTRIC_PERFORMANCE_BESS
             # Its consumption tests run at the maximum power it consumes
-            _check_parameters_declared(
-                self.__read_producer_ini(), "DEFAULT", (_CONSUMPTION_PARAMETER,)
-            )
+            producer_config = self.__read_producer_ini()
+            _check_renamed_parameters(producer_config, "DEFAULT")
+            _check_parameters_declared(producer_config, "DEFAULT", (_CONSUMPTION_PARAMETER,))
         else:
             raise ValueError(
                 "Electric performance verification does not support the modeled generator type"
