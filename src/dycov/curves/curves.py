@@ -20,6 +20,11 @@ from dycov.files import value_registry
 from dycov.model.parameters import DisconnectionModel, SimulationResult
 from dycov.model.producer import Producer
 
+# The setpoints whose steps are defined in pu of the power base of the tool, while the curves are
+# compared in pu of the nominal power of the unit; any other step is already in the base of the
+# magnitude it moves, a voltage in Unom or a frequency in fNom
+POWER_SETPOINTS = ("ActivePowerSetpointPu", "ReactivePowerSetpointPu")
+
 
 def get_cfg_oc_name(pcs_name: str, bm_name: str, oc_name: str) -> str:
     """Generate a combined configuration operating condition name from PCS benchmark
@@ -194,11 +199,31 @@ class ProducerCurves:
         if not setpoint_variation:
             return 0.0
 
-        producer = self.get_producer()
         value = self.obtain_value(
             str(setpoint_variation), origin=(config_key, "setpoint_step_value")
         )
-        return float(value) * self._s_nref / producer.s_nom
+        return self.step_in_unit_base(
+            float(value), config.get_value(config_key, "connect_event_to")
+        )
+
+    def step_in_unit_base(self, step: float, connect_to: Optional[str]) -> float:
+        """Takes the step of an event to the base the curves of the unit are compared in.
+
+        Parameters
+        ----------
+        step: float
+            Step of the event, as its definition resolves.
+        connect_to: Optional[str]
+            Setpoint the event steps, None when it steps none.
+
+        Returns
+        -------
+        float
+            The step in the base of the curves.
+        """
+        if connect_to in POWER_SETPOINTS:
+            return step * self._s_nref / self.get_producer().s_nom
+        return step
 
     @abstractmethod
     def get_solver(self) -> dict:

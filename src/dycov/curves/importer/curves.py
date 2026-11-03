@@ -185,15 +185,14 @@ class ImportedCurves(ProducerCurves):
         connect_event_to = config.get_value(config_section, "connect_event_to")
         step_value = 0.0
         if config.has_option(config_section, "setpoint_step_value"):
-            step_value = (
+            step_value = self.step_in_unit_base(
                 float(
                     self.obtain_value(
                         str(config.get_value(config_section, "setpoint_step_value")),
                         origin=(config_section, "setpoint_step_value"),
                     )
-                )
-                * self.get_snref()
-                / self.get_producer().s_nom
+                ),
+                connect_event_to,
             )
 
         return {
