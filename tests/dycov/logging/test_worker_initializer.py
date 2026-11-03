@@ -10,10 +10,12 @@
 """Tests for the preparation of a process pool worker."""
 
 import logging
+import os
 import signal
 import subprocess
 import sys
 import textwrap
+import time
 from logging.handlers import RotatingFileHandler
 
 import pytest
@@ -206,3 +208,124 @@ def test_closing_the_execution_log_leaves_the_shared_one(run_log, tmp_path):
 
     assert "solo en el compartido" in run_log.read_text(encoding="utf-8")
     assert "run_log_dir" not in dycov_logging.get_handler_settings()
+
+
+# The run traps the end signals in the main process, and a forked worker inherits that trap: the
+# exit it raises is what printed a traceback when it reached a worker running its exit handlers.
+TERMINATED_POOL_RUN = textwrap.dedent(
+    '''
+    """A run whose pool is terminated: a worker is told to end while it runs its exit handlers,
+    and another while a process it launched, as it launches Dynawo, is still running."""
+
+    import multiprocessing
+    import os
+    import signal
+    import subprocess
+    import sys
+    import time
+    from multiprocessing import util
+
+    from dycov.core.graceful_shutdown import install_signal_handlers, terminate_all_children
+    from dycov.curves.dynawo.runtime._process import _proc_registry
+    from dycov.logging import worker_initializer
+
+
+    def on_exit(exit_code):
+        terminate_all_children(timeout=5.0)
+        raise SystemExit(exit_code)
+
+
+    def finish_slowly(_):
+        util.Finalize(None, time.sleep, args=(3,), exitpriority=0)
+        return os.getpid()
+
+
+    def launch_and_wait(_):
+        child = subprocess.Popen(
+            ["sleep", "60"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            preexec_fn=os.setsid,
+        )
+        _proc_registry.add(child)
+        with open(sys.argv[2], "w") as pids:
+            pids.write(f"{os.getpid()} {child.pid}")
+        time.sleep(60)
+
+
+    if __name__ == "__main__":
+        install_signal_handlers(on_exit=on_exit)
+        context = multiprocessing.get_context(sys.argv[1])
+
+        pool = context.Pool(
+            1, initializer=worker_initializer, initargs=(None,), maxtasksperchild=1
+        )
+        worker = pool.apply(finish_slowly, (0,))
+        time.sleep(1)
+        os.kill(worker, signal.SIGTERM)
+        time.sleep(1)
+        pool.terminate()
+        pool.join()
+
+        pool = context.Pool(1, initializer=worker_initializer, initargs=(None,))
+        pool.apply_async(launch_and_wait, (0,))
+        while not os.path.exists(sys.argv[2]) or not open(sys.argv[2]).read():
+            time.sleep(0.1)
+        pool.terminate()
+        pool.join()
+    '''
+)
+
+
+def _is_running(pid: int) -> bool:
+    try:
+        os.kill(pid, 0)
+    except ProcessLookupError:
+        return False
+    with open(f"/proc/{pid}/stat") as stat:
+        return stat.read().split(")")[-1].split()[0] != "Z"
+
+
+@pytest.mark.parametrize("start_method", ["fork", "forkserver"])
+def test_a_terminated_pool_ends_its_workers_quietly_and_their_processes_with_them(
+    tmp_path, start_method
+):
+    script = tmp_path / "run.py"
+    script.write_text(TERMINATED_POOL_RUN, encoding="utf-8")
+    pids = tmp_path / "pids.txt"
+
+    run = subprocess.run(
+        [sys.executable, str(script), start_method, str(pids)],
+        timeout=120,
+        capture_output=True,
+        text=True,
+    )
+    _, child = (int(pid) for pid in pids.read_text().split())
+    time.sleep(0.5)
+    orphaned = _is_running(child)
+    if orphaned:
+        os.kill(child, signal.SIGKILL)
+
+    assert run.returncode == 0, run.stderr
+    assert "Traceback" not in run.stderr and "SystemExit" not in run.stderr, run.stderr
+    assert not orphaned
+
+
+def test_the_worker_does_not_keep_the_end_signals_of_the_main_process():
+    trapped = [getattr(signal, name) for name in ("SIGTERM", "SIGHUP", "SIGQUIT")]
+    previous = {sig: signal.getsignal(sig) for sig in trapped + [signal.SIGINT]}
+
+    def main_process_trap(signum, frame):
+        raise SystemExit(128 + signum)
+
+    try:
+        for sig in trapped:
+            signal.signal(sig, main_process_trap)
+
+        worker_initializer(None)
+
+        assert all(signal.getsignal(sig) is not main_process_trap for sig in trapped)
+        assert all(callable(signal.getsignal(sig)) for sig in trapped)
+    finally:
+        for sig, handler in previous.items():
+            signal.signal(sig, handler)
