@@ -9,6 +9,7 @@
 #
 """Checks run on the files supplied as tool inputs."""
 
+import configparser
 import logging
 from pathlib import Path
 
@@ -176,6 +177,88 @@ def test_check_curves_files_generates_the_configuration_from_the_model(tmp_path,
         file_checks.check_curves_files(model_path, tmp_path / "Curves", "performance/SM")
 
     assert created_curves == ["performance_SM"]
+
+
+def test_check_curves_files_generates_the_index_from_the_root_of_the_references(
+    tmp_path, monkeypatch
+):
+    created_curves = []
+    monkeypatch.setattr(
+        file_checks,
+        "create_producer_curves",
+        lambda model_path, curves_path, template: created_curves.append((curves_path, template)),
+    )
+    model_path = _write_model_files(tmp_path / "Dynawo")
+
+    with pytest.raises(FileNotFoundError):
+        file_checks.check_curves_files(model_path, tmp_path / "References" / "G1", "model/BESS")
+
+    assert created_curves == [(tmp_path / "References", "model_BESS")]
+
+
+_EXAMPLES = Path(__file__).resolve().parents[3] / "examples" / "Model"
+
+
+def _index(path: Path) -> configparser.ConfigParser:
+    parser = configparser.ConfigParser(inline_comment_prefixes=("#",))
+    parser.optionxform = str
+    parser.read(path, encoding="utf-8")
+    return parser
+
+
+def _tests_of(index: configparser.ConfigParser) -> set:
+    return {key.split(".")[0] for key in index["Curves-Files"]}
+
+
+def test_an_empty_reference_directory_gets_the_index_of_its_model(tmp_path, caplog):
+    """The unit of the Zone 1 of this model has the name of the Zone 3 one, so both zones share
+    the directory of the reference curves, and one index holds them."""
+    references = tmp_path / "References"
+    references.mkdir()
+
+    with pytest.raises(FileNotFoundError):
+        file_checks.check_curves_files(
+            _EXAMPLES / "Wind" / "IECB2015" / "Dynawo", references / "Producer", "model/PPM"
+        )
+
+    index = _index(references / "Producer" / "CurvesFiles.ini")
+    assert _tests_of(index) == {"PCS_RTE-I16z1", "PCS_RTE-I16z3"}
+    assert index.has_section("Curves-Dictionary-Zone1")
+    assert index.has_section("Curves-Dictionary-Zone3")
+    assert not (references / "Producer" / "Producer").exists()
+    assert "complete it" in caplog.text
+
+
+def test_each_unit_of_zone_1_gets_an_index_of_its_own(tmp_path):
+    references = tmp_path / "References"
+    references.mkdir()
+
+    with pytest.raises(FileNotFoundError):
+        file_checks.check_curves_files(
+            _EXAMPLES / "Wind" / "WECC4" / "Dynawo", references / "Producer", "model/PPM"
+        )
+
+    zone3 = _index(references / "Producer" / "CurvesFiles.ini")
+    assert _tests_of(zone3) == {"PCS_RTE-I16z3"}
+    assert zone3.has_section("Curves-Dictionary-Zone3")
+    for unit in ("Producer_G1", "Producer_G2"):
+        zone1 = _index(references / unit / "CurvesFiles.ini")
+        assert _tests_of(zone1) == {"PCS_RTE-I16z1"}
+        assert zone1.has_section("Curves-Dictionary-Zone1")
+
+
+def test_a_storage_model_gets_the_index_of_a_storage_unit(tmp_path):
+    references = tmp_path / "References"
+    references.mkdir()
+
+    with pytest.raises(FileNotFoundError):
+        file_checks.check_curves_files(
+            _EXAMPLES / "BESS" / "WECC" / "Dynawo", references / "Producer", "model/BESS"
+        )
+
+    index = _index(references / "Producer" / "CurvesFiles.ini")
+    assert "PCS_RTE-I16z3.PSetPointStep.Inc40Injection" in index["Curves-Files"]
+    assert "PCS_RTE-I16z1.SetPointStep.ActiveConsumption" in index["Curves-Files"]
 
 
 # ---------------------------------------------------------------------------
