@@ -245,6 +245,11 @@ def _failing_with(monkeypatch, timeline_error):
         "unable to find lib DYNModelUnknown ( DYNCompiler.cpp:284 )",
         "invalid dynamic connect between Gen_terminal and Bus_ACPIN : ACPIN is unknown "
         "( DYNCompiler.cpp:1009 )",
+        "element WT_terminalX not found in subModel Wind_Turbine (type "
+        "IECWT4BCurrentSource2020) ( DYNSubModel.cpp:262 )",
+        "missing 'parFile' attribute for model Wind_Turbine in the dyd file (whereas 'parId' "
+        "is defined) ( DYNDynamicData.cpp:258 )",
+        'boost::filesystem::canonical: No such file or directory: "/work/Nope.par"',
     ],
     ids=[
         "missing parameter",
@@ -255,6 +260,9 @@ def _failing_with(monkeypatch, timeline_error):
         "cardinality not set",
         "unknown library",
         "unknown connection",
+        "unknown variable",
+        "PAR not named",
+        "missing PAR",
     ],
 )
 def test_an_error_in_the_inputs_of_the_model_is_not_retried(
