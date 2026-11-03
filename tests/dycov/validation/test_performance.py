@@ -426,6 +426,34 @@ def test_calculate_times_skips_the_disabled_validations():
     assert compliance_values == {}
 
 
+def test_calculate_times_keeps_the_band_of_each_time_check():
+    validator = _make_validator(
+        validations=["time_5U", "time_10P", "time_10Pfloor_85U"], calculated=_make_pdr_curves()
+    )
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_times(compliance_values, 1.0)
+
+    assert compliance_values["time_5U_band"] == pytest.approx((0.975, 1.025))
+    assert compliance_values["time_10P_band"] == pytest.approx((0.45, 0.55))
+    assert compliance_values["time_10Pfloor_band"] == (pytest.approx(0.45), None)
+
+
+def test_check_hands_the_bands_of_the_time_checks_to_the_figures(tmp_path):
+    validator = _make_validator(validations=["time_5U"], is_dynawo_model=False)
+    compliance_values = {
+        "is_invalid_test": False,
+        "time_5u": 1.0,
+        "time_5U_band": (0.975, 1.025),
+    }
+
+    results = validator._PerformanceValidator__check(
+        tmp_path, False, _make_stability(), 1.0, 1.15, True, compliance_values
+    )
+
+    assert results["time_5U_band"] == (0.975, 1.025)
+
+
 # ---------------------------------------------------------------------------
 # AVR and frequency calculations
 # ---------------------------------------------------------------------------

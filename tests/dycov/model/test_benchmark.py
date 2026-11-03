@@ -22,7 +22,7 @@ from dycov.model.benchmark import (
 )
 from dycov.model.compliance import Compliance
 from dycov.model.parameters import CurvesAvailability, SimulationError
-from dycov.report.types import FrequencyBand
+from dycov.report.types import CheckBand, FrequencyBand
 
 _PCS_BENCHMARK = "PCS.Bench"
 _INTERNAL_NODE1_FIGURES = {
@@ -184,6 +184,29 @@ def test_frequency_figure_draws_every_declared_band(monkeypatch):
             FrequencyBand(upper=0.25, lower=0.25, color="#c44e52"),
         ]
     }
+
+
+@pytest.mark.parametrize(
+    "figure, check, band",
+    [
+        ("fig_V", "time_5U", "time_5U_band"),
+        ("fig_V", "time_10U", "time_10U_band"),
+        ("fig_P", "time_5P", "time_5P_band"),
+        ("fig_P", "time_10P", "time_10P_band"),
+        ("fig_P", "time_10P_85U", "time_10P_band"),
+        ("fig_P", "time_10Pfloor_85U", "time_10Pfloor_band"),
+        ("fig_P", "time_10Pfloor_clear", "time_10Pfloor_band"),
+    ],
+)
+def test_a_figure_draws_the_band_of_the_check_it_illustrates(monkeypatch, figure, check, band):
+    """#694: the band the check measures against, which the check leaves in the results."""
+    validations = {check: [_PCS_BENCHMARK]}
+    bm = _make_benchmark(monkeypatch, DummyProducer(), {figure: [_PCS_BENCHMARK]}, validations)
+
+    (described,) = bm.get_figures_description()
+
+    assert isinstance(described.tolerance_band, CheckBand)
+    assert described.tolerance_band.source_key == band
 
 
 def test_wref_figure_reads_the_network_frequency_curve(monkeypatch):
