@@ -140,6 +140,7 @@ def _add_user_config_argument(parser: argparse.ArgumentParser) -> None:
         "--user-config",
         help_msg=(
             "Path to a custom user configuration file. Overrides the default user config location."
+            " A file that cannot be read stops the run."
         ),
         arg_type=Path,
         default=None,

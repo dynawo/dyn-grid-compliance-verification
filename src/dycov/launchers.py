@@ -8,6 +8,7 @@
 #     demiguelm@aia.es
 #
 
+import os
 import shutil
 from pathlib import Path
 from typing import Optional
@@ -73,6 +74,8 @@ class DycovCLI:
         args : argparse.Namespace
             Parsed command-line arguments.
         """
+        self._check_user_config(parser, args)
+
         # Determine Dynawo launcher availability and initialize components.
         dynawo_launcher_path: Optional[Path] = None
         # A workbook is a model that does not exist yet: simulating it needs the launcher too.
@@ -98,6 +101,15 @@ class DycovCLI:
 
         # Dispatch the command to the appropriate handler function.
         return self._dispatch_command(parser, args, dynawo_launcher_path)
+
+    def _check_user_config(self, parser, args) -> None:
+        """Stops when the file given with --user-config cannot be read, rather than run with
+        the configuration the user meant to replace."""
+        user_config = getattr(args, "user_config", None)
+        if user_config is None:
+            return
+        if not user_config.is_file() or not os.access(user_config, os.R_OK):
+            parser.error(f"Cannot read the user configuration file {user_config}")
 
     def _apply_diagnostic_mode(self, args):
         if not getattr(args, "diagnostic", False):
