@@ -414,6 +414,29 @@ def test_get_txu_of_curves_starting_after_the_event():
     assert result == pytest.approx(2.0)
 
 
+def test_get_txu_of_a_fault_that_leaves_the_voltage_above_is_zero_whatever_follows():
+    """#682: T85U is when the voltage gets back above 0.85 pu after the fault, regardless of
+    any undershoot later on; measuring from it would make the composed checks more lenient."""
+    time = np.round(np.arange(29.0, 36.0, 0.001), 6)
+    curve = np.where((time >= 30) & (time < 30.15), 0.9, 1.0)
+    curve = np.where((time >= 33) & (time < 33.2), 0.8, curve)
+
+    result = common.get_txu(0.85, list(time), list(curve), 30.0, sim_t_event_clear=30.15)
+
+    assert result == 0
+
+
+def test_get_txu_finds_a_dip_reached_a_few_samples_into_the_fault():
+    time = [0, 1, 2, 3, 4, 5, 6, 7]
+    curve = [1.0, 1.0, 0.95, 0.9, 0.5, 0.6, 0.9, 1.0]
+
+    within = common.get_txu(0.85, time, curve, 2, sim_t_event_clear=5)
+    at_its_instant = common.get_txu(0.85, time, curve, 2)
+
+    assert within == pytest.approx(4.0)
+    assert at_its_instant == 0
+
+
 def _recovering_voltage(time: np.ndarray) -> np.ndarray:
     """A dip to 0.05 pu from 30 s to 30.15 s, then a ramp back to 1 pu at 31 s."""
     ramp = 0.05 + (time - 30.15) * 0.95 / 0.85
