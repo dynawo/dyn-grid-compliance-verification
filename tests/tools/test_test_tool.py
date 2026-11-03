@@ -19,16 +19,24 @@ from __future__ import annotations
 import os
 import stat
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 _SCRIPTS = Path(__file__).resolve().parents[2] / "tools" / "scripts"
 
+pytestmark = pytest.mark.skipif(
+    sys.platform != "linux", reason="the script needs bash 4.3 or later and GNU find"
+)
+
 _FAKE_DYCOV = """#!/bin/bash
 echo "$*" >> "$FAKE_DYCOV_CALLS"
+value=""
 for argument in "$@"; do
+    if [ -n "$value" ]; then value=""; continue; fi
     case "$argument" in
+        --user-config | --dtr) value=yes ;;
         -*) ;;
         validate | performance | generate_gfm_envelopes) break ;;
         *) echo "dycov: error: argument command: invalid choice: '$argument'" >&2; exit 2 ;;
@@ -92,6 +100,19 @@ def test_the_runner_succeeds_when_every_run_does(runner):
     assert runner.summary.is_file()
 
 
+def test_the_envelope_phase_gets_the_options_of_every_run(runner, tmp_path):
+    config = tmp_path / "user.ini"
+    config.touch()
+
+    run = runner("-g", "-d", "--user-config", str(config), "--dtr", "20240215")
+
+    assert run.returncode == 0, run.stderr
+    generations = [call for call in runner.calls() if "generate_gfm_envelopes" in call]
+    assert len(generations) == 3
+    prefix = f"-d --user-config {config} --dtr 20240215 generate_gfm_envelopes"
+    assert all(call.startswith(prefix) for call in generations)
+
+
 def test_a_failed_run_fails_the_runner_once_every_phase_has_run(runner):
     run = runner(fail="IECB2015")
 
@@ -109,9 +130,8 @@ def test_a_failed_envelope_generation_fails_the_runner(runner):
     assert len([call for call in runner.calls() if "generate_gfm_envelopes" in call]) == 3
 
 
-def test_a_run_with_incomplete_inputs_does_not_stop_the_others(runner):
-    """dycov ends with 255 when its inputs are incomplete, and xargs stops launching jobs at the
-    first 255 it sees."""
+def test_a_run_ending_with_255_does_not_stop_the_others(runner):
+    """xargs launches no further job once one ends with 255, whatever made the run end so."""
     first_example = "IECA2015"
 
     run = runner("-v", fail=f"/{first_example}/", code=255)
