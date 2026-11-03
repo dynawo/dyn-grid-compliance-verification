@@ -103,12 +103,12 @@ class DycovCLI:
         return self._dispatch_command(parser, args, dynawo_launcher_path)
 
     def _check_user_config(self, parser, args) -> None:
-        """Stops when the file given with --user-config cannot be read, rather than run with
-        the configuration the user meant to replace."""
+        """Stops when the file given with --user-config cannot be read, rather than run without
+        the settings the user gave in it."""
         user_config = getattr(args, "user_config", None)
         if user_config is None:
             return
-        if not user_config.is_file() or not os.access(user_config, os.R_OK):
+        if user_config.is_dir() or not os.access(user_config, os.R_OK):
             parser.error(f"Cannot read the user configuration file {user_config}")
 
     def _apply_diagnostic_mode(self, args):
