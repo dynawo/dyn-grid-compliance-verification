@@ -837,6 +837,8 @@ class PerformanceValidator(Validator):
                 'AVR_5_crvs': list,  # Plant-level voltage regulation 5% curves (if applicable)
                 'freq1': float,  # Frequency deviation (if applicable)
                 'freq1_check': bool,  # Frequency deviation check status (if applicable)
+                'freq1_frequency': str,  # The frequency freq_1 bounded, of the synchronous
+                    condenser or of the units (if applicable)
             }
         """
         # Validations common to all Pcs

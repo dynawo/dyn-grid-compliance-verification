@@ -325,8 +325,8 @@ step-response characteristics when they were computed.
      - Rotor speed of the generating units, in Hz.
    * - ``fig_WRef``
      - Network frequency, in Hz, with the band of ``freq_250`` or ``freq_200``
-       when activated, and that of ``freq_1`` when the test models no
-       synchronous condenser.
+       when activated, and that of ``freq_1`` when the curves give no
+       frequency of a synchronous condenser.
    * - ``fig_Theta``
      - Internal angle of the generating units.
    * - ``fig_Tap``
