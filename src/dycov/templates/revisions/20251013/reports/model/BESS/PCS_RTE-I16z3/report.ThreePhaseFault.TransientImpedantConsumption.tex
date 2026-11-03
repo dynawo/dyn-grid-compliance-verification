@@ -1,0 +1,162 @@
+    {{ waterMarkText }}
+
+    \renewcommand{\DTRPcs}{ThreePhaseFault} % DTR pcs definition
+    \renewcommand{\PCSname}{PCS_RTE-I16z3}
+    \renewcommand{\OCname}{TransientImpedantConsumption}
+
+
+    \subsection{Test I5 - Transient fault ride-through in consumption}
+
+    Checks for compliant behavior of the BESS under a grid scenario where there
+    is a symmetric three-phase fault at one of the four transmission lines
+    (at a 1\% distance from the PDR). The BESS should remain connected and
+    be able to supply the necessary reactive injection.
+
+    The fault of this test has an impedance of its own. The DTR gives it as
+    $X_{defaut} = 4$ pu, in the base $U_{dim}$ and $S_n$, and it chose that
+    value so that the voltage stays near 0.6 pu while the unit injects neither active
+    nor reactive current.
+
+    \GridCircuitZthree
+
+    \noindent Important reminders:
+    \begin{itemize}
+        \item The time for fault clearance, $T_{clear}$, is a parameter that
+        is specified in the DTR and depends on the voltage level in
+        question:
+        \begin{itemize}
+            \item HTB3 (400 kV): $T_{clear}$ = 85 ms
+            \item HTB2 (150 kV and 225 kV): $T_{clear}$ = 85 ms
+            \item HTB1 (63 kV and 90 kV): $T_{clear}$ = 150 ms
+        \end{itemize}
+    \end{itemize}
+
+    In \Dynawo this fault has been modeled by splitting Line4 into Line4a
+    and Line4b, and then inserting an intermediate bus between them, to
+    which a NodeFault model is attached.
+
+    Note that although the DTR PCS also requires simulating a one-phase
+    fault, this tool will not implement it, as it would require the
+    simulation of a three-phase model. All simulations are only
+    positive-sequence.
+
+    \begin{description}
+        \item Initial conditions used at the PDR bus:
+        \begin{itemize}
+            \item $P = P_{max\_consumption\_unite}$
+            \item $Q = 0$
+            \item $U = U_{dim}$
+        \end{itemize}
+    \end{description}
+
+    \subsubsection{Simulation parameters}
+
+    Solver and parameters used in the simulation:
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+           \textbf{Parameter} & \textbf{Value (default)} \\
+            \midrule
+            \BLOCK{for row in solverPCSI16z3ThreePhaseFaultTransientImpedantConsumption}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \GridSimulationHeaderZthree{
+        \GridCurvesDescriptionZthree
+        \GridCurvesItZthreeDescriptionZthree
+        \GridCurvesTapZthreeDescriptionZthree
+    }
+    \GridCurvesZthree
+    \GridCurvesItZthree
+    \GridCurvesTapZthree
+    \\[2\baselineskip]
+    Go to  {{ linkPCSI16z3ThreePhaseFaultTransientImpedantConsumption }}
+
+    \subsubsection{Analysis of results}
+
+    \noindent Dynamic behaviour: {{ stabilizedPCSI16z3ThreePhaseFaultTransientImpedantConsumption }}
+
+    \noindent Analysis of results for PCS \DTRPcs. Values extracted
+    from the simulation:
+
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{@{}lccccccccc@{}}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in rmPCSI16z3ThreePhaseFaultTransientImpedantConsumption}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \subsubsection{Compliance checks}
+
+    {{ missedColumns }}
+
+    \noindent Compliance thresholds on the curves:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{@{}lccccccccc@{}}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
+            \midrule
+            \BLOCK{for row in thmPCSI16z3ThreePhaseFaultTransientImpedantConsumption}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent Compliance checks on the curves:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{@{}lcccccccccc@{}}
+            \toprule
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} & \\
+            \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
+            & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.      \\
+            \midrule
+            \BLOCK{for row in emPCSI16z3ThreePhaseFaultTransientImpedantConsumption}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} & {{row[6]}} & {{row[7]}} & {{row[8]}} & {{row[9]}} & {{row[10]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent Compliance checks on the Active Power Recovery:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{cllc}
+            \toprule
+            Variable   & Error      & Threshold   & Check      \\
+            \midrule
+            \BLOCK{for row in aprPCSI16z3ThreePhaseFaultTransientImpedantConsumption}
+            {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent In steady state after the event, the absolute average error must not exceed {{steadystatethreshold}}\% (configured value):
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{cllc}
+            \toprule
+            Variable   & MAE        & Final Error & Compliance \\
+            \midrule
+            \BLOCK{for row in ssemPCSI16z3ThreePhaseFaultTransientImpedantConsumption}
+            {{row[0]}} & {{row[1]}} & {{row[2]}}  & {{row[3]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
