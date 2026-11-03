@@ -278,7 +278,8 @@ def test_sim_retries_tune_the_sim_parameters(recorded_warnings, recorded_writes,
     assert solver.relAccuracy is not None
 
 
-# The values the shipped solvers.par takes from the configuration in a run
+# A run writes solvers.par and builds its solver from the same configuration, so the file holds
+# the settings of _ida_solver() and _sim_solver()
 _SOLVER_SETTINGS = {
     "ida_order": "2",
     "ida_initStep": "1e-07",
@@ -293,7 +294,7 @@ _SOLVER_SETTINGS = {
     "sim_maxNewtonTry": "10",
     "sim_linearSolverName": "KLU",
     "sim_fnormtol": "0.0001",
-    "sim_minimalAcceptableStep": "1e-10",
+    "sim_minimalAcceptableStep": "1e-06",
 }
 
 
@@ -303,7 +304,7 @@ def _solvers_par(working_oc_dir: Path) -> None:
     (working_oc_dir / "solvers.par").write_text(filled)
 
 
-def _solver_sets(working_oc_dir: Path) -> dict[str, dict[str, float]]:
+def _solver_sets(working_oc_dir: Path) -> dict[str, dict[str, str]]:
     root = etree.parse(working_oc_dir / "solvers.par").getroot()
     return {
         parameter_set.get("id"): {
@@ -358,8 +359,7 @@ def test_ida_retries_tune_the_ida_set_and_leave_the_sim_one_as_configured(
     _run_in(SolverRetryStrategy(RetrySettings()), _ida_solver(), written_solvers)
 
     tuned = _solver_sets(written_solvers)
-    sim_configured = {name: tuned["SIM"][name] for name in configured["SIM"]}
-    assert sim_configured == configured["SIM"]
+    assert tuned["SIM"] == configured["SIM"]
     assert float(tuned["IDA"]["minStep"]) == pytest.approx(1e-7)
     assert float(tuned["IDA"]["minimalAcceptableStep"]) == pytest.approx(1e-7)
     assert float(tuned["IDA"]["absAccuracy"]) == pytest.approx(1e-5)
