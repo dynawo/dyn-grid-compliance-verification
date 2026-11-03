@@ -210,7 +210,7 @@ class PerformanceValidator(Validator):
         self,
         compliance_values: dict,
         t_event_start: float,
-        t_event_clear: float,
+        t_event_clear: float | None = None,
     ) -> dict:
         bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
         if compliance_list.contains_key(
@@ -261,7 +261,7 @@ class PerformanceValidator(Validator):
         self,
         compliance_values: dict,
         t_event_start: float,
-        t_event_clear: float,
+        t_event_clear: float | None = None,
     ):
         self.__calculate_simple_times(compliance_values, t_event_start)
         self.__calculate_composed_times(compliance_values, t_event_start, t_event_clear)
