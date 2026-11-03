@@ -15,7 +15,7 @@ from pathlib import Path
 import pandas as pd
 
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.runtime._curves import create_curves
+from dycov.curves.dynawo.runtime._curves import create_curves, find_divergence
 from dycov.curves.dynawo.runtime._process import (
     find_timeline_error,
     run_dynawo_process,
@@ -264,6 +264,16 @@ class DynawoSimulator:
             save_file,
             succeeded,
         )
+        divergence = find_divergence(
+            curves_calculated,
+            generators,
+            config.get_float("Dynawo", "divergence_voltage_limit", 10.0),
+            config.get_float("Dynawo", "divergence_power_limit", 100.0),
+        )
+        if divergence:
+            succeeded = False
+            log = f"Simulation diverged: {divergence}"
+            curves_calculated = pd.DataFrame()
 
         return DynawoResult(
             succeeded=succeeded,

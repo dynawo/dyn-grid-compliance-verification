@@ -644,3 +644,59 @@ def create_curves(
     report_unserved_requests(variable_translations, df_curves_imported)
     df_curves = translate_curves(variable_translations, df_curves_imported)
     return build_output_curves(df_curves, df_curves_imported, generators, s_nom, s_nref)
+
+
+def _is_producer_curve(column: str, generators: list) -> bool:
+    return column.startswith(("BusPDR_", "Measurements_")) or any(
+        column.startswith(f"{generator.id}_GEN_") for generator in generators
+    )
+
+
+def _divergence_limit(
+    column: str, generators: list, voltage_limit: float, power_limit: float
+) -> float | None:
+    """The magnitude beyond which a curve of the producer has diverged, None for a curve of the
+    network, whose loads and machines are not in the base of the producer, or one that may
+    legitimately reach any: a setpoint, a frequency, a tap or an angle."""
+    if not _is_producer_curve(column, generators) or "Setpoint" in column:
+        return None
+    if "Voltage" in column or "MagnitudeControlledByAVR" in column:
+        return voltage_limit
+    if "Power" in column or "Current" in column:
+        return power_limit
+    return None
+
+
+def find_divergence(
+    curves: pd.DataFrame, generators: list, voltage_limit: float, power_limit: float
+) -> str | None:
+    """Looks for a curve of the producer that has diverged: a voltage beyond voltage_limit, a
+    power or a current beyond power_limit, in absolute value, or a value that is not finite.
+
+    Parameters
+    ----------
+    curves : pd.DataFrame
+        The curves of a simulation, as create_curves gives them.
+    generators : list
+        The units of the producer, whose curves are named after their ids.
+    voltage_limit : float
+        Largest voltage, in pu, a simulation that has not diverged reaches.
+    power_limit : float
+        Largest power or current, in pu, a simulation that has not diverged reaches.
+
+    Returns
+    -------
+    str | None
+        What the first diverged curve reached, None when none has diverged.
+    """
+    for column in curves.columns:
+        limit = _divergence_limit(column, generators, voltage_limit, power_limit)
+        if limit is None:
+            continue
+        values = curves[column].to_numpy(dtype=float)
+        if not np.all(np.isfinite(values)):
+            return f"{column} is not finite"
+        peak = float(np.max(np.abs(values))) if len(values) else 0.0
+        if peak > limit:
+            return f"{column} reached {peak:.3g} pu, beyond {limit:g} pu"
+    return None
