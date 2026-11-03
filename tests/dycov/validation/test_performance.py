@@ -668,6 +668,25 @@ def test_calculate_measures_the_response_on_the_curve_the_event_drives():
     assert compliance_values["calc_rise_time"] == pytest.approx(1.0)
 
 
+@pytest.mark.parametrize("validation", ["time_10Pfloor_85U", "time_5P_85U", "time_10P_85U"])
+def test_calculate_looks_for_the_dip_until_the_fault_clears(validation):
+    curves = pd.DataFrame(
+        {
+            "time": [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            "BusPDR_BUS_Voltage": [1.0, 0.95, 0.9, 0.5, 0.6, 0.9, 1.0],
+            "BusPDR_BUS_ActivePower": [0.5] * 7,
+            "BusPDR_BUS_ReactivePower": [0.1] * 7,
+        }
+    )
+    validator = _make_validator(validations=[validation], calculated=curves)
+
+    compliance_values = validator._PerformanceValidator__calculate(
+        {"connect_to": "NetworkFrequencyPu"}, 1.0, 3.0
+    )
+
+    assert compliance_values["time_85u"] == pytest.approx(4.0)
+
+
 def test_calculate_measures_no_response_without_the_curve_the_event_drives():
     validator = _make_validator(calculated=_make_pdr_curves())
 
