@@ -443,22 +443,18 @@ def get_txu(threshold: float, time: list, curve: list, sim_t_event_end: float) -
     while sim_t_event_end > time[pos_t_event] and pos_t_event < len(time) - 1:
         pos_t_event += 1
 
-    # Cut list values
-    time = time[pos_t_event - 1 :]
-    curve = curve[pos_t_event - 1 :]
+    # Dynawo writes the discontinuity of the event a few microseconds before its instant, so the
+    # sample before the event may already hold the curve under the threshold; on a regular grid
+    # that sample is still the one before the event, above it
+    first = max(pos_t_event - 1, 0)
+    below = next((pos for pos in range(first, len(curve)) if abs(curve[pos]) < threshold), None)
+    if below is None:
+        return 0
 
-    pos = 0
-    while pos < len(curve) and abs(curve[pos]) < threshold:
-        pos += 1
-
-    if pos == len(curve):
-        pos = len(curve) - 1
-
-    if time[pos] < sim_t_event_end:
-        ret_val = 0
-    else:
-        ret_val = time[pos] - sim_t_event_end
-    return ret_val
+    recovered = next(
+        (pos for pos in range(below, len(curve)) if abs(curve[pos]) >= threshold), len(curve) - 1
+    )
+    return max(time[recovered] - sim_t_event_end, 0)
 
 
 def check_generator_imax(
