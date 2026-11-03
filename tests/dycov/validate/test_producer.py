@@ -13,6 +13,7 @@ import configparser
 from pathlib import Path
 
 import pytest
+from tests.dycov.utils import listed_in_order
 
 from dycov.configuration.cfg import Config
 from dycov.core.global_variables import MODEL_VALIDATION_BESS, MODEL_VALIDATION_PPM
@@ -199,14 +200,8 @@ def _model_in(model_path: Path, zone: int = 0, filename=None) -> ModelProducer:
     return producer
 
 
-def _listed_in_order(monkeypatch, reverse=False):
-    """The order a directory lists its files in depends on the file system; fix one."""
-    iterdir = Path.iterdir
-    monkeypatch.setattr(Path, "iterdir", lambda self: iter(sorted(iterdir(self), reverse=reverse)))
-
-
 @pytest.mark.parametrize("reverse", [False, True], ids=["dyd listed first", "par listed first"])
-@pytest.mark.parametrize("folder", ["WindPark", "IECPark", "partage"])
+@pytest.mark.parametrize("folder", ["WindPark", "IECPark", "partage", "Model_dyd"])
 def test_the_model_files_are_found_whatever_the_folder_is_called(
     tmp_path, monkeypatch, folder, reverse
 ):
@@ -215,7 +210,7 @@ def test_the_model_files_are_found_whatever_the_folder_is_called(
     for extension in ("dyd", "par", "ini"):
         (model_path / f"Producer.{extension}").write_text("[DEFAULT]\n")
     (model_path / "LHVRT.txt").write_text("")
-    _listed_in_order(monkeypatch, reverse)
+    listed_in_order(monkeypatch, reverse)
     producer = _model_in(model_path)
 
     assert producer.get_producer_dyd().name == "Producer.dyd"
@@ -227,14 +222,15 @@ def test_the_model_files_are_found_whatever_the_folder_is_called(
 def test_a_unit_is_not_taken_for_one_whose_name_ends_with_it(tmp_path, monkeypatch, reverse):
     zone1 = tmp_path / "Dynawo" / "Zone1"
     zone1.mkdir(parents=True)
-    for unit in ("G1", "WG1"):
+    for unit, p_max in (("G1", 10), ("WG1", 20)):
         for extension in ("dyd", "par", "ini"):
-            (zone1 / f"{unit}.{extension}").write_text("[DEFAULT]\n")
-    _listed_in_order(monkeypatch, reverse)
+            (zone1 / f"{unit}.{extension}").write_text(f"[DEFAULT]\np_max_injection = {p_max}\n")
+    listed_in_order(monkeypatch, reverse)
     producer = _model_in(tmp_path / "Dynawo", zone=1, filename="G1")
 
     assert producer.get_producer_dyd().name == "G1.dyd"
     assert producer.get_producer_par().name == "G1.par"
+    assert producer._ModelProducer__read_producer_ini().get("DEFAULT", "p_max_injection") == "10"
 
 
 def test_get_filenames_of_a_zone_not_delivered_is_empty(tmp_path):

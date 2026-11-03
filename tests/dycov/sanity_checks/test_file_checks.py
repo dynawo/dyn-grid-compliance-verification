@@ -15,6 +15,7 @@ from pathlib import Path
 
 import pytest
 from lxml import etree
+from tests.dycov.utils import listed_in_order
 
 from dycov.sanity_checks import file_checks
 
@@ -134,12 +135,6 @@ def test_check_dynawo_model_files_rejects_files_with_different_names(tmp_path):
     assert "do not have the same name" in str(not_found_error.value)
 
 
-def _listed_in_order(monkeypatch, reverse=False):
-    """The order a directory lists its files in depends on the file system; fix one."""
-    iterdir = Path.iterdir
-    monkeypatch.setattr(Path, "iterdir", lambda self: iter(sorted(iterdir(self), reverse=reverse)))
-
-
 @pytest.mark.parametrize("reverse", [False, True], ids=["listed first", "listed last"])
 @pytest.mark.parametrize("folder", ["WindPark", "Parc_eolien", "Comparaison", "parametres"])
 def test_check_dynawo_model_files_ignores_the_name_of_the_folder(
@@ -147,7 +142,7 @@ def test_check_dynawo_model_files_ignores_the_name_of_the_folder(
 ):
     model_path = _write_model_files(tmp_path / folder)
     (model_path / "LHVRT.txt").write_text("")
-    _listed_in_order(monkeypatch, reverse)
+    listed_in_order(monkeypatch, reverse)
 
     assert file_checks.check_dynawo_model_files(model_path) is None
 
@@ -158,7 +153,7 @@ def test_check_dynawo_model_files_checks_the_unit_it_names(tmp_path, monkeypatch
     model_path = _write_model_files(tmp_path / "Zone1", dyd="G1", par="G1", ini="G1")
     _write_model_files(model_path, dyd="WG1", par="WG1", ini="WG1")
     (model_path / "G1.par").unlink()
-    _listed_in_order(monkeypatch, reverse)
+    listed_in_order(monkeypatch, reverse)
 
     with pytest.raises(FileNotFoundError) as not_found_error:
         file_checks.check_dynawo_model_files(model_path, "G1")
