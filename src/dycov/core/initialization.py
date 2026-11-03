@@ -89,8 +89,8 @@ def _option_line(key: str, value: str) -> str:
 
 def _end_section(lines: list, options: dict) -> None:
     """Writes the options of the user the profile has no line for at the end of their section,
-    after its last group of lines and before the blank lines that close it and the comments
-    that introduce the next one."""
+    before its last blank lines, which in the profiles close it and precede the comments that
+    introduce the next one."""
     tail = []
     while lines and (not lines[-1].strip() or lines[-1].lstrip().startswith(("#", ";"))):
         tail.insert(0, lines.pop())
