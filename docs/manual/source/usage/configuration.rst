@@ -26,6 +26,11 @@ To switch profiles, copy the desired file over ``config.ini``. Individual
 options from the advanced profile may also be copied into ``config.ini``
 directly — any option is honored there, whichever profile it comes from.
 
+``--user-config <file>`` reads another configuration file on top of
+``config.ini`` for one execution: its options take precedence, and those it
+does not set keep the value ``config.ini`` gives them. A file that does not
+exist or cannot be read stops the run with an error.
+
 
 The revision of the DTR
 -----------------------
