@@ -8,10 +8,13 @@
 #     demiguelm@aia.es
 #
 
+import re
 from pathlib import Path
 
 import pytest
+from lxml import etree
 
+import dycov
 from dycov.curves.dynawo.runtime import retry_strategy as retry_strategy_module
 from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoResult, DynawoSimulator
 from dycov.curves.dynawo.runtime.retry_strategy import RetrySettings, SolverRetryStrategy
@@ -116,7 +119,7 @@ def _sim_solver():
 
 
 def _modified_parameters(writes):
-    return [args[2] for writer, args in writes if writer == "modify_par_file"]
+    return [args[3] for writer, args in writes if writer == "modify_par_file"]
 
 
 def _added_parameters(writes):
@@ -273,6 +276,94 @@ def test_sim_retries_tune_the_sim_parameters(recorded_warnings, recorded_writes,
     assert "maxNewtonTry" in _added_parameters(recorded_writes)
     assert solver.solver_id == "IDA"
     assert solver.relAccuracy is not None
+
+
+# The values the shipped solvers.par takes from the configuration in a run
+_SOLVER_SETTINGS = {
+    "ida_order": "2",
+    "ida_initStep": "1e-07",
+    "ida_minStep": "1e-06",
+    "ida_maxStep": "10",
+    "ida_absAccuracy": "1e-06",
+    "ida_relAccuracy": "0.0001",
+    "ida_minimalAcceptableStep": "1e-06",
+    "sim_hMin": "1e-06",
+    "sim_hMax": "0.001",
+    "sim_kReduceStep": "0.5",
+    "sim_maxNewtonTry": "10",
+    "sim_linearSolverName": "KLU",
+    "sim_fnormtol": "0.0001",
+    "sim_minimalAcceptableStep": "1e-10",
+}
+
+
+def _solvers_par(working_oc_dir: Path) -> None:
+    template = (Path(dycov.__file__).parent / "model_lib" / "solvers.par").read_text()
+    filled = re.sub(r"\{\{(\w+)\}\}", lambda match: _SOLVER_SETTINGS[match[1]], template)
+    (working_oc_dir / "solvers.par").write_text(filled)
+
+
+def _solver_sets(working_oc_dir: Path) -> dict[str, dict[str, float]]:
+    root = etree.parse(working_oc_dir / "solvers.par").getroot()
+    return {
+        parameter_set.get("id"): {
+            par.get("name"): par.get("value") for par in parameter_set if par.get("name")
+        }
+        for parameter_set in root.iter("{*}set")
+    }
+
+
+@pytest.fixture
+def written_solvers(monkeypatch, tmp_path):
+    """The solvers.par of a test, written by the real writers; the job file is left aside."""
+    _solvers_par(tmp_path)
+    monkeypatch.setattr(
+        retry_strategy_module.replace_placeholders, "modify_jobs_file", lambda *args: None
+    )
+    return tmp_path
+
+
+def _run_in(strategy, solver, working_oc_dir):
+    return strategy.run(
+        run=None,
+        solver=solver,
+        output_dir=Path("output"),
+        working_oc_dir=working_oc_dir,
+        jobs_output_dir=Path("jobs"),
+        bm_name="BM",
+        oc_name="OC",
+        max_sim_time=MAX_SIM_TIME,
+    )
+
+
+def test_sim_retries_tune_the_sim_set_and_leave_the_ida_one_as_configured(
+    recorded_warnings, failing_attempts, written_solvers
+):
+    configured = _solver_sets(written_solvers)
+
+    _run_in(SolverRetryStrategy(RetrySettings()), _sim_solver(), written_solvers)
+
+    tuned = _solver_sets(written_solvers)
+    assert tuned["IDA"] == configured["IDA"]
+    assert float(tuned["SIM"]["hMin"]) == pytest.approx(1e-7)
+    assert float(tuned["SIM"]["minimalAcceptableStep"]) == pytest.approx(1e-7)
+    assert float(tuned["SIM"]["fnormtol"]) == pytest.approx(1e-3)
+
+
+def test_ida_retries_tune_the_ida_set_and_leave_the_sim_one_as_configured(
+    recorded_warnings, failing_attempts, written_solvers
+):
+    configured = _solver_sets(written_solvers)
+
+    _run_in(SolverRetryStrategy(RetrySettings()), _ida_solver(), written_solvers)
+
+    tuned = _solver_sets(written_solvers)
+    sim_configured = {name: tuned["SIM"][name] for name in configured["SIM"]}
+    assert sim_configured == configured["SIM"]
+    assert float(tuned["IDA"]["minStep"]) == pytest.approx(1e-7)
+    assert float(tuned["IDA"]["minimalAcceptableStep"]) == pytest.approx(1e-7)
+    assert float(tuned["IDA"]["absAccuracy"]) == pytest.approx(1e-5)
+    assert float(tuned["IDA"]["relAccuracy"]) == pytest.approx(1e-3)
 
 
 def test_settings_are_read_from_the_configuration(monkeypatch):
