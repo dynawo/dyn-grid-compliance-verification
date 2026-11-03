@@ -11,10 +11,16 @@
 import logging
 import os
 import signal
+import threading
+import time
 import types
 from typing import Optional
 
 from dycov.logging.logger import DycovLogger
+
+_END_SIGNALS = ("SIGTERM", "SIGHUP", "SIGQUIT")
+_ending = False
+_watching_in: Optional[int] = None
 
 
 def _get_instance() -> DycovLogger:
@@ -34,19 +40,58 @@ def enable_warning_capture(force_runtimewarning_visible: bool = True) -> None:
         )
 
 
+def _in_task_loop(frame: Optional[types.FrameType]) -> bool:
+    from multiprocessing import pool
+
+    while frame is not None:
+        if frame.f_code is pool.worker.__code__:
+            return True
+        frame = frame.f_back
+    return False
+
+
 def _end_worker(signum: int, frame: Optional[types.FrameType]) -> None:
     """Ends a worker its pool terminates, with the external processes it launched, which run
-    in sessions of their own. A worker running its exit handlers exits at once, as an exception
-    raised here would reach them; any other unwinds, which releases the task queue it may be
-    waiting on, and the pool that terminates needs that queue."""
-    from multiprocessing import util
-
+    in sessions of their own. A worker still in its task loop unwinds, which releases the task
+    queue it may be waiting on, and the pool that terminates needs that queue; one that left it
+    is already exiting and exits at once, as an exception raised here would reach the exit
+    handlers it runs."""
     from dycov.core.graceful_shutdown import terminate_all_children
 
+    global _ending
+    _ending = True
     terminate_all_children(timeout=5.0)
-    if util._exiting:
+    if not _in_task_loop(frame):
         os._exit(128 + signum)
     raise SystemExit(128 + signum)
+
+
+def _deliver_again(wakeup: int, end_signals: set[int]) -> None:
+    """Delivers an end signal to the worker again until its handler runs: one that reaches the
+    worker as it starts to wait, for its next task or for the lock of the queue, leaves that wait
+    blocked and the handler pending."""
+    signum = None
+    while signum not in end_signals:
+        received = os.read(wakeup, 1)
+        if not received:
+            return
+        signum = received[0]
+    while True:
+        time.sleep(0.2)
+        if _ending or signal.getsignal(signum) is not _end_worker:
+            return
+        signal.pthread_kill(threading.main_thread().ident, signum)
+
+
+def _watch_end_signals(end_signals: set[int]) -> None:
+    global _watching_in
+    if _watching_in == os.getpid() or not hasattr(signal, "pthread_kill"):
+        return
+    wakeup, notify = os.pipe()
+    os.set_blocking(notify, False)
+    signal.set_wakeup_fd(notify, warn_on_full_buffer=False)
+    threading.Thread(target=_deliver_again, args=(wakeup, end_signals), daemon=True).start()
+    _watching_in = os.getpid()
 
 
 def worker_initializer(handler_settings: Optional[dict]) -> None:
@@ -62,10 +107,13 @@ def worker_initializer(handler_settings: Optional[dict]) -> None:
     handler_settings: Optional[dict]
         Handler configuration of the run, from get_handler_settings().
     """
+    global _ending
+    _ending = False
     signal.signal(signal.SIGINT, signal.SIG_IGN)
-    for name in ("SIGTERM", "SIGHUP", "SIGQUIT"):
-        if hasattr(signal, name):
-            signal.signal(getattr(signal, name), _end_worker)
+    end_signals = {getattr(signal, name) for name in _END_SIGNALS if hasattr(signal, name)}
+    for signum in end_signals:
+        signal.signal(signum, _end_worker)
+    _watch_end_signals(end_signals)
 
     if handler_settings and not dycov_logging.handlers:
         dycov_logging.init_handlers(**handler_settings)
