@@ -139,6 +139,9 @@ Running with **no options** will:
         *   **PNG**: `../Results/overall_result_counts.png` (if Matplotlib available)
         *   **HTML**: `../Results/overall_result_counts.html` (if Plotly available)
     *   Prints totals and percentages to the log and announces file paths on the console.
+*   **Exit status**: a dycov run that fails is logged as `ERROR: exit code <n>: <command>`, and
+    the script exits with 1 once every phase and the summary have run, naming the phases that
+    failed. A verdict is not a failure: a non-compliant test still ends its run with 0.
 
 ***
 
