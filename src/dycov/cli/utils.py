@@ -94,3 +94,15 @@ def check_dynawo_launcher_availability(dynawo_launcher_name: str) -> None:
         # If an OSError occurs (due to missing launchers), logs it and exits.
         dycov_logging.get_logger("CliUtils").critical(f"Dynawo launcher check failed: {e}")
         sys.exit(1)
+
+
+def check_report_tools_availability() -> None:
+    """Checks that the executables the report needs are in the system's executable path.
+
+    If one is missing, the error is logged and the program exits.
+    """
+    try:
+        system_checks.check_report_tools()
+    except OSError as e:
+        dycov_logging.get_logger("CliUtils").critical(f"The report cannot be built: {e}")
+        sys.exit(1)
