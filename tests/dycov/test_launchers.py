@@ -208,33 +208,47 @@ def test_without_a_user_configuration_nothing_is_checked():
     parser.error.assert_not_called()
 
 
+_ROOT_READS_ANY_FILE = pytest.mark.skipif(
+    hasattr(os, "geteuid") and os.geteuid() == 0, reason="root reads any file"
+)
+
+
 @pytest.mark.parametrize(
     "kind",
     [
         "missing",
         "directory",
-        pytest.param(
-            "unreadable",
-            marks=pytest.mark.skipif(
-                hasattr(os, "geteuid") and os.geteuid() == 0, reason="root reads any file"
-            ),
-        ),
+        "name too long",
+        pytest.param("unreadable", marks=_ROOT_READS_ANY_FILE),
+        pytest.param("in a directory that cannot be entered", marks=_ROOT_READS_ANY_FILE),
     ],
 )
 def test_a_user_configuration_that_cannot_be_read_stops_the_run(tmp_path, kind):
     user_file = tmp_path / "user_2042.ini"
+    locked = tmp_path / "locked"
     if kind == "directory":
         user_file.mkdir()
+    elif kind == "name too long":
+        user_file = tmp_path / ("user" * 70 + ".ini")
     elif kind == "unreadable":
         user_file.write_text("[DTR]\ncurrent = 20240215\n")
         user_file.chmod(0)
+    elif kind == "in a directory that cannot be entered":
+        locked.mkdir()
+        user_file = locked / "user_2042.ini"
+        user_file.write_text("[DTR]\ncurrent = 20240215\n")
+        locked.chmod(0)
     parser = MagicMock()
     args = _fake_args("performance")
     args.user_config = user_file
 
     from dycov.launchers import DycovCLI
 
-    DycovCLI()._check_user_config(parser, args)
+    try:
+        DycovCLI()._check_user_config(parser, args)
+    finally:
+        if locked.exists():
+            locked.chmod(0o700)
 
     parser.error.assert_called_once()
     assert str(user_file) in parser.error.call_args[0][0]
