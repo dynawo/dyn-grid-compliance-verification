@@ -179,7 +179,6 @@ class BisectionEngine:
 
     def find_hiz_fault(
         self,
-        output_dir: Path,
         working_oc_dir: Path,
         jobs_output_dir: Path,
         fault_start: float,
@@ -196,8 +195,6 @@ class BisectionEngine:
 
         Parameters
         ----------
-        output_dir : Path
-            Output directory for simulation results.
         working_oc_dir : Path
             Working directory for the simulation.
         jobs_output_dir : Path
@@ -214,7 +211,9 @@ class BisectionEngine:
             Operating Condition name.
         simulate_fn : callable
             Callable (output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name)
-            → SimulateOutcome, provided by DynawoCurves to avoid circular dependency.
+            → SimulateOutcome, provided by DynawoCurves to avoid circular dependency. Each
+            step runs in a copy removed once it ends, so it gets no output directory and its
+            failure quotes no log.
         reset_solver_fn : callable
             Callable () → None, provided by DynawoCurves to restore solver defaults
             after each bisection step.
@@ -249,7 +248,7 @@ class BisectionEngine:
                     fault_rpu,
                 )
                 fault_outcome = simulate_fn(
-                    output_dir,
+                    None,
                     working_oc_dir_fault,
                     jobs_output_dir,
                     bm_name,
@@ -358,7 +357,6 @@ class BisectionEngine:
 
     def find_bolted_fault(
         self,
-        output_dir: Path,
         working_oc_dir: Path,
         jobs_output_dir: Path,
         fault_start: float,
@@ -378,8 +376,6 @@ class BisectionEngine:
 
         Parameters
         ----------
-        output_dir : Path
-            Output directory for simulation results.
         working_oc_dir : Path
             Working directory for the simulation.
         jobs_output_dir : Path
@@ -394,7 +390,9 @@ class BisectionEngine:
             Operating Condition name.
         simulate_fn : callable
             Callable (output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name)
-            → SimulateOutcome, provided by DynawoCurves to avoid circular dependency.
+            → SimulateOutcome, provided by DynawoCurves to avoid circular dependency. Each
+            step runs in a copy removed once it ends, so it gets no output directory and its
+            failure quotes no log.
         reset_solver_fn : callable
             Callable () → None, provided by DynawoCurves to restore solver defaults
             after each search step.
@@ -432,7 +430,7 @@ class BisectionEngine:
                     fault_rpu,
                 )
                 fault_outcome = simulate_fn(
-                    output_dir,
+                    None,
                     working_oc_dir_fault,
                     jobs_output_dir,
                     bm_name,

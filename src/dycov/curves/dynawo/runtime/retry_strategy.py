@@ -70,7 +70,7 @@ class SolverRetryStrategy:
         self,
         run: DynawoRunInputs,
         solver: SolverParams,
-        output_dir: Path,
+        output_dir: Path | None,
         working_oc_dir: Path,
         jobs_output_dir: Path,
         bm_name: str,
@@ -123,7 +123,7 @@ class SolverRetryStrategy:
     def _attempt(
         self,
         run: DynawoRunInputs,
-        output_dir: Path,
+        output_dir: Path | None,
         working_oc_dir: Path,
         jobs_output_dir: Path,
         bm_name: str,

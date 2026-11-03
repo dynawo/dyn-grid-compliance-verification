@@ -160,9 +160,7 @@ class DynawoCurves(ProducerCurves):
     def __prepare_oc_validation(
         self,
         working_oc_dir: Path,
-        pcs_name: str,
         bm_name: str,
-        oc_name: str,
     ) -> tuple[Path, Path]:
         """
         Copies base-case and producer files into working_oc_dir.
@@ -203,7 +201,7 @@ class DynawoCurves(ProducerCurves):
 
     def __execute_simulation(
         self,
-        output_dir: Path,
+        output_dir: Path | None,
         working_oc_dir: Path,
         jobs_output_dir: Path,
         bm_name: str,
@@ -216,8 +214,9 @@ class DynawoCurves(ProducerCurves):
 
         Parameters
         ----------
-        output_dir : Path
-            Final output directory for saved results.
+        output_dir : Path | None
+            Final output directory for saved results, where a failure says Dynawo's log is;
+            None for a run in a directory that does not outlive it.
         working_oc_dir : Path
             Working directory for the current run.
         jobs_output_dir : Path
@@ -250,7 +249,7 @@ class DynawoCurves(ProducerCurves):
 
     def __simulate(
         self,
-        output_dir: Path,
+        output_dir: Path | None,
         working_oc_dir: Path,
         jobs_output_dir: Path,
         bm_name: str,
@@ -262,8 +261,9 @@ class DynawoCurves(ProducerCurves):
 
         Parameters
         ----------
-        output_dir : Path
-            Final output directory for saved results.
+        output_dir : Path | None
+            Final output directory for saved results, where a failure says Dynawo's log is;
+            None for a run in a directory that does not outlive it.
         working_oc_dir : Path
             Working directory for the current run.
         jobs_output_dir : Path
@@ -387,9 +387,7 @@ class DynawoCurves(ProducerCurves):
             ``SimulationResult``; anything else aborts the run.
         """
         self.__reset_solver()
-        output_dir, jobs_output_dir = self.__prepare_oc_validation(
-            working_oc_dir, pcs_name, bm_name, oc_name
-        )
+        output_dir, jobs_output_dir = self.__prepare_oc_validation(working_oc_dir, bm_name)
         event_params: dict = {}
         outcome = SimulateOutcome(
             succeeded=False,
@@ -425,7 +423,6 @@ class DynawoCurves(ProducerCurves):
             pcs_bm_oc_name = get_cfg_oc_name(pcs_name, bm_name, oc_name)
             if config.get_boolean(pcs_bm_oc_name, "hiz_fault"):
                 self._bisection.find_hiz_fault(
-                    output_dir,
                     working_oc_dir,
                     jobs_output_dir,
                     event_params["start_time"],
@@ -438,7 +435,6 @@ class DynawoCurves(ProducerCurves):
                 )
             elif config.get_boolean(pcs_bm_oc_name, "bolted_fault"):
                 self._bisection.find_bolted_fault(
-                    output_dir,
                     working_oc_dir,
                     jobs_output_dir,
                     event_params["start_time"],
