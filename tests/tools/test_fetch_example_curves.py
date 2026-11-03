@@ -30,8 +30,7 @@ _CURVES = Path("examples") / "Model" / "Wind" / "Unit" / "ReferenceCurves"
 
 pytestmark = pytest.mark.skipif(shutil.which("unzip") is None, reason="the script needs unzip")
 
-# Writes the asset of the test where the script asks curl to put it
-_FAKE_CURL = """#!/bin/bash
+_CURL_SERVING_THE_ASSET = """#!/bin/bash
 while (($#)); do
     if [ "$1" = "-o" ]; then cp "$FAKE_ASSET" "$2"; exit 0; fi
     shift
@@ -54,7 +53,7 @@ def clone(tmp_path: Path) -> Path:
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     curl = bin_dir / "curl"
-    curl.write_text(_FAKE_CURL)
+    curl.write_text(_CURL_SERVING_THE_ASSET)
     curl.chmod(curl.stat().st_mode | stat.S_IXUSR)
     return root
 
@@ -102,4 +101,18 @@ def test_fetching_over_regenerated_curves_records_the_release(clone, tmp_path):
 
     assert run.returncode == 0, run.stderr
     assert not (clone / _CURVES / "Regenerated.csv").exists()
+    assert (clone / "examples" / ".curves-release").read_text() == "v1.0.0\n"
+
+
+def test_an_asset_without_curves_leaves_the_curves_of_the_clone_and_their_release(clone, tmp_path):
+    _fetch(clone, _asset(tmp_path / "first.zip", {"Old.csv": "time;V\n0;1\n"}), "v1.0.0")
+    empty = tmp_path / "empty.zip"
+    with zipfile.ZipFile(empty, "w") as archive:
+        archive.writestr("examples/Model/README.txt", "no curves\n")
+
+    run = _fetch(clone, empty, "v1.1.0")
+
+    assert run.returncode != 0
+    assert "The asset of release v1.1.0 holds no curve." in run.stderr + run.stdout
+    assert (clone / _CURVES / "Old.csv").read_text() == "time;V\n0;1\n"
     assert (clone / "examples" / ".curves-release").read_text() == "v1.0.0\n"
