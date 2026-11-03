@@ -9,6 +9,7 @@
 #
 
 import configparser
+import io
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -178,9 +179,9 @@ class Config:
             The contents of those layers, ready to hand to a worker.
         """
         return {
-            "default": _layer_contents(self._default_config),
-            "user": _layer_contents(self._user_config),
-            "dtr_delta": _layer_contents(self._dtr_delta_config),
+            "default": _layer_text(self._default_config),
+            "user": _layer_text(self._user_config),
+            "dtr_delta": _layer_text(self._dtr_delta_config),
             "dtr_delta_files": list(self._dtr_delta_files),
         }
 
@@ -645,23 +646,18 @@ def is_base_revision(revision: str) -> bool:
     return revision == config.get_value("DTR", "base", "")
 
 
-def _layer_contents(parser: configparser.ConfigParser) -> dict:
-    """The options of a layer by section, as written."""
-    defaults = parser.defaults()
-    contents = {parser.default_section: dict(defaults)} if defaults else {}
-    for section in parser.sections():
-        contents[section] = {
-            key: parser.get(section, key, raw=True)
-            for key in parser.options(section)
-            if key not in defaults
-        }
-    return contents
+def _layer_text(parser: configparser.ConfigParser) -> str:
+    """A layer as configparser writes it: each section with the options it sets itself, their
+    values as written, which reading the text back takes as a file, without checking them."""
+    text = io.StringIO()
+    parser.write(text)
+    return text.getvalue()
 
 
-def _replace_layer(parser: configparser.ConfigParser, contents: dict) -> None:
+def _replace_layer(parser: configparser.ConfigParser, text: str) -> None:
     parser.clear()
     parser.defaults().clear()
-    parser.read_dict(contents)
+    parser.read_string(text)
 
 
 def _new_parser() -> configparser.ConfigParser:
