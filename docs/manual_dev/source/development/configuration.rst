@@ -505,4 +505,6 @@ These parameters are useful during development and debugging:
 * ``max_simulation_retries`` — maximum number of retries for a failed
   simulation (default: 4, covering: base line, reduced step, increased
   precision, small networks, solver switch). An error Dynawo raises while reading
-  the PAR or DYD of a model is not retried, as no solver setting settles it.
+  or compiling the PAR and DYD of a model, or a parameter a model does not find in
+  its PAR, is not retried, as no solver setting settles it, and it ends the
+  search of a fault impedance.

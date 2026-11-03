@@ -107,8 +107,10 @@ names.
   `_reduce_min_step` → `_increase_accuracy` → `_add_parameters_small_networks` → `_flip_solver`
   (SIM↔IDA) — and each one applies its change **and returns what it changed**, which `run()` quotes in
   the retry warning along with the attempt number and why the previous attempt failed. It stops at
-  once when that error comes from the Dynawo layers that read the PAR and DYD of the models, which
-  Dynawo names as the source file that raised it (`_INPUT_ERROR_ORIGIN`): no remedy settles it. Persists via
+  once when that error is one in the inputs of the models (`rejects_inputs`: raised by the Dynawo
+  layers that read, compile and parameterise the PAR and DYD, or a parameter missing from a PAR):
+  no remedy settles it. `SimulateOutcome.rejected_inputs` carries it to the bolted and HiZ searches,
+  which stop there and leave the failure to the test's own simulation. Persists via
   `replace_placeholders.modify_par_file` / `add_parameters` (`solvers.par`) and `modify_jobs_file` (`TSOModel.jobs`).
   The `SolverParams` dataclass (`runtime/run_types.py`) is **the** solver state, not a copy of it:
   `__reset_solver` builds it per OC and `__execute_simulation` hands that same object to `run()`, so
