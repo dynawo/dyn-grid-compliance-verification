@@ -344,9 +344,9 @@ Dynawo section
 * ``divergence_voltage_limit``, ``divergence_power_limit`` — magnitudes beyond
   which a simulation has diverged, even if Dynawo ends it successfully: a
   voltage in pu of Unom (10) and a power or a current (100) in pu of the
-  nominal power of the producer, the sum of its units (of SnRef for the
-  ``Measurements_BUS_*`` powers), on the curves of the producer; a value that
-  is not finite always counts. ``find_divergence`` (``runtime/_curves.py``)
+  nominal power of the producer, the sum of its units, on the curves of the PDR
+  and of the units (not the ``Measurements_BUS_*`` ones, in SnRef, which the
+  PDR curves repeat in that base); a value that is not finite always counts. ``find_divergence`` (``runtime/_curves.py``)
   checks them after every run of ``run_base_dynawo``, which then fails; the CCT
   runs (``run_simple``) are judged on the internal angles instead.
 * ``simulation_start`` — simulation start time (s). Before changing this,
