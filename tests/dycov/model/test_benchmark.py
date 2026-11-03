@@ -186,6 +186,33 @@ def test_frequency_figure_draws_every_declared_band(monkeypatch):
     }
 
 
+def _bands_of(bm: Benchmark) -> dict:
+    return {
+        figure.name: [(band.upper, band.lower, band.bounds) for band in figure.frequency_bands]
+        for figure in bm.get_figures_description()
+    }
+
+
+def test_freq_1_has_a_band_on_the_figure_of_each_frequency_it_may_bound(monkeypatch):
+    """#625: the network frequency the units measure, and that of the synchronous condenser."""
+    report_curves = {"fig_WRef": [_PCS_BENCHMARK], "fig_SyncCondFreq": [_PCS_BENCHMARK]}
+    validations = {"freq_1": [_PCS_BENCHMARK], "freq_200": [_PCS_BENCHMARK]}
+    bm = _make_benchmark(monkeypatch, DummyProducer(), report_curves, validations)
+
+    assert _bands_of(bm) == {
+        "fig_WRef": [(1.0, 1.0, "units"), (0.2, 0.2, None)],
+        "fig_SyncCondFreq": [(1.0, 1.0, "sync_condenser")],
+    }
+
+
+def test_the_condenser_frequency_is_drawn_in_hz_as_its_curves_are(monkeypatch):
+    bm = _make_benchmark(monkeypatch, DummyProducer(), {"fig_SyncCondFreq": [_PCS_BENCHMARK]})
+
+    (figure,) = bm.get_figures_description()
+
+    assert (figure.in_hz, figure.curves_in_hz, figure.frequency_bands) == (False, True, [])
+
+
 def test_wref_figure_reads_the_network_frequency_curve(monkeypatch):
     """#489: NetworkFrequencyPu is the name the simulated and the reference curves share, so the
     reference is drawn beside the simulated frequency."""
