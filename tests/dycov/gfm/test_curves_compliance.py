@@ -32,11 +32,11 @@ InternalNode1_BUS_Voltage = u
 """
 
 
-def _write_curves(curves_path, ip, with_iq=True):
+def _write_curves(curves_path, ip, with_iq=True, u=np.ones_like, duration=5.0):
     curves_path.mkdir()
     (curves_path / "CurvesFiles.ini").write_text(_CURVES_FILES)
-    time = np.arange(0.0, 5.0, 0.001)
-    data = {"t": time + _EVENT_IN_CURVES, "ip": ip(time), "u": np.ones_like(time)}
+    time = np.arange(0.0, duration, 0.001)
+    data = {"t": time + _EVENT_IN_CURVES, "ip": ip(time), "u": u(time)}
     if with_iq:
         data["iq"] = np.zeros_like(time)
     pd.DataFrame(data).to_csv(curves_path / f"{_TEST}.csv", sep=";", index=False)
@@ -152,3 +152,21 @@ def test_curves_that_stop_before_the_end_of_the_envelope_are_missing(tmp_path):
     )
 
     assert _check(tmp_path).compliance == Compliance.WithoutProducerCurves
+
+
+def test_an_oscillation_of_the_voltage_alone_does_not_fail_the_damping(tmp_path):
+    _write_curves(tmp_path / "curves", _ideal, u=lambda time: 1 + 0.03 * np.sin(4 * np.pi * time))
+
+    result = _check(tmp_path)
+
+    assert result.compliance == Compliance.Compliant
+    assert result.modes == []
+
+
+def test_an_oscillation_after_the_end_of_the_envelope_is_not_read(tmp_path):
+    def oscillating_later(time):
+        return _ideal(time) + np.where(time > 5.0, 0.03 * np.sin(4 * np.pi * time), 0.0)
+
+    _write_curves(tmp_path / "curves", oscillating_later, duration=8.0)
+
+    assert _check(tmp_path).modes == []

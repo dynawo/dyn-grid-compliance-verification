@@ -52,17 +52,17 @@
         \end{tabular}
     \end{center}
 
-    \noindent Every oscillation of the currents and of the voltage between
-    {{ fmin }} and {{ fmax }}~Hz must have a damping ratio of at least {{ threshold }}. The
-    damping ratio is estimated with the Matrix Pencil method, during the event and after it,
-    for the oscillations of an amplitude of {{ minamplitude }}~pu or more, and of 1\,\% or more
-    of the peak-to-peak span of the curve, the relative amplitude below:
+    \noindent Every oscillation of the active and reactive currents between {{ fmin }} and
+    {{ fmax }}~Hz must have a damping ratio of at least {{ threshold }}. The damping ratio is
+    estimated with the Matrix Pencil method as RTE implements it: the unfiltered curve, during
+    the event and after it up to the end of the envelope, is sampled every {{ timestep }}~s and
+    fitted with {{ pencil }} poles:
     \BLOCK{if modes}
     \begin{center}
         \scriptsize
         \begin{tabular}{llcccc}
             \toprule
-            Curve & Window & Frequency (Hz) & Damping ratio & Rel. amplitude & Compl. \\
+            Curve & Window & Frequency (Hz) & Damping ratio & Amplitude (pu) & Compl. \\
             \midrule
             \BLOCK{for row in modes}
             {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} \\

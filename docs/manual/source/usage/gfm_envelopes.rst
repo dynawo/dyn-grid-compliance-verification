@@ -329,25 +329,25 @@ time of the event in the curves, ``sim_t_event_start``, which DyCoV aligns
 with the event of the envelopes. The currents are in pu of the rating of the
 converter.
 
-The curves are low-pass filtered at 30 Hz, the cut-off the DTR Fiche I16.2
-gives the curves of a Grid Forming unit (the Fiche I18 sets none;
-``cutoff`` of the ``[GFM]`` section;
-the other verifications keep the 15 Hz of ``[GridCode]``), each side of the
-event apart. A test is **compliant** when:
+A test is **compliant** when:
 
 * the current the envelope bounds (:math:`I_p` or :math:`I_q`) stays inside
   it, over the time both cover, within ``envelope_tolerance`` (0.005 pu, which
-  also absorbs the narrowing of the envelopes in their first 20 ms);
-* no oscillation of the active or reactive current, nor of the voltage,
-  between ``damping_f_min`` and ``damping_f_max`` (0.1 Hz and 10 Hz) is damped
-  less than ``thr_damping_ratio`` (40 %). The damping is estimated with the
-  Matrix Pencil method, on each window between the event discontinuities
-  (during the frequency ramp and after it, for the RoCoF tests), over its
-  first three periods of ``damping_f_min`` at most. Oscillations smaller than
-  ``damping_min_amplitude`` (0.001 pu), or than 1 % of the peak-to-peak span
-  of the curve in the window, are the numerical noise of a nearly flat curve
-  or the residue of the fit, and a mode slower than its window is a trend of
-  the curve rather than an oscillation: none of them is considered.
+  also absorbs the narrowing of the envelopes in their first 20 ms). For this
+  check the curves are low-pass filtered at 30 Hz, the cut-off the DTR Fiche
+  I16.2 gives the curves of a Grid Forming unit (the Fiche I18 sets none;
+  ``cutoff`` of the ``[GFM]`` section; the other verifications keep the 15 Hz
+  of ``[GridCode]``), each side of the event apart;
+* no oscillation of the active or reactive current between ``damping_f_min``
+  and ``damping_f_max`` (0.1 Hz and 10 Hz) is damped less than
+  ``thr_damping_ratio`` (40 %). The damping is estimated with the Matrix
+  Pencil method as RTE implements it, the implementation the fiche names for
+  checking the compliance: the unfiltered curve, from
+  ``damping_event_delay`` (5 ms) after each discontinuity of the event to the
+  end of the envelope (during the frequency ramp and after it, for the RoCoF
+  tests), is sampled every ``damping_time_step`` (5 ms) and fitted with a
+  pencil of ``damping_pencil_order`` (6) poles, and every mode in the band
+  counts, whatever its amplitude.
 
 The last criterion of the fiche, that the converter stays connected and
 stable, is not checked apart: a curve that leaves the envelopes or oscillates
@@ -367,15 +367,11 @@ checks with their verdict. The results of each test are under
 generation, and its ``results.json`` adds the compliance, how far the curve
 leaves the envelope and over which time they are compared, and every
 oscillating mode found (curve, window, frequency, damping ratio and
-amplitude, relative to the peak-to-peak span of the curve in the window).
+amplitude, in pu).
 
 .. note::
    The Matrix Pencil method fits the response with a sum of damped
-   exponentials. A response with corners, as when a current enters or leaves
-   its limit, is not such a sum, and the fit may then show lightly damped
-   modes of small amplitude that are not oscillations of the unit. The fit
-   keeps the components whose singular value is at least 5 % of the largest
-   one, so an oscillation much smaller than the main response of the curve,
-   a few hundredths of a pu next to a step of tenths, may also go unseen.
-   Every mode found is listed, with its amplitude, in the ``results.json`` of
-   the test.
+   exponentials, here six of them, as in RTE's implementation: up to three
+   oscillating modes besides the trend of the curve. A response with more
+   modes than that is fitted with the most significant ones. Every mode found
+   is listed, with its amplitude, in the ``results.json`` of the test.

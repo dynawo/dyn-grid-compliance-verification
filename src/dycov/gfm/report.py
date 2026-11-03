@@ -230,7 +230,8 @@ def _test_map(test: GFMTestReport, outputs_by_producer: bool) -> dict:
         "cutoff": config.get_float("GFM", "cutoff", 30.0),
         "tolerance": config.get_float("GFM", "envelope_tolerance", 0.005),
         "threshold": config.get_float("GFM", "thr_damping_ratio", 0.40),
-        "minamplitude": config.get_float("GFM", "damping_min_amplitude", 0.001),
+        "timestep": config.get_float("GFM", "damping_time_step", 0.005),
+        "pencil": config.get_int("GFM", "damping_pencil_order", 6),
         "fmin": config.get_float("GFM", "damping_f_min", 0.1),
         "fmax": config.get_float("GFM", "damping_f_max", 10.0),
         "compliance": summary.translate_compliance(test.compliance) if test.compliance else "",
@@ -266,7 +267,7 @@ def _mode_rows(test: GFMTestReport) -> list[list[str]]:
             mode.window,
             f"{mode.frequency:.3f}",
             f"{mode.damping_ratio:.3f}",
-            f"{mode.amplitude:.3f}",
+            f"{mode.amplitude:.4f}",
             printable.format_latex_check(mode.damping_ratio >= thr_damping_ratio),
         ]
         for mode in test.modes

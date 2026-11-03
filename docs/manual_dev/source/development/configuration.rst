@@ -491,11 +491,13 @@ its Grid Forming tests (``PCS_RTE-I18z1``):
 * ``envelope_tolerance`` — tolerance (pu) with which a curve is still inside
   its envelope; it also absorbs the narrowing of the envelopes in their first
   20 ms.
-* ``thr_damping_ratio`` — minimum damping ratio of the oscillations (0.40).
+* ``thr_damping_ratio`` — minimum damping ratio of the oscillations of the
+  active and reactive currents (0.40).
 * ``damping_f_min``, ``damping_f_max`` — band (Hz) of the oscillations whose
   damping is checked.
-* ``damping_min_amplitude`` — smallest amplitude (pu) of an oscillation, below
-  which it is numerical noise.
+* ``damping_event_delay``, ``damping_time_step``, ``damping_pencil_order`` —
+  the Matrix Pencil estimate as RTE implements it: the unfiltered curve is read
+  from 5 ms after the event, sampled every 5 ms and fitted with 6 poles.
 
 
 CurvesVariables section

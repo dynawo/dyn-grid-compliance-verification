@@ -601,7 +601,9 @@ def save_results(path: Path, envelopes: Envelopes, curves_check: Any = None) -> 
                 config.get_float("GFM", "damping_f_min", 0.1),
                 config.get_float("GFM", "damping_f_max", 10.0),
             ],
-            "damping_min_amplitude": config.get_float("GFM", "damping_min_amplitude", 0.001),
+            "damping_event_delay": config.get_float("GFM", "damping_event_delay", 0.005),
+            "damping_time_step": config.get_float("GFM", "damping_time_step", 0.005),
+            "damping_pencil_order": config.get_int("GFM", "damping_pencil_order", 6),
             "modes": [mode._asdict() for mode in curves_check.modes],
         }
     with open(path, "w", encoding="utf-8") as f:

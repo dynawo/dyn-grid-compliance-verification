@@ -13,9 +13,11 @@ The performance verification of a storage installation of type C or D, given its
 checks the tests of the Fiche I18 that the revision 20260723 of the DTR adds: the curves of each
 test against its envelope, generated from the `[GFM Parameters]` of the INI file of the producer
 or read from the output of `dycov generate_gfm_envelopes` given with `-g`, and the damping of
-their oscillations. A run on a model leaves those tests out, as does a run on an earlier revision
-or for an installation of another type. The curves of a test hold the active and reactive
-currents and the voltage at the terminals of the converter (the PGU), and cover the whole envelope.
+the oscillations of their currents, estimated as in RTE's implementation of the Matrix Pencil
+method, the one the fiche names. A run on a model leaves those tests out, as does a run on an
+earlier revision or for an installation of another type. The curves of a test hold the active and
+reactive currents and the voltage at the terminals of the converter (the PGU), and cover the whole
+envelope.
 
 The INI file of a Grid Forming unit declares what it is, `generator_type = BESS` or `PPM`, and
 `dycov generate_gfm_envelopes` stops without it: a storage unit gets the Fiche I18, a power park

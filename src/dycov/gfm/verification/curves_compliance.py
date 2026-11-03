@@ -11,8 +11,8 @@
 
 The producer delivers the RMS active and reactive currents, and the voltage, at the PGU
 terminals. Once filtered, the current the envelope bounds must stay inside it, and no oscillation
-of the currents or of the voltage between ``damping_f_min`` and ``damping_f_max`` may be damped
-less than ``thr_damping_ratio``.
+of the currents between ``damping_f_min`` and ``damping_f_max`` may be damped less than
+``thr_damping_ratio``, as RTE's implementation of the Matrix Pencil method estimates it.
 """
 
 from collections import namedtuple
@@ -29,8 +29,7 @@ from dycov.logging import dycov_logging
 from dycov.model.compliance import Compliance
 from dycov.sigpro import matrix_pencil, signal_windows, sigpro
 
-# The producer curve of each magnitude, all of which the DTR Fiche I18 asks for: the envelope
-# bounds one of the currents, and the damping of all of them is checked
+# The producer curve of each magnitude, all of which the DTR Fiche I18 asks for
 _CURVES = {
     "Ip": "BusPDR_BUS_ActiveCurrent",
     "Iq": "BusPDR_BUS_ReactiveCurrent",
@@ -39,8 +38,8 @@ _CURVES = {
 # The PGU terminals are the Node 1 of the Zone 1 of the DTR, so the curves may also be named
 # after the Zone 1 bus (InternalNode1_BUS_*), which the importer translates for this zone
 _PGU_ZONE = 1
-# The windows between the event discontinuities that may show oscillations
-_DAMPED_WINDOWS = ("during", "after")
+# The DTR Fiche I18 asks for the damping of the active and reactive currents
+_DAMPED_CURVES = ("Ip", "Iq")
 
 EnvelopeCheck = namedtuple("EnvelopeCheck", ["within", "max_excess", "t_from", "t_to"])
 DampedMode = namedtuple(
@@ -107,6 +106,8 @@ def check(
         logger.warning(f"The producer curves of the test miss {', '.join(missing)}")
         return CurvesCheck(Compliance.WithoutProducerCurves, None, None, [])
 
+    # RTE's implementation of the damping estimate reads the curves unfiltered
+    unfiltered = curves
     curves = sigpro.resample_to_fixed_step(curves)
     windows = signal_windows.filter_windows(list(curves["time"]), event_time, event_duration)
     curves = sigpro.filter_curves(curves, windows, config.get_float("GFM", "cutoff", 30.0))
@@ -120,7 +121,7 @@ def check(
         )
         return CurvesCheck(Compliance.WithoutProducerCurves, None, None, [])
     envelope = _check_envelope(time_array, signal, lower_envelope, upper_envelope)
-    modes = _damped_modes(curves, windows)
+    modes = _damped_modes(unfiltered, event_time, event_duration, time_array[-1])
 
     thr_damping_ratio = config.get_float("GFM", "thr_damping_ratio", 0.40)
     is_damped = all(mode.damping_ratio >= thr_damping_ratio for mode in modes)
@@ -179,24 +180,31 @@ def _check_envelope(
     )
 
 
-def _damped_modes(curves: pd.DataFrame, windows: dict) -> list[DampedMode]:
-    """The oscillating modes of every checked curve, window by window after the event."""
+def _damped_modes(
+    curves: pd.DataFrame, event_time: float, event_duration: float, t_end: float
+) -> list[DampedMode]:
+    """The oscillating modes of the currents, while the event lasts and after it, up to the end
+    of the envelope. Each window starts a moment after the discontinuity that opens it, as in
+    RTE's implementation, so that the fit does not read the step itself."""
     f_min = config.get_float("GFM", "damping_f_min", 0.1)
     f_max = config.get_float("GFM", "damping_f_max", 10.0)
-    min_amplitude = config.get_float("GFM", "damping_min_amplitude", 0.001)
+    delay = config.get_float("GFM", "damping_event_delay", 0.005)
+    time_step = config.get_float("GFM", "damping_time_step", 0.005)
+    pencil = config.get_int("GFM", "damping_pencil_order", 6)
+    event_end = event_time + event_duration
+    windows = {"during": (event_time + delay, event_end), "after": (event_end + delay, t_end)}
     time = curves["time"].to_numpy()
 
     modes = []
-    for magnitude, curve in _CURVES.items():
-        if curve not in curves:
-            continue
-        for window in _DAMPED_WINDOWS:
-            t_from, t_to = windows[window]
-            selected = (time >= t_from) & (time <= t_to)
+    for magnitude in _DAMPED_CURVES:
+        values = curves[_CURVES[magnitude]].to_numpy()
+        for window, (t_from, t_to) in windows.items():
+            if t_to <= t_from:
+                continue
             modes += [
-                DampedMode(magnitude, window, mode.frequency, mode.damping_ratio, mode.amplitude)
+                DampedMode(magnitude, window, *mode)
                 for mode in matrix_pencil.oscillation_modes(
-                    time[selected], curves[curve].to_numpy()[selected], f_min, f_max, min_amplitude
+                    time, values, t_from, t_to, f_min, f_max, time_step, pencil
                 )
             ]
     return modes

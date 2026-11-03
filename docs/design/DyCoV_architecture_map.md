@@ -216,9 +216,10 @@ simulating, turns each `GFMTestReport` into a `Summary` and writes the section f
 envelopes nor `[GFM Parameters]` a test is `Compliance.WithoutEnvelopes`; curves missing U, Ip or
 Iq, or stopping before the end of the envelope, are `WithoutProducerCurves`. `verification/curves_compliance.py` reads the curves through
 `CurvesImporter` (Zone 1 naming), filters them at the `[GFM]` cutoff (30 Hz) per
-`signal_windows.filter_windows`, checks the envelope and the damping of every mode
-(`sigpro/matrix_pencil.py`, over three periods of `damping_f_min` at most, ignoring modes slower
-than the window), and `results.json` adds the verdict. `report.create_pdf` inputs
+`signal_windows.filter_windows` to check the envelope, estimates the damping of Ip and Iq on the
+unfiltered curves with `sigpro/matrix_pencil.py`, a port of RTE's implementation that the fiche
+names (6 poles on the curve sampled every 5 ms, from 5 ms after the event to the end of the
+envelope), and `results.json` adds the verdict. `report.create_pdf` inputs
 `commonz1`/`commonz3` only when they were copied, which a performance verification does not.
 
 ## Logging (`logging/`)
