@@ -9,7 +9,9 @@
 #
 
 import logging
+import os
 import signal
+import types
 from typing import Optional
 
 from dycov.logging.logger import DycovLogger
@@ -32,11 +34,22 @@ def enable_warning_capture(force_runtimewarning_visible: bool = True) -> None:
         )
 
 
+def _end_worker(signum: int, frame: Optional[types.FrameType]) -> None:
+    """Ends a worker its pool terminates, with the external processes it launched, which run
+    in sessions of their own. It exits at once: an exception raised here would reach the exit
+    handlers the worker may be running."""
+    from dycov.core.graceful_shutdown import terminate_all_children
+
+    terminate_all_children(timeout=5.0)
+    os._exit(128 + signum)
+
+
 def worker_initializer(handler_settings: Optional[dict]) -> None:
     """Prepare a process pool worker.
 
-    The main process coordinates the shutdown, so workers ignore SIGINT. A worker
-    started with forkserver or spawn does not inherit the handlers of the run, and
+    The main process coordinates the shutdown, so workers ignore SIGINT, and a worker that is
+    told to end does not run the shutdown of the main process, which a forked worker inherits.
+    A worker started with forkserver or spawn does not inherit the handlers of the run, and
     without them every record it emits is discarded, so they are built again here.
 
     Parameters
@@ -45,6 +58,9 @@ def worker_initializer(handler_settings: Optional[dict]) -> None:
         Handler configuration of the run, from get_handler_settings().
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)
+    for name in ("SIGTERM", "SIGHUP", "SIGQUIT"):
+        if hasattr(signal, name):
+            signal.signal(getattr(signal, name), _end_worker)
 
     if handler_settings and not dycov_logging.handlers:
         dycov_logging.init_handlers(**handler_settings)
