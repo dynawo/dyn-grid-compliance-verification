@@ -517,7 +517,7 @@ def _diverging(column: str, value: float) -> pd.DataFrame:
         ("Wind_Turbine_GEN_VoltageNode2", -11.0),
         ("BusPDR_BUS_ReactivePower", 1.8e21),
         ("Wind_Turbine_GEN_ActiveCurrentNode2", 101.0),
-        ("Measurements_BUS_ActivePower", float("nan")),
+        ("BusPDR_BUS_ActivePower", float("nan")),
         ("Wind_Turbine_GEN_MagnitudeControlledByAVRPu", float("inf")),
     ],
 )
@@ -542,13 +542,15 @@ def test_a_magnitude_of_the_producer_beyond_its_limit_has_diverged(column, value
         ("Synch_Gen_GEN_InternalAngle", 400.0),
         ("Wind_Turbine_GEN_ActiveCurrentNode2", 99.0),
         ("BusPDR_BUS_Voltage", 9.5),
+        ("Measurements_BUS_ReactivePower", 110.0),
     ],
 )
 def test_a_magnitude_of_the_network_that_may_be_large_or_stays_within_its_limit_has_not(
     column, value
 ):
     """#675: the loads of the network are not in the base of the producer, and the load of a
-    load-shedding test reaches thousands of pu."""
+    load-shedding test reaches thousands of pu; nor are the measurements at the PDR, in the
+    base of the network, which a producer of 2.7 GVA brings past 100 pu."""
     assert (
         curves_module.find_divergence(_diverging(column, value), _PRODUCER_UNITS, 10.0, 100.0)
         is None
