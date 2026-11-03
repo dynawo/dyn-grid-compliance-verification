@@ -190,6 +190,13 @@ default start method on Linux. Its handlers: the console; the shared, rotating
 `FileHandler` on purpose: several processes append to it, and a rotation they could interleave would
 corrupt it.
 
+`worker_initializer` also traps the end signals in the worker, which a forked one would otherwise
+answer with the shutdown of the main process: `_end_worker` stops the Dynawo and LaTeX processes the
+worker launched, then unwinds it while it is in the task loop of its pool and exits it at once once it
+has left that loop, where an exception would reach the exit handlers it runs. A signal that arrives
+as the worker starts to wait, for a task or for the lock of the queue, leaves that wait blocked and the
+handler pending, so a thread `signal.set_wakeup_fd` wakes delivers it again until the handler runs.
+
 Every record names the test it belongs to — `set_test_context(pcs, benchmark, oc, producer)`
 (`logging/test_context.py`, thread-local) and the `_ContextAdapter` that prefixes it.
 `warn_once(logger, message)` reports something that holds for the whole test however many times the
