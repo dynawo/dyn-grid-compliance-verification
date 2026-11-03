@@ -23,6 +23,12 @@ from dycov.model.parameters import Stability
 from dycov.model.producer import Producer
 from dycov.validation import common, compliance_list
 
+# The results name the frequency freq_1 bounded: that of a synchronous condenser, or that the
+# units measure
+FREQ1_FREQUENCY = "freq1_frequency"
+SYNC_CONDENSER_FREQUENCY = "sync_condenser"
+UNITS_FREQUENCY = "units"
+
 GENERATOR_DISCONNECT_MSG = "GENERATOR : disconnecting"
 LOAD_DISCONNECT_MSG = "LOAD : disconnecting"
 IEC_DISCONNECT_PROTECTION_MSG = "IEC WT disconnected due to"
@@ -301,7 +307,10 @@ class PerformanceValidator(Validator):
             check_freq1 = True
             time_freq1 = -1
             f_nom = config.get_float("Dynawo", "f_nom", 50.0)
-            for frequency in self.__separated_network_frequencies(f_nom):
+            frequencies, compliance_values[FREQ1_FREQUENCY] = self.__separated_network_frequencies(
+                f_nom
+            )
+            for frequency in frequencies:
                 gen_check_freq1, gen_time_freq1 = common.check_frequency(
                     1 / f_nom,
                     frequency,
@@ -313,16 +322,22 @@ class PerformanceValidator(Validator):
             compliance_values["check_freq1"] = check_freq1
             compliance_values["time_freq1"] = time_freq1
 
-    def __separated_network_frequencies(self, f_nom: float) -> list:
+    def __separated_network_frequencies(self, f_nom: float) -> tuple[list, str]:
         """The frequency of the separated network, in pu of f_nom, which is what Fiche I10 bounds:
         that of the synchronous condenser when the test models one, as the frequency the units
-        measure jumps for a few milliseconds at the load step; the units' own otherwise."""
-        sources = (("_GEN_TSO_FrequencyHz", 1.0 / f_nom), ("_GEN_NetworkFrequencyPu", 1.0))
-        for suffix, to_pu in sources:
+        measure jumps for a few milliseconds at the load step; the units' own otherwise. Says
+        which of the two it is, as the figure that draws the band of the check is the one that
+        draws that frequency."""
+        sources = (
+            ("_GEN_TSO_FrequencyHz", 1.0 / f_nom, SYNC_CONDENSER_FREQUENCY),
+            ("_GEN_NetworkFrequencyPu", 1.0, UNITS_FREQUENCY),
+        )
+        for suffix, to_pu, frequency in sources:
             columns = self.__get_filtered_columns(suffix)
             if columns:
-                return [[value * to_pu for value in self.__curve_list(c)] for c in columns]
-        return []
+                curves = [[value * to_pu for value in self.__curve_list(c)] for c in columns]
+                return curves, frequency
+        return [], UNITS_FREQUENCY
 
     def __calculate_others(
         self,
@@ -722,6 +737,7 @@ class PerformanceValidator(Validator):
         if compliance_list.contains_key(["freq_1"], self._validations):
             results["freq1"] = compliance_values["time_freq1"]
             results["freq1_check"] = compliance_values["check_freq1"]
+            results[FREQ1_FREQUENCY] = compliance_values[FREQ1_FREQUENCY]
             results["compliance"] &= results["freq1_check"]
 
     def __check(
