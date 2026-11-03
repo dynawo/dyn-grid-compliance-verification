@@ -192,7 +192,9 @@ class BisectionEngine:
     ) -> None:
         """
         Determines and applies the fault impedance that achieves the required voltage dip
-        using bisection. Modifies working_oc_dir/TSOModel.par in-place with the result.
+        using bisection. Modifies working_oc_dir/TSOModel.par in-place with the result. A step
+        whose model inputs Dynawo rejects ends the search and leaves TSOModel.par as it was, for
+        the simulation of the test to report that failure.
 
         Parameters
         ----------
@@ -222,8 +224,9 @@ class BisectionEngine:
         Raises
         ------
         SimulationOutcomeError
-            If no fault value yields a successful simulation, or if the required
-            voltage dip cannot be achieved within the bisection tolerance.
+            If no fault value yields a successful simulation, unless Dynawo rejects the model
+            inputs, or if the required voltage dip cannot be achieved within the bisection
+            tolerance.
         """
         fault_r_factor = config.get_float("GridCode", "fault_r_factor", 10.0)
         max_val = config.get_float("Global", "hiz_fault_max_impedance", 100.0)
@@ -379,7 +382,9 @@ class BisectionEngine:
         (see `_bolted_fault_max_residual_voltage`). Starts at `bolted_fault_min_impedance`
         (the most severe impedance), resolving the common case in a single simulation,
         and raises X by bisection only when the simulation fails to converge. Modifies
-        working_oc_dir/TSOModel.par in-place with the result.
+        working_oc_dir/TSOModel.par in-place with the result. A step whose model inputs Dynawo
+        rejects ends the search and leaves TSOModel.par as it was, for the simulation of the
+        test to report that failure.
 
         Parameters
         ----------
@@ -407,8 +412,9 @@ class BisectionEngine:
         Raises
         ------
         SimulationOutcomeError
-            If no fault value yields a successful simulation, or if no converging
-            impedance keeps the residual voltage under the threshold.
+            If no fault value yields a successful simulation, unless Dynawo rejects the model
+            inputs, or if no converging impedance keeps the residual voltage under the
+            threshold.
         """
         if self._producer.get_zone() != 1:
             return
