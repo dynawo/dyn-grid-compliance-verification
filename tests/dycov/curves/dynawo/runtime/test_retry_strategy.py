@@ -219,6 +219,61 @@ def test_retry_stops_at_the_first_successful_attempt(
     assert len(recorded_warnings) == successful_attempt - 1
 
 
+def _failing_with(monkeypatch, timeline_error):
+    attempts = []
+
+    def fake_run_base(*args, **kwargs):
+        attempts.append(1)
+        return DynawoResult(False, "", timeline_error, None, 1.0)
+
+    monkeypatch.setattr(DynawoSimulator, "run_base", staticmethod(fake_run_base))
+    return attempts
+
+
+@pytest.mark.parametrize(
+    "timeline_error",
+    [
+        "parameter WPP_tLagM not found in set merged_Wind_Turbine ( PARParametersSet.cpp:156 )",
+        "error while parsing file Producer.par : error while parsing stream bad lexical cast: "
+        "source type value could not be interpreted as target ( PARXmlImporter.cpp:63 ) "
+        "( PARXmlImporter.cpp:45 )",
+        "error while parsing file Producer.dyd : unexpected element ( DYDXmlImporter.cpp:88 )",
+    ],
+    ids=["missing parameter", "unreadable PAR", "unreadable DYD"],
+)
+def test_an_error_in_the_inputs_of_the_model_is_not_retried(
+    monkeypatch, recorded_warnings, recorded_writes, timeline_error
+):
+    attempts = _failing_with(monkeypatch, timeline_error)
+
+    result = _run(SolverRetryStrategy(RetrySettings()), _ida_solver())
+
+    assert result.succeeded is False
+    assert result.timeline_error == timeline_error
+    assert len(attempts) == 1
+    assert recorded_writes == []
+    assert not [message for message in recorded_warnings if message.startswith("Retry")]
+
+
+@pytest.mark.parametrize(
+    "timeline_error",
+    [
+        "KINSOL fails to solve the problem ( DYNSolverKINAlgRestoration.cpp:432 )",
+        "no value found for mandatory solver parameter 'hMin' (parameter set 'SIM', "
+        "parameter file 'solvers.par')",
+    ],
+    ids=["numerical", "solver setting"],
+)
+def test_an_error_a_solver_setting_may_settle_is_retried(
+    monkeypatch, recorded_warnings, recorded_writes, timeline_error
+):
+    attempts = _failing_with(monkeypatch, timeline_error)
+
+    _run(SolverRetryStrategy(RetrySettings()), _ida_solver())
+
+    assert len(attempts) == 5
+
+
 def test_the_small_network_parameters_are_declared_once_a_retry_adds_them(
     monkeypatch, recorded_warnings, recorded_writes
 ):
