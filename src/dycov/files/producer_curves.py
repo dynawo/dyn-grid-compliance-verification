@@ -340,12 +340,33 @@ def _copy_zone1_files(dict_files: list, curves_path: Path, target: str) -> None:
         manage_files.copy_file(dict_file, curves_path / target / dict_file.name)
 
 
-def _write_model_index(unit_path: Path, zones: list) -> None:
+_LEFT_TO_COMPLETE = "# Generated from the model: name the file of the curves of each test"
+
+
+def is_left_to_complete(index: Path) -> bool:
+    """Whether an index of reference curves is still the one generated in a delivery, which
+    names the file of no test."""
+    lines = index.read_text().splitlines()
+    if not lines or lines[0] != _LEFT_TO_COMPLETE:
+        return False
+    parser = configparser.ConfigParser()
+    parser.optionxform = str
+    parser.read_string("\n".join(lines))
+    return not any(value.strip() for _, value in parser.items("Curves-Files"))
+
+
+def _write_model_index(unit_path: Path, zones: list, delivery: bool) -> None:
     """Writes the index of the reference curves of one unit, for each zone whose tests it
     records: the Zone 3, the Zone 1, or both when the unit of the Zone 1 has the name of the
-    Zone 3 one, as they then share the directory."""
+    Zone 3 one, as they then share the directory. In a delivery, an index already there is the
+    producer's and stays as it is, and the one written is marked as left to complete."""
+    index = unit_path / "CurvesFiles.ini"
+    if delivery and index.exists():
+        return
     unit_path.mkdir(parents=True, exist_ok=True)
-    with open(unit_path / "CurvesFiles.ini", "w") as f:
+    with open(index, "w") as f:
+        if delivery:
+            f.write(f"{_LEFT_TO_COMPLETE}\n")
         f.write("[Curves-Files]\n")
         f.write("".join(tests for tests, _ in zones))
         f.write("\n\n")
@@ -357,6 +378,7 @@ def _get_model_templates(
     model_path: Path,
     curves_path: Path,
     template: str,
+    delivery: bool,
 ):
     if template == "model_PPM":
         file_template = _get_model_file_template
@@ -370,11 +392,12 @@ def _get_model_templates(
         "Producer": [(file_template(zone), _get_model_zone_curves_template(xfmrs, zone, z3_gens))]
     }
 
-    preserve_producer_z1 = False
+    # The records of a delivery stay where the producer put them
+    preserve_producer_z1 = delivery
     dict_files = [
         dict_file
         for dict_file in (curves_path / "Producer").glob("*.[dD][iI][cC][tT]")
-        if dict_file.name.startswith("PCS_RTE-I16z1")
+        if dict_file.name.startswith("PCS_RTE-I16z1") and not delivery
     ]
 
     zone = "Zone1"
@@ -392,7 +415,7 @@ def _get_model_templates(
         )
 
     for unit, zones in indices.items():
-        _write_model_index(curves_path / unit, zones)
+        _write_model_index(curves_path / unit, zones, delivery)
 
     if not preserve_producer_z1:
         for dict_file in dict_files:
@@ -403,6 +426,7 @@ def create_producer_curves(
     model_path: Path,
     curves_path: Path,
     template: str,
+    delivery: bool = False,
 ) -> None:
     """Create the curves file.
 
@@ -419,12 +443,16 @@ def create_producer_curves(
         * 'performance_BESS' if it is electrical performance for Storage Model
         * 'model_PPM' if it is model validation for Power Park Module Model
         * 'model_BESS' if it is model validation for Storage Model
+    delivery: bool
+        True when curves_path holds the reference curves the producer delivers: the indexes and
+        the records already there stay as they are, and the indexes written are marked as left
+        to complete. Only model validation writes into a delivery.
     """
 
     if template.startswith("performance"):
         _get_performance_templates(model_path, curves_path, template)
     elif template.startswith("model"):
-        _get_model_templates(model_path, curves_path, template)
+        _get_model_templates(model_path, curves_path, template, delivery)
 
 
 def check_curves(curves: Path) -> bool:

@@ -21,7 +21,7 @@ from pathlib import Path
 from lxml import etree
 
 from dycov.curves.importer.metadata import CurvesMetadata
-from dycov.files.producer_curves import create_producer_curves
+from dycov.files.producer_curves import create_producer_curves, is_left_to_complete
 from dycov.logging import dycov_logging
 
 
@@ -111,43 +111,57 @@ def validate_xml_syntax(xml_file: Path) -> None:
 
 def check_curves_files(model_path: Path, curves_path: Path, template: str) -> None:
     """
-    Checks if the `CurvesFiles.ini` configuration file is present in the specified
-    curves path. If not found and a model path is provided, it attempts to create it.
+    Checks that a unit of the reference curves has its index, `CurvesFiles.ini`, and that it
+    is not the one generated from the model and left to complete. A missing index is generated
+    from the model, when there is one, in each unit directory of the reference curves that has
+    none, and the run stops so the producer completes it.
 
     Parameters
     ----------
     model_path : Path
-        Path to the Dynawo model. Used to create curves if missing.
+        Path to the Dynawo model the index is generated from.
     curves_path : Path
-        Path to the directory where curves files are expected.
+        Directory of the reference curves of the unit, under the root of the reference curves.
     template : str
-        Template name for the curves files (e.g., "model", "performance_scenario").
+        Kind of the model, as the producer gives it: 'model/PPM' or 'model/BESS'.
 
     Raises
     ------
     FileNotFoundError
-        If `CurvesFiles.ini` is not found and cannot be created.
+        If `CurvesFiles.ini` is not found.
+    ValueError
+        If `CurvesFiles.ini` is the one generated from the model, left to complete.
     """
     if not curves_path:
         return
 
-    if not (curves_path / "CurvesFiles.ini").exists():
-        message = ""
-        # The index of every unit is written at once, from the root of the reference curves,
-        # where each unit has the directory of its name
-        if model_path:
-            references_path = curves_path.parent
-            create_producer_curves(model_path, references_path, template.replace("/", "_"))
+    index = curves_path / "CurvesFiles.ini"
+    if index.exists():
+        if is_left_to_complete(index):
             message = (
-                f" One has been generated from the model in each unit directory of "
-                f"{references_path}: complete it."
+                f"CurvesFiles.ini in {curves_path} was generated from the model and names no "
+                "curve file yet: complete it."
             )
+            dycov_logging.get_logger("Sanity Checks").error(message)
+            raise ValueError(message)
+        return
 
-        # Log an error and raise FileNotFoundError if 'CurvesFiles.ini' is still not found
-        dycov_logging.get_logger("Sanity Checks").error(
-            f"CurvesFiles.ini not found in {curves_path}.{message}"
+    message = ""
+    # The index of every unit is written at once, from the root of the reference curves, where
+    # each unit has the directory of its name
+    if model_path:
+        references_path = curves_path.parent
+        create_producer_curves(
+            model_path, references_path, template.replace("/", "_"), delivery=True
         )
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "CurvesFiles.ini")
+        message = (
+            f" One has been generated from the model in each unit directory of "
+            f"{references_path} that had none: complete it."
+        )
+    dycov_logging.get_logger("Sanity Checks").error(
+        f"CurvesFiles.ini not found in {curves_path}.{message}"
+    )
+    raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "CurvesFiles.ini")
 
 
 def _get_unfilled_metadata_options(dict_file: Path) -> list:
