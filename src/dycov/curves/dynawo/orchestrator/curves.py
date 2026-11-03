@@ -89,6 +89,7 @@ class DynawoCurves(ProducerCurves):
         """
         super().__init__(producer)
         self._output_dir = parameters.get_output_dir()
+        self._working_dir = parameters.get_working_dir()
         self._launcher_dwo = parameters.get_launcher_dwo()
         self._pcs_name = pcs_name
         self._model_path = model_path
@@ -171,9 +172,8 @@ class DynawoCurves(ProducerCurves):
         tuple[Path, Path]
             (output_dir, jobs_output_dir)
         """
-        op_path = self._model_path / oc_name
-        op_path_name = op_path.resolve().name
-        output_dir = self._output_dir / self._pcs_name / bm_name / op_path_name
+        # The working directory is moved whole to the output directory once the run ends
+        output_dir = self._output_dir / working_oc_dir.relative_to(self._working_dir)
 
         manage_files.copy_base_case_files(
             ModelFiles(
