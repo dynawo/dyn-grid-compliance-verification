@@ -288,6 +288,65 @@ def get_static_diff(primary_voltages: list, voltage_setpoint: list) -> float:
         return math.fabs((end_val - cons_val) / cons_val)
 
 
+def step_band(percent: float, curve: list) -> tuple[float, float]:
+    """The band a curve settles in after a step: a percentage of the change it made, around its
+    final value, or that percentage in pu when it barely changed.
+
+    Parameters
+    ----------
+    percent: float
+        Percentage of the change
+    curve: list
+        List of values that make up the curve
+
+    Returns
+    -------
+    tuple[float, float]
+        The lower and the upper limit of the band
+    """
+    change = curve[-1] - curve[0]
+    delta = abs(percent) if abs(change) < ATOL else abs(percent * change)
+    return curve[-1] - delta, curve[-1] + delta
+
+
+def final_value_band(percent: float, curve: list) -> tuple[float, float]:
+    """The band a curve settles in around its final value: a percentage of that value, or an
+    absolute tolerance when it is close to zero.
+
+    Parameters
+    ----------
+    percent: float
+        Percentage of the final value
+    curve: list
+        List of values that make up the curve
+
+    Returns
+    -------
+    tuple[float, float]
+        The lower and the upper limit of the band
+    """
+    return _compute_tube(curve[-1], percent)
+
+
+def floor_band(percent: float, curve: list) -> tuple[float | None, float | None]:
+    """The side of the final value band that faces zero, the only one a floor bounds.
+
+    Parameters
+    ----------
+    percent: float
+        Percentage of the final value
+    curve: list
+        List of values that make up the curve
+
+    Returns
+    -------
+    tuple[float | None, float | None]
+        The lower and the upper limit of the band, None on the side it does not bound
+    """
+    lower, upper = final_value_band(percent, curve)
+    return (lower, None) if curve[-1] >= 0 else (None, upper)
+
+
 def get_txu_relative(percent: float, time: list, curve: list, sim_t_event_end: float) -> float:
     """Gets the time when the curve reaches a value equivalent to a percentage of the
     difference between the end and the initial value.
@@ -311,14 +370,7 @@ def get_txu_relative(percent: float, time: list, curve: list, sim_t_event_end: f
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
 
-    # Get the tube
-    mean_val = curve[-1] - curve[0]
-    if abs(mean_val) < ATOL:
-        mean_val_min = curve[-1] - abs(percent)
-        mean_val_max = curve[-1] + abs(percent)
-    else:
-        mean_val_max = curve[-1] + abs(percent * mean_val)
-        mean_val_min = curve[-1] - abs(percent * mean_val)
+    mean_val_min, mean_val_max = step_band(percent, curve)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
@@ -354,9 +406,7 @@ def get_txp(percent: float, time: list, curve: list, sim_t_event_end: float) -> 
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
 
-    # Get the tube
-    mean_val = curve[-1]
-    mean_val_min, mean_val_max = _compute_tube(mean_val, percent)
+    mean_val_min, mean_val_max = final_value_band(percent, curve)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)

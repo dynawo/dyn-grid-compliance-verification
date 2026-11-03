@@ -189,6 +189,9 @@ class PerformanceValidator(Validator):
                 self.__curve_list(bus_pdr_voltage),
                 t_event_start,
             )
+            compliance_values["time_5U_band"] = common.step_band(
+                0.05, self.__curve_list(bus_pdr_voltage)
+            )
 
         if compliance_list.contains_key(["time_10U"], self._validations):
             compliance_values["time_10u"] = common.get_txu_relative(
@@ -197,6 +200,9 @@ class PerformanceValidator(Validator):
                 self.__curve_list(bus_pdr_voltage),
                 t_event_start,
             )
+            compliance_values["time_10U_band"] = common.step_band(
+                0.10, self.__curve_list(bus_pdr_voltage)
+            )
 
         if compliance_list.contains_key(["time_10Pfloor_clear"], self._validations):
             compliance_values["time_10pfloor"] = common.get_txpfloor(
@@ -204,6 +210,9 @@ class PerformanceValidator(Validator):
                 self.__curve_list("time"),
                 self.__curve_list("BusPDR_BUS_ActivePower"),
                 t_event_start,
+            )
+            compliance_values["time_10Pfloor_band"] = common.floor_band(
+                0.1, self.__curve_list("BusPDR_BUS_ActivePower")
             )
 
     def __calculate_composed_times(
@@ -221,6 +230,9 @@ class PerformanceValidator(Validator):
                 self.__curve_list("BusPDR_BUS_ActivePower"),
                 t_event_start,
             )
+            compliance_values["time_5P_band"] = common.final_value_band(
+                0.05, self.__curve_list("BusPDR_BUS_ActivePower")
+            )
 
         if compliance_list.contains_key(
             ["time_10P", "time_10P_85U", "time_10P_clear"], self._validations
@@ -230,6 +242,9 @@ class PerformanceValidator(Validator):
                 self.__curve_list("time"),
                 self.__curve_list("BusPDR_BUS_ActivePower"),
                 t_event_start,
+            )
+            compliance_values["time_10P_band"] = common.final_value_band(
+                0.1, self.__curve_list("BusPDR_BUS_ActivePower")
             )
 
         if compliance_list.contains_key(["time_5P_85U", "time_10P_85U"], self._validations):
@@ -252,6 +267,9 @@ class PerformanceValidator(Validator):
                 self.__curve_list("time"),
                 self.__curve_list("BusPDR_BUS_ActivePower"),
                 t_event_start,
+            )
+            compliance_values["time_10Pfloor_band"] = common.floor_band(
+                0.1, self.__curve_list("BusPDR_BUS_ActivePower")
             )
 
     def __calculate_times(
@@ -748,6 +766,11 @@ class PerformanceValidator(Validator):
             "calc_settling_time",
             "calc_ss_value",
             "calc_settling_tube",
+            "time_5U_band",
+            "time_10U_band",
+            "time_5P_band",
+            "time_10P_band",
+            "time_10Pfloor_band",
         ]:
             if key in compliance_values:
                 results[key] = compliance_values[key]
