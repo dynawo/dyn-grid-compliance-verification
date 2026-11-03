@@ -1174,3 +1174,23 @@ def test_get_measurement_names():
         "BusPDR_BUS_ReactivePower",
         "BusPDR_BUS_Voltage",
     ]
+
+
+# ---------------------------------------------------------------------------
+# Values that are not finite
+# ---------------------------------------------------------------------------
+
+
+def test_a_current_that_is_not_finite_breaks_the_reactive_priority():
+    """#675: a NaN current used to count as zero, which kept the priority."""
+    validator = _make_validator(
+        validations=["imax_reac"],
+        calculated=_make_injection_curves([0.1] * 5, [0.0, 0.0, float("nan"), 0.0, 0.0]),
+    )
+    validator.set_generators_imax({"G1": 1.0})
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_others(compliance_values, 1.0)
+
+    assert compliance_values["imax_reac_check"] is False
+    assert compliance_values["imax_reac"] == pytest.approx(2.0)

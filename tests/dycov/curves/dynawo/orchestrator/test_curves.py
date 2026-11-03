@@ -951,3 +951,12 @@ class TestSimulateOutcomeAssembly:
         outcome = self._simulate(curves, result, working_dir=tmp_path)
 
         assert outcome.has_curves is True
+
+
+class TestBuildRunInputs:
+    @pytest.mark.parametrize("zone", [0, 1, 3])
+    def test_the_run_carries_the_zone_its_outputs_are_named_for(self, zone):
+        curves, _, _ = _make_real_curves()
+        curves.get_producer().get_zone.return_value = zone
+
+        assert curves._DynawoCurves__build_run_inputs().zone == zone
