@@ -30,7 +30,9 @@ When a release carries a newer version of the configuration, the first run
 rewrites ``config.ini`` from the profile it declares and keeps every setting
 the file holds, including the options and sections the profile does not show.
 The previous file is left beside it as ``config.ini.OLD.<n>``, and the log says
-so; an option the tool no longer reads is kept as well, and reported.
+so. The log also lists, as deprecated, the options the profiles do not carry:
+an option the tool no longer reads, but also those it reads all the same and
+the profiles leave out, such as a selection of benchmarks or a PCS override.
 
 
 The revision of the DTR
