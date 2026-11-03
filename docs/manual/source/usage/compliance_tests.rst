@@ -201,7 +201,8 @@ the steady-state tolerance ``thr_ss_tol`` and the nominal frequency
 tests. A test whose curves are missing, as producer curves that leave out the
 internal angle of a synchronous machine, the magnitude its voltage regulation
 controls or its setpoint, or the currents of a unit, is reported as *N/A* and
-the operating condition as not compliant.
+the operating condition as not compliant. A unit the curves dictionary names
+counts even when every one of its entries is left blank.
 
 Voltage control
 ^^^^^^^^^^^^^^^
