@@ -385,6 +385,61 @@ def test_get_txu_raises_on_length_mismatch():
         common.get_txu(1, [0, 1, 2], [1, 2], sim_t_event_end=1)
 
 
+def test_get_txu_of_a_dip_on_a_regular_grid_measures_its_recovery():
+    """The sample before the event holds the voltage before the fault, above the threshold."""
+    time = [0, 1, 2, 3, 4, 5, 6]
+    curve = [1.0, 1.0, 0.2, 0.5, 0.9, 1.0, 1.0]
+
+    result = common.get_txu(0.85, time, curve, sim_t_event_end=2)
+
+    assert result == pytest.approx(2.0)
+
+
+def test_get_txu_of_a_dip_written_before_the_event_measures_its_recovery():
+    """Dynawo writes the discontinuity of the event a few microseconds before its instant."""
+    time = [0, 1, 1.999999, 2, 3, 4, 5]
+    curve = [1.0, 1.0, 0.2, 0.2, 0.5, 0.9, 1.0]
+
+    result = common.get_txu(0.85, time, curve, sim_t_event_end=2)
+
+    assert result == pytest.approx(2.0)
+
+
+def test_get_txu_of_curves_starting_after_the_event():
+    time = [5, 6, 7]
+    curve = [0.2, 0.9, 1.0]
+
+    result = common.get_txu(0.85, time, curve, sim_t_event_end=4)
+
+    assert result == pytest.approx(2.0)
+
+
+def _recovering_voltage(time: np.ndarray) -> np.ndarray:
+    """A dip to 0.05 pu from 30 s to 30.15 s, then a ramp back to 1 pu at 31 s."""
+    ramp = 0.05 + (time - 30.15) * 0.95 / 0.85
+    return np.where(time < 30.0, 1.0, np.where(time < 30.15, 0.05, np.minimum(ramp, 1.0)))
+
+
+@pytest.mark.parametrize(
+    "time",
+    [
+        np.round(np.arange(29.0, 32.0, 0.001), 6),
+        np.round(np.arange(29.0, 32.0, 0.01), 6),
+        np.sort(np.append(np.round(np.arange(29.0, 32.0, 0.01), 6), 29.99999)),
+    ],
+    ids=["1 ms grid", "10 ms grid", "event written before its instant"],
+)
+def test_get_txu_finds_the_recovery_whatever_the_sampling(time):
+    curve = _recovering_voltage(time)
+    if 29.99999 in time:
+        curve[np.where(time == 29.99999)[0][0]] = 0.05
+    recovery = 30.15 + (0.85 - 0.05) * 0.85 / 0.95
+
+    result = common.get_txu(0.85, list(time), list(curve), sim_t_event_end=30.0)
+
+    assert result == pytest.approx(recovery - 30.0, abs=0.0101)
+
+
 # ---------------------------------------------------------------------------
 # Generator current limit
 # ---------------------------------------------------------------------------
