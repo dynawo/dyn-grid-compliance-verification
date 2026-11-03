@@ -202,6 +202,19 @@ def test_storage_performance_must_declare_the_consumption_limit(monkeypatch, mod
 
 
 @pytest.mark.parametrize("model", [True, False], ids=["model", "curves"])
+def test_storage_performance_with_the_retired_name_points_to_the_migration(monkeypatch, model):
+    producer = _performance_producer(
+        monkeypatch,
+        _PRODUCER_INI + "generator_type = BESS\np_max_consumption_at_PDR = 60\n",
+        model,
+        _STORAGE,
+    )
+
+    with pytest.raises(ValueError, match="p_max_consumption_at_PDR.*migrate_inputs"):
+        producer._ModelProducer__set_electric_performance_type()
+
+
+@pytest.mark.parametrize("model", [True, False], ids=["model", "curves"])
 def test_storage_performance_runs_with_the_consumption_limit(monkeypatch, model):
     producer = _performance_producer(
         monkeypatch,
