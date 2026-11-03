@@ -1,3 +1,4 @@
+import os
 from unittest.mock import MagicMock
 
 import pytest
@@ -182,6 +183,21 @@ def test_a_readable_user_configuration_lets_the_run_go_on(tmp_path):
     parser.error.assert_not_called()
 
 
+def test_a_user_configuration_read_from_a_pipe_lets_the_run_go_on(tmp_path):
+    """A process substitution or /dev/stdin is no regular file, but it can be read."""
+    user_pipe = tmp_path / "user.ini"
+    os.mkfifo(user_pipe)
+    parser = MagicMock()
+    args = _fake_args("performance")
+    args.user_config = user_pipe
+
+    from dycov.launchers import DycovCLI
+
+    DycovCLI()._check_user_config(parser, args)
+
+    parser.error.assert_not_called()
+
+
 def test_without_a_user_configuration_nothing_is_checked():
     parser = MagicMock()
 
@@ -192,11 +208,26 @@ def test_without_a_user_configuration_nothing_is_checked():
     parser.error.assert_not_called()
 
 
-@pytest.mark.parametrize("kind", ["missing", "directory"])
+@pytest.mark.parametrize(
+    "kind",
+    [
+        "missing",
+        "directory",
+        pytest.param(
+            "unreadable",
+            marks=pytest.mark.skipif(
+                hasattr(os, "geteuid") and os.geteuid() == 0, reason="root reads any file"
+            ),
+        ),
+    ],
+)
 def test_a_user_configuration_that_cannot_be_read_stops_the_run(tmp_path, kind):
     user_file = tmp_path / "user_2042.ini"
     if kind == "directory":
         user_file.mkdir()
+    elif kind == "unreadable":
+        user_file.write_text("[DTR]\ncurrent = 20240215\n")
+        user_file.chmod(0)
     parser = MagicMock()
     args = _fake_args("performance")
     args.user_config = user_file
