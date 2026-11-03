@@ -36,12 +36,17 @@ def enable_warning_capture(force_runtimewarning_visible: bool = True) -> None:
 
 def _end_worker(signum: int, frame: Optional[types.FrameType]) -> None:
     """Ends a worker its pool terminates, with the external processes it launched, which run
-    in sessions of their own. It exits at once: an exception raised here would reach the exit
-    handlers the worker may be running."""
+    in sessions of their own. A worker running its exit handlers exits at once, as an exception
+    raised here would reach them; any other unwinds, which releases the task queue it may be
+    waiting on, and the pool that terminates needs that queue."""
+    from multiprocessing import util
+
     from dycov.core.graceful_shutdown import terminate_all_children
 
     terminate_all_children(timeout=5.0)
-    os._exit(128 + signum)
+    if util._exiting:
+        os._exit(128 + signum)
+    raise SystemExit(128 + signum)
 
 
 def worker_initializer(handler_settings: Optional[dict]) -> None:
