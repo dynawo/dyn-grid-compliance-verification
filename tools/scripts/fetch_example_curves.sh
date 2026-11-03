@@ -92,6 +92,10 @@ unzip -q "$download_path/$ASSET" -d "$download_path/unpacked"
 [ -d "$download_path/unpacked/examples" ] ||
     fail "The asset of release $release does not hold an examples directory."
 
+curves=$(find "$download_path/unpacked/examples" -type f -name "*.csv" \
+    \( -path "*/ReferenceCurves/*" -o -path "*/ProducerCurves/*" \) | wc -l)
+[ "$curves" -gt 0 ] || fail "The asset of release $release holds no curve."
+
 # A curve directory arrives whole, as the regeneration writes it: the curves, the dictionaries
 # that describe them, their index and the declarations beside them. Whatever was there goes
 # first, so a test that is no longer recorded leaves nothing behind.
@@ -104,9 +108,6 @@ while IFS= read -r source_directory; do
     directories=$((directories + 1))
 done < <(find "$download_path/unpacked/examples" -type d \
     \( -name ReferenceCurves -o -name ProducerCurves \) | sort)
-
-curves=$(find ./examples -name "*.csv" | wc -l)
-[ "$curves" -gt 0 ] || fail "The asset of release $release holds no curve."
 
 echo "$release" >| ./examples/.curves-release
 log_msg "$curves curves in $directories directories, from release $release."
