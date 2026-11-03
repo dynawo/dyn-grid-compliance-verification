@@ -12,7 +12,9 @@ from pathlib import Path
 
 import pytest
 
+import dycov
 from dycov.core.initialization import DycovInitializer
+from dycov.files import manage_files
 
 
 class TestDycovInitializer:
@@ -373,6 +375,98 @@ class TestDycovInitializer:
         written.read(config_dir / "config.ini")
         assert written.get("dycov", "version") == "1.1.0"
         assert written.get("Global", "file_log_level") == "40"
+
+    def _update(self, dycov_initializer, user_text: str) -> configparser.ConfigParser:
+        """Updates a user configuration the way a run does when the tool carries a newer version:
+        from the profiles the tool writes, every option commented out."""
+        config_dir = self.mock_config.get_config_dir.return_value
+        shipped = Path(dycov.__file__).parent / "configuration"
+        manage_files.create_config_file(shipped / "config.ini", config_dir / "config.ini_BASIC")
+        manage_files.create_config_file(
+            shipped / "defaultConfig.ini", config_dir / "config.ini_ADVANCED"
+        )
+        (config_dir / "config.ini").write_text(user_text)
+
+        dycov_initializer._check_config_file(
+            shipped / "defaultConfig.ini", config_dir / "config.ini"
+        )
+
+        written = configparser.ConfigParser(inline_comment_prefixes=("#",), interpolation=None)
+        written.read(config_dir / "config.ini")
+        return written
+
+    _USER_SETTINGS = (
+        "[DTR]\ncurrent = 20240215\n\n"
+        "[Global]\nconsole_log_level = 30\nretired_option = 1\n\n"
+        "[Dynawo]\nsimulation_limit = 50\nsim_hMax = 1e-4\n\n"
+        "[PCS_RTE-I16z1.GridVoltageStep.Drop.Event]\nsetpoint_step_value = 1e20\n"
+    )
+
+    def _assert_keeps_the_user_settings(self, written: configparser.ConfigParser) -> None:
+        assert written.get("DTR", "current") == "20240215"
+        assert written.get("Global", "console_log_level") == "30"
+        assert written.get("Global", "retired_option") == "1"
+        assert written.get("Dynawo", "simulation_limit") == "50"
+        assert written.get("Dynawo", "sim_hMax") == "1e-4"
+        assert written.get("PCS_RTE-I16z1.GridVoltageStep.Drop.Event", "setpoint_step_value") == (
+            "1e20"
+        )
+
+    @pytest.mark.parametrize("profile", ["basic", "advanced"])
+    def test_an_update_keeps_every_setting_of_the_user(self, dycov_initializer, profile):
+        """#665: the profiles carry every option commented out, and a section the basic one
+        does not have at all; none of it costs the user a setting."""
+        written = self._update(
+            dycov_initializer,
+            f"[dycov]\nversion = 1.0.0\ntype = {profile}\n\n" + self._USER_SETTINGS,
+        )
+
+        self._assert_keeps_the_user_settings(written)
+        assert written.get("dycov", "version") == DycovInitializer._DYCOV_TOOL_VERSION
+        assert written.get("dycov", "type") == profile
+
+    def test_an_updated_configuration_is_valid_and_keeps_the_template_text(
+        self, dycov_initializer
+    ):
+        config_dir = self.mock_config.get_config_dir.return_value
+        self._update(
+            dycov_initializer, "[dycov]\nversion = 1.0.0\ntype = basic\n\n" + self._USER_SETTINGS
+        )
+
+        text = (config_dir / "config.ini").read_text()
+        assert dycov_initializer._is_valid_config_file(config_dir / "config.ini") is True
+        assert "# # Revision of the DTR a run validates against" in text
+        assert text.count("[Dynawo]") == 1
+        assert text.count("current =") == 1
+
+    def test_a_configuration_without_version_keeps_its_settings(self, dycov_initializer):
+        """#665: a config.ini written by hand, without its [dycov] section, is updated too."""
+        written = self._update(dycov_initializer, self._USER_SETTINGS)
+
+        self._assert_keeps_the_user_settings(written)
+        assert written.get("dycov", "version") == DycovInitializer._DYCOV_TOOL_VERSION
+
+    def test_an_update_keeps_a_value_as_it_is_written(self, dycov_initializer):
+        written = self._update(
+            dycov_initializer,
+            "[dycov]\nversion = 1.0.0\ntype = basic\n\n"
+            "[Global]\nconsole_formatter = %(levelname)s|%(message)s\n"
+            "[PCS-Benchmarks]\nPCS_RTE-I16z1 = SetPointStep,\n    GridVoltageStep\n",
+        )
+
+        assert written.get("Global", "console_formatter") == "%(levelname)s|%(message)s"
+        assert written.get("PCS-Benchmarks", "PCS_RTE-I16z1") == "SetPointStep,\nGridVoltageStep"
+
+    def test_an_update_says_where_the_previous_configuration_is(self, dycov_initializer):
+        config_dir = self.mock_config.get_config_dir.return_value
+        previous = "[dycov]\nversion = 1.0.0\ntype = basic\n\n" + self._USER_SETTINGS
+
+        self._update(dycov_initializer, previous)
+
+        assert (config_dir / "config.ini.OLD.0").read_text() == previous
+        messages = " ".join(str(call) for call in self._mock_logger.method_calls)
+        assert "config.ini.OLD.0" in messages
+        assert "retired_option" in messages
 
     def test_is_valid_config_file_malformed_returns_false(self, dycov_initializer, tmp_path):
         """A malformed config (duplicated option) is treated as invalid, not a crash."""
