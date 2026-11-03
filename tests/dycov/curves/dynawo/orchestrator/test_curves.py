@@ -941,6 +941,43 @@ class TestSimulateOutcomeAssembly:
         assert outcome.time_exceeds is True
         assert outcome.has_curves is False
 
+    def test_a_failure_after_a_faster_success_is_not_a_time_out(self):
+        """Every test of a benchmark runs on one simulator: a success of 2 s before a failure
+        of 3.3 s is no reason to report the failure as over the 30 s limit."""
+        curves, _, _ = _make_real_curves()
+        self._simulate(
+            curves, MagicMock(succeeded=True, sim_time=2.0, curves=pd.DataFrame(), log="")
+        )
+
+        outcome = self._simulate(
+            curves, MagicMock(succeeded=False, sim_time=3.3, curves=pd.DataFrame(), log="KINSOL")
+        )
+
+        assert outcome.succeeded is False
+        assert outcome.time_exceeds is False
+
+    def test_a_failure_over_the_limit_is_a_time_out_whatever_ran_before(self):
+        curves, _, _ = _make_real_curves()
+        self._simulate(
+            curves, MagicMock(succeeded=True, sim_time=2.0, curves=pd.DataFrame(), log="")
+        )
+
+        outcome = self._simulate(
+            curves, MagicMock(succeeded=False, sim_time=30.5, curves=pd.DataFrame(), log="slow")
+        )
+
+        assert outcome.time_exceeds is True
+
+    def test_the_cct_search_still_bounds_its_runs_by_the_last_success(self):
+        curves, _, bisection = _make_real_curves()
+        self._simulate(
+            curves, MagicMock(succeeded=True, sim_time=2.0, curves=pd.DataFrame(), log="")
+        )
+
+        curves.get_time_cct(Path("/work"), Path("outputs"), 0.15, "BM1", "OC1")
+
+        assert bisection.sim_time == pytest.approx(2.0)
+
     def test_has_curves_when_csv_exists(self, tmp_path):
         curves, _, _ = _make_real_curves()
         csv_dir = tmp_path / "outputs" / "curves"
