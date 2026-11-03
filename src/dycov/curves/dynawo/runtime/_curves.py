@@ -668,7 +668,11 @@ def _divergence_limit(
 
 
 def find_divergence(
-    curves: pd.DataFrame, generators: list, voltage_limit: float, power_limit: float
+    curves: pd.DataFrame,
+    generators: list,
+    voltage_limit: float,
+    power_limit: float,
+    zone: int = 0,
 ) -> str | None:
     """Looks for a curve of the producer that has diverged: a voltage beyond voltage_limit, a
     power or a current beyond power_limit, in absolute value, or a value that is not finite.
@@ -683,6 +687,8 @@ def find_divergence(
         Largest voltage, in pu, a simulation that has not diverged reaches.
     power_limit : float
         Largest power or current, in pu, a simulation that has not diverged reaches.
+    zone : int
+        The zone a model validation runs in, whose outputs name its connection bus.
 
     Returns
     -------
@@ -694,9 +700,10 @@ def find_divergence(
         if limit is None:
             continue
         values = curves[column].to_numpy(dtype=float)
+        name = naming.to_output_name(column, zone)
         if not np.all(np.isfinite(values)):
-            return f"{column} is not finite"
+            return f"{name} is not finite"
         peak = float(np.max(np.abs(values))) if len(values) else 0.0
         if peak > limit:
-            return f"{column} reached {peak:.3g} pu, beyond {limit:g} pu"
+            return f"{name} reached {peak:.3g} pu, beyond {limit:g} pu"
     return None

@@ -199,6 +199,7 @@ class DynawoCurves(ProducerCurves):
             generators=self.get_producer().generators,
             s_nom=self.get_producer().s_nom,
             s_nref=self.get_snref(),
+            zone=self.get_producer().get_zone(),
         )
 
     def __execute_simulation(

@@ -86,6 +86,7 @@ class DynawoSimulator:
             run.s_nom,
             run.s_nref,
             simulation_limit=max_sim_time,
+            zone=run.zone,
         )
 
         time_exceeds = result.sim_time > max_sim_time
@@ -198,6 +199,7 @@ class DynawoSimulator:
         s_nref: float,
         save_file: bool = True,
         simulation_limit: float | None = None,
+        zone: int = 0,
     ) -> DynawoResult:
         """
         Runs a dynamic simulation with Dynamic and processes the results.
@@ -232,6 +234,8 @@ class DynawoSimulator:
         simulation_limit : float | None, optional
             Maximum time (in seconds) allowed for the simulation to run.
             If None, no timeout is applied. Defaults to None.
+        zone : int, optional
+            The zone a model validation runs in, whose outputs name its connection bus.
 
         Returns
         -------
@@ -269,6 +273,7 @@ class DynawoSimulator:
             generators,
             config.get_float("Dynawo", "divergence_voltage_limit", 10.0),
             config.get_float("Dynawo", "divergence_power_limit", 100.0),
+            zone,
         )
         if divergence:
             succeeded = False
