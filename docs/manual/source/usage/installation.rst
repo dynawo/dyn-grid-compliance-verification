@@ -70,8 +70,8 @@ Build tools:
 
    sudo apt install curl unzip make
 
-LaTeX (for PDF report generation; a ``--curves-only`` run builds no report and does not
-need it):
+LaTeX (for PDF report generation; the installer asks for it, although a
+``--curves-only`` run builds no report and does not use it):
 
 .. code-block:: console
 
