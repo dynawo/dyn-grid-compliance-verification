@@ -10,9 +10,7 @@
 """Tests for the preparation of a process pool worker."""
 
 import logging
-import multiprocessing.pool
 import os
-import queue
 import signal
 import subprocess
 import sys
@@ -26,6 +24,20 @@ from dycov.logging import _end_worker, dycov_logging, worker_initializer
 
 FILE_FORMAT = "%(levelname)s|%(name)s|%(message)s"
 EXECUTION_LOG = "dycov_run.log"
+
+
+@pytest.fixture(autouse=True)
+def end_signals_of_the_test_process(monkeypatch):
+    """A worker prepared in the process of the tests leaves its end signals as they were, and
+    starts no thread to deliver them again."""
+    monkeypatch.setattr("dycov.logging._watch_end_signals", lambda end_signals: None)
+    monkeypatch.setattr("dycov.logging._ending", False)
+    trapped = [getattr(signal, name) for name in ("SIGINT", "SIGTERM", "SIGHUP", "SIGQUIT")]
+    previous = {sig: signal.getsignal(sig) for sig in trapped}
+    yield
+    for sig, handler in previous.items():
+        signal.signal(sig, handler)
+
 
 FORKSERVER_RUN = textwrap.dedent(
     '''
@@ -500,6 +512,9 @@ def test_a_worker_out_of_its_task_loop_exits_at_once(ending_calls):
 
 
 def test_a_worker_in_its_task_loop_unwinds_it(ending_calls):
+    import multiprocessing.pool
+    import queue
+
     calls, _ = ending_calls
     tasks, results = queue.Queue(), queue.Queue()
     tasks.put((0, 0, lambda: _end_worker(signal.SIGTERM, sys._getframe()), (), {}))
