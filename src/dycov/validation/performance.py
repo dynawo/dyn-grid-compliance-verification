@@ -884,23 +884,21 @@ class PerformanceValidator(Validator):
                 'no_disconnection_gen': bool,  # No generator disconnection (if applicable)
                 'no_disconnection_load': bool,  # No load disconnection (if applicable)
                 'static_diff': float,  # Static difference (if applicable)
-                'static_diff_check': bool | str,  # Static difference check status, or 'N/A'
-                    without its curves (if applicable)
-                'stabilized': bool | str,  # Stabilization status, or 'N/A' without the internal
-                    angles (if applicable)
+                'static_diff_check': bool,  # Static difference check status (if applicable)
+                'stabilized': bool,  # Stabilization status (if applicable)
                 'stabilized_rotor_angle': bool,  # The rotor angle took part in the
                     stabilization status (if applicable)
                 'imax_reac': float,  # Maximum reactive current (if applicable)
-                'imax_reac_check': bool | str,  # Maximum reactive current check status, or
-                    'N/A' without the currents (if applicable)
-                'AVR_5_check': bool | str,  # Plant-level voltage regulation 5% check status,
-                    or 'N/A' without its curves (if applicable)
+                'imax_reac_check': bool,  # Maximum reactive current check status (if applicable)
+                'AVR_5_check': bool,  # Plant-level voltage regulation 5% check status
+                    (if applicable)
                 'AVR_5': float,  # Plant-level voltage regulation 5% value (if applicable)
                 'AVR_5_crvs': list,  # Plant-level voltage regulation 5% curves (if applicable)
                 'freq1': float,  # Frequency deviation (if applicable)
-                'freq1_check': bool | str,  # Frequency deviation check status, or 'N/A'
-                    without a frequency (if applicable)
+                'freq1_check': bool,  # Frequency deviation check status (if applicable)
             }
+            A check whose curves are missing ('stabilized', 'static_diff_check',
+            'imax_reac_check', 'AVR_5_check', 'freq1_check') is 'N/A' instead of a bool.
         """
         # Validations common to all Pcs
         (
