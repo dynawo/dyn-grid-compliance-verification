@@ -17,7 +17,7 @@ from dycov.configuration.cfg import config
 from dycov.logging import dycov_logging
 from dycov.validation import compared_curves
 
-# when magnitudes are smaller than atol, switch to absolute error
+# Magnitudes under it count as zero, and a time check allows at least this deviation
 ATOL = 1.0e-6
 # Threshold below which relative tolerance becomes meaningless
 TUBE_TARGET_THRESHOLD = 0.01
