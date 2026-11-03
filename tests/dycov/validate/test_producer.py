@@ -15,8 +15,14 @@ from pathlib import Path
 import pytest
 
 from dycov.configuration.cfg import Config
-from dycov.core.global_variables import MODEL_VALIDATION_BESS, MODEL_VALIDATION_PPM
+from dycov.core.global_variables import (
+    ELECTRIC_PERFORMANCE_BESS,
+    ELECTRIC_PERFORMANCE_PPM,
+    MODEL_VALIDATION_BESS,
+    MODEL_VALIDATION_PPM,
+)
 from dycov.model.parameters import GenParams, Terminal
+from dycov.validate import producer as producer_module
 from dycov.validate.producer import ModelProducer
 
 _PRODUCER_INI = """[DEFAULT]
@@ -153,6 +159,71 @@ def test_a_missing_magnitude_is_reported_by_its_name(monkeypatch):
 def test_storage_must_declare_the_consumption_limit(monkeypatch):
     with pytest.raises(ValueError, match="must specify the p_max_consumption"):
         _producer_reading(monkeypatch, _PRODUCER_INI, MODEL_VALIDATION_BESS)
+
+
+def _performance_producer(monkeypatch, ini_text: str, model: bool, kinds: tuple) -> ModelProducer:
+    """A producer whose kind of unit a performance verification is about to read, from its
+    model (the generators of its DYD) or from the INI beside its curves."""
+    producer = ModelProducer.__new__(ModelProducer)
+    producer._s_nref = 100.0
+    producer._sim_type = None
+    producer._is_dynawo_model = model
+    producer._producer_model_path = Path("Model") if model else None
+    producer._producer_curves_path = None if model else Path("ProducerCurves")
+    producer_config = configparser.ConfigParser()
+    producer_config.read_string(ini_text)
+    monkeypatch.setattr(producer, "_ModelProducer__read_producer_ini", lambda: producer_config)
+    monkeypatch.setattr(producer, "get_producer_dyd", lambda: Path("Producer.dyd"))
+    monkeypatch.setattr(producer, "get_producer_par", lambda: Path("Producer.par"))
+    monkeypatch.setattr(producer_module.file_checks, "check_performance_model", lambda path: None)
+    monkeypatch.setattr(producer_module.file_checks, "check_performance_curves", lambda path: None)
+    monkeypatch.setattr(
+        producer_module.model_parameters, "get_producer_values", lambda *args: ([],) * 6
+    )
+    monkeypatch.setattr(
+        producer_module.parameter_checks, "check_producer_params_consistency", lambda *a, **k: None
+    )
+    monkeypatch.setattr(producer_module.parameter_checks, "check_generators", lambda gens: kinds)
+    return producer
+
+
+_STORAGE = (0, 0, 1)
+_POWER_PARK = (0, 1, 0)
+
+
+@pytest.mark.parametrize("model", [True, False], ids=["model", "curves"])
+def test_storage_performance_must_declare_the_consumption_limit(monkeypatch, model):
+    producer = _performance_producer(
+        monkeypatch, _PRODUCER_INI + "generator_type = BESS\n", model, _STORAGE
+    )
+
+    with pytest.raises(ValueError, match="must specify the p_max_consumption"):
+        producer._ModelProducer__set_electric_performance_type()
+
+
+@pytest.mark.parametrize("model", [True, False], ids=["model", "curves"])
+def test_storage_performance_runs_with_the_consumption_limit(monkeypatch, model):
+    producer = _performance_producer(
+        monkeypatch,
+        _PRODUCER_INI + "generator_type = BESS\np_max_consumption = 60\n",
+        model,
+        _STORAGE,
+    )
+
+    producer._ModelProducer__set_electric_performance_type()
+
+    assert producer.get_sim_type() == ELECTRIC_PERFORMANCE_BESS
+
+
+@pytest.mark.parametrize("model", [True, False], ids=["model", "curves"])
+def test_power_park_performance_needs_no_consumption_limit(monkeypatch, model):
+    producer = _performance_producer(
+        monkeypatch, _PRODUCER_INI + "generator_type = PPM\n", model, _POWER_PARK
+    )
+
+    producer._ModelProducer__set_electric_performance_type()
+
+    assert producer.get_sim_type() == ELECTRIC_PERFORMANCE_PPM
 
 
 def test_the_operating_mode_selects_the_active_power_limits(monkeypatch):
