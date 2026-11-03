@@ -190,6 +190,53 @@ def test_the_controlled_node_keeps_the_flag_default_for_curves_without_a_model()
     assert producer.controls_internal_node2() is True
 
 
+def _model_in(model_path: Path, zone: int = 0, filename=None) -> ModelProducer:
+    producer = ModelProducer.__new__(ModelProducer)
+    producer._producer_model_path = model_path
+    producer._producer_curves_path = None
+    producer._zone = zone
+    producer._filename = filename
+    return producer
+
+
+def _listed_in_order(monkeypatch, reverse=False):
+    """The order a directory lists its files in depends on the file system; fix one."""
+    iterdir = Path.iterdir
+    monkeypatch.setattr(Path, "iterdir", lambda self: iter(sorted(iterdir(self), reverse=reverse)))
+
+
+@pytest.mark.parametrize("reverse", [False, True], ids=["dyd listed first", "par listed first"])
+@pytest.mark.parametrize("folder", ["WindPark", "IECPark", "partage"])
+def test_the_model_files_are_found_whatever_the_folder_is_called(
+    tmp_path, monkeypatch, folder, reverse
+):
+    model_path = tmp_path / folder
+    model_path.mkdir()
+    for extension in ("dyd", "par", "ini"):
+        (model_path / f"Producer.{extension}").write_text("[DEFAULT]\n")
+    (model_path / "LHVRT.txt").write_text("")
+    _listed_in_order(monkeypatch, reverse)
+    producer = _model_in(model_path)
+
+    assert producer.get_producer_dyd().name == "Producer.dyd"
+    assert producer.get_producer_par().name == "Producer.par"
+    assert producer.get_filenames() == ["Producer"]
+
+
+@pytest.mark.parametrize("reverse", [False, True], ids=["listed first", "listed last"])
+def test_a_unit_is_not_taken_for_one_whose_name_ends_with_it(tmp_path, monkeypatch, reverse):
+    zone1 = tmp_path / "Dynawo" / "Zone1"
+    zone1.mkdir(parents=True)
+    for unit in ("G1", "WG1"):
+        for extension in ("dyd", "par", "ini"):
+            (zone1 / f"{unit}.{extension}").write_text("[DEFAULT]\n")
+    _listed_in_order(monkeypatch, reverse)
+    producer = _model_in(tmp_path / "Dynawo", zone=1, filename="G1")
+
+    assert producer.get_producer_dyd().name == "G1.dyd"
+    assert producer.get_producer_par().name == "G1.par"
+
+
 def test_get_filenames_of_a_zone_not_delivered_is_empty(tmp_path):
     (tmp_path / "Zone3").mkdir()
     (tmp_path / "Zone3" / "Producer.dyd").write_text("")
