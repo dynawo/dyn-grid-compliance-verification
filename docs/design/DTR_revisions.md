@@ -181,7 +181,7 @@ the shape of the options, so a redefinition writes values:
 |---|---|---|
 | `20240215` | every unit above 110 kV is type D, whatever its power | `category_thresholds_high_voltage = 0,0,0` |
 | `20250801` | a unit above 110 kV is type D from 30 MW | `category_thresholds_high_voltage = 1,18,30` |
-| `20251013` | the category of a storage unit stops reading the installed power | nothing: see below |
+| `20251013` | a unit above 110 kV is type D from 30 MW, as `20250801` says; the category of a storage unit stops reading the installed power | `category_thresholds_high_voltage = 1,18,30`; for the storage unit, see below |
 
 One criterion of the base is outside that shape. The table of a storage unit makes a unit of 18 to
 50 MW above 110 kV type D when the **installed power of the installation** is above 50 MW, and
@@ -333,6 +333,7 @@ The delta of `20251013` writes:
 
 | What | Where |
 |---|---|
+| A unit above 110 kV is type D from 30 MW, as `20250801` says | `category_thresholds_high_voltage = 1,18,30` in its `revision_art_5_1_1.ini` |
 | The fiches I6 and I7 start at Un | `pdr_U` of the dip and of the swell |
 | The fiche I7 gives one operating point, at Q = 0 | the list of operating conditions, one description, one report |
 | The fiche I5 adds the impedant fault | the list of operating conditions, one description, one report |
