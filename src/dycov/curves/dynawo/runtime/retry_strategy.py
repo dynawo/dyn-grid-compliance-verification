@@ -26,10 +26,12 @@ Remedy = Callable[[SolverParams, Path], str]
 # Dynawo ends an error with the source file that raised it. The ones that read the PAR and DYD
 # files of the models, compile those models and give them their parameters raise errors in those
 # inputs, which no change of the solver settles; so do the parameters a model looks up in its PAR
-# without finding them, whatever file raises it.
+# without finding them, the variables a connection names that the model lacks and the files the
+# inputs name that do not exist, whatever raises them.
 _INPUT_ERROR = re.compile(
-    r"\(\s*(?:(?:PAR|DYD)\w*\.cpp|DYNCompiler\.cpp|DYNParameter\.hpp):\d+\s*\)"
+    r"\(\s*(?:(?:PAR|DYD)\w*\.cpp|DYN(?:Compiler|DynamicData)\.cpp|DYNParameter\.hpp):\d+\s*\)"
     r"|failed to retrieve parameter|cardinality parameter is not set"
+    r"|not found in subModel|No such file or directory"
 )
 
 
