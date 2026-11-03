@@ -31,7 +31,7 @@ parallel_run() {
 }
 
 # A failed run ends its job with 1, whatever dycov returned: xargs launches no further job once
-# one ends with 255, which is what dycov returns when its inputs are incomplete.
+# one ends with 255, and a failed run must not stop the rest of its phase.
 report_status() {
     local status=$1
     local command=$2
@@ -203,13 +203,13 @@ run_dycov_generate() {
     local model_name=$3
 
     # Full command to execute (for logging purposes)
-    local command_to_execute="dycov generate_gfm_envelopes -i \"$model_path\" -e -o \"$output_path\""
+    local command_to_execute="dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config $DYCOV_USER_CONFIG} ${DYCOV_DTR:+--dtr $DYCOV_DTR} generate_gfm_envelopes -i \"$model_path\" -e -o \"$output_path\""
     log_msg "Executing: $command_to_execute"
 
     start=$(date +%s)
     # Execute the command
     local status=0
-    dycov generate_gfm_envelopes -i "$model_path" -e -o "$output_path" || status=$?
+    dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} ${DYCOV_DTR:+--dtr "$DYCOV_DTR"} generate_gfm_envelopes -i "$model_path" -e -o "$output_path" || status=$?
     end=$(date +%s)
     log_msg "Generate: $model_name Elapsed Time: $((end - start)) seconds"
     report_status "$status" "$command_to_execute"
