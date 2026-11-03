@@ -504,4 +504,5 @@ These parameters are useful during development and debugging:
 * ``disable_LP_filtering`` — disable low-pass filtering of signals entirely.
 * ``max_simulation_retries`` — maximum number of retries for a failed
   simulation (default: 4, covering: base line, reduced step, increased
-  precision, small networks, solver switch).
+  precision, small networks, solver switch). An error Dynawo raises while reading
+  the PAR or DYD of a model is not retried, as no solver setting settles it.
