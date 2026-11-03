@@ -341,6 +341,12 @@ Dynawo section
 
 * ``simulation_limit`` — maximum time (s) for the dynamic simulation. DyCoV
   stops the simulator when this limit is exceeded.
+* ``divergence_voltage_limit``, ``divergence_power_limit`` — magnitudes beyond
+  which a simulation has diverged, even if Dynawo ends it successfully: a
+  voltage in pu of Unom (10) and a power or a current in pu of the nominal
+  power of the unit (100), on the curves of the producer; a value that is not
+  finite always counts. ``find_divergence`` (``runtime/_curves.py``) checks
+  them after every run, which then fails.
 * ``simulation_start`` — simulation start time (s). Before changing this,
   verify that all PCS events fall within the configured simulation window.
 * ``simulation_stop`` — simulation end time (s). PCS I7 has an event at t=30s;
