@@ -273,6 +273,13 @@ Each test case (Operating Condition) requires a curve file and an associated
 DICT file. The example above shows a PCS with two Benchmarks: Benchmark1 has
 two Operating Conditions and Benchmark2 has one.
 
+Each unit directory holds an index, ``CurvesFiles.ini``, that names the curve
+file of each test. When a unit has none, DyCoV writes one from the model in
+every unit directory that lacks it, listing the tests with no file, and stops
+so that you name the file of each test you deliver. An index left as it was
+generated stops every run until it names at least one file. The indexes and
+the records already in the directory are left as they are.
+
 Accepted curve file formats:
 
 * **COMTRADE** — all versions up to C37.111-2013 are accepted, either as a
