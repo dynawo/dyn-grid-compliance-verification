@@ -60,25 +60,25 @@ def _get_linux_info() -> str:
 
 
 def _user_settings(user_config: configparser.ConfigParser, metadata_section: str) -> dict:
-    """Every option of the user configuration, by section, as written."""
+    """Every option of the user configuration, by section, as written: a section holds those of
+    [DEFAULT] only where it gives them a value of its own."""
     defaults = user_config.defaults()
     settings = {"DEFAULT": dict(defaults)} if defaults else {}
     for section in user_config.sections():
         if section != metadata_section:
             settings[section] = {
-                key: user_config.get(section, key)
+                key: value
                 for key in user_config.options(section)
-                if key not in defaults
+                if (value := user_config.get(section, key)) != defaults.get(key)
             }
     return settings
 
 
 def _profile_option(line: str) -> Optional[str]:
-    """The key of the option a line of a profile carries, commented out or not."""
-    text = line.strip()
-    if text.startswith("# "):
-        text = text[2:]
-    if not text or text[0] in "#;" or "=" not in text:
+    """The key of the option a line of a profile carries, commented out or not, as often as the
+    template and the profile comment it."""
+    text = line.strip().lstrip("# ")
+    if not text or text[0] == ";" or "=" not in text:
         return None
     return text.split("=", 1)[0].strip()
 
@@ -89,13 +89,15 @@ def _option_line(key: str, value: str) -> str:
 
 def _end_section(lines: list, options: dict) -> None:
     """Writes the options of the user the profile has no line for at the end of their section,
-    before the blank lines that close it."""
-    blank = []
-    while lines and not lines[-1].strip():
-        blank.insert(0, lines.pop())
+    before the blank line that closes it and the comments that introduce the next one."""
+    tail = []
+    while lines and (not lines[-1].strip() or lines[-1].lstrip().startswith(("#", ";"))):
+        tail.insert(0, lines.pop())
+    closing = next((index for index, line in enumerate(tail) if not line.strip()), len(tail))
+    lines.extend(tail[:closing])
     lines.extend(_option_line(key, value) for key, value in options.items())
     options.clear()
-    lines.extend(blank)
+    lines.extend(tail[closing:])
 
 
 class DycovInitializer:
@@ -407,6 +409,7 @@ class DycovInitializer:
             return False
 
         cfg_parser = configparser.ConfigParser(inline_comment_prefixes=("#",))
+        cfg_parser.optionxform = str
         try:
             cfg_parser.read(config_file)
         except configparser.Error:
