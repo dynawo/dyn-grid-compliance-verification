@@ -411,10 +411,14 @@ Signal processing parameters:
 
 Step-response time characteristic thresholds:
 
-* ``thr_reaction_time`` — maximum allowed MAE on reaction time.
-* ``thr_rise_time`` — maximum allowed MAE on rise time.
-* ``thr_settling_time`` — maximum allowed MAE on settling time.
-* ``thr_overshoot`` — maximum allowed MAE on overshoot.
+* ``thr_reaction_time`` — maximum deviation of the reaction time from the
+  reference one, relative to it.
+* ``thr_rise_time`` — maximum deviation of the rise time, relative to the
+  reference one.
+* ``thr_settling_time`` — maximum deviation of the settling time, relative to
+  the reference one.
+* ``thr_overshoot`` — maximum deviation of the overshoot, relative to the
+  reference one.
 * ``thr_ramp_time_lag`` — maximum allowed ME on ramp time lag.
 * ``thr_ramp_error`` — maximum allowed MXE on ramp error.
 * ``thr_final_ss_mae`` — maximum allowed MAE between simulation and reference
