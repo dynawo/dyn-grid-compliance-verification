@@ -236,21 +236,22 @@ def _get_bess_model_file_template(zone: str) -> str:
         )
 
 
-def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
-    curves_dictionary = (
-        "[Curves-Dictionary] \n"
-        "time = \n"
-        "NetworkFrequencyPu = \n"
-        "# To represent a signal that is in raw abc three-phase form, the affected signal must "
-        "be tripled \n"
-        "# and the suffixes _a, _b and _c must be added as in the following example: \n"
-        "#    SignalName_a = \n"
-        "#    SignalName_b = \n"
-        "#    SignalName_c = \n"
-    )
+_MODEL_CURVES_DICTIONARY = (
+    "[Curves-Dictionary] \n"
+    "time = \n"
+    "NetworkFrequencyPu = \n"
+    "# To represent a signal that is in raw abc three-phase form, the affected signal must "
+    "be tripled \n"
+    "# and the suffixes _a, _b and _c must be added as in the following example: \n"
+    "#    SignalName_a = \n"
+    "#    SignalName_b = \n"
+    "#    SignalName_c = \n"
+)
 
+
+def _get_model_zone_curves_template(xfmrs: list, zone: str, gens: list) -> str:
     zone_number = 1 if zone == "Zone1" else 3
-    curves_dictionary += (
+    curves_dictionary = (
         f"\n\n# Wind Turbines or PV Arrays in {zone} \n[Curves-Dictionary-{zone}] \n"
     )
     for name in requested_curves.for_zone(
@@ -339,26 +340,35 @@ def _copy_zone1_files(dict_files: list, curves_path: Path, target: str) -> None:
         manage_files.copy_file(dict_file, curves_path / target / dict_file.name)
 
 
+def _write_model_index(unit_path: Path, zones: list) -> None:
+    """Writes the index of the reference curves of one unit, for each zone whose tests it
+    records: the Zone 3, the Zone 1, or both when the unit of the Zone 1 has the name of the
+    Zone 3 one, as they then share the directory."""
+    unit_path.mkdir(parents=True, exist_ok=True)
+    with open(unit_path / "CurvesFiles.ini", "w") as f:
+        f.write("[Curves-Files]\n")
+        f.write("".join(tests for tests, _ in zones))
+        f.write("\n\n")
+        f.write(_MODEL_CURVES_DICTIONARY)
+        f.write("".join(curves for _, curves in zones))
+
+
 def _get_model_templates(
     model_path: Path,
     curves_path: Path,
     template: str,
 ):
+    if template == "model_PPM":
+        file_template = _get_model_file_template
+    elif template == "model_BESS":
+        file_template = _get_bess_model_file_template
+
     zone = "Zone3"
     xfmrs = _get_xmfrs_models(model_path, zone, "Producer.dyd")
     z3_gens = _get_generator_models(model_path, template, zone, "Producer.dyd")
-
-    if template == "model_PPM":
-        producer_curves_txt = _get_model_file_template(zone)
-    elif template == "model_BESS":
-        producer_curves_txt = _get_bess_model_file_template(zone)
-    curves_names_txt = _get_model_curves_template(xfmrs, zone, z3_gens)
-
-    with open(curves_path / "Producer" / "CurvesFiles.ini", "w") as f:
-        f.write("[Curves-Files]\n")
-        f.write(producer_curves_txt)
-        f.write("\n\n")
-        f.write(curves_names_txt)
+    indices = {
+        "Producer": [(file_template(zone), _get_model_zone_curves_template(xfmrs, zone, z3_gens))]
+    }
 
     preserve_producer_z1 = False
     dict_files = [
@@ -377,18 +387,12 @@ def _get_model_templates(
 
         z1_xfmrs = _get_xmfrs_models(model_path, zone, dyd_file.name)
         z1_gens = _get_generator_models(model_path, template, zone, dyd_file.name)
+        indices.setdefault(dyd_file.name.replace(".dyd", ""), []).append(
+            (file_template(zone), _get_model_zone_curves_template(z1_xfmrs, zone, z1_gens))
+        )
 
-        if template == "model_PPM":
-            producer_curves_txt = _get_model_file_template(zone)
-        elif template == "model_BESS":
-            producer_curves_txt = _get_bess_model_file_template(zone)
-        curves_names_txt = _get_model_curves_template(z1_xfmrs, zone, z1_gens)
-
-        with open(curves_path / dyd_file.name.replace(".dyd", "") / "CurvesFiles.ini", "w") as f:
-            f.write("[Curves-Files]\n")
-            f.write(producer_curves_txt)
-            f.write("\n\n")
-            f.write(curves_names_txt)
+    for unit, zones in indices.items():
+        _write_model_index(curves_path / unit, zones)
 
     if not preserve_producer_z1:
         for dict_file in dict_files:

@@ -133,16 +133,20 @@ def check_curves_files(model_path: Path, curves_path: Path, template: str) -> No
 
     if not (curves_path / "CurvesFiles.ini").exists():
         message = ""
-        # If a model path is provided, try to create the producer curves file
+        # The index of every unit is written at once, from the root of the reference curves,
+        # where each unit has the directory of its name
         if model_path:
-            template_name = "model"
-            if template.startswith("performance"):
-                template_name = template.replace("/", "_")
-            create_producer_curves(model_path, curves_path, template_name)
-            message = " Edit the generated file to complete it."
+            references_path = curves_path.parent
+            create_producer_curves(model_path, references_path, template.replace("/", "_"))
+            message = (
+                f" One has been generated from the model in each unit directory of "
+                f"{references_path}: complete it."
+            )
 
         # Log an error and raise FileNotFoundError if 'CurvesFiles.ini' is still not found
-        dycov_logging.get_logger("Sanity Checks").error(f"CurvesFiles.ini not found.{message}")
+        dycov_logging.get_logger("Sanity Checks").error(
+            f"CurvesFiles.ini not found in {curves_path}.{message}"
+        )
         raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), "CurvesFiles.ini")
 
 
