@@ -392,6 +392,7 @@ class TestDycovInitializer:
         )
 
         written = configparser.ConfigParser(inline_comment_prefixes=("#",), interpolation=None)
+        written.optionxform = str
         written.read(config_dir / "config.ini")
         return written
 
@@ -467,6 +468,52 @@ class TestDycovInitializer:
         messages = " ".join(str(call) for call in self._mock_logger.method_calls)
         assert "config.ini.OLD.0" in messages
         assert "retired_option" in messages
+
+    def test_keys_that_differ_only_in_case_are_updated_once(self, dycov_initializer):
+        """The tool reads the case of a key, so two of them are two settings, and the file that
+        holds them is valid once updated."""
+        config_dir = self.mock_config.get_config_dir.return_value
+        written = self._update(
+            dycov_initializer,
+            "[dycov]\nversion = 1.0.0\ntype = basic\n\n"
+            "[Dynawo]\nsim_hMax = 1e-4\nsim_hmax = 2e-4\n",
+        )
+
+        assert written.get("Dynawo", "sim_hMax") == "1e-4"
+        assert written.get("Dynawo", "sim_hmax") == "2e-4"
+        assert dycov_initializer._is_valid_config_file(config_dir / "config.ini") is True
+
+    def test_a_section_keeps_the_value_it_gives_a_key_of_default(self, dycov_initializer):
+        written = self._update(
+            dycov_initializer,
+            "[dycov]\nversion = 1.0.0\n\n[DEFAULT]\nsimulation_limit = 100\n\n"
+            "[Dynawo]\nsimulation_limit = 600\n",
+        )
+
+        assert written.get("Dynawo", "simulation_limit") == "600"
+        assert written.get("DTR", "simulation_limit") == "100"
+
+    def test_a_setting_takes_the_place_of_its_line_or_closes_its_section(self, dycov_initializer):
+        """The template carries some options commented out already, so the profile comments
+        them twice; an option without a line goes before the comments of the next section."""
+        config_dir = self.mock_config.get_config_dir.return_value
+        self._update(
+            dycov_initializer,
+            "[dycov]\nversion = 1.0.0\ntype = basic\n\n[GridCode]\nUdim_400kV = 380\n\n"
+            "[PCS-Benchmarks]\nPCS_RTE-I16z1 = SetPointStep\n",
+        )
+
+        text = (config_dir / "config.ini").read_text()
+        assert "Udim_400kV = 405" not in text
+        assert (
+            text.index("[GridCode]")
+            < text.index("Udim_400kV = 380")
+            < text.index("## # List of Benchmarks")
+        )
+        assert text.index("[PCS-Benchmarks]") < text.index("PCS_RTE-I16z1 = SetPointStep")
+        assert text.index("PCS_RTE-I16z1 = SetPointStep") < text.index(
+            "## # List of Operating conditions"
+        )
 
     def test_is_valid_config_file_malformed_returns_false(self, dycov_initializer, tmp_path):
         """A malformed config (duplicated option) is treated as invalid, not a crash."""
