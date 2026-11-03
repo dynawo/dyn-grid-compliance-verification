@@ -35,7 +35,7 @@ _INPUT_ERROR = re.compile(
 
 def rejects_inputs(timeline_error: str | None) -> bool:
     """Whether the error Dynawo logged is one in the inputs of the models."""
-    return bool(timeline_error) and bool(_INPUT_ERROR.search(timeline_error))
+    return isinstance(timeline_error, str) and bool(_INPUT_ERROR.search(timeline_error))
 
 
 _SMALL_NETWORK_PARAMETERS = {
