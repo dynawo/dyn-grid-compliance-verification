@@ -41,21 +41,6 @@ exit 0
 """
 
 
-def _model_examples() -> list[str]:
-    listing = subprocess.run(
-        [
-            "bash",
-            "-c",
-            f'source "{_SCRIPTS / "models.sh"}"; '
-            'printf "%s\\n" "${MODEL_EXAMPLES_IEC[@]}" "${MODEL_EXAMPLES_WECC[@]}"',
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
-    return listing.stdout.split()
-
-
 @pytest.fixture
 def runner(tmp_path: Path):
     bin_dir = tmp_path / "bin"
@@ -127,10 +112,12 @@ def test_a_failed_envelope_generation_fails_the_runner(runner):
 def test_a_run_with_incomplete_inputs_does_not_stop_the_others(runner):
     """dycov ends with 255 when its inputs are incomplete, and xargs stops launching jobs at the
     first 255 it sees."""
-    examples = _model_examples()
+    first_example = "IECA2015"
 
-    run = runner("-v", fail=examples[0], code=255)
+    run = runner("-v", fail=f"/{first_example}/", code=255)
 
     assert run.returncode != 0
+    announced = runner.log().split("Model validation of: ", 1)[1].splitlines()[0].split()
+    assert announced[0].endswith(first_example)
     validated = [call for call in runner.calls() if call.startswith("validate")]
-    assert len(validated) == len(examples)
+    assert len(validated) == len(announced)
