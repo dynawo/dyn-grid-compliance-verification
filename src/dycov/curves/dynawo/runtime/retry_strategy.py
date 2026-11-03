@@ -24,8 +24,19 @@ Remedy = Callable[[SolverParams, Path], str]
 """A change tried on the solver, which reports what it changed."""
 
 # Dynawo ends an error with the source file that raised it. The ones that read the PAR and DYD
-# files of the models raise errors in those inputs, which no change of the solver settles.
-_INPUT_ERROR_ORIGIN = re.compile(r"\(\s*(PAR|DYD)\w*\.cpp:\d+\s*\)")
+# files of the models, compile those models and give them their parameters raise errors in those
+# inputs, which no change of the solver settles; so do the parameters a model looks up in its PAR
+# without finding them, whatever file raises it.
+_INPUT_ERROR = re.compile(
+    r"\(\s*(?:(?:PAR|DYD)\w*\.cpp|DYNCompiler\.cpp|DYNParameter\.hpp):\d+\s*\)"
+    r"|failed to retrieve parameter|cardinality parameter is not set"
+)
+
+
+def rejects_inputs(timeline_error: str | None) -> bool:
+    """Whether the error Dynawo logged is one in the inputs of the models."""
+    return bool(timeline_error) and bool(_INPUT_ERROR.search(timeline_error))
+
 
 _SMALL_NETWORK_PARAMETERS = {
     "IDA": [
@@ -88,7 +99,7 @@ class SolverRetryStrategy:
         for remedy in self._remedies():
             if result.succeeded or self._retries_exhausted():
                 return result
-            if self._is_input_error(result):
+            if rejects_inputs(result.timeline_error):
                 self._warn("Not retried: Dynawo rejected the inputs of the model")
                 return result
 
@@ -113,12 +124,6 @@ class SolverRetryStrategy:
             yield self._add_parameters_small_networks
         if self.settings.enable_solver_flip:
             yield self._flip_solver
-
-    @staticmethod
-    def _is_input_error(result: DynawoResult) -> bool:
-        return bool(result.timeline_error) and bool(
-            _INPUT_ERROR_ORIGIN.search(result.timeline_error)
-        )
 
     def _why_it_failed(self, result: DynawoResult, max_sim_time: float | None) -> str:
         """What the attempt just made reported, to be quoted in the retry message."""

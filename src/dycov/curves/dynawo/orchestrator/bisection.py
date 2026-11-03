@@ -278,6 +278,11 @@ class BisectionEngine:
                     manage_files.rename_path(
                         working_oc_dir_fault, working_oc_dir / target_dir_name
                     )
+                if fault_outcome.rejected_inputs:
+                    dycov_logging.get_logger("Bisection").warning(
+                        "The fault search stops: Dynawo rejected the inputs of the model"
+                    )
+                    return
                 if fault_outcome.succeeded:
                     if voltage_dip_classification == VoltDipResult.DIP_TOO_LARGE:
                         min_val = fault_xpu
@@ -460,6 +465,11 @@ class BisectionEngine:
                     manage_files.rename_path(
                         working_oc_dir_fault, working_oc_dir / target_dir_name
                     )
+                if fault_outcome.rejected_inputs:
+                    dycov_logging.get_logger("Bisection").warning(
+                        "The fault search stops: Dynawo rejected the inputs of the model"
+                    )
+                    return
                 if fault_outcome.succeeded:
                     if residual_classification == VoltDipResult.DIP_CORRECT:
                         accepted_fault_xpu = fault_xpu
