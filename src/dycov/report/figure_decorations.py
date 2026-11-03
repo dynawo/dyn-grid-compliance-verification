@@ -40,6 +40,18 @@ def drawn_scale(figure_description: FigureDescription) -> float:
     return config.get_float("Dynawo", "f_nom", 50.0) if figure_description.in_hz else 1.0
 
 
+def _frequency_band_scale(figure_description: FigureDescription) -> float:
+    """The factor a frequency band is drawn with: f_nom on a figure in Hz, whether it takes its
+    curves to Hz or they already are."""
+    in_hz = figure_description.in_hz or figure_description.curves_in_hz
+    return config.get_float("Dynawo", "f_nom", 50.0) if in_hz else 1.0
+
+
+def _bounds_the_figure(band: FrequencyBand, results: dict) -> bool:
+    """Whether the frequency the figure draws is the one the check of the band bounded."""
+    return band.bounds is None or results.get(band.source_key, band.bounds) == band.bounds
+
+
 def draw_tolerance_band(
     renderer: FigureRenderer,
     band: ToleranceBand,
@@ -220,12 +232,14 @@ def draw_additional_curves(
     if figure_description.tolerance_band is not None:
         draw_tolerance_band(renderer, figure_description.tolerance_band, last_val, results)
     for frequency_band in figure_description.frequency_bands:
+        if not _bounds_the_figure(frequency_band, results):
+            continue
         ymin, ymax = draw_frequency_band(
             renderer,
             frequency_band,
             ymin,
             ymax,
-            drawn_scale(figure_description),
+            _frequency_band_scale(figure_description),
         )
     if figure_description.dynamic_band is not None:
         draw_dynamic_band(renderer, figure_description.dynamic_band, time, results)

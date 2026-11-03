@@ -9,7 +9,7 @@
 #
 import logging
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from dycov.configuration.cfg import config
@@ -38,7 +38,12 @@ from dycov.report.types import (
 )
 from dycov.validation import compared_curves, compliance_list
 from dycov.validation.model import ModelValidator
-from dycov.validation.performance import PerformanceValidator
+from dycov.validation.performance import (
+    FREQ1_FREQUENCY,
+    SYNC_CONDENSER_FREQUENCY,
+    UNITS_FREQUENCY,
+    PerformanceValidator,
+)
 
 
 @dataclass(frozen=True)
@@ -83,6 +88,11 @@ def _compliance_for_simulation_error(error: SimulationError) -> Compliance:
             return Compliance.VoltageCurveMissing
         case _:
             return Compliance.InvalidTest
+
+
+def _checked_on(band: FrequencyBand, frequency: str) -> FrequencyBand:
+    """The band of freq_1 on the figure of one of the frequencies the check may bound."""
+    return replace(band, source_key=FREQ1_FREQUENCY, bounds=frequency)
 
 
 def _compliance_for_missing_curves(availability: CurvesAvailability) -> Compliance:
@@ -548,7 +558,9 @@ class Benchmark:
             return
 
         frequency_bands = [
-            band for validation, band in _FREQUENCY_BANDS.items() if validation in validations
+            _checked_on(band, UNITS_FREQUENCY) if validation == "freq_1" else band
+            for validation, band in _FREQUENCY_BANDS.items()
+            if validation in validations
         ]
 
         self._figures_description.append(
@@ -693,12 +705,20 @@ class Benchmark:
         if pcs_benchmark_name not in fig_SyncCondFreq:
             return
 
+        frequency_bands = []
+        if "freq_1" in validations:
+            frequency_bands.append(
+                _checked_on(_FREQUENCY_BANDS["freq_1"], SYNC_CONDENSER_FREQUENCY)
+            )
+
         freq_label = "Frequency (Hz)"
         self._figures_description.append(
             FigureDescription(
                 name="fig_SyncCondFreq",
                 variables=[{"type": "sync_condenser", "variable": "FrequencyHz"}],
                 ylabel=freq_label,
+                frequency_bands=frequency_bands,
+                curves_in_hz=True,
             )
         )
 
