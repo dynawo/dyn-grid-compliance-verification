@@ -1,7 +1,8 @@
 #!/bin/bash
 #
-# Puts the curves of the examples in a clone that has none. They are not versioned: a release
-# publishes them as the dycov_examples.zip asset, beside the Dynawo build, and this fetches them.
+# Puts the curves of the examples in a clone, in place of any it already holds. They are not
+# versioned: a release publishes them as the dycov_examples.zip asset, beside the Dynawo build,
+# and this fetches them.
 #
 # The alternative is regenerate_curves.sh, which produces them from the tool itself and needs
 # Dynawo and a few hours. This needs neither.
@@ -107,5 +108,5 @@ done < <(find "$download_path/unpacked/examples" -type d \
 curves=$(find ./examples -name "*.csv" | wc -l)
 [ "$curves" -gt 0 ] || fail "The asset of release $release holds no curve."
 
-echo "$release" > ./examples/.curves-release
+echo "$release" >| ./examples/.curves-release
 log_msg "$curves curves in $directories directories, from release $release."
