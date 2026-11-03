@@ -84,13 +84,11 @@ def check_time(
         True if the calculated time is within the tolerances of the reference time, False otherwise
 
     """
-    # when magnitudes are smaller than atol, switch to absolute error
-    time_check = math.isclose(
-        calculated_time,
-        reference_time,
-        rel_tol=rtol,
-        abs_tol=atol,
-    )
+    # The deviation is relative to the reference, as the report shows it; when magnitudes are
+    # smaller than atol, it is held to atol instead
+    deviation = abs(calculated_time - reference_time)
+    allowed = max(rtol * abs(reference_time), atol)
+    time_check = deviation <= allowed or math.isclose(deviation, allowed)
     if _show_error(calculated_time, reference_time, rtol, atol):
         return 100 * (abs(calculated_time - reference_time) / reference_time), time_check
     else:
