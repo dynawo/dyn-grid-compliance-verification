@@ -19,7 +19,6 @@ from dycov.curves.dynawo.runtime import retry_strategy as retry_strategy_module
 from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoResult, DynawoSimulator
 from dycov.curves.dynawo.runtime.retry_strategy import RetrySettings, SolverRetryStrategy
 from dycov.curves.dynawo.runtime.run_types import SolverParams
-from dycov.files import replace_placeholders
 
 MAX_SIM_TIME = 10.0
 RETRY_HEADINGS = [
@@ -301,7 +300,9 @@ _SOLVER_SETTINGS = {
 
 def _solvers_par(working_oc_dir: Path) -> None:
     shutil.copy(Path(dycov.__file__).parent / "model_lib" / "solvers.par", working_oc_dir)
-    replace_placeholders.dump_file(working_oc_dir, "solvers.par", _SOLVER_SETTINGS)
+    retry_strategy_module.replace_placeholders.dump_file(
+        working_oc_dir, "solvers.par", _SOLVER_SETTINGS
+    )
 
 
 def _solver_sets(working_oc_dir: Path) -> dict[str, dict[str, str]]:
