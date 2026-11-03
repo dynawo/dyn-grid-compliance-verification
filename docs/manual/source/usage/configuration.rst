@@ -26,6 +26,12 @@ To switch profiles, copy the desired file over ``config.ini``. Individual
 options from the advanced profile may also be copied into ``config.ini``
 directly — any option is honored there, whichever profile it comes from.
 
+When a release carries a newer version of the configuration, the first run
+rewrites ``config.ini`` from the profile it declares and keeps every setting
+the file holds, including the options and sections the profile does not show.
+The previous file is left beside it as ``config.ini.OLD.<n>``, and the log says
+so; an option the tool no longer reads is kept as well, and reported.
+
 
 The revision of the DTR
 -----------------------
