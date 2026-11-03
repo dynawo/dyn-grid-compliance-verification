@@ -490,3 +490,73 @@ def test_create_curves_reports_the_requests_dynawo_did_not_serve(
         "Dynawo did not provide the requested curves: "
         "Main_Xfmr_transformer_tap (Main_Xfmr_XFMR_Tap)"
     ]
+
+
+# ---------------------------------------------------------------------------
+# Divergence
+# ---------------------------------------------------------------------------
+
+
+_PRODUCER_UNITS = [DummyGenerator("Wind_Turbine"), DummyGenerator("Synch_Gen")]
+
+
+def _diverging(column: str, value: float) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "time": [0.0, 1.0, 2.0],
+            "BusPDR_BUS_Voltage": [1.0, 1.0, 1.0],
+            column: [0.5, 0.5, value],
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    "column, value",
+    [
+        ("BusPDR_BUS_Voltage", 4.2e6),
+        ("Wind_Turbine_GEN_VoltageNode2", -11.0),
+        ("BusPDR_BUS_ReactivePower", 1.8e21),
+        ("Wind_Turbine_GEN_ActiveCurrentNode2", 101.0),
+        ("Measurements_BUS_ActivePower", float("nan")),
+        ("Wind_Turbine_GEN_MagnitudeControlledByAVRPu", float("inf")),
+    ],
+)
+def test_a_magnitude_of_the_producer_beyond_its_limit_has_diverged(column, value):
+    divergence = curves_module.find_divergence(
+        _diverging(column, value), _PRODUCER_UNITS, 10.0, 100.0
+    )
+
+    assert divergence is not None and column in divergence
+
+
+@pytest.mark.parametrize(
+    "column, value",
+    [
+        ("SyncCompensator_GEN_TSO_ActivePower", 1.0e4),
+        ("SyncCompensator_GEN_ActivePower", 1.0e4),
+        ("SyncCompensator_GEN_TSO_FrequencyHz", 50.0),
+        ("Load_eq_LOAD_ActivePower", 3.0e3),
+        ("Main_load_LOAD_TSO_ReactivePower", float("nan")),
+        ("Wind_Turbine_GEN_ActivePowerSetpointPu", 1.0e20),
+        ("Main_Xfmr_XFMR_Tap", 33.0),
+        ("Synch_Gen_GEN_InternalAngle", 400.0),
+        ("Wind_Turbine_GEN_ActiveCurrentNode2", 99.0),
+        ("BusPDR_BUS_Voltage", 9.5),
+    ],
+)
+def test_a_magnitude_of_the_network_that_may_be_large_or_stays_within_its_limit_has_not(
+    column, value
+):
+    """#675: the loads of the network are not in the base of the producer, and the load of a
+    load-shedding test reaches thousands of pu."""
+    assert (
+        curves_module.find_divergence(_diverging(column, value), _PRODUCER_UNITS, 10.0, 100.0)
+        is None
+    )
+
+
+def test_the_limits_of_a_divergence_are_those_given():
+    curves = _diverging("BusPDR_BUS_ActivePower", 3.0)
+
+    assert curves_module.find_divergence(curves, _PRODUCER_UNITS, 10.0, 2.0) is not None
+    assert curves_module.find_divergence(curves, _PRODUCER_UNITS, 10.0, 5.0) is None

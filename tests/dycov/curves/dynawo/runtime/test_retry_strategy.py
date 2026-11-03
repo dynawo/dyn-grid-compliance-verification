@@ -205,6 +205,31 @@ def test_every_attempt_reports_how_long_dynawo_ran(monkeypatch, recording_logger
     ]
 
 
+def test_a_diverged_attempt_is_retried_and_quoted(monkeypatch, recorded_warnings, recorded_writes):
+    """#675: a run Dynawo ended well after diverging is a failed one, which a retry may cure."""
+    attempts = []
+
+    def fake_run_base(*args, **kwargs):
+        attempts.append(1)
+        if len(attempts) == 1:
+            return DynawoResult(
+                False,
+                "Simulation diverged: BusPDR_BUS_Voltage reached 4.2e+06 pu",
+                None,
+                None,
+                1.0,
+            )
+        return DynawoResult(True, None, None, None, 1.0)
+
+    monkeypatch.setattr(DynawoSimulator, "run_base", staticmethod(fake_run_base))
+
+    result = _run(SolverRetryStrategy(RetrySettings()), _ida_solver())
+
+    assert result.succeeded is True
+    assert len(attempts) == 2
+    assert "diverged: BusPDR_BUS_Voltage" in recorded_warnings[0]
+
+
 @pytest.mark.parametrize("successful_attempt", [1, 2, 3, 4])
 def test_retry_stops_at_the_first_successful_attempt(
     monkeypatch, recorded_warnings, recorded_writes, successful_attempt
