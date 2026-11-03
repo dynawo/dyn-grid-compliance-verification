@@ -32,22 +32,34 @@ def enable_warning_capture(force_runtimewarning_visible: bool = True) -> None:
         )
 
 
-def worker_initializer(handler_settings: Optional[dict]) -> None:
+def worker_initializer(
+    handler_settings: Optional[dict], config_layers: Optional[dict] = None
+) -> None:
     """Prepare a process pool worker.
 
     The main process coordinates the shutdown, so workers ignore SIGINT. A worker
     started with forkserver or spawn does not inherit the handlers of the run, and
     without them every record it emits is discarded, so they are built again here.
+    Nor does it inherit the configuration the run set up in memory, the revision of
+    the DTR and the file given with --user-config among it, which is put back too.
 
     Parameters
     ----------
     handler_settings: Optional[dict]
         Handler configuration of the run, from get_handler_settings().
+    config_layers: Optional[dict]
+        Configuration of the run, from config.run_layers().
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
     if handler_settings and not dycov_logging.handlers:
         dycov_logging.init_handlers(**handler_settings)
+
+    if config_layers is not None:
+        # The configuration logs through this package, so it is imported once it exists
+        from dycov.configuration.cfg import config
+
+        config.restore_run_layers(config_layers)
 
 
 def set_test_context(

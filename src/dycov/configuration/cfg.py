@@ -166,6 +166,39 @@ class Config:
             )
             raise
 
+    def run_layers(self) -> dict:
+        """The layers a run sets up in memory before it starts its workers: the default
+        configuration and that of the user, with the file of --user-config and the options of
+        the command line written over them, and the delta of the revision of the DTR the run
+        follows.
+
+        Returns
+        -------
+        dict
+            The contents of those layers, ready to hand to a worker.
+        """
+        return {
+            "default": _layer_contents(self._default_config),
+            "user": _layer_contents(self._user_config),
+            "dtr_delta": _layer_contents(self._dtr_delta_config),
+            "dtr_delta_files": list(self._dtr_delta_files),
+        }
+
+    def restore_run_layers(self, layers: dict) -> None:
+        """Puts in place the layers of the run in a worker that did not inherit them: one started
+        with forkserver or spawn reads the configuration again from the files, without what the
+        run set up in memory.
+
+        Parameters
+        ----------
+        layers: dict
+            The layers of the run, from run_layers().
+        """
+        _replace_layer(self._default_config, layers["default"])
+        _replace_layer(self._user_config, layers["user"])
+        _replace_layer(self._dtr_delta_config, layers["dtr_delta"])
+        self._dtr_delta_files[:] = layers["dtr_delta_files"]
+
     def load_dtr_delta_config(self, revision: str) -> None:
         """Loads the sections the selected revision of the DTR writes outside any PCS.
 
@@ -610,6 +643,25 @@ def is_base_revision(revision: str) -> bool:
     ``templates/revisions`` named after it would be read by nobody.
     """
     return revision == config.get_value("DTR", "base", "")
+
+
+def _layer_contents(parser: configparser.ConfigParser) -> dict:
+    """The options of a layer by section, as written."""
+    defaults = parser.defaults()
+    contents = {parser.default_section: dict(defaults)} if defaults else {}
+    for section in parser.sections():
+        contents[section] = {
+            key: parser.get(section, key, raw=True)
+            for key in parser.options(section)
+            if key not in defaults
+        }
+    return contents
+
+
+def _replace_layer(parser: configparser.ConfigParser, contents: dict) -> None:
+    parser.clear()
+    parser.defaults().clear()
+    parser.read_dict(contents)
 
 
 def _new_parser() -> configparser.ConfigParser:
