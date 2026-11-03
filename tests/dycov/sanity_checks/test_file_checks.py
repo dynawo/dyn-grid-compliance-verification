@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 from lxml import etree
 
+from dycov.files import producer_curves
 from dycov.sanity_checks import file_checks
 
 _MODEL_EXTENSIONS = ("dyd", "par", "ini")
@@ -292,6 +293,49 @@ def test_an_index_left_as_generated_stops_every_test_that_reads_it(tmp_path):
 
     with pytest.raises(ValueError, match="names no curve file yet: complete it"):
         file_checks.check_curves_files(model_path, references / "Producer", "model/PPM")
+
+
+def test_a_test_reading_the_index_another_is_writing_does_not_accept_it(tmp_path, monkeypatch):
+    references = tmp_path / "References"
+    model_path = _EXAMPLES / "Wind" / "IECB2015" / "Dynawo"
+    readings = []
+
+    def check_the_unit():
+        try:
+            return file_checks.check_curves_files(model_path, references / "Producer", "model/PPM")
+        except (FileNotFoundError, ValueError) as stop:
+            return stop
+
+    class ReadWhileWritten:
+        def __init__(self, stream):
+            self._stream = stream
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exception):
+            self._stream.close()
+
+        def write(self, text):
+            if not readings:
+                readings.append(None)
+                readings[0] = check_the_unit()
+            return self._stream.write(text)
+
+    def open_read_while_written(file, mode="r", *args, **kwargs):
+        stream = open(file, mode, *args, **kwargs)
+        return ReadWhileWritten(stream) if "w" in mode else stream
+
+    monkeypatch.setattr(producer_curves, "open", open_read_while_written, raising=False)
+
+    written = check_the_unit()
+
+    assert isinstance(written, FileNotFoundError) and written.filename == "CurvesFiles.ini"
+    assert isinstance(readings[0], FileNotFoundError) and readings[0].filename == "CurvesFiles.ini"
+    assert [path.name for path in (references / "Producer").iterdir()] == ["CurvesFiles.ini"]
+    index = references / "Producer" / "CurvesFiles.ini"
+    assert producer_curves.is_left_to_complete(index)
+    assert _tests_of(_index(index)) == {"PCS_RTE-I16z1", "PCS_RTE-I16z3"}
 
 
 def test_an_index_generated_and_completed_is_accepted(tmp_path):
