@@ -414,9 +414,9 @@ class Benchmark:
         tolerance_band = None
         if "time_10Pfloor_85U" in validations or "time_10Pfloor_clear" in validations:
             tolerance_band = CheckBand(source_key="time_10Pfloor_band", color="#55a868")
-        elif "time_5P" in validations:
+        elif any(check in validations for check in ("time_5P", "time_5P_85U", "time_5P_clear")):
             tolerance_band = CheckBand(source_key="time_5P_band", color="#c44e52")
-        elif "time_10P" in validations or "time_10P_85U" in validations:
+        elif any(check in validations for check in ("time_10P", "time_10P_85U", "time_10P_clear")):
             tolerance_band = CheckBand(source_key="time_10P_band", color="#55a868")
 
         if self._producer.is_dynawo_model():
