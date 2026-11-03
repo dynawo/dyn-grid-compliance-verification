@@ -28,9 +28,7 @@ import pytest
 _SCRIPT = Path(__file__).resolve().parents[2] / "tools" / "scripts" / "fetch_example_curves.sh"
 _CURVES = Path("examples") / "Model" / "Wind" / "Unit" / "ReferenceCurves"
 
-pytestmark = pytest.mark.skipif(
-    shutil.which("unzip") is None, reason="the script needs unzip"
-)
+pytestmark = pytest.mark.skipif(shutil.which("unzip") is None, reason="the script needs unzip")
 
 # Writes the asset of the test where the script asks curl to put it
 _FAKE_CURL = """#!/bin/bash
