@@ -417,24 +417,33 @@ def get_txpfloor(percent: float, time: list, curve: list, sim_t_event_end: float
     return ret_val
 
 
-def get_txu(threshold: float, time: list, curve: list, sim_t_event_end: float) -> float:
-    """Gets the time when the curve reaches a given threshold.
+def get_txu(
+    threshold: float,
+    time: list,
+    curve: list,
+    sim_t_event_end: float,
+    sim_t_event_clear: float | None = None,
+) -> float:
+    """Gets the time the curve takes, from the event, to get back to the threshold after the
+    event took it below; 0 when the event leaves it above, whatever undershoot follows.
 
     Parameters
     ----------
     threshold: float
-        Threshold that the curve must reach
+        Threshold that the curve must get back to
     time: list
         List of time instants that make up the curve
     curve: list
         List of values that make up the curve
     sim_t_event_end: float
         Instant of time when the event is triggered
+    sim_t_event_clear: float | None
+        Instant of time when the event ends, the instant it is triggered by default
 
     Returns
     -------
     float
-        Time when the percent is reached after the event
+        Time, from the event, when the curve is back to the threshold
     """
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
@@ -443,11 +452,18 @@ def get_txu(threshold: float, time: list, curve: list, sim_t_event_end: float) -
     while sim_t_event_end > time[pos_t_event] and pos_t_event < len(time) - 1:
         pos_t_event += 1
 
+    pos_t_clear = pos_t_event
+    clear = sim_t_event_end if sim_t_event_clear is None else sim_t_event_clear
+    while clear > time[pos_t_clear] and pos_t_clear < len(time) - 1:
+        pos_t_clear += 1
+
     # Dynawo writes the discontinuity of the event a few microseconds before its instant, so the
     # sample before the event may already hold the curve under the threshold; on a regular grid
     # that sample is still the one before the event, above it
     first = max(pos_t_event - 1, 0)
-    below = next((pos for pos in range(first, len(curve)) if abs(curve[pos]) < threshold), None)
+    below = next(
+        (pos for pos in range(first, pos_t_clear + 1) if abs(curve[pos]) < threshold), None
+    )
     if below is None:
         return 0
 
