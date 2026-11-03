@@ -647,7 +647,7 @@ def create_curves(
 
 
 def _is_producer_curve(column: str, generators: list) -> bool:
-    return column.startswith(("BusPDR_", "Measurements_")) or any(
+    return column.startswith("BusPDR_") or any(
         column.startswith(f"{generator.id}_GEN_") for generator in generators
     )
 
@@ -656,8 +656,9 @@ def _divergence_limit(
     column: str, generators: list, voltage_limit: float, power_limit: float
 ) -> float | None:
     """The magnitude beyond which a curve of the producer has diverged, None for a curve of the
-    network, whose loads and machines are not in the base of the producer, or one that may
-    legitimately reach any: a setpoint, a frequency, a tap or an angle."""
+    network, whose loads and machines are not in the base of the producer, for the measurements
+    at the PDR, in the base of the network, which the PDR curves repeat in that of the producer,
+    or for one that may legitimately reach any: a setpoint, a frequency, a tap or an angle."""
     if not _is_producer_curve(column, generators) or "Setpoint" in column:
         return None
     if "Voltage" in column or "MagnitudeControlledByAVR" in column:
