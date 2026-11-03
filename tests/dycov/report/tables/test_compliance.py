@@ -153,3 +153,24 @@ def test_create_map_stability_row_names_the_settled_magnitudes():
     table = create_map(results)
     labels = [row[0] for row in table]
     assert "Unit remains stable (P, Q and V settle)" in labels
+
+
+def test_create_map_reports_the_checks_that_cannot_be_computed():
+    """#676: a check whose curves are missing is reported as N/A, with no value."""
+    results = {
+        "stabilized": "N/A",
+        "stabilized_rotor_angle": True,
+        "freq1": -1,
+        "freq1_check": "N/A",
+        "AVR_5": -1,
+        "AVR_5_check": "N/A",
+        "static_diff": -1,
+        "static_diff_check": "N/A",
+        "imax_reac": -1,
+        "imax_reac_check": "N/A",
+    }
+
+    table = create_map(results)
+
+    assert [row[2] for row in table] == ["N/A", "{ N/A }", "{ N/A }", "{ N/A }", "{ N/A }"]
+    assert all(row[1].endswith("\\textemdash") for row in table)
