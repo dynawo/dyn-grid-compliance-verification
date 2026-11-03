@@ -9,6 +9,11 @@ format (`Python flavor <https://docs.python.org/3/library/configparser.html>`_).
 The file lives in ``$HOME/.config/dycov/``, and is created the first time the
 tool runs.
 
+``--user-config <file>`` reads another configuration file on top of
+``config.ini`` for one execution: its options take precedence, and those it
+does not set keep the value ``config.ini`` gives them. A file that does not
+exist or cannot be read stops the run with an error.
+
 The generated ``config.ini`` contains the most common options commented out,
 each shown with its default value. To change a setting, uncomment the relevant
 line and edit the value. We recommend duplicating the line first so you always
@@ -25,11 +30,6 @@ Two profiles are kept next to it, regenerated on every run:
 To switch profiles, copy the desired file over ``config.ini``. Individual
 options from the advanced profile may also be copied into ``config.ini``
 directly — any option is honored there, whichever profile it comes from.
-
-``--user-config <file>`` reads another configuration file on top of
-``config.ini`` for one execution: its options take precedence, and those it
-does not set keep the value ``config.ini`` gives them. A file that does not
-exist or cannot be read stops the run with an error.
 
 
 The revision of the DTR
