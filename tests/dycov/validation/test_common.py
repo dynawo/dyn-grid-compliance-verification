@@ -447,9 +447,10 @@ def _first_inside(time, curve, band):
     ],
     ids=["time_5P", "time_10P", "time_10Pfloor", "time_5U"],
 )
-def test_each_time_check_measures_the_instant_its_curve_enters_its_band(check, band):
+@pytest.mark.parametrize("sign", [1, -1], ids=["injection", "consumption"])
+def test_each_time_check_measures_the_instant_its_curve_enters_its_band(check, band, sign):
     time = [0.1 * step for step in range(30)]
-    curve = [0.3] * 5 + [0.9 - 0.6 * 0.8**step for step in range(25)]
+    curve = [sign * value for value in [0.3] * 5 + [0.9 - 0.6 * 0.8**step for step in range(25)]]
 
     assert check(time, curve) == pytest.approx(_first_inside(time, curve, band(curve)) - 0.1)
 

@@ -194,6 +194,8 @@ def test_frequency_figure_draws_every_declared_band(monkeypatch):
         ("fig_P", "time_5P", "time_5P_band"),
         ("fig_P", "time_10P", "time_10P_band"),
         ("fig_P", "time_10P_85U", "time_10P_band"),
+        ("fig_P", "time_85U", "time_5P_band"),
+        ("fig_P", "time_clear", "time_5P_band"),
         ("fig_P", "time_10Pfloor_85U", "time_10Pfloor_band"),
         ("fig_P", "time_10Pfloor_clear", "time_10Pfloor_band"),
     ],
