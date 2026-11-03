@@ -108,7 +108,8 @@ names.
   (SIM↔IDA) — and each one applies its change **and returns what it changed**, which `run()` quotes in
   the retry warning along with the attempt number and why the previous attempt failed. It stops at
   once when that error is one in the inputs of the models (`rejects_inputs`: raised by the Dynawo
-  layers that read, compile and parameterise the PAR and DYD, or a parameter missing from a PAR):
+  layers that read, compile and parameterise the PAR and DYD, a parameter missing from a PAR, a variable
+  missing from a model or a file missing from the disk):
   no remedy settles it. `SimulateOutcome.rejected_inputs` carries it to the bolted and HiZ searches,
   which stop there and leave the failure to the test's own simulation. Persists via
   `replace_placeholders.modify_par_file` / `add_parameters` (`solvers.par`) and `modify_jobs_file` (`TSOModel.jobs`).
