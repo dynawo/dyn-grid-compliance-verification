@@ -9,6 +9,8 @@
 #
 """Tests for the preparation of a process pool worker."""
 
+import configparser
+import io
 import logging
 import os
 import signal
@@ -155,7 +157,15 @@ def test_a_worker_puts_back_the_configuration_of_the_run(tmp_path):
     from dycov.configuration.cfg import config
 
     layers = config.run_layers()
-    changed = {**layers, "user": {**layers["user"], "DTR": {"current": "20240215"}}}
+    user = configparser.ConfigParser(interpolation=None)
+    user.optionxform = str
+    user.read_string(layers["user"])
+    if not user.has_section("DTR"):
+        user.add_section("DTR")
+    user.set("DTR", "current", "20240215")
+    text = io.StringIO()
+    user.write(text)
+    changed = {**layers, "user": text.getvalue()}
 
     try:
         worker_initializer(None, changed)

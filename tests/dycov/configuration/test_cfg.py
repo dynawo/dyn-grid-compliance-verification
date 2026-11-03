@@ -411,6 +411,24 @@ def test_the_layers_of_a_run_reach_a_configuration_read_again_from_the_files(
     assert not worker._user_config.has_section("Stale")
 
 
+def test_the_layers_of_a_run_keep_what_its_files_say_as_they_say_it(tmp_path, empty_parsers):
+    """A section that overrides [DEFAULT] keeps its value, and a value interpolation would
+    reject reaches the worker as the main process read it, without stopping its pool."""
+    user_file = tmp_path / "user.ini"
+    user_file.write_text(
+        "[DEFAULT]\nsimulation_limit = 30\n\n[Dynawo]\nsimulation_limit = 600\n\n"
+        "[Global]\nnote = 50%\n"
+    )
+    run = Config(tmp_path, *empty_parsers)
+    run.load_user_config(user_file)
+    worker = Config(tmp_path, *(_new_parser() for _ in range(6)))
+
+    worker.restore_run_layers(run.run_layers())
+
+    assert worker.get_value("Dynawo", "simulation_limit") == "600"
+    assert worker._user_config.get("Global", "note", raw=True) == "50%"
+
+
 def test_set_value_overrides_a_dtr_revision_value_in_the_user_config(tmp_path, empty_parsers):
     user_config = empty_parsers[1]
     pcs_dtr_delta_config = empty_parsers[3]

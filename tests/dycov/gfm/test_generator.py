@@ -34,3 +34,45 @@ def test_initialize_working_environment_exits_on_existing_output_dir(monkeypatch
         gfm_generation._GFMGeneration__initialize_working_environment()
 
     assert exc_info.value.code == 1
+
+
+class _Stop(Exception):
+    pass
+
+
+class _RecordingPool:
+    """Pool stand-in that records how it was built and stops the run once it is used."""
+
+    built_with: dict = {}
+
+    def __init__(self, **kwargs):
+        _RecordingPool.built_with = kwargs
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc_info):
+        return False
+
+    def map(self, function, items):
+        raise _Stop
+
+
+def test_a_parallel_generation_hands_its_workers_the_configuration_of_the_run(
+    monkeypatch, tmp_path
+):
+    """#678: a worker started with forkserver or spawn reads the configuration from the files."""
+    from dycov.configuration.cfg import config
+    from dycov.gfm import generator
+    from dycov.logging import worker_initializer
+
+    monkeypatch.setattr(generator.multiprocessing, "Pool", _RecordingPool)
+    gfm_generation = object.__new__(generator.GFMGeneration)
+    gfm_generation._parameters = _DummyParameters(tmp_path)
+    gfm_generation._pcs_list = []
+
+    with pytest.raises(_Stop):
+        gfm_generation.generate(use_parallel=True, num_processes=2)
+
+    assert _RecordingPool.built_with["initializer"] is worker_initializer
+    assert _RecordingPool.built_with["initargs"][1] == config.run_layers()
