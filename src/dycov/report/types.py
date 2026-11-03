@@ -36,6 +36,16 @@ class FinalValueBand(ToleranceBand):
 
 
 @dataclass
+class CheckBand:
+    """Band a check of the curve measures it against, as the check recorded it in the results:
+    ``source_key`` names its [lower, upper] limits, either of them None when the check bounds
+    one side only (time_5U, time_10P, time_10Pfloor...)."""
+
+    source_key: str
+    color: str = "#55a868"
+
+
+@dataclass
 class FrequencyBand(ToleranceBand):
     """Band relative to f_nom, deviation expressed in Hz."""
 
@@ -69,7 +79,7 @@ class FigureDescription:
     name: str
     variables: str | list[dict]
     ylabel: str
-    tolerance_band: ToleranceBand | None = None
+    tolerance_band: ToleranceBand | CheckBand | None = None
     frequency_bands: list[FrequencyBand] = field(default_factory=list)
     dynamic_band: DynamicBand | None = None
     event_markers: list[EventMarker] = field(default_factory=list)

@@ -13,6 +13,7 @@ from dycov.configuration.cfg import config
 from dycov.report.curve_classification import get_curve_style
 from dycov.report.figure_renderer import FigureRenderer
 from dycov.report.types import (
+    CheckBand,
     DynamicBand,
     EventMarker,
     FigureDescription,
@@ -42,7 +43,7 @@ def drawn_scale(figure_description: FigureDescription) -> float:
 
 def draw_tolerance_band(
     renderer: FigureRenderer,
-    band: ToleranceBand,
+    band: ToleranceBand | CheckBand,
     last_val: float,
     results: dict,
 ) -> None:
@@ -53,13 +54,21 @@ def draw_tolerance_band(
     renderer: FigureRenderer
         The figure renderer to use for drawing.
     band: ToleranceBand
-        The tolerance band to draw (FinalValueBand, FrequencyBand, or DynamicBand).
+        The tolerance band to draw (CheckBand, FinalValueBand, FrequencyBand, or
+        DynamicBand).
     last_val: float
         The last value of the curve, used for FinalValueBand calculations.
     results: dict
         The results dictionary containing any necessary values for band calculations
         (e.g., targets).
     """
+    if isinstance(band, CheckBand):
+        lower, upper = results.get(band.source_key, (None, None))
+        for limit in (lower, upper):
+            if limit is not None:
+                renderer.add_hline(y=limit, color=band.color)
+        return
+
     if isinstance(band, FinalValueBand):
         upper, lower = band_limits(last_val, band.upper, band.lower)
         if upper is not None:
