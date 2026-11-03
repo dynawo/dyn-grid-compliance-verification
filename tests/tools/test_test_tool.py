@@ -123,6 +123,21 @@ def test_a_failed_run_fails_the_runner_once_every_phase_has_run(runner):
     assert "IECB2015" in runner.log().split("ERROR", 1)[1]
 
 
+@pytest.mark.parametrize(
+    "fail, phase",
+    [
+        ("/Performance/Single/", "performance verification"),
+        ("/Dynawo/Zone3", "performance verification of the Model examples"),
+    ],
+    ids=["Performance examples", "Model examples"],
+)
+def test_a_failed_performance_run_fails_the_runner_naming_its_phase(runner, fail, phase):
+    run = runner("-p", fail=fail)
+
+    assert run.returncode != 0
+    assert f"some dycov runs failed, in: {phase}. " in runner.log()
+
+
 def test_a_failed_envelope_generation_fails_the_runner(runner):
     run = runner("-g", fail="Underdamped")
 
