@@ -10,6 +10,7 @@
 """Unit tests for the electrical performance verification (PerformanceValidator)."""
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pandas as pd
 import pytest
@@ -66,9 +67,10 @@ class RecordingConfig(DummyConfig):
 
 
 class DummyProducer:
-    def __init__(self, sim_type=ELECTRIC_PERFORMANCE_PPM, is_dynawo_model=True):
+    def __init__(self, sim_type=ELECTRIC_PERFORMANCE_PPM, is_dynawo_model=True, units=()):
         self._sim_type = sim_type
         self._is_dynawo_model = is_dynawo_model
+        self.generators = [SimpleNamespace(id=unit) for unit in units]
 
     def get_sim_type(self) -> int:
         return self._sim_type
@@ -118,10 +120,11 @@ def _make_validator(
     reference=None,
     sim_type=ELECTRIC_PERFORMANCE_PPM,
     is_dynawo_model=True,
+    units=(),
 ):
     return PerformanceValidator(
         curves_manager=DummyCurvesManager(calculated=calculated, reference=reference),
-        producer=DummyProducer(sim_type=sim_type, is_dynawo_model=is_dynawo_model),
+        producer=DummyProducer(sim_type=sim_type, is_dynawo_model=is_dynawo_model, units=units),
         thr_ss_tol=THR_SS_TOL,
         validations=validations or [],
         is_field_measurements=False,
@@ -359,6 +362,29 @@ def test_check_theta_stability_without_internal_angles_is_not_computable(monkeyp
     ]
 
 
+@pytest.mark.parametrize(
+    "angle, expected",
+    [([0.5] * 5, NOT_COMPUTABLE), ([0.5, 0.5, 0.5, 0.5, float("nan")], False)],
+    ids=["the other unit settles", "the other unit does not settle"],
+)
+def test_check_theta_stability_of_a_unit_without_its_internal_angle(monkeypatch, angle, expected):
+    """#676: a machine of the plant whose angle is left out must not pass for stable."""
+    logger = RecordingLogger()
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
+    validator = _make_validator(
+        calculated=_make_pdr_curves(G1_GEN_InternalAngle=angle), units=("G1", "G2")
+    )
+
+    stable_theta, _, pass_pi = validator._check_theta_stability(THR_SS_TOL)
+
+    assert stable_theta == expected
+    assert pass_pi == NOT_COMPUTABLE
+    assert (
+        "The rotor stability cannot be checked without G2_GEN_InternalAngle: reported as N/A"
+        in logger.warnings
+    )
+
+
 def test_check_theta_stability_of_an_unstable_internal_angle(monkeypatch):
     logger = RecordingLogger()
     monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
@@ -547,6 +573,62 @@ def test_calculate_avr_of_a_unit_losing_its_setpoint_beside_one_without_it_fails
 
     assert compliance_values["AVR_5_check"] is False
     assert compliance_values["AVR_5"] == pytest.approx(2.0)
+
+
+def test_calculate_avr_of_a_unit_left_out_of_the_curves_is_not_computable(monkeypatch):
+    """#676: the curves name the second unit by its other curves, not by its regulation."""
+    logger = RecordingLogger()
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
+    tracking = [1.0] * 5
+    curves = _without(
+        _make_avr_curves(tracking, tracking),
+        "G2_GEN_MagnitudeControlledByAVRPu",
+        "G2_GEN_VoltageSetpointPu",
+    ).assign(G2_GEN_NetworkFrequencyPu=[1.0] * 5)
+    validator = _make_validator(validations=["AVR_5"], calculated=curves, is_dynawo_model=False)
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_avr(compliance_values, 0.0)
+
+    assert compliance_values["AVR_5_check"] == NOT_COMPUTABLE
+    assert logger.warnings == [
+        "The voltage regulation cannot be checked without G2_GEN_MagnitudeControlledByAVRPu "
+        "and G2_GEN_VoltageSetpointPu: reported as N/A"
+    ]
+
+
+def test_calculate_avr_of_a_unit_of_the_model_without_its_curves_is_not_computable(monkeypatch):
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", RecordingLogger())
+    tracking = [1.0] * 5
+    curves = _without(
+        _make_avr_curves(tracking, tracking),
+        "G2_GEN_MagnitudeControlledByAVRPu",
+        "G2_GEN_VoltageSetpointPu",
+    )
+    validator = _make_validator(validations=["AVR_5"], calculated=curves, units=("G1", "G2"))
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_avr(compliance_values, 0.0)
+
+    assert compliance_values["AVR_5_check"] == NOT_COMPUTABLE
+
+
+def test_the_machines_of_the_network_are_not_units_of_the_producer(monkeypatch):
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", RecordingLogger())
+    tracking = [1.0] * 5
+    curves = _without(
+        _make_avr_curves(tracking, tracking),
+        "G2_GEN_MagnitudeControlledByAVRPu",
+        "G2_GEN_VoltageSetpointPu",
+    ).assign(
+        SyncCompensator_GEN_TSO_FrequencyHz=[50.0] * 5, SyncCompensator_GEN_FrequencyHz=[50.0] * 5
+    )
+    validator = _make_validator(validations=["AVR_5"], calculated=curves, is_dynawo_model=False)
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_avr(compliance_values, 0.0)
+
+    assert compliance_values["AVR_5_check"] is True
 
 
 def test_calculate_frequency_within_the_nominal_band():
@@ -756,7 +838,7 @@ def test_calculate_others_imax_reac_without_the_currents_is_not_computable(monke
     assert compliance_values["imax_reac_check"] == NOT_COMPUTABLE
     assert compliance_values["imax_reac"] == -1
     assert logger.warnings == [
-        "The reactive current priority cannot be checked without both currents of every unit "
+        "The reactive current priority cannot be checked without both currents of G1 "
         "(ActiveCurrentNode2, ReactiveCurrentNode2): reported as N/A"
     ]
 
@@ -785,6 +867,28 @@ def test_calculate_others_imax_reac_violated_beside_a_unit_with_one_current_fail
     validator._PerformanceValidator__calculate_others(compliance_values, 1.0)
 
     assert compliance_values["imax_reac_check"] is False
+
+
+@pytest.mark.parametrize("model", [True, False], ids=["model", "curves"])
+def test_calculate_others_imax_reac_of_a_unit_left_out_of_the_curves_is_not_computable(
+    monkeypatch, model
+):
+    """#676: in a plant of several units, leaving out the currents of the failing one must
+    not make the others pass for it."""
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", RecordingLogger())
+    curves = _make_injection_curves([0.1, 0.1, 0.2, 0.1, 0.1], [0.0] * 5)
+    validator = _make_validator(
+        validations=["imax_reac"],
+        calculated=curves,
+        is_dynawo_model=model,
+        units=("G1", "G2") if model else (),
+    )
+    validator.set_generators_imax({"G1": 1.0, "G2": 1.0})
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_others(compliance_values, 1.0)
+
+    assert compliance_values["imax_reac_check"] == NOT_COMPUTABLE
 
 
 def test_calculate_others_imax_reac_without_saturation():
