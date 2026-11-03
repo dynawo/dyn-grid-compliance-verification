@@ -144,3 +144,61 @@ def test_get_generator_u_dim_zone3_uses_dtr_classification(monkeypatch):
     curves = ProducerCurves(_producer(u_nom=225.0, zone=3))
 
     assert curves.get_generator_u_dim() == pytest.approx(235.0)
+
+
+class _EventConfig:
+    """The options of the event of one test, as the configuration serves them."""
+
+    def __init__(self, connect_event_to, setpoint_step_value):
+        self._options = {
+            "connect_event_to": connect_event_to,
+            "setpoint_step_value": setpoint_step_value,
+        }
+
+    def get_boolean(self, section, key, default=False):
+        return False
+
+    def get_value(self, section, key, default=None):
+        return self._options.get(key, default) if section.endswith(".Event") else default
+
+
+@pytest.mark.parametrize("s_nom", [0.25, 4.0, 90.0, 250.0])
+@pytest.mark.parametrize(
+    "connect_event_to, definition, step",
+    [
+        ("VoltageSetpointPu", "0.02*Udim", 0.02),
+        ("VoltageSetpointPu", "0.05*Unom", 0.05),
+        ("VoltageSetpointPu", "0.1", 0.1),
+        ("NetworkFrequencyPu", "0.01", 0.01),
+    ],
+)
+def test_a_voltage_or_frequency_step_keeps_its_base_whatever_the_size_of_the_unit(
+    monkeypatch, s_nom, connect_event_to, definition, step
+):
+    monkeypatch.setattr("dycov.curves.curves.config", _EventConfig(connect_event_to, definition))
+    producer = _producer()
+    producer.s_nom = s_nom
+    curves = _Curves(producer)
+
+    assert curves.get_setpoint_variation("PCS1.BM1.OC1") == pytest.approx(step)
+
+
+@pytest.mark.parametrize("s_nom", [4.0, 250.0])
+@pytest.mark.parametrize(
+    "connect_event_to, definition, step_in_s_nref",
+    [
+        ("ActivePowerSetpointPu", "0.4*Pmax", 0.32),
+        ("ReactivePowerSetpointPu", "-0.2*Pmax", -0.16),
+    ],
+)
+def test_a_power_step_is_taken_to_the_nominal_power_of_the_unit(
+    monkeypatch, s_nom, connect_event_to, definition, step_in_s_nref
+):
+    monkeypatch.setattr("dycov.curves.curves.config", _EventConfig(connect_event_to, definition))
+    producer = _producer(p_max_pu=0.8)
+    producer.s_nom = s_nom
+    curves = _Curves(producer)
+
+    assert curves.get_setpoint_variation("PCS1.BM1.OC1") == pytest.approx(
+        step_in_s_nref * 100.0 / s_nom
+    )
