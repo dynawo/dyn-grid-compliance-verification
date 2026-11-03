@@ -72,10 +72,12 @@ def test_wrappers():
     cm._producer_curves_generator = SimpleNamespace(
         get_voltage_dip=lambda: 0.5,
         get_generators_imax=lambda: {"g": 1},
+        get_declared_units=lambda: {"g"},
     )
 
     assert cm.get_voltage_dip() == 0.5
     assert cm.get_generators_imax()["g"] == 1
+    assert cm.get_declared_units() == {"g"}
 
 
 def _manager_for_required_curves(monkeypatch, tmp_path, sim_type, reference):

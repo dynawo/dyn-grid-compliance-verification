@@ -613,6 +613,46 @@ def test_calculate_avr_of_a_unit_of_the_model_without_its_curves_is_not_computab
     assert compliance_values["AVR_5_check"] == NOT_COMPUTABLE
 
 
+def test_a_unit_the_dictionary_declares_with_no_curve_is_not_computable(monkeypatch):
+    """#676: leaving every curve of a unit blank in the dictionary must not leave it out."""
+    logger = RecordingLogger()
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
+    validator = _make_validator(
+        calculated=_make_pdr_curves(G1_GEN_InternalAngle=[0.5] * 5), is_dynawo_model=False
+    )
+    validator.set_declared_units({"G1", "G2"})
+
+    stable_theta, _, pass_pi = validator._check_theta_stability(THR_SS_TOL)
+
+    assert stable_theta == NOT_COMPUTABLE
+    assert pass_pi == NOT_COMPUTABLE
+    assert (
+        "The rotor stability cannot be checked without G2_GEN_InternalAngle: reported as N/A"
+        in logger.warnings
+    )
+
+
+def test_a_unit_whose_id_holds_gen_is_checked_on_its_curves(monkeypatch):
+    logger = RecordingLogger()
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
+    tracking = [1.0] * 5
+    curves = _make_pdr_curves(
+        SM_GEN_1_GEN_InternalAngle=[0.5] * 5,
+        SM_GEN_1_GEN_MagnitudeControlledByAVRPu=tracking,
+        SM_GEN_1_GEN_VoltageSetpointPu=tracking,
+    )
+    validator = _make_validator(validations=["AVR_5"], calculated=curves, is_dynawo_model=False)
+    compliance_values = {}
+
+    stable_theta, _, pass_pi = validator._check_theta_stability(THR_SS_TOL)
+    validator._PerformanceValidator__calculate_avr(compliance_values, 0.0)
+
+    assert stable_theta is True
+    assert pass_pi is True
+    assert compliance_values["AVR_5_check"] is True
+    assert logger.warnings == []
+
+
 def test_the_machines_of_the_network_are_not_units_of_the_producer(monkeypatch):
     monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", RecordingLogger())
     tracking = [1.0] * 5
