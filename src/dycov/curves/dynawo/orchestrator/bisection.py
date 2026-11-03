@@ -212,7 +212,8 @@ class BisectionEngine:
         simulate_fn : callable
             Callable (output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name)
             → SimulateOutcome, provided by DynawoCurves to avoid circular dependency. Each
-            step runs in a copy removed once it ends, so it gets no output directory and its
+            step runs in a copy removed once it ends, or in debug kept as the last success or
+            failure, which the next step replaces; so it gets no output directory and its
             failure quotes no log.
         reset_solver_fn : callable
             Callable () → None, provided by DynawoCurves to restore solver defaults
@@ -391,7 +392,8 @@ class BisectionEngine:
         simulate_fn : callable
             Callable (output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name)
             → SimulateOutcome, provided by DynawoCurves to avoid circular dependency. Each
-            step runs in a copy removed once it ends, so it gets no output directory and its
+            step runs in a copy removed once it ends, or in debug kept as the last success or
+            failure, which the next step replaces; so it gets no output directory and its
             failure quotes no log.
         reset_solver_fn : callable
             Callable () → None, provided by DynawoCurves to restore solver defaults
