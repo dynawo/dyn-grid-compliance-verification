@@ -10,6 +10,7 @@
 """Tests for the preparation of a process pool worker."""
 
 import logging
+import os
 import signal
 import subprocess
 import sys
@@ -148,6 +149,98 @@ def test_the_worker_leaves_the_interrupt_to_the_main_process(run_log):
         assert signal.getsignal(signal.SIGINT) is signal.SIG_IGN
     finally:
         signal.signal(signal.SIGINT, previous)
+
+
+def test_a_worker_puts_back_the_configuration_of_the_run(tmp_path):
+    from dycov.configuration.cfg import config
+
+    layers = config.run_layers()
+    changed = {**layers, "user": {**layers["user"], "DTR": {"current": "20240215"}}}
+
+    try:
+        worker_initializer(None, changed)
+
+        assert config.get_value("DTR", "current") == "20240215"
+    finally:
+        config.restore_run_layers(layers)
+
+
+WORKER_CONFIGURATION_RUN = textwrap.dedent(
+    '''
+    """A run that sets up its configuration in memory, as the command line does, and reads it
+    back from workers started apart."""
+
+    import multiprocessing
+    import sys
+    from pathlib import Path
+
+    from dycov.configuration.cfg import config
+    from dycov.logging import worker_initializer
+
+
+    def read(_):
+        return (
+            config.get_value("DTR", "current"),
+            config.get_threshold("GridCode", "thr_reaction_time", -1.0),
+            config.get_value("Global", "from_the_user_file"),
+            config.get_value("Dynawo", "simulation_limit"),
+        )
+
+
+    if __name__ == "__main__":
+        user_file = Path(sys.argv[2])
+        user_file.write_text("[Global]\\nfrom_the_user_file = yes\\n")
+        config.load_user_config(user_file)
+        # What --dtr does, and an option set at run time where the default configuration has it
+        config.set_value("DTR", "current", sys.argv[4])
+        config.load_dtr_delta_config(sys.argv[4])
+        config.set_value("Dynawo", "simulation_limit", "77")
+
+        initargs = (None, config.run_layers()) if sys.argv[3] == "with" else (None,)
+        context = multiprocessing.get_context(sys.argv[1])
+        with context.Pool(1, initializer=worker_initializer, initargs=initargs) as pool:
+            print(repr((read(0), pool.apply(read, (0,)))))
+    '''
+)
+
+
+def _run_reading_the_configuration(tmp_path, start_method, layers, revision):
+    script = tmp_path / "run.py"
+    script.write_text(WORKER_CONFIGURATION_RUN, encoding="utf-8")
+    env = dict(os.environ, HOME=str(tmp_path / "home"))
+    run = subprocess.run(
+        [sys.executable, str(script), start_method, str(tmp_path / "user.ini"), layers, revision],
+        env=env,
+        timeout=120,
+        capture_output=True,
+        text=True,
+    )
+    assert run.returncode == 0, run.stderr
+    return eval(run.stdout.strip().splitlines()[-1])
+
+
+@pytest.mark.parametrize(
+    "revision, reaction_time_limit", [("20240215", pytest.approx(0.10)), ("20260723", None)]
+)
+@pytest.mark.parametrize("start_method", ["forkserver", "spawn"])
+def test_a_worker_started_apart_runs_with_the_configuration_of_the_run(
+    tmp_path, start_method, revision, reaction_time_limit
+):
+    """#678: the revision of --dtr, its delta, the file of --user-config and what the run set."""
+    main, worker = _run_reading_the_configuration(tmp_path, start_method, "with", revision)
+
+    assert main == (revision, reaction_time_limit, "yes", "77")
+    assert worker == main
+
+
+@pytest.mark.parametrize("revision", ["20240215", "20260723"])
+def test_a_worker_started_apart_without_the_layers_reads_the_files_alone(tmp_path, revision):
+    """What #678 saw: the worker reads the revision of the files and no delta, and neither the
+    file of --user-config nor what the run set."""
+    main, worker = _run_reading_the_configuration(tmp_path, "forkserver", "without", revision)
+
+    assert worker == ("20260723", pytest.approx(0.10), None, "30")
+    assert worker != main
 
 
 def test_a_forkserver_worker_writes_into_the_log_of_the_run(tmp_path):
