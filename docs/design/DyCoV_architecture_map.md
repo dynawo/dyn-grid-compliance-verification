@@ -186,7 +186,7 @@ ones through `worker_initializer` — which is what happens from Python 3.14, wh
 default start method on Linux. Such a worker also reads the configuration from the files again, so the
 same initializer puts back what the run set up in memory (`config.run_layers()`: the default and user
 layers with `--dtr`, `--user-config` and run-time `set_value` applied, and the revision delta).
-Its handlers: the console; the shared, rotating
+The handlers of `dycov_logging`: the console; the shared, rotating
 `~/.config/dycov/log/dycov.log`, which accumulates every run of the user; and the execution log,
 `dycov_run.log`, added by `add_run_handler` once the working dir exists and closed by
 `close_run_handler` right before that dir is moved to the `-o`. The execution log is a plain
