@@ -342,7 +342,8 @@ def test_a_terminated_pool_ends_its_workers_quietly_and_their_processes_with_the
 GROUP_SIGNALLED_RUN = textwrap.dedent(
     '''
     """A run whose whole process group is told to end, as a closed terminal or a timeout does,
-    while a worker of its pool waits for a task and another runs a process it launched."""
+    while a worker of its pool waits for a task and another runs a process it launched. Like a
+    run of the tool, it has loaded the modules whose processes its end stops."""
 
     import multiprocessing
     import os
@@ -350,6 +351,8 @@ GROUP_SIGNALLED_RUN = textwrap.dedent(
     import sys
     import time
 
+    import dycov.curves.dynawo.runtime.dynawo_simulator
+    import dycov.report.report
     from dycov.core.graceful_shutdown import install_signal_handlers, terminate_all_children
     from dycov.curves.dynawo.runtime._process import _proc_registry
     from dycov.logging import worker_initializer
