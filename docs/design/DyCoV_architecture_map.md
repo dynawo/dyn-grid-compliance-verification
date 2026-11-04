@@ -85,7 +85,10 @@ possibly signed registry name); anything else is a Dynawo parameter value passed
 A rejected definition aborts the run — `obtain_simulated_curve` turns only `SimulationOutcomeError`
 (the bisection outcomes, `model/parameters.py`) into a failed `SimulationResult`.
 Out of scope: GFM (own grammar `mult*(Xeff+Xgrid)`, `extract_defined_value` for p0/q0)
-and `line_XPu` (DTR reactance-table base `a`/`b`).
+and `line_XPu` (DTR reactance-table base `a`/`b`). `line_XFaultPu` resolves against the registry
+plus `XFaultPu`, the reactance the DTR gives the impedant three-phase fault
+(`generator_variables.calculate_fault_xpu`, at the Pmax of the test); without it the fault of
+`Fault_4Lines_InfBus` is bolted.
 
 **Declared tests (F16)**: the DTR Fiche F16 fixes no test and applies to Zone 3 only, so
 `PCS_RTE-F16z3` ships with an empty `[PCS-Benchmarks]` and, next to it, the `F16Description.ini`

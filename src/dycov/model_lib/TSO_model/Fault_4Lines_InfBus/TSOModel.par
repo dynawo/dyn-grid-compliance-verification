@@ -35,7 +35,7 @@
     from terminal1, which is directly connected to busPDR. -->
     <par type="DOUBLE" name="line_D" value="0.01"/>
     <par type="DOUBLE" name="line_RFaultPu" value="0"/>
-    <par type="DOUBLE" name="line_XFaultPu" value="0"/>
+    <par type="DOUBLE" name="line_XFaultPu" value="{{line_XFaultPu}}"/>
     <par type="DOUBLE" name="line_tBegin" value="{{event_start}}"/>
     <par type="DOUBLE" name="line_tEnd" value="{{event_end}}"/>
   </set>

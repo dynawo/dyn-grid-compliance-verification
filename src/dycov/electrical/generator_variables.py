@@ -8,6 +8,7 @@
 #     demiguelm@aia.es
 #
 import bisect
+import math
 
 from dycov.configuration.cfg import config
 
@@ -215,6 +216,40 @@ class GeneratorVariables:
         """
         p_max = p_max_pu * -s_nref
         x_dtr, u_dim = self.__get_generator_variables(line_xtype, p_max, u_nom)
+
+        return x_dtr * (u_dim**2 / u_nom**2) * (s_nref / s_nom)
+
+    def calculate_fault_xpu(
+        self, p_max_pu: float, s_nom: float, u_nom: float, s_nref: float
+    ) -> float:
+        """Calculate the reactance of the impedant three-phase fault.
+        The DTR gives it in the base Udim, Snom, so that the fault, behind the four lines of
+        reactance 3*b, holds the PDR at 0.6 Unom while the unit injects no current:
+          Xdefaut = 3/4*b / (Uinf * Udim / (0.6 * Unom) - 1)
+          Uinf = sqrt(1 + (3/4*b * Pmax / Snom)^2)
+          conversion: Xdwo = Xdtr * (Udim^2 / Unom^2) * (SnRef / Snom)
+
+        Parameters
+        ----------
+        p_max_pu: float
+            Maximum active power
+        s_nom: float
+            Nominal apparent power
+        u_nom: float
+            Nominal voltage
+        s_nref: float
+            System-wide S base (SnRef)
+
+        Returns
+        -------
+        float
+            Reactance of the fault
+        """
+        p_max = p_max_pu * -s_nref
+        b, u_dim = self.__get_generator_variables("b", p_max, u_nom)
+        grid_x = 0.75 * b
+        u_inf = math.sqrt(1 + (grid_x * p_max / s_nom) ** 2)
+        x_dtr = grid_x / (u_inf * u_dim / (0.6 * u_nom) - 1)
 
         return x_dtr * (u_dim**2 / u_nom**2) * (s_nref / s_nom)
 
