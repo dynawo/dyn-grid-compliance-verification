@@ -665,9 +665,10 @@ def _divergence_limit(
     column: str, generators: list, voltage_limit: float, power_limit: float
 ) -> float | None:
     """The magnitude beyond which a curve of the producer has diverged, None for a curve of the
-    network, whose loads and machines are not in the base of the producer, for the measurements
-    at the PDR, in the base of the network, which the PDR curves repeat in that of the producer,
-    or for one that may legitimately reach any: a setpoint, a frequency, a tap or an angle."""
+    network, whose loads and machines may reach any magnitude in the base of the producer, for the
+    measurements at the PDR, in the base of the network, which the PDR curves repeat in that of
+    the producer, or for one that may legitimately reach any: a setpoint, a frequency, a tap or an
+    angle."""
     variable = _producer_variable(column, generators)
     if variable is None or "Setpoint" in variable:
         return None

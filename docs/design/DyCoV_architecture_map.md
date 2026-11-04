@@ -24,11 +24,11 @@ What the curves mean is read outside it: each attempt of the retry strategy, onc
 well, reads them with `read_simulated_curves` (`create_curves` + `find_divergence`) and becomes a
 `SimulationAttempt(dynawo, curves, divergence)` (`runtime/retry_strategy.py`), `usable` when Dynawo
 succeeded and nothing diverged. `find_divergence` bounds the voltages, powers and currents of the
-PDR and of the units — not those of the loads and machines of the network, which are in no base of
-the producer — by `[Dynawo] divergence_voltage_limit` / `divergence_power_limit` and catches a value
-that is not finite; a diverged attempt is retried, and the fault searches see it as a failed step
-(`SimulateOutcome.succeeded` is `usable`). The CCT search does not post-process the curves and keeps
-its own test on the internal angles.
+PDR and of the units — not those of the loads and machines of the network, which may reach any
+magnitude in the base of the producer — by `[Dynawo] divergence_voltage_limit` /
+`divergence_power_limit` and catches a value that is not finite; a diverged attempt is retried,
+and the fault searches see it as a failed step (`SimulateOutcome.succeeded` is `usable`). The CCT
+search does not post-process the curves and keeps its own test on the internal angles.
 `timeline_error` carries the first error Dynawo logged, stripped of its timestamp and level
 (`find_timeline_error`, `runtime/_process.py`), so the retry message and the failure warning quote what
 Dynawo said instead of the fact that it said something; a run that reports nothing leaves no log file,
