@@ -10,14 +10,19 @@
 
 from __future__ import annotations
 
+from collections import namedtuple
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
+from dycov.configuration.cfg import config
 from dycov.core.global_variables import ABS_TOLERANCE_FACTOR, VOLTAGE_DIP_THRESHOLD
 from dycov.curves import naming
+from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs
 from dycov.logging import dycov_logging
+
+SimulatedCurves = namedtuple("SimulatedCurves", "curves divergence")
 
 
 def _get_modulus(complex_list: list) -> list:
@@ -713,3 +718,31 @@ def find_divergence(
         if peak > limit:
             return f"{name} reached {peak:.3g} pu, beyond {limit:g} pu"
     return None
+
+
+def read_simulated_curves(run: DynawoRunInputs, curves_file: Path) -> SimulatedCurves:
+    """Reads the curves of a simulation and tells whether those of the producer have diverged,
+    beyond the limits of the Dynawo section of the configuration.
+
+    Parameters
+    ----------
+    run : DynawoRunInputs
+        The inputs of the run, which give the translations, units and bases of its curves.
+    curves_file : Path
+        The curves file Dynawo wrote.
+
+    Returns
+    -------
+    SimulatedCurves
+        The curves, as create_curves gives them, and what the first diverged curve reached,
+        None when none has diverged.
+    """
+    curves = create_curves(run.curves_dict, curves_file, run.generators, run.s_nom, run.s_nref)
+    divergence = find_divergence(
+        curves,
+        run.generators,
+        config.get_float("Dynawo", "divergence_voltage_limit", 10.0),
+        config.get_float("Dynawo", "divergence_power_limit", 100.0),
+        run.zone,
+    )
+    return SimulatedCurves(curves, divergence)
