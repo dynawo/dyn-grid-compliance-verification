@@ -571,6 +571,24 @@ def test_check_generator_imax_measures_the_active_current_in_consumption():
     assert first_time == 1
 
 
+@pytest.mark.parametrize(
+    "current, active",
+    [
+        ([0.5, float("nan"), 0.5], [0.1, 0.1, 0.1]),
+        ([0.5, 0.5, 0.5], [0.1, float("nan"), 0.1]),
+        ([0.5, float("inf"), 0.5], [0.1, 0.1, 0.1]),
+    ],
+)
+def test_check_generator_imax_does_not_take_a_current_that_is_not_a_number_for_zero(
+    current, active
+):
+    """#675: a current that is not a number does not keep the reactive priority."""
+    first_time, check = common.check_generator_imax(1.0, [0, 1, 2], current, active)
+
+    assert check is False
+    assert first_time == 1
+
+
 def test_check_generator_imax_raises_on_length_mismatch():
     with pytest.raises(ValueError, match="All input lists must have the same length"):
         common.check_generator_imax(5, [0, 1, 2], [1, 2], [1, 2])

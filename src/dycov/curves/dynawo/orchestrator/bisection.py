@@ -43,7 +43,7 @@ class BisectionEngine:
     bolted) and Critical Clearing Time (CCT) calculation.
 
     This class is stateless with respect to the Dynawo model — it receives all
-    required context (producer, launcher, curves_dict, etc.) at construction time
+    required context (producer, launcher, etc.) at construction time
     and does not modify any simulation input files directly except for fault
     parameters during bisection iterations.
     """
@@ -53,10 +53,8 @@ class BisectionEngine:
         pcs_name: str,
         launcher_dwo: str,
         producer: Producer,
-        s_nref: float,
         sim_time: float,
         thr_ss_tol: float,
-        curves_dict: dict,
     ):
         """
         Parameters
@@ -67,22 +65,16 @@ class BisectionEngine:
             Path to the Dynawo launcher executable.
         producer : Producer
             The producer associated with the simulation.
-        s_nref : float
-            Reference apparent power (MVA).
         sim_time : float
             Current simulation elapsed time; updated after successful runs.
         thr_ss_tol : float
             Tolerance defining the steady-state band around the final value.
-        curves_dict : dict
-            Mapping of curve variable names used by the simulator.
         """
         self._pcs_name = pcs_name
         self._launcher_dwo = launcher_dwo
         self._producer = producer
-        self._s_nref = s_nref
         self.sim_time = sim_time
         self._thr_ss_tol = thr_ss_tol
-        self._curves_dict = curves_dict
 
     # ------------------------------------------------------------------
     # Internal utilities
@@ -567,13 +559,8 @@ class BisectionEngine:
             bm_name,
             oc_name,
             self._launcher_dwo,
-            self._curves_dict,
             working_oc_dir_attempt,
             jobs_output_dir,
-            self._producer.generators,
-            self._producer.s_nom,
-            self._s_nref,
-            save_file=False,
             simulation_limit=self.sim_time + 10,
         )
         if not cct_result.succeeded:

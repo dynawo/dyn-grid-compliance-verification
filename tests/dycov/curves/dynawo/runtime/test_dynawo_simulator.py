@@ -7,7 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-"""Tests for what a simulation reports back about a failure."""
+"""Tests for what a run of Dynawo reports back."""
 
 from pathlib import Path
 
@@ -93,3 +93,51 @@ def test_a_simulation_over_the_limit_does_not_succeed(simulated):
     result = simulated(DynawoResult(True, None, None, None, MAX_SIM_TIME + 1.0))
 
     assert not result.succeeded
+
+
+def _run_writing(monkeypatch, tmp_path, completed=True, writes_curves=True):
+    """A run of Dynawo that ends as given and writes, or not, its curves file."""
+    from dycov.curves.dynawo.runtime import dynawo_simulator
+    from dycov.curves.dynawo.runtime._process import ProcessOutcome
+
+    def run_dynawo_process(*args):
+        if writes_curves:
+            (tmp_path / "outputs" / "curves").mkdir(parents=True)
+            (tmp_path / "outputs" / "curves" / "curves.csv").write_text("time;\n0;\n")
+        return ProcessOutcome(completed, "job succeeded" if completed else "job failed", 1.0)
+
+    monkeypatch.setattr(dynawo_simulator, "run_dynawo_process", run_dynawo_process)
+    return DynawoSimulator().run_base_dynawo(
+        "PCS", "BM", "OC", Path("dynawo.sh"), "TSOModel", tmp_path, Path("outputs")
+    )
+
+
+def test_a_run_reports_the_curves_file_dynawo_wrote(monkeypatch, tmp_path):
+    result = _run_writing(monkeypatch, tmp_path)
+
+    assert result.succeeded is True
+    assert result.curves_file == tmp_path / "outputs" / "curves" / "curves.csv"
+
+
+def test_a_run_that_wrote_no_curves_reports_none(monkeypatch, tmp_path):
+    result = _run_writing(monkeypatch, tmp_path, writes_curves=False)
+
+    assert result.succeeded is True
+    assert result.curves_file is None
+
+
+def test_a_failed_run_still_says_where_dynawo_left_its_curves(monkeypatch, tmp_path):
+    """What the curves mean is for whoever reads them; the simulator only reports the run."""
+    result = _run_writing(monkeypatch, tmp_path, completed=False)
+
+    assert result.succeeded is False
+    assert result.curves_file == tmp_path / "outputs" / "curves" / "curves.csv"
+
+
+def test_the_baseline_run_passes_on_the_curves_file(simulated):
+    curves_file = Path("/work/outputs/curves/curves.csv")
+
+    result = simulated(DynawoResult(True, None, None, curves_file, 1.0))
+
+    assert result.succeeded is True
+    assert result.curves_file == curves_file

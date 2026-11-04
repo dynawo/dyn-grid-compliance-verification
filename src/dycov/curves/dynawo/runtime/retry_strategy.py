@@ -11,10 +11,13 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
+import pandas as pd
+
 from dycov.configuration.cfg import config
+from dycov.curves.dynawo.runtime._curves import read_simulated_curves
 from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoResult, DynawoSimulator
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 from dycov.files import replace_placeholders
@@ -56,6 +59,21 @@ _SMALL_NETWORK_PARAMETERS = {
 }
 
 
+@dataclass(frozen=True)
+class SimulationAttempt:
+    """What a run of Dynawo reported and, when Dynawo ended it well, the curves it left or what
+    diverged in them."""
+
+    dynawo: DynawoResult
+    curves: pd.DataFrame = field(default_factory=pd.DataFrame)
+    divergence: str | None = None
+
+    @property
+    def usable(self) -> bool:
+        """Dynawo ended the run well and none of the curves of the producer has diverged."""
+        return self.dynawo.succeeded and self.divergence is None
+
+
 @dataclass
 class RetrySettings:
     step_divisor: float = 10.0
@@ -94,29 +112,29 @@ class SolverRetryStrategy:
         bm_name: str,
         oc_name: str,
         max_sim_time: float | None,
-    ) -> DynawoResult:
-        result = self._attempt(
+    ) -> SimulationAttempt:
+        attempt = self._attempt(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
         )
         for remedy in self._remedies():
-            if result.succeeded or self._retries_exhausted():
-                return result
-            if rejects_inputs(result.timeline_error):
+            if attempt.usable or self._retries_exhausted():
+                return attempt
+            if rejects_inputs(attempt.dynawo.timeline_error):
                 self._warn("Not retried: Dynawo rejected the inputs of the model")
-                return result
+                return attempt
 
             self._warn(
                 f"Retry {self.settings.attempt_count}/{self.settings.allowed_retries}: "
                 f"{remedy(solver, working_oc_dir)} "
-                f"(previous attempt: {self._why_it_failed(result, max_sim_time)})"
+                f"(previous attempt: {self._why_it_failed(attempt, max_sim_time)})"
             )
-            result = self._attempt(
+            attempt = self._attempt(
                 run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
             )
 
-        if result.sim_time > (max_sim_time or float("inf")):
+        if attempt.dynawo.sim_time > (max_sim_time or float("inf")):
             self._warn(f"Simulation time exceeds the maximum allowed ({max_sim_time})")
-        return result
+        return attempt
 
     def _remedies(self) -> Iterator[Remedy]:
         """The changes tried on the solver, in the order they are tried."""
@@ -127,8 +145,11 @@ class SolverRetryStrategy:
         if self.settings.enable_solver_flip:
             yield self._flip_solver
 
-    def _why_it_failed(self, result: DynawoResult, max_sim_time: float | None) -> str:
+    def _why_it_failed(self, attempt: SimulationAttempt, max_sim_time: float | None) -> str:
         """What the attempt just made reported, to be quoted in the retry message."""
+        if attempt.divergence:
+            return f"diverged, {attempt.divergence}"
+        result = attempt.dynawo
         if max_sim_time is not None and result.sim_time > max_sim_time:
             return f"took {result.sim_time:.1f}s, over the {max_sim_time}s limit"
         if result.timeline_error:
@@ -150,16 +171,32 @@ class SolverRetryStrategy:
         bm_name: str,
         oc_name: str,
         max_sim_time: float | None,
-    ) -> DynawoResult:
+    ) -> SimulationAttempt:
         self.settings.attempt_count += 1
         result = DynawoSimulator.run_base(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
         )
+        attempt = self._read_curves(run, result)
         dycov_logging.get_logger("SolverRetryStrategy").debug(
             f"Attempt {self.settings.attempt_count} ran in {result.sim_time:.1f}s "
-            f"({'succeeded' if result.succeeded else 'failed'})"
+            f"({self._how_it_ended(attempt)})"
         )
-        return result
+        return attempt
+
+    @staticmethod
+    def _read_curves(run: DynawoRunInputs, result: DynawoResult) -> SimulationAttempt:
+        if not result.succeeded or result.curves_file is None:
+            return SimulationAttempt(result)
+        curves, divergence = read_simulated_curves(run, result.curves_file)
+        if divergence:
+            return SimulationAttempt(result, divergence=divergence)
+        return SimulationAttempt(result, curves)
+
+    @staticmethod
+    def _how_it_ended(attempt: SimulationAttempt) -> str:
+        if attempt.divergence:
+            return "diverged"
+        return "succeeded" if attempt.dynawo.succeeded else "failed"
 
     def _retries_exhausted(self) -> bool:
         return self.settings.attempt_count > self.settings.allowed_retries

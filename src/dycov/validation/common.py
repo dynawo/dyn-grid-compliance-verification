@@ -505,7 +505,8 @@ def check_generator_imax(
     active = np.abs(np.asarray(active_current_at_converter, dtype=float))
     reactive_squared = np.maximum(current**2 - active**2, 0.0)
     room = np.sqrt(np.maximum(imax**2 - reactive_squared, 0.0))
-    exceeded = np.nonzero(active > room + TOL)[0]
+    invalid = ~(np.isfinite(current) & np.isfinite(active))
+    exceeded = np.nonzero(invalid | (active > room + TOL))[0]
     if len(exceeded) == 0:
         return -1, True
     return time[exceeded[0]], False

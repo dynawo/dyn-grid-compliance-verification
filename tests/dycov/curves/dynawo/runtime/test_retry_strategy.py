@@ -11,14 +11,16 @@
 import shutil
 from pathlib import Path
 
+import pandas as pd
 import pytest
 from lxml import etree
 
 import dycov
 from dycov.curves.dynawo.runtime import retry_strategy as retry_strategy_module
+from dycov.curves.dynawo.runtime._curves import SimulatedCurves
 from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoResult, DynawoSimulator
 from dycov.curves.dynawo.runtime.retry_strategy import RetrySettings, SolverRetryStrategy
-from dycov.curves.dynawo.runtime.run_types import SolverParams
+from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 
 MAX_SIM_TIME = 10.0
 RETRY_HEADINGS = [
@@ -28,6 +30,16 @@ RETRY_HEADINGS = [
     "Retry 4/4: solver IDA -> SIM",
 ]
 TIME_WARNING = f"Simulation time exceeds the maximum allowed ({MAX_SIM_TIME})"
+CURVES_FILE = Path("working/jobs/curves/curves.csv")
+DIVERGENCE = "BusPDR_BUS_Voltage reached 4.2e+06 pu, beyond 10 pu"
+RUN = DynawoRunInputs(
+    pcs_name="PCS",
+    launcher_dwo=Path("dynawo.sh"),
+    curves_dict={},
+    generators=[],
+    s_nom=100.0,
+    s_nref=100.0,
+)
 
 
 class RecordingLogger:
@@ -83,9 +95,9 @@ def _patch_run_base(monkeypatch, successful_attempt):
     return attempts
 
 
-def _run(strategy, solver):
+def _run(strategy, solver, run=None):
     return strategy.run(
-        run=None,
+        run=run,
         solver=solver,
         output_dir=Path("output"),
         working_oc_dir=Path("working"),
@@ -142,7 +154,7 @@ def test_retry_warnings_follow_disable_flag(
 
     result = _run(strategy, _ida_solver())
 
-    assert not result.succeeded
+    assert not result.usable
     assert len(failing_attempts) == 5
     assert len(recorded_warnings) == expected_warnings
 
@@ -208,6 +220,104 @@ def test_every_attempt_reports_how_long_dynawo_ran(monkeypatch, recording_logger
     ]
 
 
+def _dynawo_ends_well(monkeypatch):
+    attempts = []
+
+    def run_base(*args, **kwargs):
+        attempts.append(1)
+        return DynawoResult(True, None, None, CURVES_FILE, 1.0)
+
+    monkeypatch.setattr(DynawoSimulator, "run_base", staticmethod(run_base))
+    return attempts
+
+
+def _curves_read_as(monkeypatch, *simulated):
+    """The curves each attempt reads, in turn; the last one stands for any later attempt."""
+    read = []
+
+    def read_simulated_curves(run, curves_file):
+        read.append((run, curves_file))
+        return simulated[min(len(read), len(simulated)) - 1]
+
+    monkeypatch.setattr(retry_strategy_module, "read_simulated_curves", read_simulated_curves)
+    return read
+
+
+_DIVERGED = SimulatedCurves(
+    pd.DataFrame({"time": [0.0, 1.0], "BusPDR_BUS_Voltage": [1.0, 4.2e6]}), DIVERGENCE
+)
+_SOUND = SimulatedCurves(
+    pd.DataFrame({"time": [0.0, 1.0], "BusPDR_BUS_Voltage": [1.0, 0.9]}), None
+)
+
+
+def test_a_diverged_attempt_is_retried_and_quoted(monkeypatch, recording_logger, recorded_writes):
+    """#675: a run Dynawo ended well after diverging is not a usable one, which a retry may
+    cure."""
+    attempts = _dynawo_ends_well(monkeypatch)
+    _curves_read_as(monkeypatch, _DIVERGED, _SOUND)
+
+    attempt = _run(SolverRetryStrategy(RetrySettings()), _ida_solver(), RUN)
+
+    assert len(attempts) == 2
+    assert attempt.usable
+    assert attempt.curves is _SOUND.curves
+    [retry] = recording_logger.messages
+    assert retry.startswith(RETRY_HEADINGS[0])
+    assert retry.endswith(f"(previous attempt: diverged, {DIVERGENCE})")
+    assert recording_logger.debug_messages == [
+        "Attempt 1 ran in 1.0s (diverged)",
+        "Attempt 2 ran in 1.0s (succeeded)",
+    ]
+
+
+def test_a_divergence_leaves_what_dynawo_reported_as_it_was(
+    monkeypatch, recorded_warnings, recorded_writes
+):
+    """Dynawo ended the run well; that the curves diverged is said apart from it."""
+    _dynawo_ends_well(monkeypatch)
+    _curves_read_as(monkeypatch, _DIVERGED)
+
+    attempt = _run(SolverRetryStrategy(RetrySettings()), _ida_solver(), RUN)
+
+    assert attempt.dynawo.succeeded is True
+    assert attempt.divergence == DIVERGENCE
+    assert attempt.curves.empty
+    assert not attempt.usable
+
+
+def test_the_curves_are_read_from_the_file_of_the_run_with_its_inputs(
+    monkeypatch, recorded_warnings, recorded_writes
+):
+    _dynawo_ends_well(monkeypatch)
+    read = _curves_read_as(monkeypatch, _SOUND)
+
+    _run(SolverRetryStrategy(RetrySettings()), _ida_solver(), RUN)
+
+    assert read == [(RUN, CURVES_FILE)]
+
+
+@pytest.mark.parametrize(
+    "result",
+    [
+        DynawoResult(False, "job failed", None, CURVES_FILE, 1.0),
+        DynawoResult(True, None, None, None, 1.0),
+    ],
+    ids=["Dynawo failed", "no curves file"],
+)
+def test_no_curves_are_read_when_dynawo_left_none_to_read(
+    monkeypatch, recorded_warnings, recorded_writes, result
+):
+    monkeypatch.setattr(DynawoSimulator, "run_base", staticmethod(lambda *args, **kwargs: result))
+    read = _curves_read_as(monkeypatch, _SOUND)
+
+    attempt = _run(SolverRetryStrategy(RetrySettings()), _ida_solver(), RUN)
+
+    assert read == []
+    assert attempt.curves.empty
+    assert attempt.divergence is None
+
+
 @pytest.mark.parametrize("successful_attempt", [1, 2, 3, 4])
 def test_retry_stops_at_the_first_successful_attempt(
     monkeypatch, recorded_warnings, recorded_writes, successful_attempt
@@ -217,7 +327,7 @@ def test_retry_stops_at_the_first_successful_attempt(
 
     result = _run(strategy, _ida_solver())
 
-    assert result.succeeded
+    assert result.usable
     assert len(attempts) == successful_attempt
     assert len(recorded_warnings) == successful_attempt - 1
 
@@ -273,10 +383,10 @@ def test_an_error_in_the_inputs_of_the_model_is_not_retried(
 ):
     attempts = _failing_with(monkeypatch, timeline_error)
 
-    result = _run(SolverRetryStrategy(RetrySettings()), _ida_solver())
+    attempt = _run(SolverRetryStrategy(RetrySettings()), _ida_solver())
 
-    assert result.succeeded is False
-    assert result.timeline_error == timeline_error
+    assert attempt.usable is False
+    assert attempt.dynawo.timeline_error == timeline_error
     assert len(attempts) == 1
     assert recorded_writes == []
     assert not [message for message in recorded_warnings if message.startswith("Retry")]

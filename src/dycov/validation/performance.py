@@ -405,8 +405,6 @@ class PerformanceValidator(Validator):
 
                 # I = sqrt(Ip² + Iq²), NaN where either component was None
                 current_magnitude = np.hypot(ip, iq)
-                # Replace NaN (originated from None values) with 0.0
-                current_magnitude = np.where(np.isnan(current_magnitude), 0.0, current_magnitude)
 
                 imax_gen_reac, imax_gen_reac_check = common.check_generator_imax(
                     imax,

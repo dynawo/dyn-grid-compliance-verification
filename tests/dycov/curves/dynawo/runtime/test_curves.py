@@ -9,6 +9,8 @@
 #
 """Tests for the post-processing of the curves Dynawo writes into the curves the tool compares."""
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -490,3 +492,204 @@ def test_create_curves_reports_the_requests_dynawo_did_not_serve(
         "Dynawo did not provide the requested curves: "
         "Main_Xfmr_transformer_tap (Main_Xfmr_XFMR_Tap)"
     ]
+
+
+# ---------------------------------------------------------------------------
+# Divergence
+# ---------------------------------------------------------------------------
+
+
+_PRODUCER_UNITS = [DummyGenerator("Wind_Turbine"), DummyGenerator("Synch_Gen")]
+
+
+def _diverging(column: str, value: float) -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "time": [0.0, 1.0, 2.0],
+            "BusPDR_BUS_Voltage": [1.0, 1.0, 1.0],
+            column: [0.5, 0.5, value],
+        }
+    )
+
+
+@pytest.mark.parametrize(
+    "column, value",
+    [
+        ("BusPDR_BUS_Voltage", 4.2e6),
+        ("Wind_Turbine_GEN_VoltageNode2", -11.0),
+        ("BusPDR_BUS_ReactivePower", 1.8e21),
+        ("Wind_Turbine_GEN_ActiveCurrentNode2", 101.0),
+        ("BusPDR_BUS_ActivePower", float("nan")),
+        ("Wind_Turbine_GEN_MagnitudeControlledByAVRPu", float("inf")),
+    ],
+)
+def test_a_magnitude_of_the_producer_beyond_its_limit_has_diverged(column, value):
+    divergence = curves_module.find_divergence(
+        _diverging(column, value), _PRODUCER_UNITS, 10.0, 100.0
+    )
+
+    assert divergence is not None and column in divergence
+
+
+@pytest.mark.parametrize(
+    "column, value",
+    [
+        ("BusPDR_BUS_Voltage", 2.0e3),
+        ("BusPDR_BUS_ReactivePower", 1.4e8),
+        ("Wind_Turbine_GEN_ActiveCurrentNode2", float("nan")),
+    ],
+)
+def test_a_divergence_the_curve_recovers_from_has_diverged(column, value):
+    curves = pd.DataFrame(
+        {
+            "time": [0.0, 1.0, 2.0],
+            "BusPDR_BUS_Voltage": [1.0, 1.0, 1.0],
+            column: [0.5, value, 0.5],
+        }
+    )
+
+    divergence = curves_module.find_divergence(curves, _PRODUCER_UNITS, 10.0, 100.0)
+
+    assert divergence is not None and column in divergence
+
+
+@pytest.mark.parametrize(
+    "column, value",
+    [
+        ("SyncCompensator_GEN_TSO_ActivePower", 1.0e4),
+        ("SyncCompensator_GEN_ActivePower", 1.0e4),
+        ("SyncCompensator_GEN_TSO_FrequencyHz", 50.0),
+        ("Load_eq_LOAD_ActivePower", 3.0e3),
+        ("Main_load_LOAD_TSO_ReactivePower", float("nan")),
+        ("Wind_Turbine_GEN_ActivePowerSetpointPu", 1.0e20),
+        ("Main_Xfmr_XFMR_Tap", 33.0),
+        ("Synch_Gen_GEN_InternalAngle", 400.0),
+        ("Wind_Turbine_GEN_ActiveCurrentNode2", 99.0),
+        ("BusPDR_BUS_Voltage", 9.5),
+        ("Measurements_BUS_ReactivePower", 110.0),
+    ],
+)
+def test_a_magnitude_of_the_network_that_may_be_large_or_stays_within_its_limit_has_not(
+    column, value
+):
+    """#675: the loads of the network are not in the base of the producer, and the load of a
+    load-shedding test reaches thousands of pu; nor are the measurements at the PDR, in the
+    base of the network, which a producer of 2.7 GVA brings past 100 pu."""
+    assert (
+        curves_module.find_divergence(_diverging(column, value), _PRODUCER_UNITS, 10.0, 100.0)
+        is None
+    )
+
+
+@pytest.mark.parametrize(
+    "unit, column, value, diverged",
+    [
+        ("Synch_Gen_HighVoltage", "Synch_Gen_HighVoltage_GEN_InternalAngle", 3.14, False),
+        ("PV_Array_Power", "PV_Array_Power_GEN_NetworkFrequencyPu", 1.0, False),
+        ("Setpoint_WT", "Setpoint_WT_GEN_VoltageNode2", 4.2e6, True),
+    ],
+    ids=["angle of a unit named Voltage", "frequency of a unit named Power", "named Setpoint"],
+)
+def test_the_id_of_a_unit_does_not_decide_what_is_bounded(unit, column, value, diverged):
+    """#675: the producer names its units, and the topology check only asks the id to hold the
+    kind of the unit."""
+    divergence = curves_module.find_divergence(
+        _diverging(column, value), [DummyGenerator(unit)], 3.0, 0.5
+    )
+
+    assert (divergence is not None) is diverged
+
+
+def test_the_limits_of_a_divergence_are_those_given():
+    curves = _diverging("BusPDR_BUS_ActivePower", 3.0)
+
+    assert curves_module.find_divergence(curves, _PRODUCER_UNITS, 10.0, 2.0) is not None
+    assert curves_module.find_divergence(curves, _PRODUCER_UNITS, 10.0, 5.0) is None
+
+
+def _read(monkeypatch, curves, zone=0, limits=None):
+    """Reads curves that create_curves gives as the given ones, under the given limits."""
+    from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs
+
+    read_from = []
+
+    def create(variable_translations, curves_file, generators, s_nom, s_nref):
+        read_from.append(curves_file)
+        return curves
+
+    monkeypatch.setattr(curves_module, "create_curves", create)
+    if limits:
+        config_type = type(curves_module.config)
+        get_float = config_type.get_float
+        monkeypatch.setattr(
+            config_type,
+            "get_float",
+            lambda self, section, key, default=None: (
+                limits[key] if key in limits else get_float(self, section, key, default)
+            ),
+        )
+    run = DynawoRunInputs(
+        pcs_name="PCS",
+        launcher_dwo=Path("dynawo.sh"),
+        curves_dict={},
+        generators=_PRODUCER_UNITS,
+        s_nom=100.0,
+        s_nref=100.0,
+        zone=zone,
+    )
+    simulated = curves_module.read_simulated_curves(run, Path("outputs/curves/curves.csv"))
+    assert read_from == [Path("outputs/curves/curves.csv")]
+    return simulated
+
+
+def test_the_curves_of_a_simulation_within_their_limits_are_read_as_they_are(monkeypatch):
+    curves = pd.DataFrame({"time": [0.0, 1.0], "BusPDR_BUS_Voltage": [1.0, 0.9]})
+
+    simulated = _read(monkeypatch, curves)
+
+    assert simulated.curves is curves
+    assert simulated.divergence is None
+
+
+def test_the_curves_of_a_simulation_tell_what_diverged(monkeypatch):
+    """#675: Dynawo stops on NaN or inf, not on a voltage of 4.2e6 pu."""
+    curves = pd.DataFrame({"time": [0.0, 1.0], "BusPDR_BUS_Voltage": [1.0, 4.2e6]})
+
+    simulated = _read(monkeypatch, curves)
+
+    assert simulated.divergence == "BusPDR_BUS_Voltage reached 4.2e+06 pu, beyond 10 pu"
+
+
+@pytest.mark.parametrize(
+    "limits, curve, reached",
+    [
+        (
+            {"divergence_voltage_limit": 0.95, "divergence_power_limit": 50.0},
+            "BusPDR_BUS_Voltage",
+            "beyond 0.95 pu",
+        ),
+        (
+            {"divergence_voltage_limit": 5.0, "divergence_power_limit": 0.8},
+            "BusPDR_BUS_ActivePower",
+            "beyond 0.8 pu",
+        ),
+    ],
+    ids=["voltage", "power"],
+)
+def test_the_limits_of_a_divergence_come_from_the_configuration(
+    monkeypatch, limits, curve, reached
+):
+    curves = pd.DataFrame({"time": [0.0, 1.0], curve: [0.7, 0.99]})
+
+    simulated = _read(monkeypatch, curves, limits=limits)
+
+    assert simulated.divergence == f"{curve} reached 0.99 pu, {reached}"
+
+
+def test_a_divergence_in_zone_1_names_the_bus_as_the_outputs_do(monkeypatch):
+    """#275: PDR is the real connection point; the Zone 1 outputs call this bus InternalNode1."""
+    curves = pd.DataFrame({"time": [0.0, 1.0], "BusPDR_BUS_Voltage": [1.0, 2.0e3]})
+
+    simulated = _read(monkeypatch, curves, zone=1)
+
+    assert simulated.divergence == "InternalNode1_BUS_Voltage reached 2e+03 pu, beyond 10 pu"

@@ -165,6 +165,17 @@ Basic configuration
 
   Simulation timeout for Dynawo, in seconds.
 
+* ``divergence_voltage_limit``, ``divergence_power_limit``
+
+  Dynawo may end a simulation successfully after its variables have diverged.
+  A simulation whose curves of the producer reach, in absolute value, a
+  voltage beyond ``divergence_voltage_limit`` (pu of Unom, default 10) or a
+  power or a current beyond ``divergence_power_limit`` (pu of the nominal
+  power of the installation, default 100), or a value that is not finite, is
+  taken as a failed one: it is retried, and the fault searches treat it as a
+  failed step. The search of the critical clearing time keeps its own test on
+  the internal angles.
+
 * ``f_nom``
 
   Grid nominal frequency (fNom), in Hz (default: 50.0). This must match the
