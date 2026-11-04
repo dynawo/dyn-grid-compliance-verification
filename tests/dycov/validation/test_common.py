@@ -521,6 +521,76 @@ def test_get_txu_finds_the_recovery_whatever_the_sampling(time):
 
 
 # ---------------------------------------------------------------------------
+# Bands of the time checks
+# ---------------------------------------------------------------------------
+
+
+def test_step_band_is_a_percentage_of_the_change_around_the_final_value():
+    """#694: the I2 example changes its voltage by 0.00013 pu, and its band is that narrow."""
+    lower, upper = common.step_band(0.05, [1.04445, 1.0444, 1.04458])
+
+    assert (lower, upper) == (
+        pytest.approx(1.04458 - 0.0000065),
+        pytest.approx(1.04458 + 0.0000065),
+    )
+
+
+def test_step_band_of_a_curve_that_barely_changes_is_the_percentage_in_pu():
+    assert common.step_band(0.10, [1.0, 1.2, 1.0]) == (pytest.approx(0.9), pytest.approx(1.1))
+
+
+@pytest.mark.parametrize(
+    "final, band", [(0.833, (0.7497, 0.9163)), (1.5, (1.35, 1.65)), (-0.6, (-0.66, -0.54))]
+)
+def test_final_value_band_is_a_percentage_of_the_final_value(final, band):
+    """#694: below 1 pu too, where the figures drew a percentage of 1 pu instead."""
+    assert common.final_value_band(0.1, [0.0, final]) == pytest.approx(band)
+
+
+def test_final_value_band_near_zero_is_an_absolute_tolerance():
+    assert common.final_value_band(0.1, [0.5, 0.001]) == pytest.approx((-0.019, 0.021))
+
+
+@pytest.mark.parametrize(
+    "final, band", [(0.833, (pytest.approx(0.7497), None)), (-0.6, (None, pytest.approx(-0.54)))]
+)
+def test_floor_band_bounds_the_side_of_zero_only(final, band):
+    assert common.floor_band(0.1, [0.0, final]) == band
+
+
+def _first_inside(time, curve, band):
+    """The instant from which the curve stays within the band for good."""
+    lower, upper = band
+    for pos in range(len(curve) - 1, -1, -1):
+        if (lower is not None and curve[pos] < lower) or (
+            upper is not None and curve[pos] > upper
+        ):
+            return time[pos + 1]
+    return time[0]
+
+
+@pytest.mark.parametrize(
+    "check, band",
+    [
+        (lambda t, c: common.get_txp(0.05, t, c, 0.0), lambda c: common.final_value_band(0.05, c)),
+        (lambda t, c: common.get_txp(0.1, t, c, 0.0), lambda c: common.final_value_band(0.1, c)),
+        (lambda t, c: common.get_txpfloor(0.1, t, c, 0.0), lambda c: common.floor_band(0.1, c)),
+        (
+            lambda t, c: common.get_txu_relative(0.05, t, c, 0.0),
+            lambda c: common.step_band(0.05, c),
+        ),
+    ],
+    ids=["time_5P", "time_10P", "time_10Pfloor", "time_5U"],
+)
+@pytest.mark.parametrize("sign", [1, -1], ids=["injection", "consumption"])
+def test_each_time_check_measures_the_instant_its_curve_enters_its_band(check, band, sign):
+    time = [0.1 * step for step in range(30)]
+    curve = [sign * value for value in [0.3] * 5 + [0.9 - 0.6 * 0.8**step for step in range(25)]]
+
+    assert check(time, curve) == pytest.approx(_first_inside(time, curve, band(curve)) - 0.1)
+
+
+# ---------------------------------------------------------------------------
 # Generator current limit
 # ---------------------------------------------------------------------------
 

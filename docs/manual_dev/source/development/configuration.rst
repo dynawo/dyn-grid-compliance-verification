@@ -95,8 +95,10 @@ each Benchmark or Operating Condition must pass. Available tests:
 
 * ``static_diff`` — static difference between the controlled quantity and the
   voltage adjustment setpoint.
-* ``time_5U`` — time at which voltage stays within ±5% of its final value.
-* ``time_10U`` — time at which voltage stays within ±10% of its final value.
+* ``time_5U`` — time at which voltage stays within ±5% of its change around
+  its final value.
+* ``time_10U`` — time at which voltage stays within ±10% of its change around
+  its final value.
 * ``time_5P`` — time at which P stays within ±5% of its final value.
 * ``time_10P`` — time at which P stays within ±10% of its final value.
 * ``time_85U`` — time at which voltage at the PDR returns above 0.85 pu.
