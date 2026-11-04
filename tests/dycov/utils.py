@@ -12,6 +12,12 @@ PERFORMANCE = Path(__file__).resolve().parent.parent.parent / "examples" / "Perf
 MODEL = Path(__file__).resolve().parent.parent.parent / "examples" / "Model"
 
 
+def listed_in_order(monkeypatch, reverse=False):
+    """The order a directory lists its files in depends on the file system; fix one."""
+    iterdir = Path.iterdir
+    monkeypatch.setattr(Path, "iterdir", lambda self: iter(sorted(iterdir(self), reverse=reverse)))
+
+
 def _resolve_dynawo_sh():
     env_path = os.environ.get("DYNAWOPATH")
     if env_path:

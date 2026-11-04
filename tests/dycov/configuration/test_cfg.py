@@ -9,6 +9,7 @@
 #
 
 import configparser
+import os
 from pathlib import Path
 
 import pytest
@@ -559,3 +560,44 @@ def test_an_option_the_delta_of_the_revision_fixes_is_of_the_norm(tmp_path, empt
     cfg = Config(tmp_path, *empty_parsers)
 
     assert cfg.overridden_norm_options() == [("GridCode", "category_thresholds_high_voltage")]
+
+
+def test_load_user_config_reads_the_file_it_is_given(tmp_path, empty_parsers):
+    user_file = tmp_path / "user_2024.ini"
+    user_file.write_text("[DTR]\ncurrent = 20240215\n")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    cfg.load_user_config(user_file)
+
+    assert cfg.get_value("DTR", "current") == "20240215"
+
+
+@pytest.mark.parametrize("kind", ["missing", "directory"])
+def test_load_user_config_stops_on_a_file_it_cannot_read(tmp_path, empty_parsers, caplog, kind):
+    user_file = tmp_path / "user_2042.ini"
+    if kind == "directory":
+        user_file.mkdir()
+    cfg = Config(tmp_path, *empty_parsers)
+
+    with pytest.raises(OSError):
+        cfg.load_user_config(user_file)
+
+    assert "Successfully loaded user configuration" not in caplog.text
+    assert str(user_file) in caplog.text
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root reads any file")
+def test_load_user_config_stops_on_a_file_it_may_not_read(tmp_path, empty_parsers, caplog):
+    user_file = tmp_path / "user.ini"
+    user_file.write_text("[DTR]\ncurrent = 20240215\n")
+    user_file.chmod(0)
+    cfg = Config(tmp_path, *empty_parsers)
+
+    try:
+        with pytest.raises(PermissionError):
+            cfg.load_user_config(user_file)
+    finally:
+        user_file.chmod(0o644)
+
+    assert "Successfully loaded user configuration" not in caplog.text
+    assert cfg.get_value("DTR", "current") is None

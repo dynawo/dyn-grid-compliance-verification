@@ -127,3 +127,15 @@ def test_get_network_frequency_curve_without_a_frequency_adds_nothing():
     naming.get_network_frequency_curve(curves)
 
     assert list(curves.columns) == ["time", "BusPDR_BUS_ActivePower"]
+
+
+def test_the_units_of_the_curves_keep_the_gen_of_their_ids_and_leave_the_network():
+    names = [
+        "time",
+        "BusPDR_BUS_Voltage",
+        "SM_GEN_1_GEN_InternalAngle",
+        "WT_GEN_VoltageNode2_a",
+        "Grid_GEN_TSO_FrequencyHz",
+    ]
+
+    assert naming.units_of(names) == {"SM_GEN_1", "WT"}

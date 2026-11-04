@@ -12,10 +12,7 @@ from __future__ import annotations
 from collections import namedtuple
 from pathlib import Path
 
-import pandas as pd
-
 from dycov.configuration.cfg import config
-from dycov.curves.dynawo.runtime._curves import create_curves
 from dycov.curves.dynawo.runtime._process import (
     find_timeline_error,
     run_dynawo_process,
@@ -24,14 +21,14 @@ from dycov.curves.dynawo.runtime._process import (
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs
 from dycov.files import manage_files
 
-DynawoResult = namedtuple("DynawoResult", "succeeded log timeline_error curves sim_time")
+DynawoResult = namedtuple("DynawoResult", "succeeded log timeline_error curves_file sim_time")
 
 
 class DynawoSimulator:
     @staticmethod
     def run_base(
         run: DynawoRunInputs,
-        output_dir: Path,
+        output_dir: Path | None,
         working_oc_dir: Path,
         jobs_output_dir: Path,
         bm_name: str,
@@ -45,8 +42,9 @@ class DynawoSimulator:
         ----------
         run : DynawoRunInputs
             Structured input containing all necessary parameters for the simulation.
-        output_dir : Path
-            Base directory for all outputs, used for logging reference.
+        output_dir : Path | None
+            Directory the run's outputs end up in, which a failure names as the place of
+            Dynawo's log; None when they do not outlive the run, and no log is named.
         working_oc_dir : Path
             Directory containing the operational condition files for the simulation.
         jobs_output_dir : Path
@@ -67,7 +65,7 @@ class DynawoSimulator:
             - bool: True if the simulation completed successfully.
             - str | None: Log output from stderr if an error occurred, otherwise None.
             - str | None: The error Dynawo reported in its log, if it reported one.
-            - pd.DataFrame: Transformed and calculated curves, empty on failure.
+            - Path | None: The curves file Dynawo wrote, None when it wrote none.
             - float: The actual time taken for the simulation.
         """
         if max_sim_time is None:
@@ -79,12 +77,8 @@ class DynawoSimulator:
             oc_name,
             run.launcher_dwo,
             "TSOModel",
-            run.curves_dict,
             working_oc_dir,
             jobs_output_dir,
-            run.generators,
-            run.s_nom,
-            run.s_nref,
             simulation_limit=max_sim_time,
         )
 
@@ -93,14 +87,15 @@ class DynawoSimulator:
         succeeded = result.succeeded and not time_exceeds
 
         if result.timeline_error:
-            log_path = str(output_dir / jobs_output_dir / "logs/dynawo.log")
-            log = f"Simulation Fails: {result.timeline_error}, logs in {log_path}"
+            log = f"Simulation Fails: {result.timeline_error}"
+            if output_dir is not None:
+                log += f", logs in {output_dir / jobs_output_dir / 'logs/dynawo.log'}"
 
         return DynawoResult(
             succeeded=succeeded,
             log=log,
             timeline_error=result.timeline_error,
-            curves=result.curves,
+            curves_file=result.curves_file,
             sim_time=result.sim_time,
         )
 
@@ -110,14 +105,9 @@ class DynawoSimulator:
         bm_name: str,
         oc_name: str,
         launcher_dwo: str,
-        curves_dict: dict,
         working_oc_dir: Path,
         jobs_output_dir: Path,
-        generators: list,
-        s_nom: float,
-        s_nref: float,
         simulation_limit: float,
-        save_file: bool = False,
     ) -> DynawoResult:
         """
         Thin wrapper without retry (useful for CCT flows).
@@ -132,23 +122,12 @@ class DynawoSimulator:
             Operational Condition name for logging.
         launcher_dwo : str
             Path to the Dynamic launcher executable.
-        curves_dict : dict
-            Dictionary of curves to be passed to the simulator.
         working_oc_dir : Path
             Directory containing the operational condition files for the simulation.
         jobs_output_dir : Path
             Subdirectory where the simulation outputs will be stored.
-        generators : list
-            List of generator objects, used for specific curve calculations.
-        s_nom : float
-            Nominal apparent power of the system.
-        s_nref : float
-            System-wide S base (SnRef).
         simulation_limit : float
             Maximum time (in seconds) allowed for the simulation to run.
-        save_file : bool, optional
-            If True, the calculated curves DataFrame will be created and returned.
-            Defaults to False.
 
         Returns
         -------
@@ -157,7 +136,7 @@ class DynawoSimulator:
             - bool: True if the simulation completed successfully.
             - str | None: Log output from stderr if an error occurred, otherwise None.
             - str | None: The error Dynawo reported in its log, if it reported one.
-            - pd.DataFrame: Transformed and calculated curves, empty on failure.
+            - Path | None: The curves file Dynawo wrote, None when it wrote none.
             - float: The actual time taken for the simulation.
         """
         return DynawoSimulator().run_base_dynawo(
@@ -166,13 +145,8 @@ class DynawoSimulator:
             oc_name,
             launcher_dwo,
             "TSOModel",
-            curves_dict,
             working_oc_dir,
             jobs_output_dir,
-            generators,
-            s_nom,
-            s_nref,
-            save_file=save_file,
             simulation_limit=simulation_limit,
         )
 
@@ -190,17 +164,12 @@ class DynawoSimulator:
         oc_name: str,
         launcher_dwo: Path,
         jobs_filename: str,
-        variable_translations: dict,
         inputs_path: Path,
         output_path: Path,
-        generators: list,
-        s_nom: float,
-        s_nref: float,
-        save_file: bool = True,
         simulation_limit: float | None = None,
     ) -> DynawoResult:
         """
-        Runs a dynamic simulation with Dynamic and processes the results.
+        Runs a dynamic simulation with Dynawo and reports what Dynawo did.
 
         Parameters
         ----------
@@ -214,21 +183,10 @@ class DynawoSimulator:
             Path to the Dynamic launcher executable.
         jobs_filename : str
             Name of the JOBS file (without .jobs extension).
-        variable_translations : dict
-            Dictionary mapping tool variables to Dynamic variables for curve translation.
         inputs_path : Path
             Directory containing Dynamic input files.
         output_path : Path
             Directory where Dynamic simulation outputs will be written.
-        generators : list
-            List of generator objects, used for specific curve calculations.
-        s_nom : float
-            Nominal apparent power of the system.
-        s_nref : float
-            System-wide S base (SnRef).
-        save_file : bool, optional
-            If True, the calculated curves DataFrame will be created and returned.
-            Defaults to True.
         simulation_limit : float | None, optional
             Maximum time (in seconds) allowed for the simulation to run.
             If None, no timeout is applied. Defaults to None.
@@ -240,7 +198,7 @@ class DynawoSimulator:
             - bool: True if the simulation completed successfully.
             - str | None: Log output from stderr if an error occurred, otherwise None.
             - str | None: The error Dynawo reported in its log, if it reported one.
-            - pd.DataFrame: Transformed and calculated curves, empty on failure.
+            - Path | None: The curves file Dynawo wrote, None when it wrote none.
             - float: The actual time taken for the simulation.
         """
         dynawo_output_full_path = inputs_path / output_path
@@ -255,34 +213,10 @@ class DynawoSimulator:
         log = outcome.stderr if not succeeded else None
 
         curves_path = dynawo_output_full_path / "curves/curves.csv"
-        curves_calculated = self._load_curves_if_available(
-            curves_path,
-            variable_translations,
-            generators,
-            s_nom,
-            s_nref,
-            save_file,
-            succeeded,
-        )
-
         return DynawoResult(
             succeeded=succeeded,
             log=log,
             timeline_error=timeline_error,
-            curves=curves_calculated,
+            curves_file=curves_path if curves_path.exists() else None,
             sim_time=outcome.elapsed_seconds,
         )
-
-    def _load_curves_if_available(
-        self,
-        path: Path,
-        variable_translations: dict,
-        generators: list,
-        s_nom: float,
-        s_nref: float,
-        save_file: bool,
-        succeeded: bool,
-    ) -> pd.DataFrame:
-        if not path.exists() or not succeeded or not save_file:
-            return pd.DataFrame()
-        return create_curves(variable_translations, path, generators, s_nom, s_nref)

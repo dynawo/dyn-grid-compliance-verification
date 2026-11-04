@@ -109,10 +109,11 @@ def modify_jobs_file(
 def modify_par_file(
     path: Path,
     filename: str,
+    solver_id: str,
     parameter_name: str,
     value: float,
 ) -> None:
-    """Modify the value of a parameter in the PAR file.
+    """Modify the value of a parameter in a solver <set> of the PAR file.
 
     Parameters
     ----------
@@ -120,6 +121,8 @@ def modify_par_file(
         Path where the PAR file is stored
     filename: str
         PAR filename
+    solver_id: str
+        Identifier of the <set> element that holds the parameter
     parameter_name: str
         Parameter name to modify
     value: float
@@ -128,7 +131,9 @@ def modify_par_file(
     par_tree = etree.parse(path / filename, etree.XMLParser(remove_blank_text=True))
     par_root = par_tree.getroot()
     ns = etree.QName(par_root).namespace
-    par_file_parameter = par_root.find(f".//{{{ns}}}par[@name='{parameter_name}']")
+    par_file_parameter = par_root.find(
+        f".//{{{ns}}}set[@id='{solver_id}']/{{{ns}}}par[@name='{parameter_name}']"
+    )
     if par_file_parameter is not None:
         par_file_parameter.set("value", str(value))
 

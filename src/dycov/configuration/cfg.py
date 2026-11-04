@@ -159,7 +159,9 @@ class Config:
             "Loading user configuration from: %s", user_config_path
         )
         try:
-            self._user_config.read(user_config_path, encoding="utf-8")
+            # read() skips a file it cannot open, and the run would go on with other values
+            with open(user_config_path, encoding="utf-8") as user_config_file:
+                self._user_config.read_file(user_config_file, source=str(user_config_path))
             dycov_logging.get_logger("Cfg").info("Successfully loaded user configuration.")
         except Exception as e:
             dycov_logging.get_logger("Cfg").error(

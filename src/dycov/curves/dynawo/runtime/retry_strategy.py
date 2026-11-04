@@ -9,11 +9,15 @@
 #
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Iterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
+import pandas as pd
+
 from dycov.configuration.cfg import config
+from dycov.curves.dynawo.runtime._curves import read_simulated_curves
 from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoResult, DynawoSimulator
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 from dycov.files import replace_placeholders
@@ -21,6 +25,23 @@ from dycov.logging import dycov_logging
 
 Remedy = Callable[[SolverParams, Path], str]
 """A change tried on the solver, which reports what it changed."""
+
+# Dynawo ends an error with the source file that raised it. The ones that read the PAR and DYD
+# files of the models, compile those models and give them their parameters raise errors in those
+# inputs, which no change of the solver settles; so do the parameters a model looks up in its PAR
+# without finding them, the variables a connection names that the model lacks and the files the
+# inputs name that do not exist, whatever raises them.
+_INPUT_ERROR = re.compile(
+    r"\(\s*(?:(?:PAR|DYD)\w*\.cpp|DYN(?:Compiler|DynamicData)\.cpp|DYNParameter\.hpp):\d+\s*\)"
+    r"|failed to retrieve parameter|cardinality parameter is not set"
+    r"|not found in subModel|No such file or directory"
+)
+
+
+def rejects_inputs(timeline_error: str | None) -> bool:
+    """Whether the error Dynawo logged is one in the inputs of the models."""
+    return isinstance(timeline_error, str) and bool(_INPUT_ERROR.search(timeline_error))
+
 
 _SMALL_NETWORK_PARAMETERS = {
     "IDA": [
@@ -36,6 +57,21 @@ _SMALL_NETWORK_PARAMETERS = {
         {"type": "INT", "name": "msbset", "value": "1"},
     ],
 }
+
+
+@dataclass(frozen=True)
+class SimulationAttempt:
+    """What a run of Dynawo reported and, when Dynawo ended it well, the curves it left or what
+    diverged in them."""
+
+    dynawo: DynawoResult
+    curves: pd.DataFrame = field(default_factory=pd.DataFrame)
+    divergence: str | None = None
+
+    @property
+    def usable(self) -> bool:
+        """Dynawo ended the run well and none of the curves of the producer has diverged."""
+        return self.dynawo.succeeded and self.divergence is None
 
 
 @dataclass
@@ -70,32 +106,35 @@ class SolverRetryStrategy:
         self,
         run: DynawoRunInputs,
         solver: SolverParams,
-        output_dir: Path,
+        output_dir: Path | None,
         working_oc_dir: Path,
         jobs_output_dir: Path,
         bm_name: str,
         oc_name: str,
         max_sim_time: float | None,
-    ) -> DynawoResult:
-        result = self._attempt(
+    ) -> SimulationAttempt:
+        attempt = self._attempt(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
         )
         for remedy in self._remedies():
-            if result.succeeded or self._retries_exhausted():
-                return result
+            if attempt.usable or self._retries_exhausted():
+                return attempt
+            if rejects_inputs(attempt.dynawo.timeline_error):
+                self._warn("Not retried: Dynawo rejected the inputs of the model")
+                return attempt
 
             self._warn(
                 f"Retry {self.settings.attempt_count}/{self.settings.allowed_retries}: "
                 f"{remedy(solver, working_oc_dir)} "
-                f"(previous attempt: {self._why_it_failed(result, max_sim_time)})"
+                f"(previous attempt: {self._why_it_failed(attempt, max_sim_time)})"
             )
-            result = self._attempt(
+            attempt = self._attempt(
                 run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
             )
 
-        if result.sim_time > (max_sim_time or float("inf")):
+        if attempt.dynawo.sim_time > (max_sim_time or float("inf")):
             self._warn(f"Simulation time exceeds the maximum allowed ({max_sim_time})")
-        return result
+        return attempt
 
     def _remedies(self) -> Iterator[Remedy]:
         """The changes tried on the solver, in the order they are tried."""
@@ -106,8 +145,11 @@ class SolverRetryStrategy:
         if self.settings.enable_solver_flip:
             yield self._flip_solver
 
-    def _why_it_failed(self, result: DynawoResult, max_sim_time: float | None) -> str:
+    def _why_it_failed(self, attempt: SimulationAttempt, max_sim_time: float | None) -> str:
         """What the attempt just made reported, to be quoted in the retry message."""
+        if attempt.divergence:
+            return f"diverged, {attempt.divergence}"
+        result = attempt.dynawo
         if max_sim_time is not None and result.sim_time > max_sim_time:
             return f"took {result.sim_time:.1f}s, over the {max_sim_time}s limit"
         if result.timeline_error:
@@ -123,22 +165,38 @@ class SolverRetryStrategy:
     def _attempt(
         self,
         run: DynawoRunInputs,
-        output_dir: Path,
+        output_dir: Path | None,
         working_oc_dir: Path,
         jobs_output_dir: Path,
         bm_name: str,
         oc_name: str,
         max_sim_time: float | None,
-    ) -> DynawoResult:
+    ) -> SimulationAttempt:
         self.settings.attempt_count += 1
         result = DynawoSimulator.run_base(
             run, output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name, max_sim_time
         )
+        attempt = self._read_curves(run, result)
         dycov_logging.get_logger("SolverRetryStrategy").debug(
             f"Attempt {self.settings.attempt_count} ran in {result.sim_time:.1f}s "
-            f"({'succeeded' if result.succeeded else 'failed'})"
+            f"({self._how_it_ended(attempt)})"
         )
-        return result
+        return attempt
+
+    @staticmethod
+    def _read_curves(run: DynawoRunInputs, result: DynawoResult) -> SimulationAttempt:
+        if not result.succeeded or result.curves_file is None:
+            return SimulationAttempt(result)
+        curves, divergence = read_simulated_curves(run, result.curves_file)
+        if divergence:
+            return SimulationAttempt(result, divergence=divergence)
+        return SimulationAttempt(result, curves)
+
+    @staticmethod
+    def _how_it_ended(attempt: SimulationAttempt) -> str:
+        if attempt.divergence:
+            return "diverged"
+        return "succeeded" if attempt.dynawo.succeeded else "failed"
 
     def _retries_exhausted(self) -> bool:
         return self.settings.attempt_count > self.settings.allowed_retries
@@ -150,10 +208,18 @@ class SolverRetryStrategy:
         solver.minimal_acceptable_step /= self.settings.step_divisor
         param_name_min_step = "minStep" if solver.solver_id == "IDA" else "hMin"
         replace_placeholders.modify_par_file(
-            working_oc_dir, "solvers.par", param_name_min_step, solver.minimum_time_step
+            working_oc_dir,
+            "solvers.par",
+            solver.solver_id,
+            param_name_min_step,
+            solver.minimum_time_step,
         )
         replace_placeholders.modify_par_file(
-            working_oc_dir, "solvers.par", "minimalAcceptableStep", solver.minimal_acceptable_step
+            working_oc_dir,
+            "solvers.par",
+            solver.solver_id,
+            "minimalAcceptableStep",
+            solver.minimal_acceptable_step,
         )
         return (
             f"{param_name_min_step} {previous:.3g} -> {solver.minimum_time_step:.3g}, "
@@ -168,10 +234,14 @@ class SolverRetryStrategy:
         if solver.solver_id == "IDA":
             if solver.relAccuracy is not None:
                 replace_placeholders.modify_par_file(
-                    working_oc_dir, "solvers.par", "relAccuracy", solver.relAccuracy
+                    working_oc_dir,
+                    "solvers.par",
+                    solver.solver_id,
+                    "relAccuracy",
+                    solver.relAccuracy,
                 )
             replace_placeholders.modify_par_file(
-                working_oc_dir, "solvers.par", "absAccuracy", solver.absAccuracy
+                working_oc_dir, "solvers.par", solver.solver_id, "absAccuracy", solver.absAccuracy
             )
             return (
                 f"absAccuracy {previous:.3g} -> {solver.absAccuracy:.3g}, "
@@ -179,7 +249,7 @@ class SolverRetryStrategy:
             )
 
         replace_placeholders.modify_par_file(
-            working_oc_dir, "solvers.par", "fnormtol", solver.absAccuracy
+            working_oc_dir, "solvers.par", solver.solver_id, "fnormtol", solver.absAccuracy
         )
         return f"fnormtol {previous:.3g} -> {solver.absAccuracy:.3g}"
 

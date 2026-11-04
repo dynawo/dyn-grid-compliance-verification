@@ -95,8 +95,10 @@ each Benchmark or Operating Condition must pass. Available tests:
 
 * ``static_diff`` — static difference between the controlled quantity and the
   voltage adjustment setpoint.
-* ``time_5U`` — time at which voltage stays within ±5% of its final value.
-* ``time_10U`` — time at which voltage stays within ±10% of its final value.
+* ``time_5U`` — time at which voltage stays within ±5% of its change around
+  its final value.
+* ``time_10U`` — time at which voltage stays within ±10% of its change around
+  its final value.
 * ``time_5P`` — time at which P stays within ±5% of its final value.
 * ``time_10P`` — time at which P stays within ±10% of its final value.
 * ``time_85U`` — time at which voltage at the PDR returns above 0.85 pu.
@@ -341,6 +343,17 @@ Dynawo section
 
 * ``simulation_limit`` — maximum time (s) for the dynamic simulation. DyCoV
   stops the simulator when this limit is exceeded.
+* ``divergence_voltage_limit``, ``divergence_power_limit`` — magnitudes beyond
+  which a simulation has diverged, even if Dynawo ends it successfully: a
+  voltage in pu of Unom (10) and a power or a current (100) in pu of the
+  nominal power of the producer, the sum of its units, on the curves of the PDR
+  and of the units, told apart by their variable and not by the id of the unit
+  (not the ``Measurements_BUS_*`` ones, in SnRef, which the PDR curves repeat
+  in the base of the producer); a value that is not finite always counts.
+  ``find_divergence`` (``runtime/_curves.py``) checks them on the curves of
+  every attempt of the retry strategy that Dynawo ended well, which is then
+  retried as a failed one, while what Dynawo reported stays as it was; the CCT
+  runs (``run_simple``) are judged on the internal angles instead.
 * ``simulation_start`` — simulation start time (s). Before changing this,
   verify that all PCS events fall within the configured simulation window.
 * ``simulation_stop`` — simulation end time (s). PCS I7 has an event at t=30s;
@@ -411,10 +424,14 @@ Signal processing parameters:
 
 Step-response time characteristic thresholds:
 
-* ``thr_reaction_time`` — maximum allowed MAE on reaction time.
-* ``thr_rise_time`` — maximum allowed MAE on rise time.
-* ``thr_settling_time`` — maximum allowed MAE on settling time.
-* ``thr_overshoot`` — maximum allowed MAE on overshoot.
+* ``thr_reaction_time`` — maximum deviation of the reaction time from the
+  reference one, relative to it.
+* ``thr_rise_time`` — maximum deviation of the rise time, relative to the
+  reference one.
+* ``thr_settling_time`` — maximum deviation of the settling time, relative to
+  the reference one.
+* ``thr_overshoot`` — maximum deviation of the overshoot, relative to the
+  reference one.
 * ``thr_ramp_time_lag`` — maximum allowed ME on ramp time lag.
 * ``thr_ramp_error`` — maximum allowed MXE on ramp error.
 * ``thr_final_ss_mae`` — maximum allowed MAE between simulation and reference
@@ -504,4 +521,10 @@ These parameters are useful during development and debugging:
 * ``disable_LP_filtering`` — disable low-pass filtering of signals entirely.
 * ``max_simulation_retries`` — maximum number of retries for a failed
   simulation (default: 4, covering: base line, reduced step, increased
-  precision, small networks, solver switch).
+  precision, small networks, solver switch). These errors in the inputs of a
+  model are not retried, as no solver setting settles them, and they end the
+  search of a fault impedance: one the PAR and DYD readers, the compiler or the
+  parameters of a model raise, a parameter a model does not find in its PAR, a
+  variable a connection names that the model lacks and a file the inputs name
+  that does not exist (``rejects_inputs``). Any other error is retried, a
+  connection the DYD leaves out among them.
