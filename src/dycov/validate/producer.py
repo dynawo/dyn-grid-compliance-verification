@@ -342,10 +342,11 @@ class ModelProducer(Producer):
         return self.__read_producer_ini().get("DEFAULT", "generator_type")
 
     def __read_producer_ini(self):
-        if self._filename is None:
-            pattern_ini = re.compile(r".*.Producer.[iI][nN][iI]")
-        else:
-            pattern_ini = re.compile(rf".*.{self._filename}.[iI][nN][iI]")
+        pattern_ini = re.compile(
+            file_checks.model_file_regex(
+                "ini", "Producer" if self._filename is None else self._filename
+            )
+        )
         producer_ini = self.__get_file_by_pattern(pattern_ini)
 
         producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
@@ -461,7 +462,7 @@ class ModelProducer(Producer):
             if not path.is_dir():
                 return []
 
-            pattern = re.compile(r".*.[dD][yY][dD]")
+            pattern = re.compile(file_checks.model_file_regex("dyd"))
             return sorted(
                 [file.stem for file in path.resolve().iterdir() if pattern.match(str(file))]
             )
@@ -707,10 +708,7 @@ class ModelProducer(Producer):
         Path
             Path to the Producer DYD file
         """
-        if self._filename is None:
-            pattern_dyd = re.compile(r".*.[dD][yY][dD]")
-        else:
-            pattern_dyd = re.compile(rf".*.{self._filename}.[dD][yY][dD]")
+        pattern_dyd = re.compile(file_checks.model_file_regex("dyd", self._filename))
         return self.__get_file_by_pattern(pattern_dyd)
 
     def get_producer_par(self) -> Path:
@@ -721,10 +719,7 @@ class ModelProducer(Producer):
         Path
             Path to the Producer PAR file
         """
-        if self._filename is None:
-            pattern_par = re.compile(r".*.[pP][aA][rR]")
-        else:
-            pattern_par = re.compile(rf".*.{self._filename}.[pP][aA][rR]")
+        pattern_par = re.compile(file_checks.model_file_regex("par", self._filename))
         return self.__get_file_by_pattern(pattern_par)
 
     def get_producer_curves_path(self) -> Path:

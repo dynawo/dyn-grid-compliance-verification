@@ -10,10 +10,12 @@
 """Checks run on the files supplied as tool inputs."""
 
 import logging
+import re
 from pathlib import Path
 
 import pytest
 from lxml import etree
+from tests.dycov.utils import listed_in_order
 
 from dycov.sanity_checks import file_checks
 
@@ -131,6 +133,54 @@ def test_check_dynawo_model_files_rejects_files_with_different_names(tmp_path):
         file_checks.check_dynawo_model_files(model_path)
 
     assert "do not have the same name" in str(not_found_error.value)
+
+
+@pytest.mark.parametrize("reverse", [False, True], ids=["listed first", "listed last"])
+@pytest.mark.parametrize("folder", ["WindPark", "Parc_eolien", "Comparaison", "parametres"])
+def test_check_dynawo_model_files_ignores_the_name_of_the_folder(
+    tmp_path, monkeypatch, folder, reverse
+):
+    model_path = _write_model_files(tmp_path / folder)
+    (model_path / "LHVRT.txt").write_text("")
+    listed_in_order(monkeypatch, reverse)
+
+    assert file_checks.check_dynawo_model_files(model_path) is None
+
+
+@pytest.mark.parametrize("reverse", [False, True], ids=["listed first", "listed last"])
+def test_check_dynawo_model_files_checks_the_unit_it_names(tmp_path, monkeypatch, reverse):
+    """The files of WG1 do not stand for those of G1, whose name ends that one."""
+    model_path = _write_model_files(tmp_path / "Zone1", dyd="G1", par="G1", ini="G1")
+    _write_model_files(model_path, dyd="WG1", par="WG1", ini="WG1")
+    (model_path / "G1.par").unlink()
+    listed_in_order(monkeypatch, reverse)
+
+    with pytest.raises(FileNotFoundError) as not_found_error:
+        file_checks.check_dynawo_model_files(model_path, "G1")
+
+    assert "G1.par" in str(not_found_error.value)
+
+
+@pytest.mark.parametrize(
+    "path, filename, extension, matches",
+    [
+        ("/models/WindPark/Producer.par", None, "par", True),
+        ("/models/WindPark/Producer.dyd", None, "par", False),
+        ("/models/Parc/Producer.PAR", None, "par", True),
+        ("/models/Zone1/G1.dyd", "G1", "dyd", True),
+        ("/models/Zone1/WG1.dyd", "G1", "dyd", False),
+        ("/models/Zone1/G1.dyd.bak", "G1", "dyd", False),
+        ("/models/Zone1/G1xdyd", "G1", "dyd", False),
+        ("Producer.ini", "Producer", "ini", True),
+        ("C:\\models\\WindPark\\Producer.ini", "Producer", "ini", True),
+        ("/models/Unit.1/Unit.1.dyd", "Unit.1", "dyd", True),
+        ("/models/Unit.1/UnitX1.dyd", "Unit.1", "dyd", False),
+    ],
+)
+def test_a_model_file_is_matched_by_its_own_name(path, filename, extension, matches):
+    pattern = re.compile(file_checks.model_file_regex(extension, filename))
+
+    assert bool(pattern.match(path)) is matches
 
 
 def test_check_performance_model_accepts_a_complete_model(tmp_path):

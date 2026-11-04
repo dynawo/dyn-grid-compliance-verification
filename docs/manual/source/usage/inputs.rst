@@ -54,7 +54,9 @@ reactive power limits, topology identifier, and so on.
 
 For **Electric Performance Verification**, the three model files should all
 live in the same directory, which is then passed to ``dycov performance``
-via the ``-m`` option.
+via the ``-m`` option. The three files share their name, and the INI is read
+under the name ``Producer.ini``, so they are ``Producer.dyd``, ``Producer.par``
+and ``Producer.ini``.
 
 For **RMS Model Validation**, the directory must contain two subdirectories
 named ``Zone1/`` and ``Zone3/``, each with its own set of three files.
