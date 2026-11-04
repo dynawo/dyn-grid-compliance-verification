@@ -288,7 +288,7 @@ class DynawoCurves(ProducerCurves):
         has_curves = (working_oc_dir / jobs_output_dir / _CURVES_CSV).exists() and result.succeeded
         return SimulateOutcome(
             succeeded=result.succeeded,
-            time_exceeds=result.sim_time > self._sim_time,
+            time_exceeds=result.sim_time > config.get_float("Dynawo", "simulation_limit", 30.0),
             has_curves=has_curves,
             curves=result.curves,
             sim_time=result.sim_time,
