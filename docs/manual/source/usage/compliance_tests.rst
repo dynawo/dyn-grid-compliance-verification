@@ -198,7 +198,11 @@ thresholds are the ones the DTR fixes and are not configurable, except for
 the steady-state tolerance ``thr_ss_tol`` and the nominal frequency
 ``f_nom`` of the ``[Dynawo]`` section. Times are measured from the event
 (``sim_t_event_start``), or from the end of the fault for the ``*_clear``
-tests.
+tests. A test whose curves are missing, as producer curves that leave out the
+internal angle of a synchronous machine, the magnitude its voltage regulation
+controls or its setpoint, or the currents of a unit, is reported as *N/A* and
+the operating condition as not compliant. A unit the curves dictionary names
+counts even when every one of its entries is left blank.
 
 Voltage control
 ^^^^^^^^^^^^^^^
@@ -270,7 +274,9 @@ Frequency and current
 ``freq_1``
   Whether the frequency stays within ±1 Hz of ``f_nom`` at every instant,
   measured at the synchronous condenser when the test models one, at the
-  generating units otherwise. Meant for the islanding of PCS I10.
+  generating units otherwise, or on the network frequency of the curves
+  (``NetworkFrequencyPu``) when they carry neither. Meant for the islanding of
+  PCS I10.
 
 ``freq_200``, ``freq_250``
   Draw a ±200 mHz or ±250 mHz band on the frequency figure; they compute

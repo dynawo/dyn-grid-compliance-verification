@@ -600,6 +600,17 @@ class CurvesManager:
         """
         return self._producer_curves_generator.get_generators_imax()
 
+    def get_declared_units(self) -> set:
+        """Get the generating units the producer curves declare, whether they deliver their
+        curves or not.
+
+        Returns
+        -------
+        set
+            Ids of the units.
+        """
+        return self._producer_curves_generator.get_declared_units()
+
     def get_voltage_dip(self) -> float | None:
         """Get the voltage dip.
 

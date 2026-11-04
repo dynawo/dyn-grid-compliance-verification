@@ -41,6 +41,7 @@ class Validator(ABC):
         self._bm_name = bm_name
         self._time_cct: float | None = None
         self._generators_imax: dict = {}
+        self._declared_units: set = set()
         self._disconnection_model: DisconnectionModel | None = None
         self._setpoint_variation: float = 0.0
         self._oc_name: str | None = None
@@ -138,6 +139,16 @@ class Validator(ABC):
         """
         self._generators_imax = generators_imax
 
+    def set_declared_units(self, declared_units: set) -> None:
+        """Set the generating units the producer curves declare.
+
+        Parameters
+        ----------
+        declared_units: set
+            Ids of the units the curves dictionary names, whether it gives their curves or not.
+        """
+        self._declared_units = declared_units
+
     def set_disconnection_model(self, disconnection_model: DisconnectionModel) -> None:
         """Set the disconnection model.
 
@@ -201,6 +212,7 @@ class Validator(ABC):
             )
             self.set_time_cct(time_cct_value)
         self.set_generators_imax(self._curves_manager.get_generators_imax())
+        self.set_declared_units(self._curves_manager.get_declared_units())
         self.set_disconnection_model(self._curves_manager.get_disconnection_model())
         self.set_setpoint_variation(self._curves_manager.get_setpoint_variation(cfg_oc_name))
 

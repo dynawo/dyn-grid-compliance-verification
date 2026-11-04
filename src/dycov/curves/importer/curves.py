@@ -73,6 +73,7 @@ class ImportedCurves(ProducerCurves):
         self._generators = []
         self._gens = []
         self._generators_imax = {}
+        self._declared_units = set()
         self._voltage_dip = None
 
     def _get_common_curve_data(
@@ -132,6 +133,7 @@ class ImportedCurves(ProducerCurves):
         self.get_producer().set_is_field_measurements(self._is_field_measurements)
 
         self._generators_imax = importer.metadata.get_generators_imax()
+        self._declared_units = importer.get_declared_units()
 
         return has_imported_curves, sim_t_event_start, fault_duration, df_imported_curves
 
@@ -334,6 +336,9 @@ class ImportedCurves(ProducerCurves):
 
     def get_generators_imax(self) -> dict:
         return self._generators_imax
+
+    def get_declared_units(self) -> set:
+        return self._declared_units
 
     def get_voltage_dip(self) -> float | None:
         return self._voltage_dip

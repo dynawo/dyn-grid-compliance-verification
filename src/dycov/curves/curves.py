@@ -370,6 +370,17 @@ class ProducerCurves:
         """
         pass
 
+    def get_declared_units(self) -> set:
+        """Get the generating units the producer curves declare, whether they deliver their
+        curves or not.
+
+        Returns
+        -------
+        set
+            Ids of the units, none unless the curves are imported.
+        """
+        return set()
+
     @abstractmethod
     def get_disconnection_model(self) -> DisconnectionModel:
         """Get all equipment in the model that can be disconnected in the simulation.
