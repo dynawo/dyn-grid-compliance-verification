@@ -207,7 +207,9 @@ def reactances(monkeypatch, generator_variables):
     [
         ("PPM", 40.0, 0.3),
         ("PPM", 300.0, 0.54),
+        ("PPM", 250.0, 0.54),
         ("SM", 40.0, 0.2),
+        ("SM", 50.0, 0.3),
         ("BESS", 60.0, 0.3),
         (None, 40.0, 0.2),
     ],
@@ -238,3 +240,9 @@ def test_the_fault_takes_the_reactance_b_of_the_technology(generator_variables, 
     sm = generator_variables.calculate_fault_xpu(-0.4, 100.0, 90, 100.0, "SM")
 
     assert ppm > sm
+
+
+def test_the_short_circuit_power_is_that_of_the_configuration(generator_variables, monkeypatch):
+    monkeypatch.setitem(GRID_CODE_FLOATS, ("GridCode", "HTB2_Scc"), 1600.0)
+
+    assert generator_variables.get_scc(225) == pytest.approx(1600.0)

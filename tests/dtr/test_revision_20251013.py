@@ -242,6 +242,7 @@ def test_20260723_writes_what_20251013_writes(path):
         (BASE_REVISION, "PPM", 40.0, 0.2),
         (REVISION, "PPM", 40.0, 0.3),
         (REVISION, "PPM", 240.0, 0.3),
+        (REVISION, "PPM", 250.0, 0.54),
         (REVISION, "PPM", 260.0, 0.54),
         (BASE_REVISION, "BESS", 40.0, 0.2),
         (REVISION, "BESS", 40.0, 0.3),
