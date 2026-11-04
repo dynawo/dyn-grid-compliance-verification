@@ -186,7 +186,7 @@ def test_i18_rocofs():
         assert _scr(parser, section) == scr
 
 
-def test_i18_operating_points_are_given_in_pu_of_the_converter_rating():
+def test_i18_operating_points_are_given_in_pu_of_the_maximum_active_power():
     aliases = _aliases()
     points = {
         section: (aliases.get(section, "P0"), aliases.get(section, "Q0"))
@@ -196,10 +196,10 @@ def test_i18_operating_points_are_given_in_pu_of_the_converter_rating():
 
     assert points == {
         "PlantOC1": ("0", "0"),
-        "PlantOC2": ("0.5", "0"),
-        "PlantOC3": ("-0.5", "0"),
-        "PlantOC4": ("0.95", "0"),
-        "PlantOC5": ("-0.95", "0"),
+        "PlantOC2": ("0.5*Pmax", "0"),
+        "PlantOC3": ("-0.5*Pmax", "0"),
+        "PlantOC4": ("0.95*Pmax", "0"),
+        "PlantOC5": ("-0.95*Pmax", "0"),
         "PlantOC6": ("0", "-Qmax"),
         "PlantOC7": ("0", "Qmax"),
     }

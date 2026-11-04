@@ -125,7 +125,7 @@ instead.
 
 | Parameter | Description |
 |-----------|-------------|
-| `Xeff` | Effective reactance (pu). The DTR Fiche I18 fixes 0.27 pu: its envelopes use the `Xeff` of the unit only when higher |
+| `Xeff` | Effective reactance (pu). The DTR Fiche I18 fixes 0.27 pu, which its events and envelopes use whatever the unit declares; this value serves the PCS of a power park module |
 | `Imax` | Optional short-duration maximum current (pu of `Snom`), which the Fiche I18 asks the manufacturer to define; when declared, it bounds every envelope |
 
 **Standard control parameters** (used when operating in Standard mode):

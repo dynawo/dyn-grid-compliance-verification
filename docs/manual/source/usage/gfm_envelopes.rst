@@ -68,15 +68,16 @@ Which tests a unit is given follows from what it is, declared with
 
   The scenarios of a test inherit its settings from the alias file next to
   the PCS (``PhaseJumpTest``, ``AmplitudeStepTest``, ``SCRJumpTest`` and
-  ``RoCoFTest``). The operating points are given in pu of the rating of the
-  converter, and the grid short-circuit ratios are those of the fiche:
-  ``SCRmin = 2``, ``SCRmed = 10`` and ``SCRmax = 20`` (``[GFM]`` section of
-  the configuration). The envelopes are drawn from the ideal converter of the
-  fiche, whose effective reactance is 0.27 pu and whose inertia is
-  TR = 10 s, an ``H`` of 5 s: the PCS declares both, so they are used whatever
-  the input file says, but for an ``Xeff`` higher than the fiche's, which is
-  kept. The events of the tests are sized with that ``Xeff``, so with a higher
-  one they differ from those the fiche tabulates. RTE may set other values in
+  ``RoCoFTest``). The active power of the operating points is given in pu of
+  Pn, the maximum active power of the PGU, and the rest of the fiche, the
+  envelopes, the reactances and the short-circuit ratios, in pu of the rating
+  of the converter (Snom). The grid short-circuit ratios are those of the
+  fiche: ``SCRmin = 2``, ``SCRmed = 10`` and ``SCRmax = 20`` (``[GFM]``
+  section of the configuration). The events and the envelopes are drawn from
+  the ideal converter of the fiche, whose effective reactance is 0.27 pu and
+  whose inertia is TR = 10 s, an ``H`` of 5 s: the PCS declares both, so they
+  are used whatever the input file says, and the events are those the fiche
+  tabulates. RTE may set other values in
   the convention d'exploitation, which a description of the user for
   ``PCS_RTE-I18z1`` holds, in its ``Xeff`` and in the inertia of both modes,
   ``H`` and, for the Hybrid mode, ``H_Overdamped`` and ``H_Underdamped`` (see

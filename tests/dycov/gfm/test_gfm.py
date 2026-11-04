@@ -22,7 +22,6 @@ from dycov.configuration.cfg import config
 from dycov.gfm.gfm import GridForming
 from dycov.gfm.parameters import GFMParameters
 from dycov.gfm.producer import GFMProducer
-from dycov.logging import clear_test_context, set_test_context
 from dycov.model.compliance import Compliance
 
 _PCS, _BM, _OC = "PCS_RTE-I18z1", "S_VolAngStep1", "OC2"
@@ -171,12 +170,23 @@ def test_the_fiche_fixes_the_effective_reactance_and_the_inertia(tmp_path, i18_d
     assert parameters.get_inertia_constant() == pytest.approx(5.0)
 
 
-def test_a_higher_effective_reactance_of_the_producer_is_kept(tmp_path, i18_description):
+def test_a_higher_effective_reactance_of_the_producer_does_not_replace_the_fiche(
+    tmp_path, i18_description
+):
     parameters = _set_section(
         _parameters(tmp_path, _UNIT + _GFM_PARAMETERS.replace("Xeff = 0.27", "Xeff = 0.35"))
     )
 
-    assert parameters.get_effective_reactance() == pytest.approx(0.35)
+    assert parameters.get_effective_reactance() == pytest.approx(0.27)
+
+
+def test_without_a_fixed_effective_reactance_the_producer_gives_it(tmp_path, monkeypatch):
+    parameters = _parameters(
+        tmp_path, _UNIT + _GFM_PARAMETERS.replace("Xeff = 0.27", "Xeff = 0.15")
+    )
+    monkeypatch.setattr(GFMParameters, "_GFMParameters__get_value", lambda self, option: None)
+
+    assert parameters.get_effective_reactance() == pytest.approx(0.15)
 
 
 def test_the_pgu_is_described_apart_from_the_installation(tmp_path, i18_description):
@@ -217,23 +227,6 @@ def test_a_verification_warns_of_a_pgu_given_the_limits_of_the_installation(
 
     warnings = [record for record in caplog.records if "p_max_injection of 100" in record.message]
     assert len(warnings) == 1
-
-
-def test_the_effective_reactance_below_the_fiche_is_warned_of_once(
-    tmp_path, i18_description, caplog
-):
-    parameters = _parameters(
-        tmp_path, _UNIT + _GFM_PARAMETERS.replace("Xeff = 0.27", "Xeff = 0.15")
-    )
-    try:
-        for oc in ("OC2", "OC3"):
-            set_test_context(pcs=_PCS, benchmark=_BM, oc=oc, producer="Producer")
-            parameters.set_section(_PCS, _BM, oc)
-            parameters.get_effective_reactance()
-    finally:
-        clear_test_context()
-
-    assert sum("Xeff of 0.15" in record.message for record in caplog.records) == 1
 
 
 def test_a_unit_whose_parameters_are_incomplete_has_an_invalid_test(tmp_path, i18_description):

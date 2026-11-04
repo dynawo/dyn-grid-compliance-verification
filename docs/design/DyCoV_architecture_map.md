@@ -210,8 +210,9 @@ does). The producer INI declares `generator_type` (`gfm/producer.py`, which read
 it is given), which picks the PCS tree: `gfm/BESS` holds the DTR Fiche I18 as one Zone 1 PCS,
 `PCS_RTE-I18z1`, which the revision `20260723` adds and so describes in its delta alone
 (`templates/revisions/20260723/PCS/gfm/BESS`; its scenarios inherit the settings of their test
-from the `*Test` aliases of `config_aliases.ini`, OCs in pu of the converter rating; its PCS fixes
-`Xeff` 0.27 as a floor and `H` 5), `gfm/PPM` the four PCS agreed before the fiche. Generator and
+from the `*Test` aliases of `config_aliases.ini`, the active power of its OCs in pu of Pn, the rest
+in pu of the converter rating; its PCS fixes `Xeff` 0.27 and `H` 5 whatever the producer
+declares), `gfm/PPM` the four PCS agreed before the fiche. Generator and
 validation list the PCS of the shipped tree, of the delta and of the user's directory. A declared
 `Imax` bounds every envelope (`gfm.py`). `GFMParameters` holds the run (`Parameters` of the CLI,
 or the `ValidationParameters`), whose working and output dirs it uses; its powers come from

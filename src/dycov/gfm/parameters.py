@@ -205,32 +205,24 @@ class GFMParameters:
 
     def get_effective_reactance(self) -> float:
         """
-        Retrieves the effective reactance (Xeff). A fiche may fix it in its PCS: the Fiche I18
-        sets 0.27 pu, which RTE may raise in the convention d'exploitation, so the value of the
-        producer is used only when it is higher.
+        Retrieves the effective reactance (Xeff): the one the PCS fixes, as the Fiche I18 does
+        for its ideal converter, or else the one the producer declares.
 
         Returns
         -------
         float
             The effective reactance value in pu.
         """
-        declared = self._producer.get_config().getfloat("GFM Parameters", "Xeff", fallback=None)
         fixed = self.__get_value("Xeff")
-        if not fixed:
-            if declared is None:
-                raise ValueError(
-                    f"{self._producer.get_producer_path()} declares no Xeff in its "
-                    "[GFM Parameters] section"
-                )
-            return declared
-        fixed = float(fixed)
-        if declared is not None and declared < fixed:
-            self.__report_once(
-                "Xeff",
-                f"The Xeff of {declared} pu the producer declares is below the {fixed} pu the "
-                f"PCS fixes: {fixed} pu is used",
+        if fixed:
+            return float(fixed)
+        declared = self._producer.get_config().getfloat("GFM Parameters", "Xeff", fallback=None)
+        if declared is None:
+            raise ValueError(
+                f"{self._producer.get_producer_path()} declares no Xeff in its [GFM Parameters] "
+                "section"
             )
-        return fixed if declared is None else max(fixed, declared)
+        return declared
 
     def get_damping_constant(self) -> float:
         """

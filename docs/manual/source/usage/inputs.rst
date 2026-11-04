@@ -162,8 +162,9 @@ A typical file looks like this:
 The DTR Fiche I18 fixes the effective reactance, 0.27 pu, and the inertia,
 TR = 10 s (an ``H`` of 5 s), of the ideal converter its envelopes are drawn
 from, which RTE may change in the convention d'exploitation: its PCS declares
-them, so the envelopes of the fiche use that ``H`` whatever the file says, and
-its ``Xeff`` unless the file declares a higher one. A description of the user
+them, so the events and the envelopes of the fiche use them whatever the file
+says, and the ``Xeff`` of the file serves only the PCS that fix none, those of a
+power park module. A description of the user
 for ``PCS_RTE-I18z1`` holds the values RTE sets otherwise: ``Xeff``, and the
 inertia as ``H`` and, for the Hybrid mode, ``H_Overdamped`` and
 ``H_Underdamped``, the three keys the PCS declares.

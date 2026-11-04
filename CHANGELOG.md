@@ -31,9 +31,10 @@ describes in a performance verification: its `Snom` and, when they differ, its
 `p_max_injection`, `p_max_consumption`, `q_max` and `q_min`. It may also declare `Imax`, the
 short-duration maximum current the fiche asks the manufacturer to define, which bounds every
 envelope, and `emt = true` when the curves of the unit come from EMT simulations. The Fiche I18
-fixes the effective reactance, 0.27 pu, and the inertia, H = 5 s, of its envelopes; a higher
-`Xeff` of the producer is used instead, and the values RTE sets otherwise go in a description of
-the user (`Xeff`, and `H`, `H_Overdamped` and `H_Underdamped` for the inertia).
+fixes the effective reactance, 0.27 pu, and the inertia, H = 5 s, of its events and envelopes,
+whatever the producer declares, and the values RTE sets otherwise go in a description of the
+user (`Xeff`, and `H`, `H_Overdamped` and `H_Underdamped` for the inertia). The active power of
+its operating points is in pu of Pn, the maximum active power of the PGU.
 
 The Grid Forming templates of the user move by kind of unit, as the tool's do: a PCS under
 `templates/PCS/gfm/` or `templates/reports/gfm/` goes under `gfm/PPM/` or `gfm/BESS/`, and the
