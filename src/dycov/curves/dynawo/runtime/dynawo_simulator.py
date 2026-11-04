@@ -31,7 +31,7 @@ class DynawoSimulator:
     @staticmethod
     def run_base(
         run: DynawoRunInputs,
-        output_dir: Path,
+        output_dir: Path | None,
         working_oc_dir: Path,
         jobs_output_dir: Path,
         bm_name: str,
@@ -45,8 +45,9 @@ class DynawoSimulator:
         ----------
         run : DynawoRunInputs
             Structured input containing all necessary parameters for the simulation.
-        output_dir : Path
-            Base directory for all outputs, used for logging reference.
+        output_dir : Path | None
+            Directory the run's outputs end up in, which a failure names as the place of
+            Dynawo's log; None when they do not outlive the run, and no log is named.
         working_oc_dir : Path
             Directory containing the operational condition files for the simulation.
         jobs_output_dir : Path
@@ -93,8 +94,9 @@ class DynawoSimulator:
         succeeded = result.succeeded and not time_exceeds
 
         if result.timeline_error:
-            log_path = str(output_dir / jobs_output_dir / "logs/dynawo.log")
-            log = f"Simulation Fails: {result.timeline_error}, logs in {log_path}"
+            log = f"Simulation Fails: {result.timeline_error}"
+            if output_dir is not None:
+                log += f", logs in {output_dir / jobs_output_dir / 'logs/dynawo.log'}"
 
         return DynawoResult(
             succeeded=succeeded,

@@ -815,6 +815,7 @@ def _make_real_curves(solver_lib="dynawo_SolverIDA"):
 
         parameters = MagicMock()
         parameters.get_output_dir.return_value = Path("/output")
+        parameters.get_working_dir.return_value = Path("/work")
         parameters.get_launcher_dwo.return_value = "/dynawo"
 
         instance = DynawoCurves(
@@ -873,12 +874,26 @@ class TestPrepareOcValidation:
         mock_sf.find_output_dir.return_value = Path("outputs")
 
         output_dir, jobs_output_dir = curves._DynawoCurves__prepare_oc_validation(
-            Path("/work"), "PCS1", "BM1", "OC1"
+            Path("/work/Producer/PCS1/BM1/OC1"), "BM1"
         )
 
         mock_mf.copy_base_case_files.assert_called_once()
         assert jobs_output_dir == Path("outputs")
-        assert output_dir == Path("/output") / "PCS1" / "BM1" / "OC1"
+        assert output_dir == Path("/output") / "Producer" / "PCS1" / "BM1" / "OC1"
+
+    @patch(f"{_MODULE}.simulation_files")
+    @patch(f"{_MODULE}.manage_files")
+    def test_the_output_dir_is_where_the_results_tree_puts_the_test(self, mock_mf, mock_sf):
+        """The working directory becomes the results directory, so a test lands under the
+        directory of its producer, which the Dynawo log quoted on a failure has to name."""
+        curves, _, _ = _make_real_curves()
+        mock_sf.find_output_dir.return_value = Path("outputs")
+
+        output_dir, _ = curves._DynawoCurves__prepare_oc_validation(
+            Path("/work/WindFarm/PCS_RTE-I16z3/USetPointStep/AReactance"), "USetPointStep"
+        )
+
+        assert output_dir == Path("/output/WindFarm/PCS_RTE-I16z3/USetPointStep/AReactance")
 
 
 class TestSimulateOutcomeAssembly:
