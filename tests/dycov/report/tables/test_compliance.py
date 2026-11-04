@@ -51,7 +51,7 @@ def test_create_map_all_keys_present():
     assert table[0][2] in ("True", "\\textcolor{red}{ False }")
     assert table[3][0] == "Frequency remains within [49, 51] Hz"
     assert table[3][1].startswith("\\footnote")
-    assert table[4][0] == "Stator voltage within $\pm 5\%$ of setpoint"
+    assert table[4][0] == r"Stator voltage within $\pm 5\%$ of setpoint"
     assert table[10][0] == "$T_{10P}  - T_{clear} < 5 s$"
     assert table[-1][0] == "$T_{10P_{floor}} - T_{85U} < 2 s$"
 
