@@ -28,7 +28,7 @@ This script orchestrates automated runs of **dycov** to **validate models**, **v
 >
 > *   **Validation** — `dycov validate` for Wind / Photovoltaics / BESS
 > *   **Performance** — `dycov performance` for selected topologies and models
-> *   **Envelope Generation** — `dycov generate_gfm_envelopes` for GFM (Overdamped / Underdamped)
+> *   **Envelope Generation** — `dycov generate_gfm_envelopes` for GFM (Overdamped / Underdamped / Fusion)
 
 ***
 
@@ -139,6 +139,9 @@ Running with **no options** will:
         *   **PNG**: `../Results/overall_result_counts.png` (if Matplotlib available)
         *   **HTML**: `../Results/overall_result_counts.html` (if Plotly available)
     *   Prints totals and percentages to the log and announces file paths on the console.
+*   **Exit status**: a dycov run that fails is logged as `ERROR: exit code <n>: <command>`, and
+    the script exits with 1 once every phase and the summary have run, naming the phases that
+    failed. A verdict is not a failure: a non-compliant test still ends its run with 0.
 
 ***
 
@@ -170,7 +173,7 @@ tools/scripts/test_tool.sh --examples /home/marcos/project/examples
 
 ## 7) Troubleshooting & best practices
 
-*   The script uses `set -o errexit -o pipefail`; any failure causes a non-zero exit. Check `../Results/test_tool.log`.
+*   A failed run does not stop the others: the script exits with 1 at the end, as section 5 describes. Check `../Results/test_tool.log`.
 *   Provide a full path to `dynawo.sh` via `--launcher` if not on PATH.
 *   Keep Validation and Performance runs separate for clean logs; use `--remove` for reproducibility and version outputs via `--output`.
 
