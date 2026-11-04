@@ -169,6 +169,7 @@ class ModelSetup:
                     producer.s_nom,
                     producer.u_nom,
                     self._s_nref,
+                    self._technology(),
                 )
             if producer.get_zone() == 3:
                 xpu_r_factor = config.get_float("GridCode", "XPu_r_factor", 0.0)
@@ -203,6 +204,11 @@ class ModelSetup:
         self._owner.complete_unit_characteristics(line_xpu)
         return line_rpu, line_xpu
 
+    def _technology(self) -> str:
+        """SM, PPM or BESS: the capability specifications of the DTR give the reactances of the
+        grid by technology."""
+        return self._owner.get_producer().get_sim_type_str().rpartition("/")[2]
+
     def _zcc_voltage(self) -> float:
         """The voltage the short-circuit impedance Zcc = U²/Scc is computed with, in pu of Unom:
         Udim or Unom, as the revision of the DTR in use writes it."""
@@ -234,7 +240,11 @@ class ModelSetup:
         characteristics = {
             **self._owner.get_unit_characteristics(),
             "XFaultPu": generator_variables.calculate_fault_xpu(
-                abs(producer.p_max_pu) * -1, producer.s_nom, producer.u_nom, self._s_nref
+                abs(producer.p_max_pu) * -1,
+                producer.s_nom,
+                producer.u_nom,
+                self._s_nref,
+                self._technology(),
             ),
         }
         return value_registry.resolve_value_definition(
