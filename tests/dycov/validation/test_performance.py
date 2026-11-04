@@ -10,6 +10,7 @@
 """Unit tests for the electrical performance verification (PerformanceValidator)."""
 
 from pathlib import Path
+from types import SimpleNamespace
 
 import pandas as pd
 import pytest
@@ -21,6 +22,7 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_PPM,
 )
 from dycov.model.parameters import DisconnectionModel, Stability
+from dycov.validation.checks import NOT_COMPUTABLE
 from dycov.validation.performance import (
     GENERATOR_DISCONNECT_MSG,
     IEC_DISCONNECT_PROTECTION_MSG,
@@ -28,6 +30,7 @@ from dycov.validation.performance import (
     PerformanceValidator,
     _check_compliance,
     _check_timeline,
+    _combined_check,
     _is_disconnection_event,
 )
 
@@ -64,9 +67,10 @@ class RecordingConfig(DummyConfig):
 
 
 class DummyProducer:
-    def __init__(self, sim_type=ELECTRIC_PERFORMANCE_PPM, is_dynawo_model=True):
+    def __init__(self, sim_type=ELECTRIC_PERFORMANCE_PPM, is_dynawo_model=True, units=()):
         self._sim_type = sim_type
         self._is_dynawo_model = is_dynawo_model
+        self.generators = [SimpleNamespace(id=unit) for unit in units]
 
     def get_sim_type(self) -> int:
         return self._sim_type
@@ -116,10 +120,11 @@ def _make_validator(
     reference=None,
     sim_type=ELECTRIC_PERFORMANCE_PPM,
     is_dynawo_model=True,
+    units=(),
 ):
     return PerformanceValidator(
         curves_manager=DummyCurvesManager(calculated=calculated, reference=reference),
-        producer=DummyProducer(sim_type=sim_type, is_dynawo_model=is_dynawo_model),
+        producer=DummyProducer(sim_type=sim_type, is_dynawo_model=is_dynawo_model, units=units),
         thr_ss_tol=THR_SS_TOL,
         validations=validations or [],
         is_field_measurements=False,
@@ -178,6 +183,22 @@ def test_check_compliance_without_a_threshold_only_stores_the_value():
     assert results["metric"] == pytest.approx(0.75)
     assert "metric_check" not in results
     assert results["compliance"] is True
+
+
+@pytest.mark.parametrize(
+    "parts, expected",
+    [
+        ([True, True], True),
+        ([True, False], False),
+        ([True, NOT_COMPUTABLE], NOT_COMPUTABLE),
+        ([NOT_COMPUTABLE, False], False),
+        ([], NOT_COMPUTABLE),
+    ],
+)
+def test_combined_check_fails_on_a_failed_part_before_reporting_one_not_computable(
+    parts, expected
+):
+    assert _combined_check(parts) == expected
 
 
 def test_check_compliance_above_the_threshold_fails():
@@ -323,15 +344,45 @@ def test_run_common_tests_of_a_synchronous_machine_checks_the_internal_angle():
     assert pass_pi is True
 
 
-def test_check_theta_stability_without_internal_angles_is_stable():
+def test_check_theta_stability_without_internal_angles_is_not_computable(monkeypatch):
+    """#676: a synchronous machine whose curves leave out its internal angle was stable."""
+    logger = RecordingLogger()
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
     validator = _make_validator(calculated=_make_pdr_curves())
 
     stable_theta, first_stable_pos_theta, pass_pi = validator._check_theta_stability(THR_SS_TOL)
 
-    # Without generator internal angles the position defaults to the end of the simulation.
-    assert stable_theta is True
-    assert first_stable_pos_theta == 5
-    assert pass_pi is True
+    assert stable_theta == NOT_COMPUTABLE
+    assert pass_pi == NOT_COMPUTABLE
+    # The steady state is then that of P, Q and V alone.
+    assert first_stable_pos_theta == 0
+    assert logger.warnings == [
+        "The rotor stability cannot be checked without the internal angle of the units: "
+        "reported as N/A"
+    ]
+
+
+@pytest.mark.parametrize(
+    "angle, expected",
+    [([0.5] * 5, NOT_COMPUTABLE), ([0.5, 0.5, 0.5, 0.5, float("nan")], False)],
+    ids=["the other unit settles", "the other unit does not settle"],
+)
+def test_check_theta_stability_of_a_unit_without_its_internal_angle(monkeypatch, angle, expected):
+    """#676: a machine of the plant whose angle is left out must not pass for stable."""
+    logger = RecordingLogger()
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
+    validator = _make_validator(
+        calculated=_make_pdr_curves(G1_GEN_InternalAngle=angle), units=("G1", "G2")
+    )
+
+    stable_theta, _, pass_pi = validator._check_theta_stability(THR_SS_TOL)
+
+    assert stable_theta == expected
+    assert pass_pi == NOT_COMPUTABLE
+    assert (
+        "The rotor stability cannot be checked without G2_GEN_InternalAngle: reported as N/A"
+        in logger.warnings
+    )
 
 
 def test_check_theta_stability_of_an_unstable_internal_angle(monkeypatch):
@@ -389,7 +440,7 @@ def test_calculate_composed_times_measures_the_power_and_voltage_instants():
     )
     compliance_values = {}
 
-    validator._PerformanceValidator__calculate_composed_times(compliance_values, 1.0)
+    validator._PerformanceValidator__calculate_composed_times(compliance_values, 1.0, 1.0)
 
     # The 0.53 pu sample at t = 3 s is inside the 10% tube but outside the 5% one.
     assert compliance_values["time_5p"] == pytest.approx(2.0)
@@ -401,17 +452,35 @@ def test_calculate_composed_times_for_the_power_floor_at_85_percent_voltage():
     validator = _make_validator(validations=["time_10Pfloor_85U"], calculated=_make_pdr_curves())
     compliance_values = {}
 
-    validator._PerformanceValidator__calculate_composed_times(compliance_values, 1.0)
+    validator._PerformanceValidator__calculate_composed_times(compliance_values, 1.0, 1.0)
 
     assert compliance_values["time_85u"] == pytest.approx(1.0)
     assert compliance_values["time_10pfloor"] == pytest.approx(1.0)
+
+
+def test_calculate_composed_times_looks_for_the_dip_until_the_fault_clears():
+    """#682: the voltage of a field record may take a few samples to fall under 0.85 pu."""
+    curves = pd.DataFrame(
+        {
+            "time": [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            "BusPDR_BUS_Voltage": [1.0, 0.95, 0.9, 0.5, 0.6, 0.9, 1.0],
+            "BusPDR_BUS_ActivePower": [0.5] * 7,
+            "BusPDR_BUS_ReactivePower": [0.1] * 7,
+        }
+    )
+    validator = _make_validator(validations=["time_10Pfloor_85U"], calculated=curves)
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_composed_times(compliance_values, 1.0, 3.0)
+
+    assert compliance_values["time_85u"] == pytest.approx(4.0)
 
 
 def test_calculate_times_covers_the_simple_and_the_composed_instants():
     validator = _make_validator(validations=["time_5U", "time_5P"], calculated=_make_pdr_curves())
     compliance_values = {}
 
-    validator._PerformanceValidator__calculate_times(compliance_values, 1.0)
+    validator._PerformanceValidator__calculate_times(compliance_values, 1.0, 1.0)
 
     assert compliance_values["time_5u"] == pytest.approx(1.0)
     assert compliance_values["time_5p"] == pytest.approx(2.0)
@@ -421,9 +490,37 @@ def test_calculate_times_skips_the_disabled_validations():
     validator = _make_validator(calculated=_make_pdr_curves())
     compliance_values = {}
 
-    validator._PerformanceValidator__calculate_times(compliance_values, 1.0)
+    validator._PerformanceValidator__calculate_times(compliance_values, 1.0, 1.0)
 
     assert compliance_values == {}
+
+
+def test_calculate_times_keeps_the_band_of_each_time_check():
+    validator = _make_validator(
+        validations=["time_5U", "time_10P", "time_10Pfloor_85U"], calculated=_make_pdr_curves()
+    )
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_times(compliance_values, 1.0)
+
+    assert compliance_values["time_5U_band"] == pytest.approx((0.975, 1.025))
+    assert compliance_values["time_10P_band"] == pytest.approx((0.45, 0.55))
+    assert compliance_values["time_10Pfloor_band"] == (pytest.approx(0.45), None)
+
+
+def test_check_hands_the_bands_of_the_time_checks_to_the_figures(tmp_path):
+    validator = _make_validator(validations=["time_5U"], is_dynawo_model=False)
+    compliance_values = {
+        "is_invalid_test": False,
+        "time_5u": 1.0,
+        "time_5U_band": (0.975, 1.025),
+    }
+
+    results = validator._PerformanceValidator__check(
+        tmp_path, False, _make_stability(), 1.0, 1.15, True, compliance_values
+    )
+
+    assert results["time_5U_band"] == (0.975, 1.025)
 
 
 # ---------------------------------------------------------------------------
@@ -467,6 +564,157 @@ def test_calculate_avr_reports_the_generator_losing_its_setpoint():
 
     assert compliance_values["AVR_5_check"] is False
     assert compliance_values["AVR_5"] == pytest.approx(2.0)
+
+
+def test_calculate_avr_without_the_magnitude_the_avr_controls_is_not_computable(monkeypatch):
+    """#676: I8, whose only criterion is AVR_5, passed with no curve to check."""
+    logger = RecordingLogger()
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
+    validator = _make_validator(validations=["AVR_5"], calculated=_make_pdr_curves())
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_avr(compliance_values, 0.0)
+
+    assert compliance_values["AVR_5_check"] == NOT_COMPUTABLE
+    assert compliance_values["AVR_5"] == -1
+    assert compliance_values["AVR_5_crvs"] == []
+    assert len(logger.warnings) == 1
+    assert "MagnitudeControlledByAVRPu" in logger.warnings[0]
+
+
+def _without(curves: pd.DataFrame, *columns) -> pd.DataFrame:
+    return curves.drop(columns=list(columns))
+
+
+def test_calculate_avr_of_a_unit_without_its_setpoint_is_not_computable(monkeypatch):
+    logger = RecordingLogger()
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
+    tracking = [1.0, 1.0, 1.0, 1.0, 1.0]
+    validator = _make_validator(
+        validations=["AVR_5"],
+        calculated=_without(_make_avr_curves(tracking, tracking), "G2_GEN_VoltageSetpointPu"),
+    )
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_avr(compliance_values, 0.0)
+
+    assert compliance_values["AVR_5_check"] == NOT_COMPUTABLE
+    assert compliance_values["AVR_5_crvs"] == [tracking]
+    assert logger.warnings == [
+        "The voltage regulation cannot be checked without G2_GEN_VoltageSetpointPu: "
+        "reported as N/A"
+    ]
+
+
+def test_calculate_avr_of_a_unit_losing_its_setpoint_beside_one_without_it_fails():
+    validator = _make_validator(
+        validations=["AVR_5"],
+        calculated=_without(
+            _make_avr_curves([1.0, 1.0, 2.0, 1.0, 1.0], [1.0] * 5), "G2_GEN_VoltageSetpointPu"
+        ),
+    )
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_avr(compliance_values, 0.0)
+
+    assert compliance_values["AVR_5_check"] is False
+    assert compliance_values["AVR_5"] == pytest.approx(2.0)
+
+
+def test_calculate_avr_of_a_unit_left_out_of_the_curves_is_not_computable(monkeypatch):
+    """#676: the curves name the second unit by its other curves, not by its regulation."""
+    logger = RecordingLogger()
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
+    tracking = [1.0] * 5
+    curves = _without(
+        _make_avr_curves(tracking, tracking),
+        "G2_GEN_MagnitudeControlledByAVRPu",
+        "G2_GEN_VoltageSetpointPu",
+    ).assign(G2_GEN_NetworkFrequencyPu=[1.0] * 5)
+    validator = _make_validator(validations=["AVR_5"], calculated=curves, is_dynawo_model=False)
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_avr(compliance_values, 0.0)
+
+    assert compliance_values["AVR_5_check"] == NOT_COMPUTABLE
+    assert logger.warnings == [
+        "The voltage regulation cannot be checked without G2_GEN_MagnitudeControlledByAVRPu "
+        "and G2_GEN_VoltageSetpointPu: reported as N/A"
+    ]
+
+
+def test_calculate_avr_of_a_unit_of_the_model_without_its_curves_is_not_computable(monkeypatch):
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", RecordingLogger())
+    tracking = [1.0] * 5
+    curves = _without(
+        _make_avr_curves(tracking, tracking),
+        "G2_GEN_MagnitudeControlledByAVRPu",
+        "G2_GEN_VoltageSetpointPu",
+    )
+    validator = _make_validator(validations=["AVR_5"], calculated=curves, units=("G1", "G2"))
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_avr(compliance_values, 0.0)
+
+    assert compliance_values["AVR_5_check"] == NOT_COMPUTABLE
+
+
+def test_a_unit_the_dictionary_declares_with_no_curve_is_not_computable(monkeypatch):
+    """#676: leaving every curve of a unit blank in the dictionary must not leave it out."""
+    logger = RecordingLogger()
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
+    validator = _make_validator(
+        calculated=_make_pdr_curves(G1_GEN_InternalAngle=[0.5] * 5), is_dynawo_model=False
+    )
+    validator.set_declared_units({"G1", "G2"})
+
+    stable_theta, _, pass_pi = validator._check_theta_stability(THR_SS_TOL)
+
+    assert stable_theta == NOT_COMPUTABLE
+    assert pass_pi == NOT_COMPUTABLE
+    assert (
+        "The rotor stability cannot be checked without G2_GEN_InternalAngle: reported as N/A"
+        in logger.warnings
+    )
+
+
+def test_a_unit_whose_id_holds_gen_is_checked_on_its_curves(monkeypatch):
+    logger = RecordingLogger()
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
+    tracking = [1.0] * 5
+    curves = _make_pdr_curves(
+        SM_GEN_1_GEN_InternalAngle=[0.5] * 5,
+        SM_GEN_1_GEN_MagnitudeControlledByAVRPu=tracking,
+        SM_GEN_1_GEN_VoltageSetpointPu=tracking,
+    )
+    validator = _make_validator(validations=["AVR_5"], calculated=curves, is_dynawo_model=False)
+    compliance_values = {}
+
+    stable_theta, _, pass_pi = validator._check_theta_stability(THR_SS_TOL)
+    validator._PerformanceValidator__calculate_avr(compliance_values, 0.0)
+
+    assert stable_theta is True
+    assert pass_pi is True
+    assert compliance_values["AVR_5_check"] is True
+    assert logger.warnings == []
+
+
+def test_the_machines_of_the_network_are_not_units_of_the_producer(monkeypatch):
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", RecordingLogger())
+    tracking = [1.0] * 5
+    curves = _without(
+        _make_avr_curves(tracking, tracking),
+        "G2_GEN_MagnitudeControlledByAVRPu",
+        "G2_GEN_VoltageSetpointPu",
+    ).assign(
+        SyncCompensator_GEN_TSO_FrequencyHz=[50.0] * 5, SyncCompensator_GEN_FrequencyHz=[50.0] * 5
+    )
+    validator = _make_validator(validations=["AVR_5"], calculated=curves, is_dynawo_model=False)
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_avr(compliance_values, 0.0)
+
+    assert compliance_values["AVR_5_check"] is True
 
 
 def test_calculate_frequency_within_the_nominal_band():
@@ -530,6 +778,51 @@ def test_calculate_frequency_reports_the_separated_network_leaving_the_band():
     assert compliance_values["time_freq1"] == pytest.approx(2.0)
 
 
+def test_calculate_frequency_without_any_frequency_is_not_computable(monkeypatch):
+    logger = RecordingLogger()
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
+    validator = _make_validator(validations=["freq_1"], calculated=_make_pdr_curves())
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_frequency(compliance_values)
+
+    assert compliance_values["check_freq1"] == NOT_COMPUTABLE
+    assert compliance_values["time_freq1"] == -1
+    assert logger.warnings == [
+        "The frequency of the separated network cannot be checked without a frequency: "
+        "reported as N/A"
+    ]
+
+
+def test_calculate_frequency_falls_back_on_the_network_frequency_of_the_curves():
+    """#676: producer curves without the frequency of the units passed I10, although the
+    network frequency they carry sat at 51.5 Hz."""
+    validator = _make_validator(
+        validations=["freq_1"],
+        calculated=_make_pdr_curves(NetworkFrequencyPu=[1.0, 1.0, 1.03, 1.03, 1.03]),
+    )
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_frequency(compliance_values)
+
+    assert compliance_values["check_freq1"] is False
+    assert compliance_values["time_freq1"] == pytest.approx(2.0)
+
+
+def test_calculate_frequency_prefers_the_frequency_the_units_measure_to_the_network_one():
+    validator = _make_validator(
+        validations=["freq_1"],
+        calculated=_make_pdr_curves(
+            G1_GEN_NetworkFrequencyPu=[1.0] * 5, NetworkFrequencyPu=[1.0, 1.0, 1.03, 1.0, 1.0]
+        ),
+    )
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_frequency(compliance_values)
+
+    assert compliance_values["check_freq1"] is True
+
+
 def test_calculate_frequency_reads_f_nom_from_the_dynawo_section(monkeypatch):
     recording = RecordingConfig()
     monkeypatch.setattr(f"{PERFORMANCE_MODULE}.config", recording)
@@ -578,7 +871,35 @@ def test_calculate_others_keeps_the_worst_static_difference():
 
     validator._PerformanceValidator__calculate_others(compliance_values, 1.0)
 
-    assert compliance_values["static_diff"] == pytest.approx(0.002)
+    assert compliance_values["static_diffs"] == pytest.approx([0.001, 0.002])
+
+
+def test_calculate_others_static_diff_without_the_avr_curves_has_no_unit(monkeypatch):
+    """#676: I2 passed with a made-up 0.0 when the curves left out the AVR magnitude."""
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", RecordingLogger())
+    validator = _make_validator(validations=["static_diff"], calculated=_make_pdr_curves())
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_others(compliance_values, 1.0)
+
+    assert compliance_values["static_diffs"] == []
+
+
+def test_calculate_others_static_diff_of_a_unit_without_its_setpoint_is_not_computed(
+    monkeypatch,
+):
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", RecordingLogger())
+    validator = _make_validator(
+        validations=["static_diff"],
+        calculated=_without(
+            _make_avr_curves([1.0, 1.0, 1.0, 1.0, 1.001], [1.0] * 5), "G2_GEN_VoltageSetpointPu"
+        ),
+    )
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_others(compliance_values, 1.0)
+
+    assert compliance_values["static_diffs"] == [pytest.approx(0.001), None]
 
 
 def _make_injection_curves(active_current, reactive_current):
@@ -588,6 +909,72 @@ def _make_injection_curves(active_current, reactive_current):
             "G1_GEN_ReactiveCurrentNode2": reactive_current,
         }
     )
+
+
+def test_calculate_others_imax_reac_without_the_currents_is_not_computable(monkeypatch):
+    """#676: I5 passed when the curves left out the currents of the units."""
+    logger = RecordingLogger()
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
+    validator = _make_validator(validations=["imax_reac"], calculated=_make_pdr_curves())
+    validator.set_generators_imax({"G1": 1.0})
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_others(compliance_values, 1.0)
+
+    assert compliance_values["imax_reac_check"] == NOT_COMPUTABLE
+    assert compliance_values["imax_reac"] == -1
+    assert logger.warnings == [
+        "The reactive current priority cannot be checked without both currents of G1 "
+        "(ActiveCurrentNode2, ReactiveCurrentNode2): reported as N/A"
+    ]
+
+
+def test_calculate_others_imax_reac_of_a_unit_with_one_current_is_not_computable(monkeypatch):
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", RecordingLogger())
+    curves = _make_injection_curves([0.1, 0.1, 0.2, 0.1, 0.1], [0.0] * 5)
+    curves["G2_GEN_ActiveCurrentNode2"] = [0.1] * 5
+    validator = _make_validator(validations=["imax_reac"], calculated=curves)
+    validator.set_generators_imax({"G1": 1.0, "G2": 1.0})
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_others(compliance_values, 1.0)
+
+    assert compliance_values["imax_reac_check"] == NOT_COMPUTABLE
+
+
+def test_calculate_others_imax_reac_violated_beside_a_unit_with_one_current_fails(monkeypatch):
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", RecordingLogger())
+    curves = _make_injection_curves([0.2, 0.3, 0.4, 0.4, 0.4], [0.0] * 5)
+    curves["G2_GEN_ReactiveCurrentNode2"] = [0.1] * 5
+    validator = _make_validator(validations=["imax_reac"], calculated=curves)
+    validator.set_generators_imax({"G1": 0.2, "G2": 1.0})
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_others(compliance_values, 1.0)
+
+    assert compliance_values["imax_reac_check"] is False
+
+
+@pytest.mark.parametrize("model", [True, False], ids=["model", "curves"])
+def test_calculate_others_imax_reac_of_a_unit_left_out_of_the_curves_is_not_computable(
+    monkeypatch, model
+):
+    """#676: in a plant of several units, leaving out the currents of the failing one must
+    not make the others pass for it."""
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", RecordingLogger())
+    curves = _make_injection_curves([0.1, 0.1, 0.2, 0.1, 0.1], [0.0] * 5)
+    validator = _make_validator(
+        validations=["imax_reac"],
+        calculated=curves,
+        is_dynawo_model=model,
+        units=("G1", "G2") if model else (),
+    )
+    validator.set_generators_imax({"G1": 1.0, "G2": 1.0})
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_others(compliance_values, 1.0)
+
+    assert compliance_values["imax_reac_check"] == NOT_COMPUTABLE
 
 
 def test_calculate_others_imax_reac_without_saturation():
@@ -618,10 +1005,49 @@ def test_calculate_others_imax_reac_detects_the_active_current_priority_violatio
     assert compliance_values["imax_reac"] == pytest.approx(1.0)
 
 
+def test_calculate_others_imax_reac_without_the_maximum_current_says_which_one_is_missing(
+    monkeypatch,
+):
+    logger = RecordingLogger()
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", logger)
+    validator = _make_validator(
+        validations=["imax_reac"],
+        calculated=_make_injection_curves([0.2, 0.3, 0.4, 0.4, 0.4], [0.0] * 5),
+    )
+    validator.set_generators_imax({})
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_others(compliance_values, 1.0)
+
+    assert compliance_values["imax_reac_check"] == "N/A"
+    assert compliance_values["imax_reac"] == -1
+    assert len(logger.warnings) == 1
+    assert "G1_GEN_MaxInjectedCurrentPu" in logger.warnings[0]
+
+
+def test_calculate_others_imax_reac_still_fails_a_generator_whose_maximum_is_declared(
+    monkeypatch,
+):
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", RecordingLogger())
+    curves = _make_injection_curves([0.2, 0.3, 0.4, 0.4, 0.4], [0.0] * 5)
+    curves["G2_GEN_ActiveCurrentNode2"] = [0.1] * 5
+    curves["G2_GEN_ReactiveCurrentNode2"] = [0.0] * 5
+    validator = _make_validator(validations=["imax_reac"], calculated=curves)
+    validator.set_generators_imax({"G1": 0.2})
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_others(compliance_values, 1.0)
+
+    assert compliance_values["imax_reac_check"] is False
+    assert compliance_values["imax_reac"] == pytest.approx(1.0)
+
+
 def test_calculate_gathers_every_enabled_validation():
     validator = _make_validator(
         validations=["time_5U", "AVR_5", "freq_1"],
-        calculated=_make_avr_curves([1.0] * 5, [1.0] * 5),
+        calculated=_make_avr_curves([1.0] * 5, [1.0] * 5).assign(
+            G1_GEN_NetworkFrequencyPu=[1.0] * 5
+        ),
     )
 
     compliance_values = validator._PerformanceValidator__calculate(
@@ -648,6 +1074,25 @@ def test_calculate_measures_the_response_on_the_curve_the_event_drives():
     assert list(compliance_values["calc_settling_tube"]) == ["BusPDR_BUS_ReactivePower"]
     assert compliance_values["calc_reaction_time"] == pytest.approx(1.0)
     assert compliance_values["calc_rise_time"] == pytest.approx(1.0)
+
+
+@pytest.mark.parametrize("validation", ["time_10Pfloor_85U", "time_5P_85U", "time_10P_85U"])
+def test_calculate_looks_for_the_dip_until_the_fault_clears(validation):
+    curves = pd.DataFrame(
+        {
+            "time": [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            "BusPDR_BUS_Voltage": [1.0, 0.95, 0.9, 0.5, 0.6, 0.9, 1.0],
+            "BusPDR_BUS_ActivePower": [0.5] * 7,
+            "BusPDR_BUS_ReactivePower": [0.1] * 7,
+        }
+    )
+    validator = _make_validator(validations=[validation], calculated=curves)
+
+    compliance_values = validator._PerformanceValidator__calculate(
+        {"connect_to": "NetworkFrequencyPu"}, 1.0, 3.0
+    )
+
+    assert compliance_values["time_85u"] == pytest.approx(4.0)
 
 
 def test_calculate_measures_no_response_without_the_curve_the_event_drives():
@@ -971,7 +1416,7 @@ def test_check_others_static_diff_within_the_threshold():
     results = {"compliance": True}
 
     validator._PerformanceValidator__check_others(
-        results, _make_stability(), False, {"static_diff": 0.001}
+        results, _make_stability(), False, {"static_diffs": [0.001]}
     )
 
     # The static difference is reported as a percentage against a 0.2% threshold.
@@ -985,11 +1430,34 @@ def test_check_others_static_diff_above_the_threshold():
     results = {"compliance": True}
 
     validator._PerformanceValidator__check_others(
-        results, _make_stability(), False, {"static_diff": 0.01}
+        results, _make_stability(), False, {"static_diffs": [0.001, 0.01]}
     )
 
     assert results["static_diff"] == pytest.approx(1.0)
     assert results["static_diff_check"] is False
+    assert results["compliance"] is False
+
+
+@pytest.mark.parametrize(
+    "static_diffs, expected_value, expected_check",
+    [
+        ([], -1, NOT_COMPUTABLE),
+        ([0.001, None], 0.1, NOT_COMPUTABLE),
+        ([0.01, None], 1.0, False),
+    ],
+)
+def test_check_others_static_diff_of_units_without_their_curves(
+    static_diffs, expected_value, expected_check
+):
+    validator = _make_validator(validations=["static_diff"])
+    results = {"compliance": True}
+
+    validator._PerformanceValidator__check_others(
+        results, _make_stability(), False, {"static_diffs": static_diffs}
+    )
+
+    assert results["static_diff"] == pytest.approx(expected_value)
+    assert results["static_diff_check"] == expected_check
     assert results["compliance"] is False
 
 
@@ -1000,6 +1468,25 @@ def test_check_others_stabilized_of_a_synchronous_machine_requires_the_internal_
     validator._PerformanceValidator__check_others(results, _make_stability(theta=False), False, {})
 
     assert results["stabilized"] is False
+    assert results["compliance"] is False
+
+
+@pytest.mark.parametrize(
+    "stability, expected",
+    [
+        (Stability(True, True, True, NOT_COMPUTABLE, NOT_COMPUTABLE), NOT_COMPUTABLE),
+        (Stability(True, False, True, NOT_COMPUTABLE, NOT_COMPUTABLE), False),
+    ],
+)
+def test_check_others_stabilized_of_a_synchronous_machine_without_its_internal_angle(
+    stability, expected
+):
+    validator = _make_validator(validations=["stabilized"])
+    results = {"compliance": True}
+
+    validator._PerformanceValidator__check_others(results, stability, False, {})
+
+    assert results["stabilized"] == expected
     assert results["compliance"] is False
 
 
@@ -1028,6 +1515,18 @@ def test_check_others_imax_reac():
     assert results["compliance"] is False
 
 
+def test_check_others_imax_reac_not_computable_is_reported_and_not_compliant():
+    validator = _make_validator(validations=["imax_reac"])
+    results = {"compliance": True}
+
+    validator._PerformanceValidator__check_others(
+        results, _make_stability(), True, {"imax_reac": -1, "imax_reac_check": "N/A"}
+    )
+
+    assert results["imax_reac_check"] == "N/A"
+    assert results["compliance"] is False
+
+
 def test_check_others_avr_and_frequency():
     validator = _make_validator(validations=["AVR_5", "freq_1"])
     results = {"compliance": True}
@@ -1048,6 +1547,28 @@ def test_check_others_avr_and_frequency():
     assert results["AVR_5_crvs"] == [[1.0, 1.0]]
     assert results["freq1"] == pytest.approx(0.1)
     assert results["freq1_check"] is False
+    assert results["compliance"] is False
+
+
+@pytest.mark.parametrize(
+    "validation, compliance_values",
+    [
+        ("imax_reac", {"imax_reac": -1, "imax_reac_check": NOT_COMPUTABLE}),
+        ("AVR_5", {"AVR_5_check": NOT_COMPUTABLE, "AVR_5": -1, "AVR_5_crvs": []}),
+        ("freq_1", {"time_freq1": -1, "check_freq1": NOT_COMPUTABLE}),
+    ],
+)
+def test_check_others_a_check_not_computable_is_reported_and_not_compliant(
+    validation, compliance_values
+):
+    validator = _make_validator(validations=[validation])
+    results = {"compliance": True}
+
+    validator._PerformanceValidator__check_others(
+        results, _make_stability(), True, compliance_values
+    )
+
+    assert NOT_COMPUTABLE in results.values()
     assert results["compliance"] is False
 
 
@@ -1120,6 +1641,23 @@ def test_validate_a_synchronous_machine_includes_the_internal_angle(tmp_path):
     assert results["reference_curves"] is validator._get_reference_curves()
 
 
+def test_validate_a_synchronous_machine_without_its_internal_angle_is_not_compliant(
+    monkeypatch, tmp_path
+):
+    """#676: the rotor stability of the producer curves without the angle was reported True."""
+    monkeypatch.setattr(f"{PERFORMANCE_MODULE}.dycov_logging", RecordingLogger())
+    validator = _make_validator(
+        validations=["stabilized"],
+        calculated=_make_pdr_curves(active_power=[0.5, 0.5, 0.1, 0.5, 0.5]),
+        sim_type=ELECTRIC_PERFORMANCE_SM,
+    )
+
+    results = validator.validate("oc", tmp_path, "outputs", VALIDATE_EVENT_PARAMS)
+
+    assert results["stabilized"] == NOT_COMPUTABLE
+    assert results["compliance"] is False
+
+
 def test_validate_reports_a_power_park_module_that_never_settles_as_not_stabilized(tmp_path):
     validator = _make_validator(
         validations=["stabilized"],
@@ -1174,3 +1712,23 @@ def test_get_measurement_names():
         "BusPDR_BUS_ReactivePower",
         "BusPDR_BUS_Voltage",
     ]
+
+
+# ---------------------------------------------------------------------------
+# Values that are not finite
+# ---------------------------------------------------------------------------
+
+
+def test_a_current_that_is_not_finite_breaks_the_reactive_priority():
+    """#675: a NaN current used to count as zero, which kept the priority."""
+    validator = _make_validator(
+        validations=["imax_reac"],
+        calculated=_make_injection_curves([0.1] * 5, [0.0, 0.0, float("nan"), 0.0, 0.0]),
+    )
+    validator.set_generators_imax({"G1": 1.0})
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_others(compliance_values, 1.0)
+
+    assert compliance_values["imax_reac_check"] is False
+    assert compliance_values["imax_reac"] == pytest.approx(2.0)

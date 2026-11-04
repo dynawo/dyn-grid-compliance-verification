@@ -17,7 +17,7 @@ from dycov.configuration.cfg import config
 from dycov.logging import dycov_logging
 from dycov.validation import compared_curves
 
-# when magnitudes are smaller than atol, switch to absolute error
+# Magnitudes under it count as zero, and a time check allows at least this deviation
 ATOL = 1.0e-6
 # Threshold below which relative tolerance becomes meaningless
 TUBE_TARGET_THRESHOLD = 0.01
@@ -38,10 +38,8 @@ def get_ss_tolerance() -> float:
 
 
 # Absolute tube for small targets avoids unrealistic relative tolerances near zero
-def _show_error(calculated_value: float, reference_value: float, rtol: float, atol: float) -> bool:
-    if rtol * max(abs(calculated_value), abs(reference_value)) > atol and reference_value != 0.0:
-        return True
-    return False
+def _show_error(reference_value: float, rtol: float, atol: float) -> bool:
+    return rtol * abs(reference_value) > atol and reference_value != 0.0
 
 
 def _compute_tube(target: float, percent: float, step: float = 0.0) -> tuple[float, float]:
@@ -84,14 +82,11 @@ def check_time(
         True if the calculated time is within the tolerances of the reference time, False otherwise
 
     """
-    # when magnitudes are smaller than atol, switch to absolute error
-    time_check = math.isclose(
-        calculated_time,
-        reference_time,
-        rel_tol=rtol,
-        abs_tol=atol,
-    )
-    if _show_error(calculated_time, reference_time, rtol, atol):
+    # The report shows the error relative to the reference wherever the verdict judges it so
+    deviation = abs(calculated_time - reference_time)
+    allowed = max(rtol * abs(reference_time), atol)
+    time_check = deviation <= allowed or math.isclose(deviation, allowed)
+    if _show_error(reference_time, rtol, atol):
         return 100 * (abs(calculated_time - reference_time) / reference_time), time_check
     else:
         return "-", time_check
@@ -288,6 +283,65 @@ def get_static_diff(primary_voltages: list, voltage_setpoint: list) -> float:
         return math.fabs((end_val - cons_val) / cons_val)
 
 
+def step_band(percent: float, curve: list) -> tuple[float, float]:
+    """The band a curve settles in after a step: a percentage of the change it made, around its
+    final value, or that percentage in pu when it barely changed.
+
+    Parameters
+    ----------
+    percent: float
+        Percentage of the change
+    curve: list
+        List of values that make up the curve
+
+    Returns
+    -------
+    tuple[float, float]
+        The lower and the upper limit of the band
+    """
+    change = curve[-1] - curve[0]
+    delta = abs(percent) if abs(change) < ATOL else abs(percent * change)
+    return curve[-1] - delta, curve[-1] + delta
+
+
+def final_value_band(percent: float, curve: list) -> tuple[float, float]:
+    """The band a curve settles in around its final value: a percentage of that value, or an
+    absolute tolerance when it is close to zero.
+
+    Parameters
+    ----------
+    percent: float
+        Percentage of the final value
+    curve: list
+        List of values that make up the curve
+
+    Returns
+    -------
+    tuple[float, float]
+        The lower and the upper limit of the band
+    """
+    return _compute_tube(curve[-1], percent)
+
+
+def floor_band(percent: float, curve: list) -> tuple[float | None, float | None]:
+    """The side of the final value band that faces zero, the only one a floor bounds.
+
+    Parameters
+    ----------
+    percent: float
+        Percentage of the final value
+    curve: list
+        List of values that make up the curve
+
+    Returns
+    -------
+    tuple[float | None, float | None]
+        The lower and the upper limit of the band, None on the side it does not bound
+    """
+    lower, upper = final_value_band(percent, curve)
+    return (lower, None) if curve[-1] >= 0 else (None, upper)
+
+
 def get_txu_relative(percent: float, time: list, curve: list, sim_t_event_end: float) -> float:
     """Gets the time when the curve reaches a value equivalent to a percentage of the
     difference between the end and the initial value.
@@ -311,14 +365,7 @@ def get_txu_relative(percent: float, time: list, curve: list, sim_t_event_end: f
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
 
-    # Get the tube
-    mean_val = curve[-1] - curve[0]
-    if abs(mean_val) < ATOL:
-        mean_val_min = curve[-1] - abs(percent)
-        mean_val_max = curve[-1] + abs(percent)
-    else:
-        mean_val_max = curve[-1] + abs(percent * mean_val)
-        mean_val_min = curve[-1] - abs(percent * mean_val)
+    mean_val_min, mean_val_max = step_band(percent, curve)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
@@ -354,9 +401,7 @@ def get_txp(percent: float, time: list, curve: list, sim_t_event_end: float) -> 
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
 
-    # Get the tube
-    mean_val = curve[-1]
-    mean_val_min, mean_val_max = _compute_tube(mean_val, percent)
+    mean_val_min, mean_val_max = final_value_band(percent, curve)
 
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
@@ -368,12 +413,6 @@ def get_txp(percent: float, time: list, curve: list, sim_t_event_end: float) -> 
     else:
         ret_val = time[pos] - sim_t_event_end
     return ret_val
-
-
-def _short_of_target(value: float, target: float, tube: tuple[float, float]) -> bool:
-    """Whether value still lies between zero and the tube around target."""
-    tube_min, tube_max = tube
-    return value < tube_min if target >= 0 else value > tube_max
 
 
 def get_txpfloor(percent: float, time: list, curve: list, sim_t_event_end: float) -> float:
@@ -401,13 +440,12 @@ def get_txpfloor(percent: float, time: list, curve: list, sim_t_event_end: float
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
 
-    # Get the tube
-    mean_val = curve[-1]
-    tube = _compute_tube(mean_val, percent)
-
+    lower, upper = floor_band(percent, curve)
     for i in range(len(curve)):
         pos = len(curve) - (i + 1)
-        if _short_of_target(curve[pos], mean_val, tube):
+        if (lower is not None and curve[pos] < lower) or (
+            upper is not None and curve[pos] > upper
+        ):
             break
 
     if time[pos] < sim_t_event_end:
@@ -417,24 +455,33 @@ def get_txpfloor(percent: float, time: list, curve: list, sim_t_event_end: float
     return ret_val
 
 
-def get_txu(threshold: float, time: list, curve: list, sim_t_event_end: float) -> float:
-    """Gets the time when the curve reaches a given threshold.
+def get_txu(
+    threshold: float,
+    time: list,
+    curve: list,
+    sim_t_event_end: float,
+    sim_t_event_clear: float | None = None,
+) -> float:
+    """Gets the time the curve takes, from the event, to get back to the threshold after the
+    event took it below; 0 when the event leaves it above, whatever undershoot follows.
 
     Parameters
     ----------
     threshold: float
-        Threshold that the curve must reach
+        Threshold that the curve must get back to
     time: list
         List of time instants that make up the curve
     curve: list
         List of values that make up the curve
     sim_t_event_end: float
         Instant of time when the event is triggered
+    sim_t_event_clear: float | None
+        Instant of time when the event ends, the instant it is triggered by default
 
     Returns
     -------
     float
-        Time when the percent is reached after the event
+        Time, from the event, when the curve is back to the threshold
     """
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
@@ -443,22 +490,25 @@ def get_txu(threshold: float, time: list, curve: list, sim_t_event_end: float) -
     while sim_t_event_end > time[pos_t_event] and pos_t_event < len(time) - 1:
         pos_t_event += 1
 
-    # Cut list values
-    time = time[pos_t_event - 1 :]
-    curve = curve[pos_t_event - 1 :]
+    pos_t_clear = pos_t_event
+    clear = sim_t_event_end if sim_t_event_clear is None else sim_t_event_clear
+    while clear > time[pos_t_clear] and pos_t_clear < len(time) - 1:
+        pos_t_clear += 1
 
-    pos = 0
-    while pos < len(curve) and abs(curve[pos]) < threshold:
-        pos += 1
+    # Dynawo writes the discontinuity of the event a few microseconds before its instant, so the
+    # sample before the event may already hold the curve under the threshold; on a regular grid
+    # that sample is still the one before the event, above it
+    first = max(pos_t_event - 1, 0)
+    below = next(
+        (pos for pos in range(first, pos_t_clear + 1) if abs(curve[pos]) < threshold), None
+    )
+    if below is None:
+        return 0
 
-    if pos == len(curve):
-        pos = len(curve) - 1
-
-    if time[pos] < sim_t_event_end:
-        ret_val = 0
-    else:
-        ret_val = time[pos] - sim_t_event_end
-    return ret_val
+    recovered = next(
+        (pos for pos in range(below, len(curve)) if abs(curve[pos]) >= threshold), len(curve) - 1
+    )
+    return max(time[recovered] - sim_t_event_end, 0)
 
 
 def check_generator_imax(
@@ -498,7 +548,8 @@ def check_generator_imax(
     active = np.abs(np.asarray(active_current_at_converter, dtype=float))
     reactive_squared = np.maximum(current**2 - active**2, 0.0)
     room = np.sqrt(np.maximum(imax**2 - reactive_squared, 0.0))
-    exceeded = np.nonzero(active > room + TOL)[0]
+    invalid = ~(np.isfinite(current) & np.isfinite(active))
+    exceeded = np.nonzero(invalid | (active > room + TOL))[0]
     if len(exceeded) == 0:
         return -1, True
     return time[exceeded[0]], False

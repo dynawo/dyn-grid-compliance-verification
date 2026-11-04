@@ -420,3 +420,44 @@ def test_obtain_simulated_curve_with_unfilled_event_start_names_the_dictionary(
 
     assert "sim_t_event_start" in str(unfilled_error.value)
     assert _DICT_NAME in str(unfilled_error.value)
+
+
+class _EventConfig(DummyConfig):
+    """The options of the event of one test, as the configuration serves them."""
+
+    def __init__(self, connect_event_to: str):
+        self._connect_event_to = connect_event_to
+
+    def get_value(self, section: str, key: str):
+        if key == "connect_event_to":
+            return self._connect_event_to
+        if key == "setpoint_step_value":
+            return "step"
+        return super().get_value(section, key)
+
+    def has_option(self, section: str, key: str) -> bool:
+        return key == "setpoint_step_value"
+
+
+@pytest.mark.parametrize(
+    "connect_event_to, scaled",
+    [
+        ("VoltageSetpointPu", False),
+        ("NetworkFrequencyPu", False),
+        ("ActivePowerSetpointPu", True),
+        ("ReactivePowerSetpointPu", True),
+    ],
+)
+def test_the_step_of_imported_curves_is_in_the_base_the_curves_are_compared_in(
+    monkeypatch, connect_event_to, scaled
+):
+    monkeypatch.setattr(f"{_IC}.config", _EventConfig(connect_event_to))
+    producer = DummyProducer()
+    producer.s_nom = 4.0
+    imported_curves = ImportedCurves(producer)
+    monkeypatch.setattr(imported_curves, "obtain_value", lambda definition, origin=None: 0.01)
+
+    event = imported_curves._ImportedCurves__process_event_parameters(_PCS, _BM, _OC, 20.0, 0.0)
+
+    assert event["connect_to"] == connect_event_to
+    assert event["step_value"] == pytest.approx(0.01 * 100.0 / 4.0 if scaled else 0.01)

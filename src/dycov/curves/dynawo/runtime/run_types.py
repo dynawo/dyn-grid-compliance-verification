@@ -20,6 +20,8 @@ class DynawoRunInputs:
     generators: List[Any]
     s_nom: float
     s_nref: float
+    zone: int = 0
+    """The zone a model validation runs in, whose outputs name its connection bus."""
 
 
 @dataclass

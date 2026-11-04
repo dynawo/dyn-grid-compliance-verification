@@ -9,6 +9,8 @@
 #
 
 import configparser
+import os
+import uuid
 from pathlib import Path
 
 from lxml import etree
@@ -236,21 +238,22 @@ def _get_bess_model_file_template(zone: str) -> str:
         )
 
 
-def _get_model_curves_template(xfmrs: list, zone: str, gens: list) -> str:
-    curves_dictionary = (
-        "[Curves-Dictionary] \n"
-        "time = \n"
-        "NetworkFrequencyPu = \n"
-        "# To represent a signal that is in raw abc three-phase form, the affected signal must "
-        "be tripled \n"
-        "# and the suffixes _a, _b and _c must be added as in the following example: \n"
-        "#    SignalName_a = \n"
-        "#    SignalName_b = \n"
-        "#    SignalName_c = \n"
-    )
+_MODEL_CURVES_DICTIONARY = (
+    "[Curves-Dictionary] \n"
+    "time = \n"
+    "NetworkFrequencyPu = \n"
+    "# To represent a signal that is in raw abc three-phase form, the affected signal must "
+    "be tripled \n"
+    "# and the suffixes _a, _b and _c must be added as in the following example: \n"
+    "#    SignalName_a = \n"
+    "#    SignalName_b = \n"
+    "#    SignalName_c = \n"
+)
 
+
+def _get_model_zone_curves_template(xfmrs: list, zone: str, gens: list) -> str:
     zone_number = 1 if zone == "Zone1" else 3
-    curves_dictionary += (
+    curves_dictionary = (
         f"\n\n# Wind Turbines or PV Arrays in {zone} \n[Curves-Dictionary-{zone}] \n"
     )
     for name in requested_curves.for_zone(
@@ -339,32 +342,71 @@ def _copy_zone1_files(dict_files: list, curves_path: Path, target: str) -> None:
         manage_files.copy_file(dict_file, curves_path / target / dict_file.name)
 
 
+_LEFT_TO_COMPLETE = "# Generated from the model: name the file of the curves of each test"
+
+
+def is_left_to_complete(index: Path) -> bool:
+    """Whether an index of reference curves is still the one generated in a delivery, which
+    names the file of no test."""
+    lines = index.read_text().splitlines()
+    if not lines or lines[0] != _LEFT_TO_COMPLETE:
+        return False
+    parser = configparser.ConfigParser()
+    parser.optionxform = str
+    parser.read_string("\n".join(lines))
+    return not any(value.strip() for _, value in parser.items("Curves-Files"))
+
+
+def _write_model_index(unit_path: Path, zones: list, delivery: bool) -> None:
+    """Writes the index of the reference curves of one unit, for each zone whose tests it
+    records: the Zone 3, the Zone 1, or both when the unit of the Zone 1 has the name of the
+    Zone 3 one, as they then share the directory. In a delivery, an index already there is the
+    producer's and stays as it is, and the one written is marked as left to complete. The other
+    tests of the run read the index as it is written, so it is written beside it and only then
+    takes its place, whole."""
+    index = unit_path / "CurvesFiles.ini"
+    if delivery and index.exists():
+        return
+    unit_path.mkdir(parents=True, exist_ok=True)
+    written = index.with_name(f".{index.name}.{uuid.uuid4().hex}")
+    try:
+        with open(written, "w") as f:
+            if delivery:
+                f.write(f"{_LEFT_TO_COMPLETE}\n")
+            f.write("[Curves-Files]\n")
+            f.write("".join(tests for tests, _ in zones))
+            f.write("\n\n")
+            f.write(_MODEL_CURVES_DICTIONARY)
+            f.write("".join(curves for _, curves in zones))
+        os.replace(written, index)
+    finally:
+        written.unlink(missing_ok=True)
+
+
 def _get_model_templates(
     model_path: Path,
     curves_path: Path,
     template: str,
+    delivery: bool,
 ):
+    if template == "model_PPM":
+        file_template = _get_model_file_template
+    elif template == "model_BESS":
+        file_template = _get_bess_model_file_template
+
     zone = "Zone3"
     xfmrs = _get_xmfrs_models(model_path, zone, "Producer.dyd")
     z3_gens = _get_generator_models(model_path, template, zone, "Producer.dyd")
+    indices = {
+        "Producer": [(file_template(zone), _get_model_zone_curves_template(xfmrs, zone, z3_gens))]
+    }
 
-    if template == "model_PPM":
-        producer_curves_txt = _get_model_file_template(zone)
-    elif template == "model_BESS":
-        producer_curves_txt = _get_bess_model_file_template(zone)
-    curves_names_txt = _get_model_curves_template(xfmrs, zone, z3_gens)
-
-    with open(curves_path / "Producer" / "CurvesFiles.ini", "w") as f:
-        f.write("[Curves-Files]\n")
-        f.write(producer_curves_txt)
-        f.write("\n\n")
-        f.write(curves_names_txt)
-
-    preserve_producer_z1 = False
+    # The records of a delivery stay where the producer put them
+    preserve_producer_z1 = delivery
     dict_files = [
         dict_file
         for dict_file in (curves_path / "Producer").glob("*.[dD][iI][cC][tT]")
-        if dict_file.name.startswith("PCS_RTE-I16z1")
+        if dict_file.name.startswith("PCS_RTE-I16z1") and not delivery
     ]
 
     zone = "Zone1"
@@ -377,18 +419,12 @@ def _get_model_templates(
 
         z1_xfmrs = _get_xmfrs_models(model_path, zone, dyd_file.name)
         z1_gens = _get_generator_models(model_path, template, zone, dyd_file.name)
+        indices.setdefault(dyd_file.name.replace(".dyd", ""), []).append(
+            (file_template(zone), _get_model_zone_curves_template(z1_xfmrs, zone, z1_gens))
+        )
 
-        if template == "model_PPM":
-            producer_curves_txt = _get_model_file_template(zone)
-        elif template == "model_BESS":
-            producer_curves_txt = _get_bess_model_file_template(zone)
-        curves_names_txt = _get_model_curves_template(z1_xfmrs, zone, z1_gens)
-
-        with open(curves_path / dyd_file.name.replace(".dyd", "") / "CurvesFiles.ini", "w") as f:
-            f.write("[Curves-Files]\n")
-            f.write(producer_curves_txt)
-            f.write("\n\n")
-            f.write(curves_names_txt)
+    for unit, zones in indices.items():
+        _write_model_index(curves_path / unit, zones, delivery)
 
     if not preserve_producer_z1:
         for dict_file in dict_files:
@@ -399,6 +435,7 @@ def create_producer_curves(
     model_path: Path,
     curves_path: Path,
     template: str,
+    delivery: bool = False,
 ) -> None:
     """Create the curves file.
 
@@ -415,12 +452,16 @@ def create_producer_curves(
         * 'performance_BESS' if it is electrical performance for Storage Model
         * 'model_PPM' if it is model validation for Power Park Module Model
         * 'model_BESS' if it is model validation for Storage Model
+    delivery: bool
+        True when curves_path holds the reference curves the producer delivers: the indexes and
+        the records already there stay as they are, and the indexes written are marked as left
+        to complete. Only model validation writes into a delivery.
     """
 
     if template.startswith("performance"):
         _get_performance_templates(model_path, curves_path, template)
     elif template.startswith("model"):
-        _get_model_templates(model_path, curves_path, template)
+        _get_model_templates(model_path, curves_path, template, delivery)
 
 
 def check_curves(curves: Path) -> bool:

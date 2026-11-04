@@ -17,11 +17,12 @@ from dycov.core.global_variables import (
     ELECTRIC_PERFORMANCE_SM,
 )
 from dycov.core.validator import Validator
+from dycov.curves import naming
 from dycov.curves.manager import CurvesManager
 from dycov.logging import dycov_logging
 from dycov.model.parameters import Stability
 from dycov.model.producer import Producer
-from dycov.validation import common, compliance_list
+from dycov.validation import checks, common, compliance_list
 
 GENERATOR_DISCONNECT_MSG = "GENERATOR : disconnecting"
 LOAD_DISCONNECT_MSG = "LOAD : disconnecting"
@@ -39,6 +40,22 @@ def _check_compliance(
     if threshold is not None:
         results[results_name + "_check"] = results[results_name] < threshold
         results["compliance"] &= results[results_name + "_check"]
+
+
+def _combined_check(parts: list) -> bool | str:
+    """A check made of several: failed if one of them fails, otherwise not computable if one of
+    them cannot be computed or if there are none."""
+    if not parts:
+        return checks.NOT_COMPUTABLE
+    if not all(parts):
+        return False
+    return checks.NOT_COMPUTABLE if checks.NOT_COMPUTABLE in parts else True
+
+
+def _warn_not_computable(check: str, missing: str) -> None:
+    dycov_logging.get_logger("Performance").warning(
+        f"{check} cannot be checked without {missing}: reported as {checks.NOT_COMPUTABLE}"
+    )
 
 
 def _is_generator_disconnection_event(event: etree.Element):
@@ -97,7 +114,7 @@ class PerformanceValidator(Validator):
         self,
         thr_ss_tol: float,
         is_non_synchronous: bool,
-    ) -> tuple[bool, int, bool, int, bool, int, bool, int, bool]:
+    ) -> tuple[bool, int, bool, int, bool, int, bool | str, int, bool | str]:
         bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
         # Run stabilization test
         steady_v, first_steady_pos_v = common.is_stable(
@@ -143,13 +160,24 @@ class PerformanceValidator(Validator):
             pass_pi,
         )
 
-    def _check_theta_stability(self, thr_ss_tol: float) -> tuple[bool, int, bool]:
+    def _check_theta_stability(self, thr_ss_tol: float) -> tuple[bool | str, int, bool | str]:
         stable_theta = True
         first_stable_pos_theta = len(self._get_calculated_curve_by_name("time"))
         pass_pi = True
         internal_angle_keys = [
             key for key in self._get_calculated_curves().keys() if key.endswith("_InternalAngle")
         ]
+        missing = sorted(
+            f"{unit}_GEN_InternalAngle"
+            for unit in self.__units()
+            if f"{unit}_GEN_InternalAngle" not in internal_angle_keys
+        )
+        if not internal_angle_keys:
+            _warn_not_computable("The rotor stability", "the internal angle of the units")
+            return checks.NOT_COMPUTABLE, 0, checks.NOT_COMPUTABLE
+        if missing:
+            _warn_not_computable("The rotor stability", " and ".join(missing))
+
         for key in internal_angle_keys:
             gen_stable_theta, gen_first_stable_pos_theta = common.is_stable(
                 self.__curve_list("time"),
@@ -174,7 +202,17 @@ class PerformanceValidator(Validator):
                 "Theta has not met the success criterion"
             )
 
+        if missing:
+            stable_theta = _combined_check([stable_theta, checks.NOT_COMPUTABLE])
+            pass_pi = _combined_check([pass_pi, checks.NOT_COMPUTABLE])
         return stable_theta, first_stable_pos_theta, pass_pi
+
+    def __units(self) -> set:
+        """The generating units of the producer: those of its model, or those its curves name
+        or its curves dictionary declares, the machines of the network aside."""
+        if self._producer.is_dynawo_model():
+            return {generator.id for generator in self._producer.generators}
+        return naming.units_of(self._get_calculated_curves().columns) | self._declared_units
 
     def __calculate_simple_times(
         self,
@@ -189,6 +227,9 @@ class PerformanceValidator(Validator):
                 self.__curve_list(bus_pdr_voltage),
                 t_event_start,
             )
+            compliance_values["time_5U_band"] = common.step_band(
+                0.05, self.__curve_list(bus_pdr_voltage)
+            )
 
         if compliance_list.contains_key(["time_10U"], self._validations):
             compliance_values["time_10u"] = common.get_txu_relative(
@@ -196,6 +237,9 @@ class PerformanceValidator(Validator):
                 self.__curve_list("time"),
                 self.__curve_list(bus_pdr_voltage),
                 t_event_start,
+            )
+            compliance_values["time_10U_band"] = common.step_band(
+                0.10, self.__curve_list(bus_pdr_voltage)
             )
 
         if compliance_list.contains_key(["time_10Pfloor_clear"], self._validations):
@@ -205,11 +249,15 @@ class PerformanceValidator(Validator):
                 self.__curve_list("BusPDR_BUS_ActivePower"),
                 t_event_start,
             )
+            compliance_values["time_10Pfloor_band"] = common.floor_band(
+                0.1, self.__curve_list("BusPDR_BUS_ActivePower")
+            )
 
     def __calculate_composed_times(
         self,
         compliance_values: dict,
         t_event_start: float,
+        t_event_clear: float | None = None,
     ) -> dict:
         bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
         if compliance_list.contains_key(
@@ -221,6 +269,9 @@ class PerformanceValidator(Validator):
                 self.__curve_list("BusPDR_BUS_ActivePower"),
                 t_event_start,
             )
+            compliance_values["time_5P_band"] = common.final_value_band(
+                0.05, self.__curve_list("BusPDR_BUS_ActivePower")
+            )
 
         if compliance_list.contains_key(
             ["time_10P", "time_10P_85U", "time_10P_clear"], self._validations
@@ -231,6 +282,9 @@ class PerformanceValidator(Validator):
                 self.__curve_list("BusPDR_BUS_ActivePower"),
                 t_event_start,
             )
+            compliance_values["time_10P_band"] = common.final_value_band(
+                0.1, self.__curve_list("BusPDR_BUS_ActivePower")
+            )
 
         if compliance_list.contains_key(["time_5P_85U", "time_10P_85U"], self._validations):
             compliance_values["time_85u"] = common.get_txu(
@@ -238,6 +292,7 @@ class PerformanceValidator(Validator):
                 self.__curve_list("time"),
                 self.__curve_list(bus_pdr_voltage),
                 t_event_start,
+                t_event_clear,
             )
 
         if compliance_list.contains_key(["time_10Pfloor_85U"], self._validations):
@@ -246,6 +301,7 @@ class PerformanceValidator(Validator):
                 self.__curve_list("time"),
                 self.__curve_list(bus_pdr_voltage),
                 t_event_start,
+                t_event_clear,
             )
             compliance_values["time_10pfloor"] = common.get_txpfloor(
                 0.1,
@@ -253,14 +309,18 @@ class PerformanceValidator(Validator):
                 self.__curve_list("BusPDR_BUS_ActivePower"),
                 t_event_start,
             )
+            compliance_values["time_10Pfloor_band"] = common.floor_band(
+                0.1, self.__curve_list("BusPDR_BUS_ActivePower")
+            )
 
     def __calculate_times(
         self,
         compliance_values: dict,
         t_event_start: float,
+        t_event_clear: float | None = None,
     ):
         self.__calculate_simple_times(compliance_values, t_event_start)
-        self.__calculate_composed_times(compliance_values, t_event_start)
+        self.__calculate_composed_times(compliance_values, t_event_start, t_event_clear)
 
     def __get_filtered_columns(self, suffix: str) -> list:
         return [col for col in self._get_calculated_curves() if col.endswith(suffix)]
@@ -272,13 +332,12 @@ class PerformanceValidator(Validator):
     ):
         if compliance_list.contains_key(["AVR_5"], self._validations):
             AVR_5_crv = list()
-            AVR_5_check = True
+            AVR_5_checks = []
             AVR_5 = -1
-            filter_col = self.__get_filtered_columns("_GEN_MagnitudeControlledByAVRPu")
-            for curve_name in filter_col:
-                generator_id = curve_name.replace("_GEN_MagnitudeControlledByAVRPu", "")
-                magnitude_controlled_by_avr = generator_id + "_GEN_" + "MagnitudeControlledByAVRPu"
-                avr_setpoint = generator_id + "_GEN_" + "VoltageSetpointPu"
+            for magnitude_controlled_by_avr, avr_setpoint in self.__avr_curves():
+                if avr_setpoint is None:
+                    AVR_5_checks.append(checks.NOT_COMPUTABLE)
+                    continue
                 gen_AVR_5_check, gen_AVR_5 = common.get_AVR_x(
                     self.__curve_list("time"),
                     self.__curve_list(magnitude_controlled_by_avr),
@@ -286,42 +345,70 @@ class PerformanceValidator(Validator):
                     t_event_start,
                 )
                 AVR_5_crv.append(self.__curve_list(avr_setpoint))
-                AVR_5_check &= gen_AVR_5_check
+                AVR_5_checks.append(gen_AVR_5_check)
                 if gen_AVR_5 != -1:
                     AVR_5 = gen_AVR_5
-            compliance_values["AVR_5_check"] = AVR_5_check
+            compliance_values["AVR_5_check"] = _combined_check(AVR_5_checks)
             compliance_values["AVR_5"] = AVR_5
             compliance_values["AVR_5_crvs"] = AVR_5_crv
+
+    def __avr_curves(self) -> list[tuple[str, str | None]]:
+        """The magnitude the AVR of each unit controls and its setpoint, None when the curves do
+        not carry it; warns about what is missing, as the regulation cannot be checked without."""
+        suffix = "_GEN_MagnitudeControlledByAVRPu"
+        curves = self._get_calculated_curves()
+        units = self.__units() | {
+            magnitude[: -len(suffix)] for magnitude in self.__get_filtered_columns(suffix)
+        }
+        pairs = []
+        for unit in sorted(units):
+            magnitude, setpoint = f"{unit}{suffix}", f"{unit}_GEN_VoltageSetpointPu"
+            missing = [name for name in (magnitude, setpoint) if name not in curves]
+            if missing:
+                _warn_not_computable("The voltage regulation", " and ".join(missing))
+            pairs.append((magnitude, None if missing else setpoint))
+        if not pairs:
+            _warn_not_computable(
+                "The voltage regulation",
+                "the magnitude the AVR of a unit controls (MagnitudeControlledByAVRPu)",
+            )
+        return pairs
 
     def __calculate_frequency(
         self,
         compliance_values: dict,
     ):
         if compliance_list.contains_key(["freq_1"], self._validations):
-            check_freq1 = True
+            freq1_checks = []
             time_freq1 = -1
             f_nom = config.get_float("Dynawo", "f_nom", 50.0)
-            for frequency in self.__separated_network_frequencies(f_nom):
+            frequencies = self.__separated_network_frequencies(f_nom)
+            if not frequencies:
+                _warn_not_computable("The frequency of the separated network", "a frequency")
+            for frequency in frequencies:
                 gen_check_freq1, gen_time_freq1 = common.check_frequency(
                     1 / f_nom,
                     frequency,
                     self.__curve_list("time"),
                 )
-                check_freq1 &= gen_check_freq1
+                freq1_checks.append(gen_check_freq1)
                 if gen_time_freq1 != -1:
                     time_freq1 = gen_time_freq1
-            compliance_values["check_freq1"] = check_freq1
+            compliance_values["check_freq1"] = _combined_check(freq1_checks)
             compliance_values["time_freq1"] = time_freq1
 
     def __separated_network_frequencies(self, f_nom: float) -> list:
         """The frequency of the separated network, in pu of f_nom, which is what Fiche I10 bounds:
         that of the synchronous condenser when the test models one, as the frequency the units
-        measure jumps for a few milliseconds at the load step; the units' own otherwise."""
+        measure jumps for a few milliseconds at the load step; the units' own otherwise, or the
+        network frequency the curves carry when they give neither."""
         sources = (("_GEN_TSO_FrequencyHz", 1.0 / f_nom), ("_GEN_NetworkFrequencyPu", 1.0))
         for suffix, to_pu in sources:
             columns = self.__get_filtered_columns(suffix)
             if columns:
                 return [[value * to_pu for value in self.__curve_list(c)] for c in columns]
+        if naming.NETWORK_FREQUENCY in self._get_calculated_curves():
+            return [self.__curve_list(naming.NETWORK_FREQUENCY)]
         return []
 
     def __calculate_others(
@@ -339,24 +426,15 @@ class PerformanceValidator(Validator):
         )
 
         if compliance_list.contains_key(["static_diff"], self._validations):
-            max_static_diff = 0
-            filter_col = [
-                col
-                for col in self._get_calculated_curves()
-                if col.endswith("_GEN_MagnitudeControlledByAVRPu")
-            ]
-            for curve_name in filter_col:
-                generator_id = curve_name.replace("_GEN_MagnitudeControlledByAVRPu", "")
-                magnitude_controlled_by_avr = generator_id + "_GEN_" + "MagnitudeControlledByAVRPu"
-                avr_setpoint = generator_id + "_GEN_" + "VoltageSetpointPu"
-
-                static_diff = common.get_static_diff(
+            compliance_values["static_diffs"] = [
+                common.get_static_diff(
                     self.__curve_list(magnitude_controlled_by_avr),
                     self.__curve_list(avr_setpoint),
                 )
-                if max_static_diff < static_diff:
-                    max_static_diff = static_diff
-            compliance_values["static_diff"] = max_static_diff
+                if avr_setpoint is not None
+                else None
+                for magnitude_controlled_by_avr, avr_setpoint in self.__avr_curves()
+            ]
 
         if compliance_list.contains_key(["imax_reac"], self._validations):
             imax_reac = -1
@@ -372,13 +450,37 @@ class PerformanceValidator(Validator):
                 c.replace("_GEN_ReactiveCurrentNode2", ""): c
                 for c in self.__get_filtered_columns("_GEN_ReactiveCurrentNode2")
             }
+            units = (
+                self.__units()
+                | set(self._generators_imax)
+                | active_current.keys()
+                | reactive_current.keys()
+            )
+            incomplete = sorted(
+                unit
+                for unit in units
+                if unit not in active_current or unit not in reactive_current
+            )
+            if not units or incomplete:
+                _warn_not_computable(
+                    "The reactive current priority",
+                    f"both currents of {', '.join(incomplete) or 'a unit'} "
+                    "(ActiveCurrentNode2, ReactiveCurrentNode2)",
+                )
+                imax_reac_check = checks.NOT_COMPUTABLE
 
             # Columns names are expected to be in the format:
             #   - <generator_id>_GEN_ActiveCurrentNode2
             #   - <generator_id>_GEN_ReactiveCurrentNode2
             # so we can match them based on the generator_id extracted from the column name
             generator_ids = sorted(set(active_current.keys()) & set(reactive_current.keys()))
+            undeclared = []
             for generator_id in generator_ids:
+                imax = self._generators_imax.get(generator_id)
+                if imax is None:
+                    undeclared.append(generator_id)
+                    continue
+
                 ip = self.__curve_list(active_current[generator_id])
                 iq = self.__curve_list(reactive_current[generator_id])
 
@@ -395,11 +497,9 @@ class PerformanceValidator(Validator):
 
                 # I = sqrt(Ip² + Iq²), NaN where either component was None
                 current_magnitude = np.hypot(ip, iq)
-                # Replace NaN (originated from None values) with 0.0
-                current_magnitude = np.where(np.isnan(current_magnitude), 0.0, current_magnitude)
 
                 imax_gen_reac, imax_gen_reac_check = common.check_generator_imax(
-                    self._generators_imax.get(generator_id),
+                    imax,
                     t,
                     current_magnitude,
                     ip,
@@ -410,6 +510,16 @@ class PerformanceValidator(Validator):
                     imax_reac_check = False
                     if imax_reac == -1 or imax_gen_reac < imax_reac:
                         imax_reac = imax_gen_reac
+
+            if undeclared:
+                options = ", ".join(f"{gen}_GEN_MaxInjectedCurrentPu" for gen in undeclared)
+                dycov_logging.get_logger("PerformanceValidator").warning(
+                    "The reactive current priority cannot be checked without the maximum "
+                    f"injected current: declare {options} in the [Curves-Metadata] of the "
+                    "dictionary of the curves"
+                )
+                if imax_reac_check:
+                    imax_reac_check = checks.NOT_COMPUTABLE
 
             compliance_values["imax_reac"] = imax_reac
             compliance_values["imax_reac_check"] = imax_reac_check
@@ -468,7 +578,7 @@ class PerformanceValidator(Validator):
     ) -> dict:
         compliance_values = {}
 
-        self.__calculate_times(compliance_values, t_event_start)
+        self.__calculate_times(compliance_values, t_event_start, time_clear)
         self.__calculate_avr(compliance_values, t_event_start)
         self.__calculate_frequency(compliance_values)
         self.__calculate_others(compliance_values, t_event_start)
@@ -684,45 +794,45 @@ class PerformanceValidator(Validator):
         compliance_values: dict,
     ):
         if compliance_list.contains_key(["static_diff"], self._validations):
-            _check_compliance(
-                results,
-                compliance_values["static_diff"],
-                "static_diff",
-                0.2,
-                100,
+            percentages = [
+                None if static_diff is None else static_diff * 100
+                for static_diff in compliance_values["static_diffs"]
+            ]
+            computed = [percentage for percentage in percentages if percentage is not None]
+            results["static_diff"] = max(computed) if computed else -1
+            results["static_diff_check"] = _combined_check(
+                [
+                    checks.NOT_COMPUTABLE if percentage is None else percentage < 0.2
+                    for percentage in percentages
+                ]
             )
+            results["compliance"] &= results["static_diff_check"] is True
 
         if compliance_list.contains_key(["stabilized"], self._validations):
+            measured = [is_stable.p, is_stable.q, is_stable.v]
             if not is_non_synchronous:
-                stabilized = (
-                    is_stable.p
-                    and is_stable.q
-                    and is_stable.v
-                    and is_stable.theta
-                    and is_stable.pi
-                )
-            else:
-                stabilized = is_stable.p and is_stable.q and is_stable.v
+                measured += [is_stable.theta, is_stable.pi]
+            stabilized = _combined_check(measured)
 
             results["stabilized"] = stabilized
             results["stabilized_rotor_angle"] = not is_non_synchronous
-            results["compliance"] &= stabilized
+            results["compliance"] &= stabilized is True
 
         if compliance_list.contains_key(["imax_reac"], self._validations):
             results["imax_reac"] = compliance_values["imax_reac"]
             results["imax_reac_check"] = compliance_values["imax_reac_check"]
-            results["compliance"] &= results["imax_reac_check"]
+            results["compliance"] &= results["imax_reac_check"] is True
 
         if compliance_list.contains_key(["AVR_5"], self._validations):
             results["AVR_5_check"] = compliance_values["AVR_5_check"]
             results["AVR_5"] = compliance_values["AVR_5"]
             results["AVR_5_crvs"] = compliance_values["AVR_5_crvs"]
-            results["compliance"] &= results["AVR_5_check"]
+            results["compliance"] &= results["AVR_5_check"] is True
 
         if compliance_list.contains_key(["freq_1"], self._validations):
             results["freq1"] = compliance_values["time_freq1"]
             results["freq1_check"] = compliance_values["check_freq1"]
-            results["compliance"] &= results["freq1_check"]
+            results["compliance"] &= results["freq1_check"] is True
 
     def __check(
         self,
@@ -748,6 +858,11 @@ class PerformanceValidator(Validator):
             "calc_settling_time",
             "calc_ss_value",
             "calc_settling_tube",
+            "time_5U_band",
+            "time_10U_band",
+            "time_5P_band",
+            "time_10P_band",
+            "time_10Pfloor_band",
         ]:
             if key in compliance_values:
                 results[key] = compliance_values[key]
@@ -810,11 +925,13 @@ class PerformanceValidator(Validator):
                 'no_disconnection_gen': bool,  # No generator disconnection (if applicable)
                 'no_disconnection_load': bool,  # No load disconnection (if applicable)
                 'static_diff': float,  # Static difference (if applicable)
+                'static_diff_check': bool,  # Static difference check status (if applicable)
                 'stabilized': bool,  # Stabilization status (if applicable)
                 'stabilized_rotor_angle': bool,  # The rotor angle took part in the
                     stabilization status (if applicable)
                 'imax_reac': float,  # Maximum reactive current (if applicable)
-                'imax_reac_check': bool,  # Maximum reactive current check status (if applicable)
+                'imax_reac_check': bool | str,  # Maximum reactive current check status, N/A
+                    when it cannot be computed (if applicable)
                 'AVR_5_check': bool,  # Plant-level voltage regulation 5% check status
                     (if applicable)
                 'AVR_5': float,  # Plant-level voltage regulation 5% value (if applicable)
@@ -822,6 +939,8 @@ class PerformanceValidator(Validator):
                 'freq1': float,  # Frequency deviation (if applicable)
                 'freq1_check': bool,  # Frequency deviation check status (if applicable)
             }
+            A check whose curves are missing ('stabilized', 'static_diff_check',
+            'imax_reac_check', 'AVR_5_check', 'freq1_check') is 'N/A' instead of a bool.
         """
         # Validations common to all Pcs
         (
