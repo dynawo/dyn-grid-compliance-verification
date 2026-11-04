@@ -369,7 +369,7 @@ class Validation:
             with multiprocessing.Pool(
                 processes=num_processes,
                 initializer=worker_initializer,
-                initargs=(dycov_logging.get_handler_settings(),),
+                initargs=(dycov_logging.get_handler_settings(), config.run_layers()),
             ) as pool:
                 try:
                     results = pool.map(_validate_pcs, self._pcs_list)
