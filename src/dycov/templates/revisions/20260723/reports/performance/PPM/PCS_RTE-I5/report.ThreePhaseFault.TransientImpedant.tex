@@ -5,10 +5,16 @@
     (at a 1\% distance from the PDR). The PPM should remain connected and
     be able to supply the necessary reactive injection.
 
-    The fault of this test has an impedance of its own. The DTR gives it as
-    $X_{defaut} = 4$ pu, in the base $U_{dim}$ and $S_n$, and it chose that
-    value so that the voltage stays near 0.6 pu while the unit injects neither active
-    nor reactive current.
+    The fault of this test has an impedance of its own. The DTR gives its reactance
+    in the base $U_{dim}$ and $S_n$, so that the voltage at the PDR falls to
+    $0.6\,U_n$ while the unit injects neither active nor reactive current:
+    \[
+        X_{defaut} = \frac{\frac{3}{4}\,b}{\frac{U_\infty\,U_{dim}}{0.6\,U_n} - 1},
+        \qquad
+        U_\infty = \sqrt{1 + \left(\frac{3}{4}\,b\,\frac{P_{max\_unite}}{S_n}\right)^2}
+    \]
+    where $\frac{3}{4}\,b$ is the reactance of the four lines of the grid, and
+    $U_\infty$ the voltage of the infinite bus, in the same base.
 
     The grid model and its operational point is as in the following schematic:
     \begin{center}
