@@ -646,10 +646,14 @@ def create_curves(
     return build_output_curves(df_curves, df_curves_imported, generators, s_nom, s_nref)
 
 
-def _is_producer_curve(column: str, generators: list) -> bool:
-    return column.startswith("BusPDR_") or any(
-        column.startswith(f"{generator.id}_GEN_") for generator in generators
-    )
+def _producer_variable(column: str, generators: list) -> str | None:
+    """The variable a curve of the producer gives, after its PDR bus or its unit, whose id the
+    producer chooses; None for a curve of the network."""
+    if column.startswith("BusPDR_"):
+        return column[len("BusPDR_") :]
+    units = [f"{generator.id}_GEN_" for generator in generators]
+    prefixes = [unit for unit in units if column.startswith(unit)]
+    return column[len(max(prefixes, key=len)) :] if prefixes else None
 
 
 def _divergence_limit(
@@ -659,11 +663,12 @@ def _divergence_limit(
     network, whose loads and machines are not in the base of the producer, for the measurements
     at the PDR, in the base of the network, which the PDR curves repeat in that of the producer,
     or for one that may legitimately reach any: a setpoint, a frequency, a tap or an angle."""
-    if not _is_producer_curve(column, generators) or "Setpoint" in column:
+    variable = _producer_variable(column, generators)
+    if variable is None or "Setpoint" in variable:
         return None
-    if "Voltage" in column or "MagnitudeControlledByAVR" in column:
+    if "Voltage" in variable or "MagnitudeControlledByAVR" in variable:
         return voltage_limit
-    if "Power" in column or "Current" in column:
+    if "Power" in variable or "Current" in variable:
         return power_limit
     return None
 
