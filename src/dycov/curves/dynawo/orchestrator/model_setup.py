@@ -169,6 +169,7 @@ class ModelSetup:
                     producer.s_nom,
                     producer.u_nom,
                     self._s_nref,
+                    self._technology(),
                 )
             if producer.get_zone() == 3:
                 xpu_r_factor = config.get_float("GridCode", "XPu_r_factor", 0.0)
@@ -189,8 +190,7 @@ class ModelSetup:
         elif config.has_option(config_section, "Zcc"):
             self.has_line = True
             scc = generator_variables.get_scc(producer.u_nom)
-            udim = generator_variables.get_generator_u_dim(producer.u_nom)
-            uc_pu = udim / producer.u_nom
+            uc_pu = self._zcc_voltage()
             scc_pu = scc / self._s_nref
             ztanphi = config.get_float("GridCode", "Ztanphi", 1.0)
             if ztanphi < 1.0:
@@ -203,6 +203,20 @@ class ModelSetup:
 
         self._owner.complete_unit_characteristics(line_xpu)
         return line_rpu, line_xpu
+
+    def _technology(self) -> str:
+        """SM, PPM or BESS: the capability specifications of the DTR give the reactances of the
+        grid by technology."""
+        return self._owner.get_producer().get_sim_type_str().rpartition("/")[2]
+
+    def _zcc_voltage(self) -> float:
+        """The voltage the short-circuit impedance Zcc = U²/Scc is computed with, in pu of Unom:
+        Udim or Unom, as the revision of the DTR in use writes it."""
+        return value_registry.resolve_value_definition(
+            config.get_value("GridCode", "zcc_voltage"),
+            self._owner.get_unit_characteristics(),
+            origin=("GridCode", "zcc_voltage"),
+        )
 
     def _get_fault_xpu(self, pcs_name: str, bm_name: str, oc_name: str) -> float:
         """
@@ -226,7 +240,11 @@ class ModelSetup:
         characteristics = {
             **self._owner.get_unit_characteristics(),
             "XFaultPu": generator_variables.calculate_fault_xpu(
-                abs(producer.p_max_pu) * -1, producer.s_nom, producer.u_nom, self._s_nref
+                abs(producer.p_max_pu) * -1,
+                producer.s_nom,
+                producer.u_nom,
+                self._s_nref,
+                self._technology(),
             ),
         }
         return value_registry.resolve_value_definition(

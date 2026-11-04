@@ -289,9 +289,10 @@ present the first of this list wins:
   installation, with ``X / R = SCR_r_factor``. Used by I16 Zone 1.
 
 ``Zcc``
-  The short-circuit impedance of the voltage level (``HTB<n>_Scc`` of
-  ``[GridCode]``), with ``X / R = Ztanphi``. Used by the dips and swells
-  (I6, I7, I16 Zone 3); only its presence counts (``Zcc = true``).
+  The short-circuit impedance of the voltage level, :math:`U^2 / S_{cc}`, with
+  the ``HTB<n>_Scc`` of ``[GridCode]``, the voltage its ``zcc_voltage`` names
+  and ``X / R = Ztanphi``. Used by the dips and swells (I6, I7, I16 Zone 3);
+  only its presence counts (``Zcc = true``).
 
 Whichever is chosen also becomes the ``line_XPu`` magnitude of the value
 definitions of the operating condition.

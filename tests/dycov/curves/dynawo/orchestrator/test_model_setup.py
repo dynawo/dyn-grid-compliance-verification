@@ -625,7 +625,9 @@ class TestGetFaultXpu:
     def _setup(self, mock_config, definition, p_max_pu=0.94):
         mock_config.has_option.side_effect = lambda section, key: key == "line_XFaultPu"
         mock_config.get_value.return_value = definition
-        owner = _make_owner(_make_producer(u_nom=225.0, s_nom=100.0, p_max_pu=p_max_pu))
+        producer = _make_producer(u_nom=225.0, s_nom=100.0, p_max_pu=p_max_pu)
+        producer.get_sim_type_str.return_value = "performance/PPM"
+        owner = _make_owner(producer)
         owner.get_unit_characteristics.return_value = {"Pmax": p_max_pu, "line_XPu": 0.9}
         return _make_setup(owner)
 
@@ -648,7 +650,7 @@ class TestGetFaultXpu:
         setup = self._setup(mock_config, "XFaultPu", p_max_pu)
 
         assert setup._get_fault_xpu("PCS1", "BM1", "OC1") == pytest.approx(0.315)
-        mock_gv.calculate_fault_xpu.assert_called_once_with(-0.94, 100.0, 225.0, 100.0)
+        mock_gv.calculate_fault_xpu.assert_called_once_with(-0.94, 100.0, 225.0, 100.0, "PPM")
 
     @pytest.mark.parametrize(
         "definition, fault_xpu", [("0.5*XFaultPu", 0.1575), ("0.02", 0.02), ("0.1*line_XPu", 0.09)]
@@ -994,6 +996,28 @@ class TestComputeRxFromScr:
 
 
 class TestGetLineBranches:
+    @pytest.mark.parametrize(
+        "sim_type, technology",
+        [("performance/SM", "SM"), ("performance/PPM", "PPM"), ("model/BESS", "BESS")],
+    )
+    @patch(f"{_MS}.generator_variables")
+    @patch(f"{_MS}.get_cfg_oc_name", return_value="SEC")
+    @patch(f"{_MS}.config")
+    def test_the_reactance_of_the_line_is_that_of_the_technology(
+        self, mock_config, mock_gcn, mock_gv, sim_type, technology
+    ):
+        """The capability specifications of the DTR give the reactances by technology."""
+        mock_config.has_option.side_effect = lambda s, k: k == "line_XPu"
+        mock_config.get_value.return_value = "3*b"
+        producer = _make_producer()
+        producer.get_sim_type_str.return_value = sim_type
+        setup = _make_setup(_make_owner(producer))
+
+        setup._get_line("PCS1", "BM1", "OC1")
+
+        assert mock_gv.calculate_line_xpu.call_args[0][0] == "b"
+        assert mock_gv.calculate_line_xpu.call_args[0][5] == technology
+
     @patch(f"{_MS}.generator_variables")
     @patch(f"{_MS}.get_cfg_oc_name", return_value="SEC")
     @patch(f"{_MS}.config")
@@ -1025,19 +1049,27 @@ class TestGetLineBranches:
         assert rpu == pytest.approx(1.0 / (factor * 3.0))
         assert xpu == pytest.approx(10.0 / (factor * 3.0))
 
+    @pytest.mark.parametrize("zcc_voltage, uc_pu", [("Udim", 235.0 / 225.0), ("Unom", 1.0)])
     @patch(f"{_MS}.generator_variables")
     @patch(f"{_MS}.get_cfg_oc_name", return_value="SEC")
     @patch(f"{_MS}.config")
-    def test_zcc_branch_derives_impedance_from_scc(self, mock_config, mock_gcn, mock_gv):
+    def test_zcc_branch_derives_impedance_from_scc(
+        self, mock_config, mock_gcn, mock_gv, zcc_voltage, uc_pu
+    ):
+        """Zcc = U^2/Scc, with the voltage the revision of the DTR in use names."""
         mock_config.has_option.side_effect = lambda s, k: k == "Zcc"
         mock_config.get_float.side_effect = lambda s, k, d=None: 2.0 if k == "Ztanphi" else d
+        mock_config.get_value.side_effect = lambda s, k, d=None: {
+            ("GridCode", "zcc_voltage"): zcc_voltage
+        }.get((s, k), d)
         mock_gv.get_scc.return_value = 1000.0
-        mock_gv.get_generator_u_dim.return_value = 20.0
-        setup = _make_setup()
+        owner = _make_owner()
+        owner.get_unit_characteristics.return_value = {"Udim": 235.0 / 225.0, "Unom": 1.0}
+        setup = _make_setup(owner)
 
         rpu, xpu = setup._get_line("PCS1", "BM1", "OC1")
 
-        zcc = 1.0**2 / (1000.0 / 100.0)
+        zcc = uc_pu**2 / (1000.0 / 100.0)
         expected_xpu = 2.0 * zcc / math.sqrt(1 + 4.0)
         assert xpu == pytest.approx(expected_xpu)
         assert rpu == pytest.approx(expected_xpu / 2.0)

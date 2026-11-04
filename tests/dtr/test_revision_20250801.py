@@ -112,3 +112,22 @@ def test_the_reaction_time_keeps_its_limit(revision, selected, limit):
     revision(selected)
 
     assert config.get_threshold("GridCode", "thr_reaction_time", -1.0) == limit
+
+
+@pytest.mark.parametrize("selected, voltage", [(REVISION, "Udim"), (LATER_REVISION, "Unom")])
+def test_the_short_circuit_impedance_is_still_that_of_the_dimensioning_voltage(
+    revision, selected, voltage
+):
+    revision(selected)
+
+    assert config.get_value("GridCode", "zcc_voltage") == voltage
+
+
+@pytest.mark.parametrize("selected, b", [(REVISION, 0.2), (LATER_REVISION, 0.3)])
+@pytest.mark.parametrize("technology", ["PPM", "BESS"])
+def test_a_unit_at_htb1_still_takes_the_reactance_b_of_the_base(revision, selected, b, technology):
+    revision(selected)
+
+    line_xpu = generator_variables.calculate_line_xpu("b", -0.4, 100.0, 90.0, 100.0, technology)
+
+    assert line_xpu == pytest.approx(b)

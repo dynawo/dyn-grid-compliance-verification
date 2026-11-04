@@ -147,7 +147,7 @@
         \includegraphics[width=\textwidth]{\Producer_fig_P_PCS_RTE-I6.GridVoltageDip.QzeroConsumption}
         \begin{minipage}[t]{0.8\textwidth}
             \small Real power output P, measured at the PDR bus. Green-dashed
-            line: $-10\%$ ``floor'' below the final value of P.
+            line: ``floor'' at 90\% of the final value of P, on the side of zero.
         \end{minipage}
     \end{minipage}
     \hfill
@@ -201,8 +201,8 @@
 
     \noindent Key:
     \begin{description}
-        \item[Recovery time $T_{10P_{floor}}$:] time at which the suplied power
-        P recovers and stays above -10\% of the final value of P (note
+        \item[Recovery time $T_{10P_{floor}}$:] time at which the consumed power
+        P recovers and stays, in magnitude, above 90\% of its final value (note
         how this is not a "tube", but a "floor").
         \item[Rise time $T_{85U}$:] time at which the voltage at the
         PDR bus returns back above 0.85pu, regardless of any possible

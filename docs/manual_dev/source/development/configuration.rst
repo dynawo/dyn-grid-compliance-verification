@@ -447,6 +447,10 @@ Impedance calculation factors:
 * ``SCR_r_factor`` — factor to calculate Rcc from Xcc.
 * ``fault_r_factor`` — factor to calculate Rv from Xv.
 * ``Ztanphi`` — factor to derive Xcc and Rcc from Zcc.
+* ``zcc_voltage`` — voltage of the short-circuit impedance of the dips and
+  swells, :math:`Z_{cc} = U^2 / S_{cc}`, as a value definition: ``Udim``, the
+  Uc of article 8.3.3 v3.3 and v3.4, or ``Unom``, the Un the revisions
+  ``20251013`` and ``20260723`` write.
 
 Signal error thresholds (simulation reference):
     For each signal ``<s>`` in {``P``, ``Q``, ``Ip``, ``Iq``} and each metric
@@ -488,6 +492,11 @@ Grid connection parameters by generator type (HTB1, HTB2, HTB3):
 
 * ``HTB1_p_max``, ``HTB2_p_max``, ``HTB3_p_max`` — active power limit for
   reactance calculation.
+* The reactances and their power limits may be given for one technology: a
+  key with the suffix ``_SM``, ``_PPM`` or ``_BESS`` wins over the plain one.
+  The revisions ``20251013`` and ``20260723`` write them for a PPM and a
+  storage unit at HTB1, whose ``b`` is 0.3 below 250 MW and for any power
+  respectively.
 * ``HTB1_Scc``, ``HTB2_Scc``, ``HTB3_Scc`` — reference short-circuit power
   (MVA) by generator type (400, 1500, 7000 MVA respectively).
 * ``Udim_63kV``, ``Udim_66kV``, ``Udim_90kV``, ``Udim_132kV``,
