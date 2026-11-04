@@ -98,8 +98,10 @@ each Benchmark or Operating Condition must pass. Available tests:
 
 * ``static_diff`` — static difference between the controlled quantity and the
   voltage adjustment setpoint.
-* ``time_5U`` — time at which voltage stays within ±5% of its final value.
-* ``time_10U`` — time at which voltage stays within ±10% of its final value.
+* ``time_5U`` — time at which voltage stays within ±5% of its change around
+  its final value.
+* ``time_10U`` — time at which voltage stays within ±10% of its change around
+  its final value.
 * ``time_5P`` — time at which P stays within ±5% of its final value.
 * ``time_10P`` — time at which P stays within ±10% of its final value.
 * ``time_85U`` — time at which voltage at the PDR returns above 0.85 pu.
@@ -211,6 +213,8 @@ Under ``[PCSName.BenchmarkName.OCName.Model]``:
 * ``line_XPu`` — reactance of the line at the PDR, when the Benchmark has a
   single Operating Condition. Optional.
 * ``SCR`` — Short-Circuit Ratio. Optional.
+* ``line_XFaultPu`` — reactance of the fault of a three-phase fault test,
+  bolted without it. Optional.
 * ``pdr_P``, ``pdr_Q``, ``pdr_U`` — initial P, Q, and voltage at the PDR.
 
 Every multiplier-based value read from ``PCSDescription.ini`` is written as a
@@ -231,7 +235,9 @@ against a kV variant of the registry and divides by ``u_nom`` afterwards.
 Adding a new base magnitude
 is a matter of adding an entry to that registry — no per-key parsing code changes.
 (GFM keys and the ``line_XPu`` *key*, whose base is a DTR reactance-table entry,
-use their own resolution and are not part of this registry.)
+use their own resolution and are not part of this registry.) ``line_XFaultPu``
+resolves against the registry plus ``XFaultPu``, the reactance the DTR gives the
+impedant three-phase fault.
 
 A definition that cannot be resolved — empty, misspelled magnitude, or malformed
 — raises a ``ValueError`` naming the offending option, the configuration file it
@@ -254,8 +260,8 @@ shipped models:
   loads.
 * ``step_event_PPu``, ``step_event_QPu`` — magnitude of the islanding load
   steps.
-* ``line_RPu``, ``line_XPu``, ``bus_UNom``, ``event_start`` — grid-side
-  parameters of the benchmark.
+* ``line_RPu``, ``line_XPu``, ``line_XFaultPu``, ``bus_UNom``,
+  ``event_start`` — grid-side parameters of the benchmark.
 
 Under ``[PCSName.BenchmarkName.OCName.Event]``:
 
@@ -344,6 +350,17 @@ Dynawo section
 
 * ``simulation_limit`` — maximum time (s) for the dynamic simulation. DyCoV
   stops the simulator when this limit is exceeded.
+* ``divergence_voltage_limit``, ``divergence_power_limit`` — magnitudes beyond
+  which a simulation has diverged, even if Dynawo ends it successfully: a
+  voltage in pu of Unom (10) and a power or a current (100) in pu of the
+  nominal power of the producer, the sum of its units, on the curves of the PDR
+  and of the units, told apart by their variable and not by the id of the unit
+  (not the ``Measurements_BUS_*`` ones, in SnRef, which the PDR curves repeat
+  in the base of the producer); a value that is not finite always counts.
+  ``find_divergence`` (``runtime/_curves.py``) checks them on the curves of
+  every attempt of the retry strategy that Dynawo ended well, which is then
+  retried as a failed one, while what Dynawo reported stays as it was; the CCT
+  runs (``run_simple``) are judged on the internal angles instead.
 * ``simulation_start`` — simulation start time (s). Before changing this,
   verify that all PCS events fall within the configured simulation window.
 * ``simulation_stop`` — simulation end time (s). PCS I7 has an event at t=30s;
@@ -414,10 +431,14 @@ Signal processing parameters:
 
 Step-response time characteristic thresholds:
 
-* ``thr_reaction_time`` — maximum allowed MAE on reaction time.
-* ``thr_rise_time`` — maximum allowed MAE on rise time.
-* ``thr_settling_time`` — maximum allowed MAE on settling time.
-* ``thr_overshoot`` — maximum allowed MAE on overshoot.
+* ``thr_reaction_time`` — maximum deviation of the reaction time from the
+  reference one, relative to it.
+* ``thr_rise_time`` — maximum deviation of the rise time, relative to the
+  reference one.
+* ``thr_settling_time`` — maximum deviation of the settling time, relative to
+  the reference one.
+* ``thr_overshoot`` — maximum deviation of the overshoot, relative to the
+  reference one.
 * ``thr_ramp_time_lag`` — maximum allowed ME on ramp time lag.
 * ``thr_ramp_error`` — maximum allowed MXE on ramp error.
 * ``thr_final_ss_mae`` — maximum allowed MAE between simulation and reference
@@ -429,6 +450,10 @@ Impedance calculation factors:
 * ``SCR_r_factor`` — factor to calculate Rcc from Xcc.
 * ``fault_r_factor`` — factor to calculate Rv from Xv.
 * ``Ztanphi`` — factor to derive Xcc and Rcc from Zcc.
+* ``zcc_voltage`` — voltage of the short-circuit impedance of the dips and
+  swells, :math:`Z_{cc} = U^2 / S_{cc}`, as a value definition: ``Udim``, the
+  Uc of article 8.3.3 v3.3 and v3.4, or ``Unom``, the Un the revisions
+  ``20251013`` and ``20260723`` write.
 
 Signal error thresholds (simulation reference):
     For each signal ``<s>`` in {``P``, ``Q``, ``Ip``, ``Iq``} and each metric
@@ -470,6 +495,11 @@ Grid connection parameters by generator type (HTB1, HTB2, HTB3):
 
 * ``HTB1_p_max``, ``HTB2_p_max``, ``HTB3_p_max`` — active power limit for
   reactance calculation.
+* The reactances and their power limits may be given for one technology: a
+  key with the suffix ``_SM``, ``_PPM`` or ``_BESS`` wins over the plain one.
+  The revisions ``20251013`` and ``20260723`` write them for a PPM and a
+  storage unit at HTB1, whose ``b`` is 0.3 below 250 MW and for any power
+  respectively.
 * ``HTB1_Scc``, ``HTB2_Scc``, ``HTB3_Scc`` — reference short-circuit power
   (MVA) by generator type (400, 1500, 7000 MVA respectively).
 * ``Udim_63kV``, ``Udim_66kV``, ``Udim_90kV``, ``Udim_132kV``,
@@ -523,4 +553,10 @@ These parameters are useful during development and debugging:
 * ``disable_LP_filtering`` — disable low-pass filtering of signals entirely.
 * ``max_simulation_retries`` — maximum number of retries for a failed
   simulation (default: 4, covering: base line, reduced step, increased
-  precision, small networks, solver switch).
+  precision, small networks, solver switch). These errors in the inputs of a
+  model are not retried, as no solver setting settles them, and they end the
+  search of a fault impedance: one the PAR and DYD readers, the compiler or the
+  parameters of a model raise, a parameter a model does not find in its PAR, a
+  variable a connection names that the model lacks and a file the inputs name
+  that does not exist (``rejects_inputs``). Any other error is retried, a
+  connection the DYD leaves out among them.

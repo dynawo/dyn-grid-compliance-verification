@@ -187,3 +187,69 @@ def test_the_reaction_time_loses_its_limit(revision, selected, limit):
     revision(selected)
 
     assert config.get_threshold("GridCode", "thr_reaction_time", -1.0) == limit
+
+
+@pytest.mark.parametrize("selected, voltage", [(BASE_REVISION, "Udim"), (REVISION, "Unom")])
+def test_the_short_circuit_impedance_is_that_of_the_nominal_voltage(revision, selected, voltage):
+    """The fiche I6 gave Zcc = Uc^2/Scc, Uc being Udim, and I7 an infinite bus at the
+    connection point; both now give Zcc = Un^2/Scc."""
+    revision(selected)
+
+    assert config.get_value("GridCode", "zcc_voltage") == voltage
+
+
+@pytest.mark.parametrize(
+    "verification, technology, pcs, case, reactance",
+    [
+        ("performance", "PPM", "PCS_RTE-I5", "TransientBolted", None),
+        ("performance", "PPM", "PCS_RTE-I5", "TransientImpedant", "XFaultPu"),
+        ("performance", "BESS", "PCS_RTE-I5", "TransientBoltedInjection", None),
+        ("performance", "BESS", "PCS_RTE-I5", "TransientImpedantInjection", "XFaultPu"),
+        ("performance", "BESS", "PCS_RTE-I5", "TransientImpedantConsumption", "XFaultPu"),
+        ("model", "PPM", "PCS_RTE-I16z3", "TransientBolted", None),
+        ("model", "PPM", "PCS_RTE-I16z3", "TransientImpedant", "XFaultPu"),
+        ("model", "BESS", "PCS_RTE-I16z3", "TransientImpedantInjection", "XFaultPu"),
+        ("model", "BESS", "PCS_RTE-I16z3", "TransientImpedantConsumption", "XFaultPu"),
+    ],
+)
+def test_the_impedant_fault_takes_the_reactance_the_dtr_gives_it(
+    revision, description, verification, technology, pcs, case, reactance
+):
+    """The bolted fault has no reactance of its own, and the impedant one the DTR's."""
+    revision(REVISION)
+    description(verification, technology, pcs)
+
+    section = f"{pcs}.ThreePhaseFault.{case}.Model"
+    assert config.has_option(section, "pdr_P")
+    if reactance is None:
+        assert not config.has_option(section, "line_XFaultPu")
+    else:
+        assert config.get_value(section, "line_XFaultPu") == reactance
+
+
+@pytest.mark.parametrize(
+    "selected, technology, p_max, b",
+    [
+        (BASE_REVISION, "PPM", 40.0, 0.2),
+        (REVISION, "PPM", 40.0, 0.3),
+        (REVISION, "PPM", 240.0, 0.3),
+        (REVISION, "PPM", 250.0, 0.54),
+        (REVISION, "PPM", 260.0, 0.54),
+        (BASE_REVISION, "BESS", 40.0, 0.2),
+        (REVISION, "BESS", 40.0, 0.3),
+        (REVISION, "BESS", 60.0, 0.3),
+        (BASE_REVISION, "SM", 40.0, 0.2),
+        (REVISION, "SM", 40.0, 0.2),
+    ],
+)
+def test_a_unit_at_htb1_takes_the_reactance_b_of_its_technology(
+    revision, selected, technology, p_max, b
+):
+    """The capability specifications of PPM and storage give HTB1 a b of 0.3 below 250 MW."""
+    revision(selected)
+
+    line_xpu = generator_variables.calculate_line_xpu(
+        "b", -p_max / 100, 100.0, 90.0, 100.0, technology
+    )
+
+    assert line_xpu == pytest.approx(b)

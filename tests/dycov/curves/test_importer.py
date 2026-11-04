@@ -82,3 +82,13 @@ def test_zone0_keeps_dictionary_keys_untranslated(curves_dir):
     assert "InternalNode1_BUS_Voltage" in df
     assert "BusPDR_BUS_ActivePower" in df
     assert "BusPDR_BUS_Voltage" not in df
+
+
+def test_the_units_declared_are_those_the_dictionary_names_its_blank_entries_too(curves_dir):
+    dictionary = curves_dir / "ref.dict"
+    dictionary.write_text(
+        dictionary.read_text() + "G1_GEN_InternalAngle = colA\nG2_GEN_InternalAngle = \n"
+    )
+    importer = CurvesImporter(curves_dir, "ref", remove_working_dict=False)
+
+    assert importer.get_declared_units() == {"G1", "G2"}

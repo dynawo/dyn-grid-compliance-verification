@@ -8,54 +8,21 @@
 #     demiguelm@aia.es
 #
 import bisect
+import math
 
 from dycov.configuration.cfg import config
 
+_SCC_DEFAULTS = {"htb1": 400.0, "htb2": 1500.0, "htb3": 7000.0}
+
 
 class GeneratorVariables:
-    def __init__(
-        self,
-    ):
-        htb1_a = config.get_float("GridCode", "HTB1_reactance_a", 0.0)
-        htb2_a = config.get_float("GridCode", "HTB2_reactance_a", 0.0)
-        htb3_a = config.get_float("GridCode", "HTB3_reactance_a", 0.0)
-        htb1_b1 = config.get_float("GridCode", "HTB1_reactance_b_low", 0.0)
-        htb2_b1 = config.get_float("GridCode", "HTB2_reactance_b_low", 0.0)
-        htb3_b1 = config.get_float("GridCode", "HTB3_reactance_b_low", 0.0)
-        htb1_b2 = config.get_float("GridCode", "HTB1_reactance_b_high", 0.0)
-        htb2_b2 = config.get_float("GridCode", "HTB2_reactance_b_high", 0.0)
-        htb3_b2 = config.get_float("GridCode", "HTB3_reactance_b_high", 0.0)
-        htb1_p_max = config.get_float("GridCode", "HTB1_p_max", 0.0)
-        htb2_p_max = config.get_float("GridCode", "HTB2_p_max", 0.0)
-        htb3_p_max = config.get_float("GridCode", "HTB3_p_max", 0.0)
-        htb1_scc = config.get_float("GridCode", "HTB1_Scc", 400.0)
-        htb2_scc = config.get_float("GridCode", "HTB2_Scc", 1500.0)
-        htb3_scc = config.get_float("GridCode", "HTB3_Scc", 7000.0)
-
-        self._x_dtr_switcher = {
-            "htb1": {
-                "a": (htb1_a, htb1_a),
-                "b": (htb1_b1, htb1_b2),
-            },
-            "htb2": {
-                "a": (htb2_a, htb2_a),
-                "b": (htb2_b1, htb2_b2),
-            },
-            "htb3": {
-                "a": (htb3_a, htb3_a),
-                "b": (htb3_b1, htb3_b2),
-            },
-        }
-        self._p_max_switcher = {
-            "htb1": htb1_p_max,
-            "htb2": htb2_p_max,
-            "htb3": htb3_p_max,
-        }
-        self._scc_switcher = {
-            "htb1": htb1_scc,
-            "htb2": htb2_scc,
-            "htb3": htb3_scc,
-        }
+    def __grid_code(self, key: str, technology: str | None, default: float = 0.0) -> float:
+        """The value [GridCode] gives a key, that of the technology when the key carries its
+        suffix: the capability specifications of the DTR give the reactances of the grid by
+        technology, and a revision may change them for one technology alone."""
+        suffixes = (technology,) if technology else ()
+        option = config.find_option("GridCode", key, *suffixes) or key
+        return config.get_float("GridCode", option, default)
 
     def __get_generator_type(self, u_nom: float) -> str:
         # The Unom are divided into 2 lists to differentiate land from offshore.
@@ -84,16 +51,16 @@ class GeneratorVariables:
         return generator_type
 
     def __get_generator_variables(
-        self, line_xtype: str, p_max: float, u_nom: float
+        self, line_xtype: str, p_max: float, u_nom: float, technology: str | None = None
     ) -> tuple[float, float]:
-        generator_type = self.__require_known_type(u_nom)
-        x_dtr_tuple = self._x_dtr_switcher[generator_type][line_xtype]
-        p_max_threshold = self._p_max_switcher[generator_type]
-
-        if p_max < p_max_threshold:
-            x_dtr = x_dtr_tuple[0]
+        level = self.__require_known_type(u_nom).upper()
+        if line_xtype == "a":
+            x_dtr = self.__grid_code(f"{level}_reactance_a", technology)
+        elif line_xtype == "b":
+            side = "low" if p_max < self.__grid_code(f"{level}_p_max", technology) else "high"
+            x_dtr = self.__grid_code(f"{level}_reactance_b_{side}", technology)
         else:
-            x_dtr = x_dtr_tuple[1]
+            raise KeyError(line_xtype)
 
         return x_dtr, self.get_generator_u_dim(u_nom)
 
@@ -183,13 +150,21 @@ class GeneratorVariables:
             If ``u_nom`` is not one of the DTR's normalized PDR voltage levels.
         """
         generator_type = self.__require_known_type(u_nom)
-        return self._scc_switcher[generator_type]
+        return config.get_float(
+            "GridCode", f"{generator_type.upper()}_Scc", _SCC_DEFAULTS[generator_type]
+        )
 
     def calculate_line_xpu(
-        self, line_xtype: str, p_max_pu: float, s_nom: float, u_nom: float, s_nref: float
+        self,
+        line_xtype: str,
+        p_max_pu: float,
+        s_nom: float,
+        u_nom: float,
+        s_nref: float,
+        technology: str | None = None,
     ) -> float:
         """Calculate the reactance of the line.
-        variables by generator's type:
+        variables by generator's type, as the base revision gives them:
           HTB1:  a=0.05 b=Pmax<50MW?0.2:0.3, Udim=90kV, Unom=90kV, SnRef=100MVA
           HTB2:  a=0.05 b=Pmax<250MW?0.3:0.54, Udim=235kV, Unom=225kV, SnRef=100MVA
           HTB3:  a=0.05 b=Pmax<800MW?0.54:0.6 Udim=405kV, Unom=400kV, SnRef=100MVA
@@ -207,6 +182,8 @@ class GeneratorVariables:
             Nominal voltage
         s_nref: float
             System-wide S base (SnRef)
+        technology: str | None
+            SM, PPM or BESS, whose own values of [GridCode] win over the plain ones
 
         Returns
         -------
@@ -214,7 +191,48 @@ class GeneratorVariables:
             Reactance of the line
         """
         p_max = p_max_pu * -s_nref
-        x_dtr, u_dim = self.__get_generator_variables(line_xtype, p_max, u_nom)
+        x_dtr, u_dim = self.__get_generator_variables(line_xtype, p_max, u_nom, technology)
+
+        return x_dtr * (u_dim**2 / u_nom**2) * (s_nref / s_nom)
+
+    def calculate_fault_xpu(
+        self,
+        p_max_pu: float,
+        s_nom: float,
+        u_nom: float,
+        s_nref: float,
+        technology: str | None = None,
+    ) -> float:
+        """Calculate the reactance of the impedant three-phase fault.
+        The DTR gives it in the base Udim, Snom, so that the fault, behind the four lines of
+        reactance 3*b, holds the PDR at 0.6 Unom while the unit injects no current:
+          Xdefaut = 3/4*b / (Uinf * Udim / (0.6 * Unom) - 1)
+          Uinf = sqrt(1 + (3/4*b * Pmax / Snom)^2)
+          conversion: Xdwo = Xdtr * (Udim^2 / Unom^2) * (SnRef / Snom)
+
+        Parameters
+        ----------
+        p_max_pu: float
+            Maximum active power
+        s_nom: float
+            Nominal apparent power
+        u_nom: float
+            Nominal voltage
+        s_nref: float
+            System-wide S base (SnRef)
+        technology: str | None
+            SM, PPM or BESS, whose own values of [GridCode] win over the plain ones
+
+        Returns
+        -------
+        float
+            Reactance of the fault
+        """
+        p_max = p_max_pu * -s_nref
+        b, u_dim = self.__get_generator_variables("b", p_max, u_nom, technology)
+        grid_x = 0.75 * b
+        u_inf = math.sqrt(1 + (grid_x * p_max / s_nom) ** 2)
+        x_dtr = grid_x / (u_inf * u_dim / (0.6 * u_nom) - 1)
 
         return x_dtr * (u_dim**2 / u_nom**2) * (s_nref / s_nom)
 

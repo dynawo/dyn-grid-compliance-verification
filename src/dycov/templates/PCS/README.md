@@ -62,7 +62,7 @@ the section is *Model-Validations*
     # Analyses to perform in every pcs
     # Static difference between the controlled quantity injected into the primary voltage regulator and the voltage adjustment setpoint
     static_diff = DummySample.Benchmark1
-    # Time at which the power supplied V stays within the +/-5% tube centered on the final value of V
+    # Time at which V stays within +/-5% of its change around its final value
     time_5U = DummySample.Benchmark1
    ```
 7. Modify the *ReportCurves* section to select the figures that will be shown in the report for the new 

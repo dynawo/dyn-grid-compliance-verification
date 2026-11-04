@@ -75,6 +75,51 @@ def _get_linux_info() -> str:
     return f"{name} {version_id}, kernel {kernel}, {arch}"
 
 
+def _user_settings(user_config: configparser.ConfigParser, metadata_section: str) -> dict:
+    """Every option of the user configuration, by section, as written: a section holds those of
+    [DEFAULT] only where it gives them a value of its own."""
+    defaults = user_config.defaults()
+    settings = {"DEFAULT": dict(defaults)} if defaults else {}
+    for section in user_config.sections():
+        if section != metadata_section:
+            settings[section] = {
+                key: value
+                for key in user_config.options(section)
+                if (value := user_config.get(section, key)) != defaults.get(key)
+            }
+    return settings
+
+
+def _profile_option(line: str) -> Optional[str]:
+    """The key of the option a line of a profile carries, commented out or not, as often as the
+    template and the profile comment it."""
+    text = line.strip().lstrip("# ")
+    if not text or text[0] == ";" or "=" not in text:
+        return None
+    return text.split("=", 1)[0].strip()
+
+
+def _option_line(key: str, value: str) -> str:
+    return f"{key} = {value.replace(chr(10), chr(10) + '    ')}\n"
+
+
+def _end_section(lines: list, options: dict) -> None:
+    """Writes the options of the user the profile has no line for at the end of their section,
+    before its last blank lines, which in the profiles close it and precede the comments that
+    introduce the next one."""
+    tail = []
+    while lines and (not lines[-1].strip() or lines[-1].lstrip().startswith(("#", ";"))):
+        tail.insert(0, lines.pop())
+    blanks = [index for index, line in enumerate(tail) if not line.strip()]
+    closing = blanks[-1] if blanks else len(tail)
+    while closing and not tail[closing - 1].strip():
+        closing -= 1
+    lines.extend(tail[:closing])
+    lines.extend(_option_line(key, value) for key, value in options.items())
+    options.clear()
+    lines.extend(tail[closing:])
+
+
 class DycovInitializer:
     """
     Handles the initialization process for the DYCOV tool, including
@@ -383,6 +428,7 @@ class DycovInitializer:
             return False
 
         cfg_parser = configparser.ConfigParser(inline_comment_prefixes=("#",))
+        cfg_parser.optionxform = str
         try:
             cfg_parser.read(config_file)
         except configparser.Error:
@@ -411,9 +457,14 @@ class DycovInitializer:
             Path to the user's configuration file.
         """
         tool_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
+        tool_config.optionxform = str
         tool_config.read(tool_config_file)
-        # strict=False tolerates an already-duplicated file so it can be rewritten cleanly.
-        user_config = configparser.ConfigParser(inline_comment_prefixes=("#",), strict=False)
+        # strict=False tolerates an already-duplicated file so it can be rewritten cleanly; the
+        # values are copied as they are written, with the case of their keys the tool reads
+        user_config = configparser.ConfigParser(
+            inline_comment_prefixes=("#",), strict=False, interpolation=None
+        )
+        user_config.optionxform = str
         user_config.read(user_config_file)
 
         deprecated_parameters = self._find_deprecated_parameters(tool_config, user_config)
@@ -453,10 +504,14 @@ class DycovInitializer:
         Backs up the current user configuration file and updates it based on the
         tool's default or advanced configuration.
         """
-        self._backup_config_file(user_config_file)
+        backup = self._backup_config_file(user_config_file)
         self._write_updated_config(user_config_file, user_config)
+        dycov_logging.get_logger("Initialization").warning(
+            f"{user_config_file} was rewritten for the configuration version "
+            f"{self._DYCOV_TOOL_VERSION}, keeping its settings; the previous one is {backup}"
+        )
 
-    def _backup_config_file(self, user_config_file: Path):
+    def _backup_config_file(self, user_config_file: Path) -> Path:
         """
         Creates a backup of the user's configuration file with a timestamp.
         """
@@ -465,14 +520,18 @@ class DycovInitializer:
             for path in config.get_config_dir().glob("config.ini.OLD.*")
         ]
         next_id = max(existing_backups) + 1 if existing_backups else 0
-        user_config_file.rename(config.get_config_dir() / f"config.ini.OLD.{next_id}")
+        backup = config.get_config_dir() / f"config.ini.OLD.{next_id}"
+        user_config_file.rename(backup)
+        return backup
 
     def _write_updated_config(
         self, user_config_file: Path, user_config: configparser.ConfigParser
     ):
         """
-        Writes the updated configuration to the main config.ini file,
-        merging values from the old user config if applicable.
+        Writes the updated configuration to the main config.ini file, from the profile the user
+        configuration declares, basic or advanced, with every setting of the user: in place of
+        the line the profile has for it, commented out or not, at the end of its section when the
+        profile has none, and in a section of its own when the profile lacks the section too.
         """
         # Determine which base configuration file to use (basic or advanced).
         if (
@@ -484,22 +543,29 @@ class DycovInitializer:
         else:
             source_config_path = config.get_config_dir() / "config.ini_ADVANCED"
 
-        # Read the source config and write to the main config.ini,
-        # incorporating existing user settings where applicable.
+        # [dycov] metadata always keeps the template value, so the version advances
+        pending = _user_settings(user_config, self._DYCOV_CONFIG_SECTION)
+        lines = []
+        current_section = ""
         with open(source_config_path, "r") as input_file:
-            with open(config.get_config_dir() / "config.ini", "w") as output_file:
-                current_section = ""
-                for line in input_file:
-                    stripped = line.strip()
-                    if stripped.startswith("[") and stripped.endswith("]"):
-                        current_section = stripped[1:-1]
-                    elif "=" in line and "#" not in line.split("=")[0]:
-                        # [dycov] metadata always keeps the template value so version
-                        # advances; other sections take the user's value, written once
-                        # (in place of the template line, never in addition to it).
-                        key = line.split("=")[0].strip()
-                        is_metadata = current_section == self._DYCOV_CONFIG_SECTION
-                        if not is_metadata and user_config.has_option(current_section, key):
-                            output_file.write(f"{key} = {user_config.get(current_section, key)}\n")
-                            continue
-                    output_file.write(line)
+            for line in input_file:
+                stripped = line.strip()
+                if stripped.startswith("[") and stripped.endswith("]"):
+                    _end_section(lines, pending.get(current_section, {}))
+                    current_section = stripped[1:-1]
+                    lines.append(line)
+                    continue
+                key = _profile_option(line)
+                if key is not None and key in pending.get(current_section, {}):
+                    lines.append(_option_line(key, pending[current_section].pop(key)))
+                    continue
+                lines.append(line)
+        _end_section(lines, pending.get(current_section, {}))
+
+        for section, options in pending.items():
+            if options:
+                lines.append(f"\n[{section}]\n")
+                lines.extend(_option_line(key, value) for key, value in options.items())
+
+        with open(config.get_config_dir() / "config.ini", "w") as output_file:
+            output_file.writelines(lines)

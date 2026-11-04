@@ -198,7 +198,11 @@ thresholds are the ones the DTR fixes and are not configurable, except for
 the steady-state tolerance ``thr_ss_tol`` and the nominal frequency
 ``f_nom`` of the ``[Dynawo]`` section. Times are measured from the event
 (``sim_t_event_start``), or from the end of the fault for the ``*_clear``
-tests.
+tests. A test whose curves are missing, as producer curves that leave out the
+internal angle of a synchronous machine, the magnitude its voltage regulation
+controls or its setpoint, or the currents of a unit, is reported as *N/A* and
+the operating condition as not compliant. A unit the curves dictionary names
+counts even when every one of its entries is left blank.
 
 Voltage control
 ^^^^^^^^^^^^^^^
@@ -270,7 +274,9 @@ Frequency and current
 ``freq_1``
   Whether the frequency stays within ±1 Hz of ``f_nom`` at every instant,
   measured at the synchronous condenser when the test models one, at the
-  generating units otherwise. Meant for the islanding of PCS I10.
+  generating units otherwise, or on the network frequency of the curves
+  (``NetworkFrequencyPu``) when they carry neither. Meant for the islanding of
+  PCS I10.
 
 ``freq_200``, ``freq_250``
   Draw a ±200 mHz or ±250 mHz band on the frequency figure; they compute
@@ -281,8 +287,10 @@ Frequency and current
   current limit, as the DTR states it: the active current fits in what the
   reactive current leaves under the maximum current,
   :math:`I_a^2 \leq I_{max}^2 - I_q^2`. It reports the first instant it does
-  not. Needs the maximum current of the units, read from the model. Meant for
-  the faults of PCS I5.
+  not. Needs the maximum current of the units, read from the model or, with
+  producer curves, from the ``<unit>_GEN_MaxInjectedCurrentPu`` option of the
+  ``[Curves-Metadata]`` of their dictionaries: without it the check is *N/A*.
+  Meant for the faults of PCS I5.
 
 
 Report figures (``[ReportCurves]``)
@@ -324,14 +332,16 @@ step-response characteristics when they were computed.
    * - ``fig_W``
      - Rotor speed of the generating units, in Hz.
    * - ``fig_WRef``
-     - Network frequency, in Hz, with the band of ``freq_1``, ``freq_250`` or
-       ``freq_200`` when activated.
+     - Network frequency, in Hz, with the band of ``freq_250`` or ``freq_200``
+       when activated, and that of ``freq_1`` when the curves give no
+       frequency of a synchronous condenser.
    * - ``fig_Theta``
      - Internal angle of the generating units.
    * - ``fig_Tap``
      - Tap position of the main transformer.
    * - ``fig_SyncCondP``, ``fig_SyncCondQ``, ``fig_SyncCondFreq``
      - Active power, reactive power and frequency of the synchronous
-       condenser of an islanding test.
+       condenser of an islanding test. The frequency carries the band of
+       ``freq_1``, which bounds it as that of the separated network.
    * - ``fig_LoadP``, ``fig_LoadQ``
      - Active and reactive power of the loads of an islanding test.

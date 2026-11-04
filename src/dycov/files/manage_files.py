@@ -246,11 +246,25 @@ def check_output_dir(path: Path, force_overwrite: bool = False) -> bool:
         True if the directory should NOT be overwritten, False otherwise.
     """
     if path.exists() and next(path.iterdir(), None):
-        option = input("Do you want to overwrite the results directory? (y/[N]) ")
-        if option.lower() in ("n", "no", ""):
+        if not force_overwrite and not _confirms_overwrite():
             return True
         shutil.rmtree(path)
     return False
+
+
+def _confirms_overwrite() -> bool:
+    """Asks until the answer is a yes or a no; no answer at all keeps the results."""
+    while True:
+        try:
+            option = input("Do you want to overwrite the results directory? (y/[N]) ")
+        except EOFError:
+            return False
+        option = option.strip().lower()
+        if option in ("y", "yes"):
+            return True
+        if option in ("n", "no", ""):
+            return False
+        print("Please answer y or n.")
 
 
 def copy_from_path(source: Path, target: Path, extra_excludes: Iterable[re.Pattern] = ()) -> None:

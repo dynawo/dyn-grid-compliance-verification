@@ -9,6 +9,7 @@
 #
 
 import configparser
+import io
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -159,13 +160,48 @@ class Config:
             "Loading user configuration from: %s", user_config_path
         )
         try:
-            self._user_config.read(user_config_path, encoding="utf-8")
+            # read() skips a file it cannot open, and the run would go on with other values
+            with open(user_config_path, encoding="utf-8") as user_config_file:
+                self._user_config.read_file(user_config_file, source=str(user_config_path))
             dycov_logging.get_logger("Cfg").info("Successfully loaded user configuration.")
         except Exception as e:
             dycov_logging.get_logger("Cfg").error(
                 "Error loading user configuration from %s: %s", user_config_path, e
             )
             raise
+
+    def run_layers(self) -> dict:
+        """The layers a run sets up in memory before it starts its workers: the default
+        configuration and that of the user, with the file of --user-config and the options of
+        the command line written over them, and the delta of the revision of the DTR the run
+        follows.
+
+        Returns
+        -------
+        dict
+            The contents of those layers, ready to hand to a worker.
+        """
+        return {
+            "default": _layer_text(self._default_config),
+            "user": _layer_text(self._user_config),
+            "dtr_delta": _layer_text(self._dtr_delta_config),
+            "dtr_delta_files": list(self._dtr_delta_files),
+        }
+
+    def restore_run_layers(self, layers: dict) -> None:
+        """Puts in place the layers of the run in a worker that did not inherit them: one started
+        with forkserver or spawn reads the configuration again from the files, without what the
+        run set up in memory.
+
+        Parameters
+        ----------
+        layers: dict
+            The layers of the run, from run_layers().
+        """
+        _replace_layer(self._default_config, layers["default"])
+        _replace_layer(self._user_config, layers["user"])
+        _replace_layer(self._dtr_delta_config, layers["dtr_delta"])
+        self._dtr_delta_files[:] = layers["dtr_delta_files"]
 
     def load_dtr_delta_config(self, revision: str) -> None:
         """Loads the sections the selected revision of the DTR writes outside any PCS.
@@ -632,6 +668,20 @@ def is_base_revision(revision: str) -> bool:
     ``templates/revisions`` named after it would be read by nobody.
     """
     return revision == config.get_value("DTR", "base", "")
+
+
+def _layer_text(parser: configparser.ConfigParser) -> str:
+    """A layer as configparser writes it: each section with the options it sets itself, their
+    values as written, which reading the text back takes as a file, without checking them."""
+    text = io.StringIO()
+    parser.write(text)
+    return text.getvalue()
+
+
+def _replace_layer(parser: configparser.ConfigParser, text: str) -> None:
+    parser.clear()
+    parser.defaults().clear()
+    parser.read_string(text)
 
 
 def _new_parser() -> configparser.ConfigParser:

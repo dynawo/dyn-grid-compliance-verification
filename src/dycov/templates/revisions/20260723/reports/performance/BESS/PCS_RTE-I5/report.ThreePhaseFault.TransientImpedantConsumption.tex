@@ -1,14 +1,20 @@
-    \subsection{Overview of DTR PCS \DTRPcs in consumption}
+    \subsection{Overview of DTR PCS \DTRPcs{} in consumption}
 
     Checks for compliant behavior of the BESS under a grid scenario where there
     is a symmetric three-phase fault at one of the four transmission lines
     (at a 1\% distance from the PDR). The BESS should remain connected and
     be able to supply the necessary reactive injection.
 
-    The fault of this test has an impedance of its own. The DTR gives it as
-    $X_{defaut} = 4$ pu, in the base $U_{dim}$ and $S_n$, and it chose that
-    value so that the voltage stays near 0.6 pu while the unit injects neither active
-    nor reactive current.
+    The fault of this test has an impedance of its own. The DTR gives its reactance
+    in the base $U_{dim}$ and $S_n$, so that the voltage at the PDR falls to
+    about $0.6\,U_n$ while the unit injects neither active nor reactive current:
+    \[
+        X_{defaut} = \frac{\frac{3}{4}\,b}{\frac{U_\infty\,U_{dim}}{0.6\,U_n} - 1},
+        \qquad
+        U_\infty = \sqrt{1 + \left(\frac{3}{4}\,b\,\frac{P_{max\_consumption\_unite}}{S_n}\right)^2}
+    \]
+    where $\frac{3}{4}\,b$ is the reactance of the four lines of the grid, and
+    $U_\infty$ the voltage of the infinite bus, in the same base.
 
     The grid model and its operational point is as in the following schematic:
     \begin{center}
@@ -114,7 +120,7 @@
         \includegraphics[width=\textwidth]{\Producer_fig_P_PCS_RTE-I5.ThreePhaseFault.TransientImpedantConsumption}
         \begin{minipage}[t]{0.8\textwidth}
             \small Real power output P, measured at the PDR bus. Green-dashed
-            line: $-10\%$ ``floor'' below the final value of P.
+            line: ``floor'' at 90\% of the final value of P, on the side of zero.
         \end{minipage}
     \end{minipage}
     \hfill
@@ -178,8 +184,8 @@
 
     \noindent Key:
     \begin{description}
-        \item[Recovery time $T_{10P_{floor}}$:] time at which the suplied power
-        P recovers and stays above -10\% of the final value of P (note
+        \item[Recovery time $T_{10P_{floor}}$:] time at which the consumed power
+        P recovers and stays, in magnitude, above 90\% of its final value (note
         how this is not a "tube", but a "floor").
         \item[Rise time $T_{85U}$:] time at which the voltage at the PDR
         bus returns back above 0.85 pu, regardless of any possible
