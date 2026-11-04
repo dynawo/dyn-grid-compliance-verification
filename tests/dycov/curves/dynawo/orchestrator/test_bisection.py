@@ -38,10 +38,8 @@ def _make_engine(**overrides) -> BisectionEngine:
         pcs_name="PCS1",
         launcher_dwo="/path/to/dynawo",
         producer=producer,
-        s_nref=100.0,
         sim_time=30.0,
         thr_ss_tol=10.0,
-        curves_dict={"var1": "GEN1_var1"},
     )
     defaults.update(overrides)
     return BisectionEngine(**defaults)

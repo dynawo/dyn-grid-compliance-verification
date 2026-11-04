@@ -9,6 +9,8 @@
 #
 """Tests for the post-processing of the curves Dynawo writes into the curves the tool compares."""
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -581,3 +583,91 @@ def test_the_limits_of_a_divergence_are_those_given():
 
     assert curves_module.find_divergence(curves, _PRODUCER_UNITS, 10.0, 2.0) is not None
     assert curves_module.find_divergence(curves, _PRODUCER_UNITS, 10.0, 5.0) is None
+
+
+def _read(monkeypatch, curves, zone=0, limits=None):
+    """Reads curves that create_curves gives as the given ones, under the given limits."""
+    from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs
+
+    read_from = []
+
+    def create(variable_translations, curves_file, generators, s_nom, s_nref):
+        read_from.append(curves_file)
+        return curves
+
+    monkeypatch.setattr(curves_module, "create_curves", create)
+    if limits:
+        config_type = type(curves_module.config)
+        get_float = config_type.get_float
+        monkeypatch.setattr(
+            config_type,
+            "get_float",
+            lambda self, section, key, default=None: (
+                limits[key] if key in limits else get_float(self, section, key, default)
+            ),
+        )
+    run = DynawoRunInputs(
+        pcs_name="PCS",
+        launcher_dwo=Path("dynawo.sh"),
+        curves_dict={},
+        generators=_PRODUCER_UNITS,
+        s_nom=100.0,
+        s_nref=100.0,
+        zone=zone,
+    )
+    simulated = curves_module.read_simulated_curves(run, Path("outputs/curves/curves.csv"))
+    assert read_from == [Path("outputs/curves/curves.csv")]
+    return simulated
+
+
+def test_the_curves_of_a_simulation_within_their_limits_are_read_as_they_are(monkeypatch):
+    curves = pd.DataFrame({"time": [0.0, 1.0], "BusPDR_BUS_Voltage": [1.0, 0.9]})
+
+    simulated = _read(monkeypatch, curves)
+
+    assert simulated.curves is curves
+    assert simulated.divergence is None
+
+
+def test_the_curves_of_a_simulation_tell_what_diverged(monkeypatch):
+    """#675: Dynawo stops on NaN or inf, not on a voltage of 4.2e6 pu."""
+    curves = pd.DataFrame({"time": [0.0, 1.0], "BusPDR_BUS_Voltage": [1.0, 4.2e6]})
+
+    simulated = _read(monkeypatch, curves)
+
+    assert simulated.divergence == "BusPDR_BUS_Voltage reached 4.2e+06 pu, beyond 10 pu"
+
+
+@pytest.mark.parametrize(
+    "limits, curve, reached",
+    [
+        (
+            {"divergence_voltage_limit": 0.95, "divergence_power_limit": 50.0},
+            "BusPDR_BUS_Voltage",
+            "beyond 0.95 pu",
+        ),
+        (
+            {"divergence_voltage_limit": 5.0, "divergence_power_limit": 0.8},
+            "BusPDR_BUS_ActivePower",
+            "beyond 0.8 pu",
+        ),
+    ],
+    ids=["voltage", "power"],
+)
+def test_the_limits_of_a_divergence_come_from_the_configuration(
+    monkeypatch, limits, curve, reached
+):
+    curves = pd.DataFrame({"time": [0.0, 1.0], curve: [0.7, 0.99]})
+
+    simulated = _read(monkeypatch, curves, limits=limits)
+
+    assert simulated.divergence == f"{curve} reached 0.99 pu, {reached}"
+
+
+def test_a_divergence_in_zone_1_names_the_bus_as_the_outputs_do(monkeypatch):
+    """#275: PDR is the real connection point; the Zone 1 outputs call this bus InternalNode1."""
+    curves = pd.DataFrame({"time": [0.0, 1.0], "BusPDR_BUS_Voltage": [1.0, 2.0e3]})
+
+    simulated = _read(monkeypatch, curves, zone=1)
+
+    assert simulated.divergence == "InternalNode1_BUS_Voltage reached 2e+03 pu, beyond 10 pu"
