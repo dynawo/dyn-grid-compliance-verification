@@ -150,10 +150,18 @@ class SolverRetryStrategy:
         solver.minimal_acceptable_step /= self.settings.step_divisor
         param_name_min_step = "minStep" if solver.solver_id == "IDA" else "hMin"
         replace_placeholders.modify_par_file(
-            working_oc_dir, "solvers.par", param_name_min_step, solver.minimum_time_step
+            working_oc_dir,
+            "solvers.par",
+            solver.solver_id,
+            param_name_min_step,
+            solver.minimum_time_step,
         )
         replace_placeholders.modify_par_file(
-            working_oc_dir, "solvers.par", "minimalAcceptableStep", solver.minimal_acceptable_step
+            working_oc_dir,
+            "solvers.par",
+            solver.solver_id,
+            "minimalAcceptableStep",
+            solver.minimal_acceptable_step,
         )
         return (
             f"{param_name_min_step} {previous:.3g} -> {solver.minimum_time_step:.3g}, "
@@ -168,10 +176,14 @@ class SolverRetryStrategy:
         if solver.solver_id == "IDA":
             if solver.relAccuracy is not None:
                 replace_placeholders.modify_par_file(
-                    working_oc_dir, "solvers.par", "relAccuracy", solver.relAccuracy
+                    working_oc_dir,
+                    "solvers.par",
+                    solver.solver_id,
+                    "relAccuracy",
+                    solver.relAccuracy,
                 )
             replace_placeholders.modify_par_file(
-                working_oc_dir, "solvers.par", "absAccuracy", solver.absAccuracy
+                working_oc_dir, "solvers.par", solver.solver_id, "absAccuracy", solver.absAccuracy
             )
             return (
                 f"absAccuracy {previous:.3g} -> {solver.absAccuracy:.3g}, "
@@ -179,7 +191,7 @@ class SolverRetryStrategy:
             )
 
         replace_placeholders.modify_par_file(
-            working_oc_dir, "solvers.par", "fnormtol", solver.absAccuracy
+            working_oc_dir, "solvers.par", solver.solver_id, "fnormtol", solver.absAccuracy
         )
         return f"fnormtol {previous:.3g} -> {solver.absAccuracy:.3g}"
 
