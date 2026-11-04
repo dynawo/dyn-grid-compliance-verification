@@ -492,6 +492,11 @@ Grid connection parameters by generator type (HTB1, HTB2, HTB3):
 
 * ``HTB1_p_max``, ``HTB2_p_max``, ``HTB3_p_max`` — active power limit for
   reactance calculation.
+* The reactances and their power limits may be given for one technology: a
+  key with the suffix ``_SM``, ``_PPM`` or ``_BESS`` wins over the plain one.
+  The revisions ``20251013`` and ``20260723`` write them for a PPM and a
+  storage unit at HTB1, whose ``b`` is 0.3 below 250 MW and for any power
+  respectively.
 * ``HTB1_Scc``, ``HTB2_Scc``, ``HTB3_Scc`` — reference short-circuit power
   (MVA) by generator type (400, 1500, 7000 MVA respectively).
 * ``Udim_63kV``, ``Udim_66kV``, ``Udim_90kV``, ``Udim_132kV``,

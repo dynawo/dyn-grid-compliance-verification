@@ -108,7 +108,7 @@ fiche, in the list of its operating conditions.
 
 ## What the tool already gives a delta
 
-Three mechanisms are in the tool so that a delta carries data alone:
+Four mechanisms are in the tool so that a delta carries data alone:
 
 * **A key may name the category of the unit.** `find_option` reads `<key>_<category>` first,
   `<key>_<level>` next, and `<key>` last. `get_generator_category` gives the category from the
@@ -117,6 +117,10 @@ Three mechanisms are in the tool so that a delta carries data alone:
   way: the plain key holds what the DTR gives to the types B and C, and the `_D` key what it
   gives to the type D. The level suffix is left for the one value the DTR does give by level,
   the clearing time of the fault of the fiches I4, I5 and I16 zone 3.
+* **A reactance of the grid may name the technology.** The capability specifications give the
+  reactances `a` and `b` of the lines, and the power that splits `b`, by technology, so
+  `HTB<n>_reactance_*` and `HTB<n>_p_max` read `<key>_SM`, `<key>_PPM` or `<key>_BESS` before
+  `<key>`, when the reactance is computed and not when the tool starts.
 * **A limit may be withdrawn.** `get_threshold` reads `none` as "no limit", and the check then
   reports its value and gives no verdict. The report drops the comparison from the row of that
   check. A revision that keeps an indicator and withdraws its criterion writes one word.
@@ -338,9 +342,10 @@ The delta of `20251013` writes:
 | The fiche I7 gives one operating point, at Q = 0 | the list of operating conditions, one description, one report |
 | The fiche I5 adds the impedant fault | the list of operating conditions, one description, one report |
 | The reaction time carries no verdict | `thr_reaction_time = none` in `revision_art_8_3_3.ini` |
-| The short-circuit impedance of I6 and I7 is Un²/Scc, not Uc²/Scc | `zcc_voltage = Unom` in `revision_art_8_3_3.ini` |
+| The short-circuit impedance of I6 and I7 is Un²/Scc, where I6 gave Uc²/Scc and I7 none | `zcc_voltage = Unom` in `revision_art_8_3_3.ini` |
+| The reactance b at HTB1 is 0.3 for a PPM below 250 MW and for any storage unit, where it was 0.2 below 50 MW | the `_PPM` and `_BESS` keys of `HTB1_reactance_b_*` and `HTB1_p_max` in `revision_art_8_3_1.ini` and `revision_art_8_3_4.ini` |
 
-The delta of `20260723` is not compared yet. It carries the six points above, because its
+The delta of `20260723` is not compared yet. It carries the seven points above, because its
 revision keeps them, and it writes them itself: a delta is measured against the base.
 
 Two fiches of those revisions are not in the tool at all: I17 and F17, on the damping of
