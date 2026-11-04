@@ -856,9 +856,14 @@ class TestCompleteModel:
             mock_table = stack.enter_context(patch(f"{_MS}.TableFile"))
             mock_solvers = stack.enter_context(patch(f"{_MS}.SolversFile"))
 
-            stack.enter_context(patch.object(setup, "_get_pdr"))
+            mock_get_pdr = stack.enter_context(patch.object(setup, "_get_pdr"))
             stack.enter_context(patch.object(setup, "_get_line", return_value=(0.01, 0.1)))
-            stack.enter_context(patch.object(setup, "_get_fault_xpu", return_value=fault_xpu))
+            mock_get_fault_xpu = stack.enter_context(
+                patch.object(setup, "_get_fault_xpu", return_value=fault_xpu)
+            )
+            order = MagicMock()
+            order.attach_mock(mock_get_pdr, "get_pdr")
+            order.attach_mock(mock_get_fault_xpu, "get_fault_xpu")
             stack.enter_context(patch.object(setup, "_get_lines_for_initial_calcs"))
             stack.enter_context(
                 patch.object(setup, "_sort_group_xfmrs_to_generators", return_value=[])
@@ -891,6 +896,7 @@ class TestCompleteModel:
                 dyd=mock_dyd,
                 table=mock_table,
                 solvers=mock_solvers,
+                order=order,
             )
 
         return setup, result, mocks
@@ -940,6 +946,14 @@ class TestCompleteModel:
 
         line_rpu, line_xpu, fault_xpu = mocks["par"].return_value.complete_file.call_args[0][1:4]
         assert (line_rpu, line_xpu, fault_xpu) == (0.01, 0.1, 0.315)
+
+    def test_the_reactance_of_the_fault_is_that_of_the_operating_point_of_the_test(self):
+        """_get_pdr puts a storage unit in consumption for a consumption test, and the reactance
+        of the fault is computed from the Pmax of that operating point."""
+        _, _, mocks = self._run()
+
+        called = [name for name, _, _ in mocks["order"].mock_calls]
+        assert called.index("get_pdr") < called.index("get_fault_xpu")
 
     def test_aux_and_main_xfmrs_included_in_curves_file(self):
         producer = _make_producer()
