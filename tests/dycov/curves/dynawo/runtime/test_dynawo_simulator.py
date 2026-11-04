@@ -60,6 +60,29 @@ def test_a_failure_names_what_dynawo_reported_and_where_to_read_it(simulated):
     )
 
 
+def test_a_failure_of_a_run_whose_outputs_do_not_last_names_no_log(monkeypatch):
+    """#707: the step of a fault search runs in a copy removed once it ends."""
+    monkeypatch.setattr(
+        DynawoSimulator,
+        "run_base_dynawo",
+        lambda self, *args, **kwargs: DynawoResult(
+            False, "stderr", "parameter WT4A_VDipPu not found", None, 1.0
+        ),
+    )
+
+    result = DynawoSimulator.run_base(
+        run=RUN,
+        output_dir=None,
+        working_oc_dir=Path("/work/fault_time_execution_1"),
+        jobs_output_dir=Path("outputs"),
+        bm_name="BM",
+        oc_name="OC",
+        max_sim_time=MAX_SIM_TIME,
+    )
+
+    assert result.log == "Simulation Fails: parameter WT4A_VDipPu not found"
+
+
 def test_a_failure_dynawo_did_not_log_keeps_what_it_printed(simulated):
     result = simulated(DynawoResult(False, "job failed", None, None, 1.0))
 

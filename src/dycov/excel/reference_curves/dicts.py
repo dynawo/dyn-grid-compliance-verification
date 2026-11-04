@@ -36,7 +36,7 @@ METADATA_HELP = {
 }
 # Optional per-generator key DyCoV also reads from this section.
 _METADATA_OPTIONAL = [
-    "# The maximum injected current of a generator, when the curves come from field measurements:",
+    "# The maximum injected current of a generator, which the fault tests check:",
     "#    <generator>_GEN_MaxInjectedCurrentPu =",
 ]
 

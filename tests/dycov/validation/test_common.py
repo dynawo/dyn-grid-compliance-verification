@@ -72,6 +72,63 @@ def test_check_time_against_a_null_reference_reports_no_error():
     assert error == "-"
 
 
+@pytest.mark.parametrize("calculated", [1.111, 0.889], ids=["slower", "faster"])
+def test_check_time_fails_the_same_deviation_on_either_side_of_the_reference(calculated):
+    error, time_check = common.check_time(calculated, 1.0, 0.10)
+
+    assert error == pytest.approx(11.1)
+    assert time_check is False
+
+
+@pytest.mark.parametrize("calculated", [1.0999, 0.9001, 1.1, 0.9])
+def test_check_time_passes_up_to_the_threshold_on_either_side(calculated):
+    error, time_check = common.check_time(calculated, 1.0, 0.10)
+
+    assert error <= 10.0 + 1e-9
+    assert time_check is True
+
+
+@pytest.mark.parametrize("calculated", [1.176, 0.824])
+def test_check_time_of_the_overshoot_fails_past_its_threshold_on_either_side(calculated):
+    error, time_check = common.check_time(calculated, 1.0, 0.15, 1e-6)
+
+    assert error == pytest.approx(17.6)
+    assert time_check is False
+
+
+def test_check_time_verdict_follows_the_error_it_reports():
+    for calculated in (0.5, 0.85, 0.899, 0.95, 1.0, 1.05, 1.101, 1.111, 1.2, 2.0):
+        error, time_check = common.check_time(calculated, 1.0, 0.10)
+
+        assert time_check is (error <= 10.0 + 1e-9), calculated
+
+
+def test_check_time_keeps_the_absolute_tolerance_as_its_floor():
+    """Below the absolute tolerance the relative error means nothing: it is not reported, and
+    the deviation is held to that tolerance instead."""
+    within = common.check_time(0.0119, 0.01, 0.10, 0.002)
+    beyond = common.check_time(0.0125, 0.01, 0.10, 0.002)
+
+    assert within == ("-", True)
+    assert beyond == ("-", False)
+
+
+@pytest.mark.parametrize("calculated", [0.0201, 0.0161], ids=["above", "below"])
+def test_check_time_held_to_its_floor_reports_no_relative_error_on_either_side(calculated):
+    """A deviation of 11 % passes an overshoot of 0.0181 because its floor allows 0.002: the
+    report must not show the 11 % next to the pass, nor treat the two sides apart."""
+    assert common.check_time(calculated, 0.0181, 0.10, 0.002) == ("-", True)
+
+
+def test_check_time_reports_a_relative_error_only_where_it_decides_the_verdict():
+    for reference in (0.005, 0.0181, 0.02, 0.05, 1.0):
+        for factor in (0.5, 0.85, 0.89, 0.95, 1.05, 1.11, 1.2, 1.5):
+            error, time_check = common.check_time(reference * factor, reference, 0.10, 0.002)
+
+            if error != "-":
+                assert time_check is (error <= 10.0 + 1e-9), (reference, factor)
+
+
 # ---------------------------------------------------------------------------
 # Flat response detection
 # ---------------------------------------------------------------------------
@@ -383,6 +440,84 @@ def test_get_txu_of_a_curve_already_above_the_threshold_returns_zero():
 def test_get_txu_raises_on_length_mismatch():
     with pytest.raises(ValueError, match="different length"):
         common.get_txu(1, [0, 1, 2], [1, 2], sim_t_event_end=1)
+
+
+def test_get_txu_of_a_dip_on_a_regular_grid_measures_its_recovery():
+    """The sample before the event holds the voltage before the fault, above the threshold."""
+    time = [0, 1, 2, 3, 4, 5, 6]
+    curve = [1.0, 1.0, 0.2, 0.5, 0.9, 1.0, 1.0]
+
+    result = common.get_txu(0.85, time, curve, sim_t_event_end=2)
+
+    assert result == pytest.approx(2.0)
+
+
+def test_get_txu_of_a_dip_written_before_the_event_measures_its_recovery():
+    """Dynawo writes the discontinuity of the event a few microseconds before its instant."""
+    time = [0, 1, 1.999999, 2, 3, 4, 5]
+    curve = [1.0, 1.0, 0.2, 0.2, 0.5, 0.9, 1.0]
+
+    result = common.get_txu(0.85, time, curve, sim_t_event_end=2)
+
+    assert result == pytest.approx(2.0)
+
+
+def test_get_txu_of_curves_starting_after_the_event():
+    time = [5, 6, 7]
+    curve = [0.2, 0.9, 1.0]
+
+    result = common.get_txu(0.85, time, curve, sim_t_event_end=4)
+
+    assert result == pytest.approx(2.0)
+
+
+def test_get_txu_of_a_fault_that_leaves_the_voltage_above_is_zero_whatever_follows():
+    """#682: T85U is when the voltage gets back above 0.85 pu after the fault, regardless of
+    any undershoot later on; measuring from it would make the composed checks more lenient."""
+    time = np.round(np.arange(29.0, 36.0, 0.001), 6)
+    curve = np.where((time >= 30) & (time < 30.15), 0.9, 1.0)
+    curve = np.where((time >= 33) & (time < 33.2), 0.8, curve)
+
+    result = common.get_txu(0.85, list(time), list(curve), 30.0, sim_t_event_clear=30.15)
+
+    assert result == 0
+
+
+def test_get_txu_finds_a_dip_reached_a_few_samples_into_the_fault():
+    time = [0, 1, 2, 3, 4, 5, 6, 7]
+    curve = [1.0, 1.0, 0.95, 0.9, 0.5, 0.6, 0.9, 1.0]
+
+    within = common.get_txu(0.85, time, curve, 2, sim_t_event_clear=5)
+    at_its_instant = common.get_txu(0.85, time, curve, 2)
+
+    assert within == pytest.approx(4.0)
+    assert at_its_instant == 0
+
+
+def _recovering_voltage(time: np.ndarray) -> np.ndarray:
+    """A dip to 0.05 pu from 30 s to 30.15 s, then a ramp back to 1 pu at 31 s."""
+    ramp = 0.05 + (time - 30.15) * 0.95 / 0.85
+    return np.where(time < 30.0, 1.0, np.where(time < 30.15, 0.05, np.minimum(ramp, 1.0)))
+
+
+@pytest.mark.parametrize(
+    "time",
+    [
+        np.round(np.arange(29.0, 32.0, 0.001), 6),
+        np.round(np.arange(29.0, 32.0, 0.01), 6),
+        np.sort(np.append(np.round(np.arange(29.0, 32.0, 0.01), 6), 29.99999)),
+    ],
+    ids=["1 ms grid", "10 ms grid", "event written before its instant"],
+)
+def test_get_txu_finds_the_recovery_whatever_the_sampling(time):
+    curve = _recovering_voltage(time)
+    if 29.99999 in time:
+        curve[np.where(time == 29.99999)[0][0]] = 0.05
+    recovery = 30.15 + (0.85 - 0.05) * 0.85 / 0.95
+
+    result = common.get_txu(0.85, list(time), list(curve), sim_t_event_end=30.0)
+
+    assert result == pytest.approx(recovery - 30.0, abs=0.0101)
 
 
 # ---------------------------------------------------------------------------

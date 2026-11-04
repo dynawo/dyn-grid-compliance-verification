@@ -9,6 +9,7 @@
 #
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -24,6 +25,23 @@ from dycov.logging import dycov_logging
 
 Remedy = Callable[[SolverParams, Path], str]
 """A change tried on the solver, which reports what it changed."""
+
+# Dynawo ends an error with the source file that raised it. The ones that read the PAR and DYD
+# files of the models, compile those models and give them their parameters raise errors in those
+# inputs, which no change of the solver settles; so do the parameters a model looks up in its PAR
+# without finding them, the variables a connection names that the model lacks and the files the
+# inputs name that do not exist, whatever raises them.
+_INPUT_ERROR = re.compile(
+    r"\(\s*(?:(?:PAR|DYD)\w*\.cpp|DYN(?:Compiler|DynamicData)\.cpp|DYNParameter\.hpp):\d+\s*\)"
+    r"|failed to retrieve parameter|cardinality parameter is not set"
+    r"|not found in subModel|No such file or directory"
+)
+
+
+def rejects_inputs(timeline_error: str | None) -> bool:
+    """Whether the error Dynawo logged is one in the inputs of the models."""
+    return isinstance(timeline_error, str) and bool(_INPUT_ERROR.search(timeline_error))
+
 
 _SMALL_NETWORK_PARAMETERS = {
     "IDA": [
@@ -88,7 +106,7 @@ class SolverRetryStrategy:
         self,
         run: DynawoRunInputs,
         solver: SolverParams,
-        output_dir: Path,
+        output_dir: Path | None,
         working_oc_dir: Path,
         jobs_output_dir: Path,
         bm_name: str,
@@ -100,6 +118,9 @@ class SolverRetryStrategy:
         )
         for remedy in self._remedies():
             if attempt.usable or self._retries_exhausted():
+                return attempt
+            if rejects_inputs(attempt.dynawo.timeline_error):
+                self._warn("Not retried: Dynawo rejected the inputs of the model")
                 return attempt
 
             self._warn(
@@ -144,7 +165,7 @@ class SolverRetryStrategy:
     def _attempt(
         self,
         run: DynawoRunInputs,
-        output_dir: Path,
+        output_dir: Path | None,
         working_oc_dir: Path,
         jobs_output_dir: Path,
         bm_name: str,
@@ -187,10 +208,18 @@ class SolverRetryStrategy:
         solver.minimal_acceptable_step /= self.settings.step_divisor
         param_name_min_step = "minStep" if solver.solver_id == "IDA" else "hMin"
         replace_placeholders.modify_par_file(
-            working_oc_dir, "solvers.par", param_name_min_step, solver.minimum_time_step
+            working_oc_dir,
+            "solvers.par",
+            solver.solver_id,
+            param_name_min_step,
+            solver.minimum_time_step,
         )
         replace_placeholders.modify_par_file(
-            working_oc_dir, "solvers.par", "minimalAcceptableStep", solver.minimal_acceptable_step
+            working_oc_dir,
+            "solvers.par",
+            solver.solver_id,
+            "minimalAcceptableStep",
+            solver.minimal_acceptable_step,
         )
         return (
             f"{param_name_min_step} {previous:.3g} -> {solver.minimum_time_step:.3g}, "
@@ -205,10 +234,14 @@ class SolverRetryStrategy:
         if solver.solver_id == "IDA":
             if solver.relAccuracy is not None:
                 replace_placeholders.modify_par_file(
-                    working_oc_dir, "solvers.par", "relAccuracy", solver.relAccuracy
+                    working_oc_dir,
+                    "solvers.par",
+                    solver.solver_id,
+                    "relAccuracy",
+                    solver.relAccuracy,
                 )
             replace_placeholders.modify_par_file(
-                working_oc_dir, "solvers.par", "absAccuracy", solver.absAccuracy
+                working_oc_dir, "solvers.par", solver.solver_id, "absAccuracy", solver.absAccuracy
             )
             return (
                 f"absAccuracy {previous:.3g} -> {solver.absAccuracy:.3g}, "
@@ -216,7 +249,7 @@ class SolverRetryStrategy:
             )
 
         replace_placeholders.modify_par_file(
-            working_oc_dir, "solvers.par", "fnormtol", solver.absAccuracy
+            working_oc_dir, "solvers.par", solver.solver_id, "fnormtol", solver.absAccuracy
         )
         return f"fnormtol {previous:.3g} -> {solver.absAccuracy:.3g}"
 

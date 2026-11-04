@@ -422,10 +422,14 @@ Signal processing parameters:
 
 Step-response time characteristic thresholds:
 
-* ``thr_reaction_time`` — maximum allowed MAE on reaction time.
-* ``thr_rise_time`` — maximum allowed MAE on rise time.
-* ``thr_settling_time`` — maximum allowed MAE on settling time.
-* ``thr_overshoot`` — maximum allowed MAE on overshoot.
+* ``thr_reaction_time`` — maximum deviation of the reaction time from the
+  reference one, relative to it.
+* ``thr_rise_time`` — maximum deviation of the rise time, relative to the
+  reference one.
+* ``thr_settling_time`` — maximum deviation of the settling time, relative to
+  the reference one.
+* ``thr_overshoot`` — maximum deviation of the overshoot, relative to the
+  reference one.
 * ``thr_ramp_time_lag`` — maximum allowed ME on ramp time lag.
 * ``thr_ramp_error`` — maximum allowed MXE on ramp error.
 * ``thr_final_ss_mae`` — maximum allowed MAE between simulation and reference
@@ -515,4 +519,10 @@ These parameters are useful during development and debugging:
 * ``disable_LP_filtering`` — disable low-pass filtering of signals entirely.
 * ``max_simulation_retries`` — maximum number of retries for a failed
   simulation (default: 4, covering: base line, reduced step, increased
-  precision, small networks, solver switch).
+  precision, small networks, solver switch). These errors in the inputs of a
+  model are not retried, as no solver setting settles them, and they end the
+  search of a fault impedance: one the PAR and DYD readers, the compiler or the
+  parameters of a model raise, a parameter a model does not find in its PAR, a
+  variable a connection names that the model lacks and a file the inputs name
+  that does not exist (``rejects_inputs``). Any other error is retried, a
+  connection the DYD leaves out among them.

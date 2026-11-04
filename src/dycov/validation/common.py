@@ -17,7 +17,7 @@ from dycov.configuration.cfg import config
 from dycov.logging import dycov_logging
 from dycov.validation import compared_curves
 
-# when magnitudes are smaller than atol, switch to absolute error
+# Magnitudes under it count as zero, and a time check allows at least this deviation
 ATOL = 1.0e-6
 # Threshold below which relative tolerance becomes meaningless
 TUBE_TARGET_THRESHOLD = 0.01
@@ -38,10 +38,8 @@ def get_ss_tolerance() -> float:
 
 
 # Absolute tube for small targets avoids unrealistic relative tolerances near zero
-def _show_error(calculated_value: float, reference_value: float, rtol: float, atol: float) -> bool:
-    if rtol * max(abs(calculated_value), abs(reference_value)) > atol and reference_value != 0.0:
-        return True
-    return False
+def _show_error(reference_value: float, rtol: float, atol: float) -> bool:
+    return rtol * abs(reference_value) > atol and reference_value != 0.0
 
 
 def _compute_tube(target: float, percent: float, step: float = 0.0) -> tuple[float, float]:
@@ -84,14 +82,11 @@ def check_time(
         True if the calculated time is within the tolerances of the reference time, False otherwise
 
     """
-    # when magnitudes are smaller than atol, switch to absolute error
-    time_check = math.isclose(
-        calculated_time,
-        reference_time,
-        rel_tol=rtol,
-        abs_tol=atol,
-    )
-    if _show_error(calculated_time, reference_time, rtol, atol):
+    # The report shows the error relative to the reference wherever the verdict judges it so
+    deviation = abs(calculated_time - reference_time)
+    allowed = max(rtol * abs(reference_time), atol)
+    time_check = deviation <= allowed or math.isclose(deviation, allowed)
+    if _show_error(reference_time, rtol, atol):
         return 100 * (abs(calculated_time - reference_time) / reference_time), time_check
     else:
         return "-", time_check
@@ -417,24 +412,33 @@ def get_txpfloor(percent: float, time: list, curve: list, sim_t_event_end: float
     return ret_val
 
 
-def get_txu(threshold: float, time: list, curve: list, sim_t_event_end: float) -> float:
-    """Gets the time when the curve reaches a given threshold.
+def get_txu(
+    threshold: float,
+    time: list,
+    curve: list,
+    sim_t_event_end: float,
+    sim_t_event_clear: float | None = None,
+) -> float:
+    """Gets the time the curve takes, from the event, to get back to the threshold after the
+    event took it below; 0 when the event leaves it above, whatever undershoot follows.
 
     Parameters
     ----------
     threshold: float
-        Threshold that the curve must reach
+        Threshold that the curve must get back to
     time: list
         List of time instants that make up the curve
     curve: list
         List of values that make up the curve
     sim_t_event_end: float
         Instant of time when the event is triggered
+    sim_t_event_clear: float | None
+        Instant of time when the event ends, the instant it is triggered by default
 
     Returns
     -------
     float
-        Time when the percent is reached after the event
+        Time, from the event, when the curve is back to the threshold
     """
     if len(time) != len(curve):
         raise ValueError("curve values and time values have different length")
@@ -443,22 +447,25 @@ def get_txu(threshold: float, time: list, curve: list, sim_t_event_end: float) -
     while sim_t_event_end > time[pos_t_event] and pos_t_event < len(time) - 1:
         pos_t_event += 1
 
-    # Cut list values
-    time = time[pos_t_event - 1 :]
-    curve = curve[pos_t_event - 1 :]
+    pos_t_clear = pos_t_event
+    clear = sim_t_event_end if sim_t_event_clear is None else sim_t_event_clear
+    while clear > time[pos_t_clear] and pos_t_clear < len(time) - 1:
+        pos_t_clear += 1
 
-    pos = 0
-    while pos < len(curve) and abs(curve[pos]) < threshold:
-        pos += 1
+    # Dynawo writes the discontinuity of the event a few microseconds before its instant, so the
+    # sample before the event may already hold the curve under the threshold; on a regular grid
+    # that sample is still the one before the event, above it
+    first = max(pos_t_event - 1, 0)
+    below = next(
+        (pos for pos in range(first, pos_t_clear + 1) if abs(curve[pos]) < threshold), None
+    )
+    if below is None:
+        return 0
 
-    if pos == len(curve):
-        pos = len(curve) - 1
-
-    if time[pos] < sim_t_event_end:
-        ret_val = 0
-    else:
-        ret_val = time[pos] - sim_t_event_end
-    return ret_val
+    recovered = next(
+        (pos for pos in range(below, len(curve)) if abs(curve[pos]) >= threshold), len(curve) - 1
+    )
+    return max(time[recovered] - sim_t_event_end, 0)
 
 
 def check_generator_imax(

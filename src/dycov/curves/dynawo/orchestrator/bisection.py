@@ -171,7 +171,6 @@ class BisectionEngine:
 
     def find_hiz_fault(
         self,
-        output_dir: Path,
         working_oc_dir: Path,
         jobs_output_dir: Path,
         fault_start: float,
@@ -184,12 +183,12 @@ class BisectionEngine:
     ) -> None:
         """
         Determines and applies the fault impedance that achieves the required voltage dip
-        using bisection. Modifies working_oc_dir/TSOModel.par in-place with the result.
+        using bisection. Modifies working_oc_dir/TSOModel.par in-place with the result. A step
+        whose model inputs Dynawo rejects ends the search and leaves TSOModel.par as it was, for
+        the simulation of the test to report that failure.
 
         Parameters
         ----------
-        output_dir : Path
-            Output directory for simulation results.
         working_oc_dir : Path
             Working directory for the simulation.
         jobs_output_dir : Path
@@ -206,7 +205,10 @@ class BisectionEngine:
             Operating Condition name.
         simulate_fn : callable
             Callable (output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name)
-            → SimulateOutcome, provided by DynawoCurves to avoid circular dependency.
+            → SimulateOutcome, provided by DynawoCurves to avoid circular dependency. Each
+            step runs in a copy removed once it ends, or in debug kept as the last success or
+            failure, which the next step replaces; so it gets no output directory and its
+            failure quotes no log.
         reset_solver_fn : callable
             Callable () → None, provided by DynawoCurves to restore solver defaults
             after each bisection step.
@@ -214,8 +216,9 @@ class BisectionEngine:
         Raises
         ------
         SimulationOutcomeError
-            If no fault value yields a successful simulation, or if the required
-            voltage dip cannot be achieved within the bisection tolerance.
+            If no fault value yields a successful simulation, unless Dynawo rejects the model
+            inputs, or if the required voltage dip cannot be achieved within the bisection
+            tolerance.
         """
         fault_r_factor = config.get_float("GridCode", "fault_r_factor", 10.0)
         max_val = config.get_float("Global", "hiz_fault_max_impedance", 100.0)
@@ -241,7 +244,7 @@ class BisectionEngine:
                     fault_rpu,
                 )
                 fault_outcome = simulate_fn(
-                    output_dir,
+                    None,
                     working_oc_dir_fault,
                     jobs_output_dir,
                     bm_name,
@@ -270,6 +273,11 @@ class BisectionEngine:
                     manage_files.rename_path(
                         working_oc_dir_fault, working_oc_dir / target_dir_name
                     )
+                if fault_outcome.rejected_inputs:
+                    dycov_logging.get_logger("Bisection").warning(
+                        "The fault search stops: Dynawo rejected the inputs of the model"
+                    )
+                    return
                 if fault_outcome.succeeded:
                     if voltage_dip_classification == VoltDipResult.DIP_TOO_LARGE:
                         min_val = fault_xpu
@@ -350,7 +358,6 @@ class BisectionEngine:
 
     def find_bolted_fault(
         self,
-        output_dir: Path,
         working_oc_dir: Path,
         jobs_output_dir: Path,
         fault_start: float,
@@ -366,12 +373,12 @@ class BisectionEngine:
         (see `_bolted_fault_max_residual_voltage`). Starts at `bolted_fault_min_impedance`
         (the most severe impedance), resolving the common case in a single simulation,
         and raises X by bisection only when the simulation fails to converge. Modifies
-        working_oc_dir/TSOModel.par in-place with the result.
+        working_oc_dir/TSOModel.par in-place with the result. A step whose model inputs Dynawo
+        rejects ends the search and leaves TSOModel.par as it was, for the simulation of the
+        test to report that failure.
 
         Parameters
         ----------
-        output_dir : Path
-            Output directory for simulation results.
         working_oc_dir : Path
             Working directory for the simulation.
         jobs_output_dir : Path
@@ -386,7 +393,10 @@ class BisectionEngine:
             Operating Condition name.
         simulate_fn : callable
             Callable (output_dir, working_oc_dir, jobs_output_dir, bm_name, oc_name)
-            → SimulateOutcome, provided by DynawoCurves to avoid circular dependency.
+            → SimulateOutcome, provided by DynawoCurves to avoid circular dependency. Each
+            step runs in a copy removed once it ends, or in debug kept as the last success or
+            failure, which the next step replaces; so it gets no output directory and its
+            failure quotes no log.
         reset_solver_fn : callable
             Callable () → None, provided by DynawoCurves to restore solver defaults
             after each search step.
@@ -394,8 +404,9 @@ class BisectionEngine:
         Raises
         ------
         SimulationOutcomeError
-            If no fault value yields a successful simulation, or if no converging
-            impedance keeps the residual voltage under the threshold.
+            If no fault value yields a successful simulation, unless Dynawo rejects the model
+            inputs, or if no converging impedance keeps the residual voltage under the
+            threshold.
         """
         if self._producer.get_zone() != 1:
             return
@@ -424,7 +435,7 @@ class BisectionEngine:
                     fault_rpu,
                 )
                 fault_outcome = simulate_fn(
-                    output_dir,
+                    None,
                     working_oc_dir_fault,
                     jobs_output_dir,
                     bm_name,
@@ -452,6 +463,11 @@ class BisectionEngine:
                     manage_files.rename_path(
                         working_oc_dir_fault, working_oc_dir / target_dir_name
                     )
+                if fault_outcome.rejected_inputs:
+                    dycov_logging.get_logger("Bisection").warning(
+                        "The fault search stops: Dynawo rejected the inputs of the model"
+                    )
+                    return
                 if fault_outcome.succeeded:
                     if residual_classification == VoltDipResult.DIP_CORRECT:
                         accepted_fault_xpu = fault_xpu

@@ -797,6 +797,7 @@ def _make_real_curves(solver_lib="dynawo_SolverIDA"):
 
         parameters = MagicMock()
         parameters.get_output_dir.return_value = Path("/output")
+        parameters.get_working_dir.return_value = Path("/work")
         parameters.get_launcher_dwo.return_value = "/dynawo"
 
         instance = DynawoCurves(
@@ -855,12 +856,26 @@ class TestPrepareOcValidation:
         mock_sf.find_output_dir.return_value = Path("outputs")
 
         output_dir, jobs_output_dir = curves._DynawoCurves__prepare_oc_validation(
-            Path("/work"), "PCS1", "BM1", "OC1"
+            Path("/work/Producer/PCS1/BM1/OC1"), "BM1"
         )
 
         mock_mf.copy_base_case_files.assert_called_once()
         assert jobs_output_dir == Path("outputs")
-        assert output_dir == Path("/output") / "PCS1" / "BM1" / "OC1"
+        assert output_dir == Path("/output") / "Producer" / "PCS1" / "BM1" / "OC1"
+
+    @patch(f"{_MODULE}.simulation_files")
+    @patch(f"{_MODULE}.manage_files")
+    def test_the_output_dir_is_where_the_results_tree_puts_the_test(self, mock_mf, mock_sf):
+        """The working directory becomes the results directory, so a test lands under the
+        directory of its producer, which the Dynawo log quoted on a failure has to name."""
+        curves, _, _ = _make_real_curves()
+        mock_sf.find_output_dir.return_value = Path("outputs")
+
+        output_dir, _ = curves._DynawoCurves__prepare_oc_validation(
+            Path("/work/WindFarm/PCS_RTE-I16z3/USetPointStep/AReactance"), "USetPointStep"
+        )
+
+        assert output_dir == Path("/output/WindFarm/PCS_RTE-I16z3/USetPointStep/AReactance")
 
 
 def _attempt(succeeded=True, sim_time=1.0, log=None, curves=None, divergence=None):
@@ -895,6 +910,26 @@ class TestSimulateOutcomeAssembly:
         assert outcome.has_curves is False
         assert outcome.sim_time == pytest.approx(10.0)
 
+    @pytest.mark.parametrize(
+        "timeline_error, rejected",
+        [
+            (
+                "parameter WT_Kpq not found in set merged_Wind_Turbine "
+                "( PARParametersSet.cpp:156 )",
+                True,
+            ),
+            ("KINSOL fails to solve the problem ( DYNSolverKINAlgRestoration.cpp:432 )", False),
+            (None, False),
+        ],
+    )
+    def test_the_outcome_says_whether_dynawo_rejected_the_inputs(self, timeline_error, rejected):
+        curves, _, _ = _make_real_curves()
+        attempt = SimulationAttempt(DynawoResult(False, "failed", timeline_error, None, 1.0))
+
+        outcome = self._simulate(curves, attempt)
+
+        assert outcome.rejected_inputs is rejected
+
     def test_a_retry_mutation_reaches_the_solver_the_report_reads(self):
         curves, _, _ = _make_real_curves()
 
@@ -928,6 +963,33 @@ class TestSimulateOutcomeAssembly:
         assert outcome.succeeded is False
         assert outcome.time_exceeds is True
         assert outcome.has_curves is False
+
+    def test_a_failure_after_a_faster_success_is_not_a_time_out(self):
+        """Every test of a benchmark runs on one simulator: a success of 2 s before a failure
+        of 3.3 s is no reason to report the failure as over the 30 s limit."""
+        curves, _, _ = _make_real_curves()
+        self._simulate(curves, _attempt(sim_time=2.0))
+
+        outcome = self._simulate(curves, _attempt(succeeded=False, sim_time=3.3, log="KINSOL"))
+
+        assert outcome.succeeded is False
+        assert outcome.time_exceeds is False
+
+    def test_a_failure_over_the_limit_is_a_time_out_whatever_ran_before(self):
+        curves, _, _ = _make_real_curves()
+        self._simulate(curves, _attempt(sim_time=2.0))
+
+        outcome = self._simulate(curves, _attempt(succeeded=False, sim_time=30.5, log="slow"))
+
+        assert outcome.time_exceeds is True
+
+    def test_the_cct_search_still_bounds_its_runs_by_the_last_success(self):
+        curves, _, bisection = _make_real_curves()
+        self._simulate(curves, _attempt(sim_time=2.0))
+
+        curves.get_time_cct(Path("/work"), Path("outputs"), 0.15, "BM1", "OC1")
+
+        assert bisection.sim_time == pytest.approx(2.0)
 
     def test_has_curves_when_csv_exists(self, tmp_path):
         curves, _, _ = _make_real_curves()

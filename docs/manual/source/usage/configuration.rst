@@ -9,6 +9,11 @@ format (`Python flavor <https://docs.python.org/3/library/configparser.html>`_).
 The file lives in ``$HOME/.config/dycov/``, and is created the first time the
 tool runs.
 
+``--user-config <file>`` reads another configuration file on top of
+``config.ini`` for one execution: its options take precedence, and those it
+does not set keep the value ``config.ini`` gives them. A file that does not
+exist or cannot be read stops the run with an error.
+
 The generated ``config.ini`` contains the most common options commented out,
 each shown with its default value. To change a setting, uncomment the relevant
 line and edit the value. We recommend duplicating the line first so you always
@@ -214,7 +219,10 @@ switches meant for diagnosing the tool itself:
 * ``disable_LP_filtering`` — disable the low-pass frequency filtering of the
   signals.
 * ``max_simulation_retries`` — maximum number of retries for a failed
-  simulation (default: 4).
+  simulation (default: 4). A simulation whose model Dynawo rejects, because its
+  PAR lacks a parameter, a PAR or DYD cannot be read or the DYD names a model, a
+  connection, a variable or a file Dynawo does not find, is not retried, and the
+  search of a fault impedance stops at it.
 
 
 User templates
