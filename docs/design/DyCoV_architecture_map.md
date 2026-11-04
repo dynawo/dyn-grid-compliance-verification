@@ -10,20 +10,25 @@ DynawoCurves.obtain_simulated_curve()          orchestrator/curves.py
   └─ ModelSetup.complete_model()               orchestrator/model_setup.py:545   (writes .jobs/.par/.dyd/.crv/solvers.par)
   └─ [bisection, optional]                      orchestrator/bisection.py         (HIZ / bolted / CCT)
   └─ DynawoCurves.__execute_simulation()        orchestrator/curves.py
-       └─ SolverRetryStrategy.run()             runtime/retry_strategy.py         (backend-agnostic; up to 4 retries)
+       └─ SolverRetryStrategy.run()             runtime/retry_strategy.py         (up to 4 retries; reads the curves of each attempt)
             └─ DynawoSimulator.run_base()       runtime/dynawo_simulator.py       ← THE backend seam
-                 └─ run_dynawo_process()        runtime/_process.py:67           subprocess: [launcher, "jobs", "TSOModel.jobs"]
-                 └─ create_curves()             runtime/_curves.py:515            post-process outputs/curves/curves.csv
+            │    └─ run_dynawo_process()        runtime/_process.py:60           subprocess: [launcher, "jobs", "TSOModel.jobs"]
+            └─ read_simulated_curves()          runtime/_curves.py:723            post-process outputs/curves/curves.csv
 ```
 
-`DynawoResult(succeeded, log, timeline_error, curves, sim_time)` is the namedtuple returned by the seam
-(defined in `runtime/dynawo_simulator.py`). `run_simple()` is the retry-less variant used by CCT bisection.
-A run Dynawo ends successfully whose curves of the producer have diverged is a failed one:
-`find_divergence` (`runtime/_curves.py`) bounds the voltages, powers and currents of the PDR and
-of the units — not those of the loads and machines of the network, which are in no base of the
-producer — by `[Dynawo] divergence_voltage_limit` / `divergence_power_limit` and fails on a value
-that is not finite, so the retries and the fault searches treat it as any other failure; the CCT
-search, which does not post-process the curves, keeps its own test on the internal angles.
+The seam only runs Dynawo and reports what it did:
+`DynawoResult(succeeded, log, timeline_error, curves_file, sim_time)` (defined in
+`runtime/dynawo_simulator.py`), `succeeded` being Dynawo's own verdict within the time limit and
+`curves_file` the curves Dynawo wrote. `run_simple()` is the retry-less variant used by CCT bisection.
+What the curves mean is read outside it: each attempt of the retry strategy, once Dynawo ended it
+well, reads them with `read_simulated_curves` (`create_curves` + `find_divergence`) and becomes a
+`SimulationAttempt(dynawo, curves, divergence)` (`runtime/retry_strategy.py`), `usable` when Dynawo
+succeeded and nothing diverged. `find_divergence` bounds the voltages, powers and currents of the
+PDR and of the units — not those of the loads and machines of the network, which are in no base of
+the producer — by `[Dynawo] divergence_voltage_limit` / `divergence_power_limit` and catches a value
+that is not finite; a diverged attempt is retried, and the fault searches see it as a failed step
+(`SimulateOutcome.succeeded` is `usable`). The CCT search does not post-process the curves and keeps
+its own test on the internal angles.
 `timeline_error` carries the first error Dynawo logged, stripped of its timestamp and level
 (`find_timeline_error`, `runtime/_process.py`), so the retry message and the failure warning quote what
 Dynawo said instead of the fact that it said something; a run that reports nothing leaves no log file,
