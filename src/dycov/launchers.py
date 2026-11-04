@@ -23,7 +23,11 @@ from dycov.cli.command_handlers import (
     handle_performance_command,
     handle_validate_command,
 )
-from dycov.cli.utils import check_dynawo_launcher_availability, get_dynawo_launcher_name
+from dycov.cli.utils import (
+    check_dynawo_launcher_availability,
+    check_report_tools_availability,
+    get_dynawo_launcher_name,
+)
 from dycov.core.initialization import DycovInitializer
 from dycov.logging import dycov_logging
 
@@ -89,6 +93,8 @@ class DycovCLI:
             self.logger.info(f"Dynawo launcher path resolved to: {dynawo_launcher_path}")
         else:
             dynawo_launcher_path = None
+        if args.command in {"performance", "validate"} and not getattr(args, "curves_only", False):
+            check_report_tools_availability()
 
         # Apply diagnostic mode BEFORE initialization
         self._apply_diagnostic_mode(args)

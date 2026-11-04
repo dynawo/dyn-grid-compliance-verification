@@ -27,6 +27,7 @@ def _patch_common(mocker):
     mocker.patch("dycov.launchers.shutil.which", return_value="/usr/bin/dynawo")
     mocker.patch("dycov.launchers.DycovInitializer")
     mocker.patch("dycov.launchers.check_dynawo_launcher_availability")
+    mocker.patch("dycov.launchers.check_report_tools_availability")
 
 
 # ---------------------------------------------------------------------------
@@ -78,6 +79,70 @@ def test_dycov_raises_when_dynawo_not_available(mocker):
 
     with pytest.raises(RuntimeError, match="Dynawo launcher not found"):
         dycov()
+
+
+# ---------------------------------------------------------------------------
+# The tools the report needs
+# ---------------------------------------------------------------------------
+
+
+def _run(mocker, command, model=None, curves_only=False):
+    _patch_common(mocker)
+    mocker.patch(f"dycov.launchers.handle_{command}_command")
+    args = _fake_args(command)
+    args.model = model
+    args.excel = None
+    args.curves_only = curves_only
+    mocker.patch("dycov.launchers.setup_cli_parsers").return_value.parse_args.return_value = args
+
+    from dycov.launchers import dycov
+
+    dycov()
+
+
+@pytest.mark.parametrize("command", ["validate", "performance"])
+@pytest.mark.parametrize("model", ["Dynawo", None], ids=["model", "curves"])
+def test_a_run_that_builds_the_report_checks_its_tools(mocker, command, model):
+    _run(mocker, command, model=model)
+
+    from dycov import launchers
+
+    launchers.check_report_tools_availability.assert_called_once()
+
+
+@pytest.mark.parametrize("command", ["validate", "performance"])
+def test_a_curves_only_run_does_not_ask_for_the_report_tools(mocker, command):
+    _run(mocker, command, model="Dynawo", curves_only=True)
+
+    from dycov import launchers
+
+    launchers.check_report_tools_availability.assert_not_called()
+    launchers.check_dynawo_launcher_availability.assert_called_once()
+
+
+@pytest.mark.parametrize("command", ["anonymize", "excel2inputs", "migrate_inputs"])
+def test_a_command_without_report_does_not_ask_for_its_tools(mocker, command):
+    _run(mocker, command)
+
+    from dycov import launchers
+
+    launchers.check_report_tools_availability.assert_not_called()
+
+
+def test_a_missing_report_tool_stops_the_run_naming_it(mocker, caplog):
+    mocker.patch(
+        "dycov.cli.utils.system_checks.check_report_tools",
+        side_effect=OSError("PdfLatex not found."),
+    )
+
+    from dycov.cli.utils import check_report_tools_availability
+
+    with pytest.raises(SystemExit) as exit_info:
+        check_report_tools_availability()
+
+    assert exit_info.value.code == 1
+    assert "PdfLatex not found." in caplog.text
+    assert "Dynawo launcher" not in caplog.text
 
 
 def test_dycov_unknown_command_logs_error(mocker, caplog):
