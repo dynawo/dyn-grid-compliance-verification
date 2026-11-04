@@ -617,6 +617,67 @@ class TestGetLine:
 
 
 # ---------------------------------------------------------------------------
+# _get_fault_xpu
+# ---------------------------------------------------------------------------
+
+
+class TestGetFaultXpu:
+    def _setup(self, mock_config, definition, p_max_pu=0.94):
+        mock_config.has_option.side_effect = lambda section, key: key == "line_XFaultPu"
+        mock_config.get_value.return_value = definition
+        owner = _make_owner(_make_producer(u_nom=225.0, s_nom=100.0, p_max_pu=p_max_pu))
+        owner.get_unit_characteristics.return_value = {"Pmax": p_max_pu, "line_XPu": 0.9}
+        return _make_setup(owner)
+
+    @patch(f"{_MS}.generator_variables")
+    @patch(f"{_MS}.config")
+    def test_a_fault_without_reactance_is_bolted(self, mock_config, mock_gv):
+        mock_config.has_option.return_value = False
+        setup = _make_setup()
+
+        assert setup._get_fault_xpu("PCS1", "BM1", "OC1") == 0.0
+        mock_gv.calculate_fault_xpu.assert_not_called()
+
+    @pytest.mark.parametrize("p_max_pu", [0.94, -0.94])
+    @patch(f"{_MS}.generator_variables")
+    @patch(f"{_MS}.config")
+    def test_xfaultpu_is_the_reactance_the_dtr_gives_at_the_pmax_of_the_test(
+        self, mock_config, mock_gv, p_max_pu
+    ):
+        mock_gv.calculate_fault_xpu.return_value = 0.315
+        setup = self._setup(mock_config, "XFaultPu", p_max_pu)
+
+        assert setup._get_fault_xpu("PCS1", "BM1", "OC1") == pytest.approx(0.315)
+        mock_gv.calculate_fault_xpu.assert_called_once_with(-0.94, 100.0, 225.0, 100.0)
+
+    @pytest.mark.parametrize(
+        "definition, fault_xpu", [("0.5*XFaultPu", 0.1575), ("0.02", 0.02), ("0.1*line_XPu", 0.09)]
+    )
+    @patch(f"{_MS}.generator_variables")
+    @patch(f"{_MS}.config")
+    def test_the_reactance_is_a_value_definition(
+        self, mock_config, mock_gv, definition, fault_xpu
+    ):
+        mock_gv.calculate_fault_xpu.return_value = 0.315
+        setup = self._setup(mock_config, definition)
+
+        assert setup._get_fault_xpu("PCS1", "BM1", "OC1") == pytest.approx(fault_xpu)
+
+    @patch(f"{_MS}.generator_variables")
+    @patch(f"{_MS}.config")
+    def test_an_unknown_reactance_raises_naming_the_option(self, mock_config, mock_gv):
+        mock_gv.calculate_fault_xpu.return_value = 0.315
+        setup = self._setup(mock_config, "XFaultpu")
+
+        with pytest.raises(ValueError) as error:
+            setup._get_fault_xpu("PCS1", "BM1", "OC1")
+
+        message = str(error.value)
+        assert "'line_XFaultPu'" in message
+        assert "XFaultPu" in message.split("magnitudes are")[1]
+
+
+# ---------------------------------------------------------------------------
 # _get_pdr
 # ---------------------------------------------------------------------------
 
@@ -765,6 +826,7 @@ class TestCompleteModel:
         applicable=True,
         has_line=False,
         event_params=None,
+        fault_xpu=0.0,
     ):
         """
         Runs the complete_model orchestration setup.
@@ -796,6 +858,7 @@ class TestCompleteModel:
 
             stack.enter_context(patch.object(setup, "_get_pdr"))
             stack.enter_context(patch.object(setup, "_get_line", return_value=(0.01, 0.1)))
+            stack.enter_context(patch.object(setup, "_get_fault_xpu", return_value=fault_xpu))
             stack.enter_context(patch.object(setup, "_get_lines_for_initial_calcs"))
             stack.enter_context(
                 patch.object(setup, "_sort_group_xfmrs_to_generators", return_value=[])
@@ -871,6 +934,12 @@ class TestCompleteModel:
 
         _, _, mocks = self._run(has_line=False)
         mocks["pcs"].get_pcs_lines_params.assert_not_called()
+
+    def test_the_reactance_of_the_fault_reaches_the_par_file(self):
+        _, _, mocks = self._run(fault_xpu=0.315)
+
+        line_rpu, line_xpu, fault_xpu = mocks["par"].return_value.complete_file.call_args[0][1:4]
+        assert (line_rpu, line_xpu, fault_xpu) == (0.01, 0.1, 0.315)
 
     def test_aux_and_main_xfmrs_included_in_curves_file(self):
         producer = _make_producer()

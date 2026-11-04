@@ -187,3 +187,32 @@ def test_the_reaction_time_loses_its_limit(revision, selected, limit):
     revision(selected)
 
     assert config.get_threshold("GridCode", "thr_reaction_time", -1.0) == limit
+
+
+@pytest.mark.parametrize(
+    "verification, technology, pcs, case, reactance",
+    [
+        ("performance", "PPM", "PCS_RTE-I5", "TransientBolted", None),
+        ("performance", "PPM", "PCS_RTE-I5", "TransientImpedant", "XFaultPu"),
+        ("performance", "BESS", "PCS_RTE-I5", "TransientBoltedInjection", None),
+        ("performance", "BESS", "PCS_RTE-I5", "TransientImpedantInjection", "XFaultPu"),
+        ("performance", "BESS", "PCS_RTE-I5", "TransientImpedantConsumption", "XFaultPu"),
+        ("model", "PPM", "PCS_RTE-I16z3", "TransientBolted", None),
+        ("model", "PPM", "PCS_RTE-I16z3", "TransientImpedant", "XFaultPu"),
+        ("model", "BESS", "PCS_RTE-I16z3", "TransientImpedantInjection", "XFaultPu"),
+        ("model", "BESS", "PCS_RTE-I16z3", "TransientImpedantConsumption", "XFaultPu"),
+    ],
+)
+def test_the_impedant_fault_takes_the_reactance_the_dtr_gives_it(
+    revision, description, verification, technology, pcs, case, reactance
+):
+    """The bolted fault has no reactance of its own, and the impedant one the DTR's."""
+    revision(REVISION)
+    description(verification, technology, pcs)
+
+    section = f"{pcs}.ThreePhaseFault.{case}.Model"
+    assert config.has_option(section, "pdr_P")
+    if reactance is None:
+        assert not config.has_option(section, "line_XFaultPu")
+    else:
+        assert config.get_value(section, "line_XFaultPu") == reactance
