@@ -295,9 +295,10 @@ definitions of the operating condition.
 condition gives it a reactance:
 
 ``line_XFaultPu``
-  Reactance of the fault, as a value definition that may also name
-  ``XFaultPu``: the reactance the DTR gives the impedant fault, in the base
-  Udim, Sn, so that the PDR falls to 0.6 Un while the unit injects no current,
+  Reactance of the fault, in pu of the base of Dynawo (Unom, SnRef), as a
+  value definition that may also name ``XFaultPu``: the reactance the DTR
+  gives the impedant fault, so that the PDR falls to about 0.6 Un while the
+  unit injects no current. The DTR writes it in the base Udim, Sn,
 
   .. math::
 
@@ -305,9 +306,9 @@ condition gives it a reactance:
      \qquad
      U_\infty = \sqrt{1 + \left(\frac{3}{4}b\,\frac{P_{max}}{S_n}\right)^2}
 
-  with the ``Pmax`` of the operating point, the consumed one in consumption.
-  DyCoV writes it in the base of Dynawo, Unom and SnRef. Used by the impedant
-  faults of I5 and I16 Zone 3 (``TransientImpedant``).
+  with the ``Pmax`` of the operating point, the consumed one in consumption,
+  and DyCoV converts it to the base of Dynawo. Used by the impedant faults of
+  I5 and I16 Zone 3 (``TransientImpedant``).
 
 **The operating point** at the connection bus, before the event:
 
