@@ -343,7 +343,7 @@ The delta of `20251013` writes:
 | The fiche I5 adds the impedant fault | the list of operating conditions, one description, one report |
 | The reaction time carries no verdict | `thr_reaction_time = none` in `revision_art_8_3_3.ini` |
 | The short-circuit impedance of I6 and I7 is Un²/Scc, where I6 gave Uc²/Scc and I7 none | `zcc_voltage = Unom` in `revision_art_8_3_3.ini` |
-| The reactance b at HTB1 is 0.3 for a PPM below 250 MW and for any storage unit, where it was 0.2 below 50 MW | the `_PPM` and `_BESS` keys of `HTB1_reactance_b_*` and `HTB1_p_max` in `revision_art_8_3_1.ini` and `revision_art_8_3_4.ini` |
+| The reactance b at HTB1 is 0.3 for a PPM below 250 MW, 0.54 from 250 MW, and 0.3 for any storage unit, where it was 0.2 below 50 MW | the `_PPM` and `_BESS` keys of `HTB1_reactance_b_*` and `HTB1_p_max` in `revision_art_8_3_1.ini` and `revision_art_8_3_4.ini` |
 
 The delta of `20260723` is not compared yet. It carries the seven points above, because its
 revision keeps them, and it writes them itself: a delta is measured against the base.
