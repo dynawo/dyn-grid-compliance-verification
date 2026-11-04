@@ -29,7 +29,9 @@ GRID_CODE_FLOATS = {
     ("GridCode", "HTB1_Scc"): 400.0,
     ("GridCode", "HTB2_Scc"): 1500.0,
     ("GridCode", "HTB3_Scc"): 7000.0,
+    ("GridCode", "Udim_90kV"): 90.0,
     ("GridCode", "Udim_225kV"): 235.0,
+    ("GridCode", "Udim_400kV"): 405.0,
     ("GridCode", "category_voltage_threshold"): 110.0,
 }
 
@@ -97,6 +99,46 @@ def test_calculate_line_xpu_known_level(generator_variables):
 def test_calculate_line_xpu_raises_for_unknown_level(generator_variables):
     with pytest.raises(ValueError, match="33"):
         generator_variables.calculate_line_xpu("a", -0.1, 100.0, 33, 100.0)
+
+
+@pytest.mark.parametrize("s_nom", [100.0, 200.0])
+def test_calculate_fault_xpu_gives_the_example_of_the_dtr(generator_variables, s_nom):
+    """A unit of 225 kV at Pmax = 0.94 Snom, where b = 0.3, faults through 0.29 pu (Udim, Snom)."""
+    x_dynawo = generator_variables.calculate_fault_xpu(-0.94 * s_nom / 100.0, s_nom, 225, 100.0)
+
+    x_dtr = x_dynawo / ((235.0 / 225.0) ** 2 * (100.0 / s_nom))
+    assert x_dtr == pytest.approx(0.29, abs=0.005)
+
+
+@pytest.mark.parametrize(
+    "u_nom, u_dim, p_max, s_nom, b",
+    [
+        (90, 90.0, 40.0, 45.0, 0.2),
+        (90, 90.0, 60.0, 70.0, 0.3),
+        (225, 235.0, 94.0, 100.0, 0.3),
+        (225, 235.0, 300.0, 320.0, 0.54),
+        (400, 405.0, 500.0, 600.0, 0.54),
+        (400, 405.0, 900.0, 1000.0, 0.6),
+    ],
+)
+def test_calculate_fault_xpu_holds_the_pdr_at_60_percent_of_unom(
+    generator_variables, u_nom, u_dim, p_max, s_nom, b
+):
+    """Behind the four lines of 3*b, from the infinite bus that gives Udim at Pmax, the fault
+    divides the voltage down to 0.6 Unom at the PDR once the unit injects no current."""
+    s_nref = 100.0
+    grid_x = 0.75 * b * (u_dim / u_nom) ** 2 * (s_nref / s_nom)
+    u_pdr = u_dim / u_nom
+    u_inf = abs(u_pdr - 1j * grid_x * (p_max / s_nref) / u_pdr)
+
+    fault_x = generator_variables.calculate_fault_xpu(-p_max / s_nref, s_nom, u_nom, s_nref)
+
+    assert u_inf * fault_x / (fault_x + grid_x) == pytest.approx(0.6)
+
+
+def test_calculate_fault_xpu_raises_for_unknown_level(generator_variables):
+    with pytest.raises(ValueError, match="33"):
+        generator_variables.calculate_fault_xpu(-0.1, 100.0, 33, 100.0)
 
 
 @pytest.mark.parametrize(

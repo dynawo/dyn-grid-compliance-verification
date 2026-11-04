@@ -332,14 +332,16 @@ step-response characteristics when they were computed.
    * - ``fig_W``
      - Rotor speed of the generating units, in Hz.
    * - ``fig_WRef``
-     - Network frequency, in Hz, with the band of ``freq_1``, ``freq_250`` or
-       ``freq_200`` when activated.
+     - Network frequency, in Hz, with the band of ``freq_250`` or ``freq_200``
+       when activated, and that of ``freq_1`` when the curves give no
+       frequency of a synchronous condenser.
    * - ``fig_Theta``
      - Internal angle of the generating units.
    * - ``fig_Tap``
      - Tap position of the main transformer.
    * - ``fig_SyncCondP``, ``fig_SyncCondQ``, ``fig_SyncCondFreq``
      - Active power, reactive power and frequency of the synchronous
-       condenser of an islanding test.
+       condenser of an islanding test. The frequency carries the band of
+       ``freq_1``, which bounds it as that of the separated network.
    * - ``fig_LoadP``, ``fig_LoadQ``
      - Active and reactive power of the loads of an islanding test.

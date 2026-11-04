@@ -385,6 +385,51 @@ def test_the_user_config_overrides_the_dtr_revision(tmp_path, empty_parsers):
     assert cfg.get_value("PCS.Model", "pdr_Q") == "0.3"
 
 
+def test_the_layers_of_a_run_reach_a_configuration_read_again_from_the_files(
+    tmp_path, empty_parsers
+):
+    """#678: a worker started with forkserver or spawn builds its configuration from the files;
+    what the run set up in memory reaches it through these layers."""
+    user_file = tmp_path / "user.ini"
+    user_file.write_text("[Global]\nconsole_formatter = %(levelname)s|%(message)s\n")
+    run = Config(tmp_path, *empty_parsers)
+    run.load_user_config(user_file)
+    run._default_config.read_string("[DTR]\ncurrent = 20260723\n")
+    run.set_value("DTR", "current", "20240215")
+    run._dtr_delta_config.read_string("[GridCode]\nthr_reaction_time = none\n")
+    run._dtr_delta_files.append("revision_art_8_3_3.ini")
+    worker = Config(tmp_path, *(_new_parser() for _ in range(6)))
+    worker._user_config.read_string("[DTR]\ncurrent = 20260723\n[Stale]\nkey = 1\n")
+
+    worker.restore_run_layers(run.run_layers())
+
+    assert worker.get_value("DTR", "current") == "20240215"
+    assert worker._user_config.get("Global", "console_formatter", raw=True) == (
+        "%(levelname)s|%(message)s"
+    )
+    assert worker.get_threshold("GridCode", "thr_reaction_time", -1.0) is None
+    assert worker._dtr_delta_files == ["revision_art_8_3_3.ini"]
+    assert not worker._user_config.has_section("Stale")
+
+
+def test_the_layers_of_a_run_keep_what_its_files_say_as_they_say_it(tmp_path, empty_parsers):
+    """A section that overrides [DEFAULT] keeps its value, and a value interpolation would
+    reject reaches the worker as the main process read it, without stopping its pool."""
+    user_file = tmp_path / "user.ini"
+    user_file.write_text(
+        "[DEFAULT]\nsimulation_limit = 30\n\n[Dynawo]\nsimulation_limit = 600\n\n"
+        "[Global]\nnote = 50%\n"
+    )
+    run = Config(tmp_path, *empty_parsers)
+    run.load_user_config(user_file)
+    worker = Config(tmp_path, *(_new_parser() for _ in range(6)))
+
+    worker.restore_run_layers(run.run_layers())
+
+    assert worker.get_value("Dynawo", "simulation_limit") == "600"
+    assert worker._user_config.get("Global", "note", raw=True) == "50%"
+
+
 def test_set_value_overrides_a_dtr_revision_value_in_the_user_config(tmp_path, empty_parsers):
     user_config = empty_parsers[1]
     pcs_dtr_delta_config = empty_parsers[3]

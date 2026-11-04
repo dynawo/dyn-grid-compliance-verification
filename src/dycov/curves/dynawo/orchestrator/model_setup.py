@@ -212,6 +212,35 @@ class ModelSetup:
             origin=("GridCode", "zcc_voltage"),
         )
 
+    def _get_fault_xpu(self, pcs_name: str, bm_name: str, oc_name: str) -> float:
+        """
+        Calculates the reactance of the line fault (pu) from configuration.
+
+        A fault without ``line_XFaultPu`` is bolted. Its definition may reference
+        ``XFaultPu``, the reactance the DTR gives to the impedant three-phase fault.
+
+        Returns
+        -------
+        float
+            line_XFaultPu
+        """
+        config_section = self._cfg_section(pcs_name, bm_name, oc_name, ".Model")
+        if not config.has_option(config_section, "line_XFaultPu"):
+            return 0.0
+
+        fault_xpu_definition = config.get_value(config_section, "line_XFaultPu")
+        dycov_logging.get_logger("ModelSetup").debug(f"\tline_XFaultPu={fault_xpu_definition}")
+        producer = self._owner.get_producer()
+        characteristics = {
+            **self._owner.get_unit_characteristics(),
+            "XFaultPu": generator_variables.calculate_fault_xpu(
+                abs(producer.p_max_pu) * -1, producer.s_nom, producer.u_nom, self._s_nref
+            ),
+        }
+        return value_registry.resolve_value_definition(
+            fault_xpu_definition, characteristics, origin=(config_section, "line_XFaultPu")
+        )
+
     # ------------------------------------------------------------------
     # PDR and load parameters
     # ------------------------------------------------------------------
@@ -654,6 +683,7 @@ class ModelSetup:
         u_dim = self._owner.get_generator_u_dim()
         pdr = self.pdr = self._get_pdr(pcs_name, bm_name, oc_name, u_dim)
         line_rpu, line_xpu = self._get_line(pcs_name, bm_name, oc_name)
+        fault_xpu = self._get_fault_xpu(pcs_name, bm_name, oc_name)
 
         tso_lines = []
         if self.has_line:
@@ -738,6 +768,7 @@ class ModelSetup:
             working_oc_dir,
             line_rpu,
             line_xpu,
+            fault_xpu,
             tso_gen,
             event_params,
             producer.u_nom,

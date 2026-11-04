@@ -87,7 +87,10 @@ possibly signed registry name); anything else is a Dynawo parameter value passed
 A rejected definition aborts the run — `obtain_simulated_curve` turns only `SimulationOutcomeError`
 (the bisection outcomes, `model/parameters.py`) into a failed `SimulationResult`.
 Out of scope: GFM (own grammar `mult*(Xeff+Xgrid)`, `extract_defined_value` for p0/q0)
-and `line_XPu` (DTR reactance-table base `a`/`b`).
+and `line_XPu` (DTR reactance-table base `a`/`b`). `line_XFaultPu` resolves against the registry
+plus `XFaultPu`, the reactance the DTR gives the impedant three-phase fault
+(`generator_variables.calculate_fault_xpu`, at the Pmax of the test); without it the fault of
+`Fault_4Lines_InfBus` is bolted.
 
 **Declared tests (F16)**: the DTR Fiche F16 fixes no test and applies to Zone 3 only, so
 `PCS_RTE-F16z3` ships with an empty `[PCS-Benchmarks]` and, next to it, the `F16Description.ini`
@@ -202,7 +205,10 @@ in Zone 1 reference-curve dictionaries. The curves of a unit are named after the
 `dycov_logging` is one process-wide `DycovLogger`. `init_handlers` (from `core/initialization.py`) keeps
 the arguments it was called with, so a pool worker that did not inherit the handlers rebuilds the same
 ones through `worker_initializer` — which is what happens from Python 3.14, where `forkserver` is the
-default start method on Linux. Its handlers: the console; the shared, rotating
+default start method on Linux. Such a worker also reads the configuration from the files again, so the
+same initializer puts back what the run set up in memory (`config.run_layers()`: the default and user
+layers with `--dtr`, `--user-config` and run-time `set_value` applied, and the revision delta).
+The handlers of `dycov_logging`: the console; the shared, rotating
 `~/.config/dycov/log/dycov.log`, which accumulates every run of the user; and the execution log,
 `dycov_run.log`, added by `add_run_handler` once the working dir exists and closed by
 `close_run_handler` right before that dir is moved to the `-o`. The execution log is a plain

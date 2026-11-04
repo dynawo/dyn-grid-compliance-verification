@@ -199,7 +199,8 @@ def test_the_reaction_time_loses_its_limit(revision, selected, limit):
 
 @pytest.mark.parametrize("selected, voltage", [(BASE_REVISION, "Udim"), (REVISION, "Unom")])
 def test_the_short_circuit_impedance_is_that_of_the_nominal_voltage(revision, selected, voltage):
-    """The fiches I6 and I7 gave Zcc = Uc^2/Scc, Uc being Udim, and now give Zcc = Un^2/Scc."""
+    """The fiche I6 gave Zcc = Uc^2/Scc, Uc being Udim, and I7 an infinite bus at the
+    connection point; both now give Zcc = Un^2/Scc."""
     revision(selected)
 
     assert config.get_value("GridCode", "zcc_voltage") == voltage
