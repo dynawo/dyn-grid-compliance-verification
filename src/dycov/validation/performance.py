@@ -21,7 +21,7 @@ from dycov.curves.manager import CurvesManager
 from dycov.logging import dycov_logging
 from dycov.model.parameters import Stability
 from dycov.model.producer import Producer
-from dycov.validation import common, compliance_list
+from dycov.validation import checks, common, compliance_list
 
 GENERATOR_DISCONNECT_MSG = "GENERATOR : disconnecting"
 LOAD_DISCONNECT_MSG = "LOAD : disconnecting"
@@ -378,7 +378,13 @@ class PerformanceValidator(Validator):
             #   - <generator_id>_GEN_ReactiveCurrentNode2
             # so we can match them based on the generator_id extracted from the column name
             generator_ids = sorted(set(active_current.keys()) & set(reactive_current.keys()))
+            undeclared = []
             for generator_id in generator_ids:
+                imax = self._generators_imax.get(generator_id)
+                if imax is None:
+                    undeclared.append(generator_id)
+                    continue
+
                 ip = self.__curve_list(active_current[generator_id])
                 iq = self.__curve_list(reactive_current[generator_id])
 
@@ -399,7 +405,7 @@ class PerformanceValidator(Validator):
                 current_magnitude = np.where(np.isnan(current_magnitude), 0.0, current_magnitude)
 
                 imax_gen_reac, imax_gen_reac_check = common.check_generator_imax(
-                    self._generators_imax.get(generator_id),
+                    imax,
                     t,
                     current_magnitude,
                     ip,
@@ -410,6 +416,16 @@ class PerformanceValidator(Validator):
                     imax_reac_check = False
                     if imax_reac == -1 or imax_gen_reac < imax_reac:
                         imax_reac = imax_gen_reac
+
+            if undeclared:
+                options = ", ".join(f"{gen}_GEN_MaxInjectedCurrentPu" for gen in undeclared)
+                dycov_logging.get_logger("PerformanceValidator").warning(
+                    "The reactive current priority cannot be checked without the maximum "
+                    f"injected current: declare {options} in the [Curves-Metadata] of the "
+                    "dictionary of the curves"
+                )
+                if imax_reac_check:
+                    imax_reac_check = checks.NOT_COMPUTABLE
 
             compliance_values["imax_reac"] = imax_reac
             compliance_values["imax_reac_check"] = imax_reac_check
@@ -711,7 +727,7 @@ class PerformanceValidator(Validator):
         if compliance_list.contains_key(["imax_reac"], self._validations):
             results["imax_reac"] = compliance_values["imax_reac"]
             results["imax_reac_check"] = compliance_values["imax_reac_check"]
-            results["compliance"] &= results["imax_reac_check"]
+            results["compliance"] &= results["imax_reac_check"] is True
 
         if compliance_list.contains_key(["AVR_5"], self._validations):
             results["AVR_5_check"] = compliance_values["AVR_5_check"]
@@ -814,7 +830,8 @@ class PerformanceValidator(Validator):
                 'stabilized_rotor_angle': bool,  # The rotor angle took part in the
                     stabilization status (if applicable)
                 'imax_reac': float,  # Maximum reactive current (if applicable)
-                'imax_reac_check': bool,  # Maximum reactive current check status (if applicable)
+                'imax_reac_check': bool | str,  # Maximum reactive current check status, N/A
+                    when it cannot be computed (if applicable)
                 'AVR_5_check': bool,  # Plant-level voltage regulation 5% check status
                     (if applicable)
                 'AVR_5': float,  # Plant-level voltage regulation 5% value (if applicable)

@@ -281,8 +281,10 @@ Frequency and current
   current limit, as the DTR states it: the active current fits in what the
   reactive current leaves under the maximum current,
   :math:`I_a^2 \leq I_{max}^2 - I_q^2`. It reports the first instant it does
-  not. Needs the maximum current of the units, read from the model. Meant for
-  the faults of PCS I5.
+  not. Needs the maximum current of the units, read from the model or, with
+  producer curves, from the ``<unit>_GEN_MaxInjectedCurrentPu`` option of the
+  ``[Curves-Metadata]`` of their dictionaries: without it the check is *N/A*.
+  Meant for the faults of PCS I5.
 
 
 Report figures (``[ReportCurves]``)
