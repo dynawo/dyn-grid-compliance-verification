@@ -234,3 +234,30 @@ def test_20260723_writes_what_20251013_writes(path):
         assert _options(REVISIONS / REVISION / path) == _options(later)
     else:
         assert (REVISIONS / REVISION / path).read_bytes() == later.read_bytes()
+
+
+@pytest.mark.parametrize(
+    "selected, technology, p_max, b",
+    [
+        (BASE_REVISION, "PPM", 40.0, 0.2),
+        (REVISION, "PPM", 40.0, 0.3),
+        (REVISION, "PPM", 240.0, 0.3),
+        (REVISION, "PPM", 260.0, 0.54),
+        (BASE_REVISION, "BESS", 40.0, 0.2),
+        (REVISION, "BESS", 40.0, 0.3),
+        (REVISION, "BESS", 60.0, 0.3),
+        (BASE_REVISION, "SM", 40.0, 0.2),
+        (REVISION, "SM", 40.0, 0.2),
+    ],
+)
+def test_a_unit_at_htb1_takes_the_reactance_b_of_its_technology(
+    revision, selected, technology, p_max, b
+):
+    """The capability specifications of PPM and storage give HTB1 a b of 0.3 below 250 MW."""
+    revision(selected)
+
+    line_xpu = generator_variables.calculate_line_xpu(
+        "b", -p_max / 100, 100.0, 90.0, 100.0, technology
+    )
+
+    assert line_xpu == pytest.approx(b)

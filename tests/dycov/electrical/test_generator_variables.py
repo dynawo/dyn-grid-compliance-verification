@@ -182,3 +182,59 @@ def test_a_revision_moves_the_category_by_moving_a_threshold(generator_variables
 def test_get_generator_category_of_a_storage_unit(generator_variables, u_nom, p_max, category):
     """Above 110 kV a storage unit is type D from 50 MW, by its own table of the DTR."""
     assert generator_variables.get_generator_category(u_nom, p_max, True) == category
+
+
+@pytest.fixture
+def reactances(monkeypatch, generator_variables):
+    """The [GridCode] of a revision that gives a technology reactances of its own."""
+    floats = dict(GRID_CODE_FLOATS)
+    floats[("GridCode", "HTB1_reactance_b_low_PPM")] = 0.3
+    floats[("GridCode", "HTB1_reactance_b_high_PPM")] = 0.54
+    floats[("GridCode", "HTB1_p_max_PPM")] = 250.0
+    monkeypatch.setattr(
+        "dycov.configuration.cfg.Config.get_float",
+        lambda self, section, key, default=0.0: floats.get((section, key), default),
+    )
+    monkeypatch.setattr(
+        "dycov.configuration.cfg.Config.has_option",
+        lambda self, section, key: (section, key) in floats,
+    )
+    return floats
+
+
+@pytest.mark.parametrize(
+    "technology, p_max, b",
+    [
+        ("PPM", 40.0, 0.3),
+        ("PPM", 300.0, 0.54),
+        ("SM", 40.0, 0.2),
+        ("BESS", 60.0, 0.3),
+        (None, 40.0, 0.2),
+    ],
+)
+def test_the_reactance_b_of_a_technology_wins_over_the_plain_one(
+    generator_variables, reactances, technology, p_max, b
+):
+    result = generator_variables.calculate_line_xpu(
+        "b", -p_max / 100.0, 100.0, 90, 100.0, technology
+    )
+
+    assert result == pytest.approx(b)
+
+
+def test_the_reactances_are_read_when_they_are_computed(
+    generator_variables, reactances, monkeypatch
+):
+    """A revision of the DTR is selected after the tool has started."""
+    monkeypatch.setitem(reactances, ("GridCode", "HTB1_reactance_b_low_PPM"), 0.25)
+
+    result = generator_variables.calculate_line_xpu("b", -0.4, 100.0, 90, 100.0, "PPM")
+
+    assert result == pytest.approx(0.25)
+
+
+def test_the_fault_takes_the_reactance_b_of_the_technology(generator_variables, reactances):
+    ppm = generator_variables.calculate_fault_xpu(-0.4, 100.0, 90, 100.0, "PPM")
+    sm = generator_variables.calculate_fault_xpu(-0.4, 100.0, 90, 100.0, "SM")
+
+    assert ppm > sm
