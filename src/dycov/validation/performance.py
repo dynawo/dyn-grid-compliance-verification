@@ -210,6 +210,7 @@ class PerformanceValidator(Validator):
         self,
         compliance_values: dict,
         t_event_start: float,
+        t_event_clear: float | None = None,
     ) -> dict:
         bus_pdr_voltage = "BusPDR" + "_BUS_" + "Voltage"
         if compliance_list.contains_key(
@@ -238,6 +239,7 @@ class PerformanceValidator(Validator):
                 self.__curve_list("time"),
                 self.__curve_list(bus_pdr_voltage),
                 t_event_start,
+                t_event_clear,
             )
 
         if compliance_list.contains_key(["time_10Pfloor_85U"], self._validations):
@@ -246,6 +248,7 @@ class PerformanceValidator(Validator):
                 self.__curve_list("time"),
                 self.__curve_list(bus_pdr_voltage),
                 t_event_start,
+                t_event_clear,
             )
             compliance_values["time_10pfloor"] = common.get_txpfloor(
                 0.1,
@@ -258,9 +261,10 @@ class PerformanceValidator(Validator):
         self,
         compliance_values: dict,
         t_event_start: float,
+        t_event_clear: float | None = None,
     ):
         self.__calculate_simple_times(compliance_values, t_event_start)
-        self.__calculate_composed_times(compliance_values, t_event_start)
+        self.__calculate_composed_times(compliance_values, t_event_start, t_event_clear)
 
     def __get_filtered_columns(self, suffix: str) -> list:
         return [col for col in self._get_calculated_curves() if col.endswith(suffix)]
@@ -484,7 +488,7 @@ class PerformanceValidator(Validator):
     ) -> dict:
         compliance_values = {}
 
-        self.__calculate_times(compliance_values, t_event_start)
+        self.__calculate_times(compliance_values, t_event_start, time_clear)
         self.__calculate_avr(compliance_values, t_event_start)
         self.__calculate_frequency(compliance_values)
         self.__calculate_others(compliance_values, t_event_start)

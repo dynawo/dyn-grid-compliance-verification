@@ -389,7 +389,7 @@ def test_calculate_composed_times_measures_the_power_and_voltage_instants():
     )
     compliance_values = {}
 
-    validator._PerformanceValidator__calculate_composed_times(compliance_values, 1.0)
+    validator._PerformanceValidator__calculate_composed_times(compliance_values, 1.0, 1.0)
 
     # The 0.53 pu sample at t = 3 s is inside the 10% tube but outside the 5% one.
     assert compliance_values["time_5p"] == pytest.approx(2.0)
@@ -401,17 +401,35 @@ def test_calculate_composed_times_for_the_power_floor_at_85_percent_voltage():
     validator = _make_validator(validations=["time_10Pfloor_85U"], calculated=_make_pdr_curves())
     compliance_values = {}
 
-    validator._PerformanceValidator__calculate_composed_times(compliance_values, 1.0)
+    validator._PerformanceValidator__calculate_composed_times(compliance_values, 1.0, 1.0)
 
     assert compliance_values["time_85u"] == pytest.approx(1.0)
     assert compliance_values["time_10pfloor"] == pytest.approx(1.0)
+
+
+def test_calculate_composed_times_looks_for_the_dip_until_the_fault_clears():
+    """#682: the voltage of a field record may take a few samples to fall under 0.85 pu."""
+    curves = pd.DataFrame(
+        {
+            "time": [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            "BusPDR_BUS_Voltage": [1.0, 0.95, 0.9, 0.5, 0.6, 0.9, 1.0],
+            "BusPDR_BUS_ActivePower": [0.5] * 7,
+            "BusPDR_BUS_ReactivePower": [0.1] * 7,
+        }
+    )
+    validator = _make_validator(validations=["time_10Pfloor_85U"], calculated=curves)
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_composed_times(compliance_values, 1.0, 3.0)
+
+    assert compliance_values["time_85u"] == pytest.approx(4.0)
 
 
 def test_calculate_times_covers_the_simple_and_the_composed_instants():
     validator = _make_validator(validations=["time_5U", "time_5P"], calculated=_make_pdr_curves())
     compliance_values = {}
 
-    validator._PerformanceValidator__calculate_times(compliance_values, 1.0)
+    validator._PerformanceValidator__calculate_times(compliance_values, 1.0, 1.0)
 
     assert compliance_values["time_5u"] == pytest.approx(1.0)
     assert compliance_values["time_5p"] == pytest.approx(2.0)
@@ -421,7 +439,7 @@ def test_calculate_times_skips_the_disabled_validations():
     validator = _make_validator(calculated=_make_pdr_curves())
     compliance_values = {}
 
-    validator._PerformanceValidator__calculate_times(compliance_values, 1.0)
+    validator._PerformanceValidator__calculate_times(compliance_values, 1.0, 1.0)
 
     assert compliance_values == {}
 
@@ -685,6 +703,25 @@ def test_calculate_measures_the_response_on_the_curve_the_event_drives():
     assert list(compliance_values["calc_settling_tube"]) == ["BusPDR_BUS_ReactivePower"]
     assert compliance_values["calc_reaction_time"] == pytest.approx(1.0)
     assert compliance_values["calc_rise_time"] == pytest.approx(1.0)
+
+
+@pytest.mark.parametrize("validation", ["time_10Pfloor_85U", "time_5P_85U", "time_10P_85U"])
+def test_calculate_looks_for_the_dip_until_the_fault_clears(validation):
+    curves = pd.DataFrame(
+        {
+            "time": [0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0],
+            "BusPDR_BUS_Voltage": [1.0, 0.95, 0.9, 0.5, 0.6, 0.9, 1.0],
+            "BusPDR_BUS_ActivePower": [0.5] * 7,
+            "BusPDR_BUS_ReactivePower": [0.1] * 7,
+        }
+    )
+    validator = _make_validator(validations=[validation], calculated=curves)
+
+    compliance_values = validator._PerformanceValidator__calculate(
+        {"connect_to": "NetworkFrequencyPu"}, 1.0, 3.0
+    )
+
+    assert compliance_values["time_85u"] == pytest.approx(4.0)
 
 
 def test_calculate_measures_no_response_without_the_curve_the_event_drives():
