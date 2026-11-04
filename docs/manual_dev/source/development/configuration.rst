@@ -504,4 +504,10 @@ These parameters are useful during development and debugging:
 * ``disable_LP_filtering`` — disable low-pass filtering of signals entirely.
 * ``max_simulation_retries`` — maximum number of retries for a failed
   simulation (default: 4, covering: base line, reduced step, increased
-  precision, small networks, solver switch).
+  precision, small networks, solver switch). These errors in the inputs of a
+  model are not retried, as no solver setting settles them, and they end the
+  search of a fault impedance: one the PAR and DYD readers, the compiler or the
+  parameters of a model raise, a parameter a model does not find in its PAR, a
+  variable a connection names that the model lacks and a file the inputs name
+  that does not exist (``rejects_inputs``). Any other error is retried, a
+  connection the DYD leaves out among them.

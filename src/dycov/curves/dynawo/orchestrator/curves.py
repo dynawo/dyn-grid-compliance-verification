@@ -18,7 +18,11 @@ from dycov.core.parameters import Parameters
 from dycov.curves.curves import ProducerCurves, get_cfg_oc_name
 from dycov.curves.dynawo.orchestrator.bisection import BisectionEngine
 from dycov.curves.dynawo.orchestrator.model_setup import ModelSetup
-from dycov.curves.dynawo.runtime.retry_strategy import RetrySettings, SolverRetryStrategy
+from dycov.curves.dynawo.runtime.retry_strategy import (
+    RetrySettings,
+    SolverRetryStrategy,
+    rejects_inputs,
+)
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 from dycov.curves.naming import to_output_name
 from dycov.curves.voltage_dip import measure_voltage_dip
@@ -35,7 +39,9 @@ _SIMULATION_SECTION = "Simulation"
 _NOT_CONFIGURED = "not set"
 
 SimulateOutcome = namedtuple(
-    "SimulateOutcome", "succeeded time_exceeds has_curves curves sim_time"
+    "SimulateOutcome",
+    "succeeded time_exceeds has_curves curves sim_time rejected_inputs",
+    defaults=(False,),
 )
 SolverParam = namedtuple("SolverParam", "actual default")
 
@@ -292,6 +298,7 @@ class DynawoCurves(ProducerCurves):
             has_curves=has_curves,
             curves=result.curves,
             sim_time=result.sim_time,
+            rejected_inputs=rejects_inputs(result.timeline_error),
         )
 
     # ------------------------------------------------------------------

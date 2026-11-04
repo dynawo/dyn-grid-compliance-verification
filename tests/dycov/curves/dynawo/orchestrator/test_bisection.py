@@ -57,9 +57,14 @@ def _succeed_outcome(curves: pd.DataFrame | None = None) -> SimulateOutcome:
     )
 
 
-def _fail_outcome() -> SimulateOutcome:
+def _fail_outcome(rejected_inputs: bool = False) -> SimulateOutcome:
     return SimulateOutcome(
-        succeeded=False, time_exceeds=False, has_curves=False, curves=pd.DataFrame(), sim_time=1.0
+        succeeded=False,
+        time_exceeds=False,
+        has_curves=False,
+        curves=pd.DataFrame(),
+        sim_time=1.0,
+        rejected_inputs=rejected_inputs,
     )
 
 
@@ -317,6 +322,28 @@ class TestFindBoltedFault:
 
         simulate_fn.assert_not_called()
         mock_rp.fault_par_file.assert_not_called()
+
+    @patch("dycov.curves.dynawo.orchestrator.bisection.dycov_logging")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.classify_residual_voltage")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.replace_placeholders")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.config")
+    def test_inputs_dynawo_rejects_end_the_search_at_once(
+        self, mock_config, mock_rp, mock_mf, mock_crv, mock_log
+    ):
+        """#700: no impedance settles a model Dynawo rejects, so the test's own simulation
+        reports it."""
+        engine = self._engine_with_config(mock_config)
+        simulate_fn = MagicMock(return_value=_fail_outcome(rejected_inputs=True))
+
+        with _fake_isolated_copy(engine):
+            self._find(engine, simulate_fn, MagicMock())
+
+        assert simulate_fn.call_count == 1
+        mock_rp.fault_par_file.assert_called_once()
+        mock_log.get_logger.return_value.warning.assert_called_once_with(
+            "The fault search stops: Dynawo rejected the inputs of the model"
+        )
 
     @patch("dycov.curves.dynawo.orchestrator.bisection.classify_residual_voltage")
     @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")
@@ -668,6 +695,27 @@ class TestFindHizFault:
                     MagicMock(),
                 )
         return simulate_fn
+
+    @patch("dycov.curves.dynawo.orchestrator.bisection.dycov_logging")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.classify_voltage_dip")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.config")
+    def test_inputs_dynawo_rejects_end_the_search_at_once(
+        self, mock_config, mock_mf, mock_cvd, mock_log
+    ):
+        """#700: no impedance settles a model Dynawo rejects, so the test's own simulation
+        reports it."""
+        engine = self._engine_with_config(mock_config)
+
+        simulate_fn = self._run_until_correct(
+            engine, mock_cvd, [_fail_outcome(rejected_inputs=True)], []
+        )
+
+        assert simulate_fn.call_count == 1
+        mock_cvd.assert_not_called()
+        mock_log.get_logger.return_value.warning.assert_called_once_with(
+            "The fault search stops: Dynawo rejected the inputs of the model"
+        )
 
     @patch("dycov.curves.dynawo.orchestrator.bisection.classify_voltage_dip")
     @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")

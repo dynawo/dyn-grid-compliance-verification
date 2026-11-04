@@ -921,6 +921,32 @@ class TestSimulateOutcomeAssembly:
         assert outcome.has_curves is False
         assert outcome.sim_time == pytest.approx(10.0)
 
+    @pytest.mark.parametrize(
+        "timeline_error, rejected",
+        [
+            (
+                "parameter WT_Kpq not found in set merged_Wind_Turbine "
+                "( PARParametersSet.cpp:156 )",
+                True,
+            ),
+            ("KINSOL fails to solve the problem ( DYNSolverKINAlgRestoration.cpp:432 )", False),
+            (None, False),
+        ],
+    )
+    def test_the_outcome_says_whether_dynawo_rejected_the_inputs(self, timeline_error, rejected):
+        curves, _, _ = _make_real_curves()
+        result = MagicMock(
+            succeeded=False,
+            sim_time=1.0,
+            curves=pd.DataFrame(),
+            log="failed",
+            timeline_error=timeline_error,
+        )
+
+        outcome = self._simulate(curves, result)
+
+        assert outcome.rejected_inputs is rejected
+
     def test_a_retry_mutation_reaches_the_solver_the_report_reads(self):
         curves, _, _ = _make_real_curves()
 

@@ -208,7 +208,10 @@ switches meant for diagnosing the tool itself:
 * ``disable_LP_filtering`` — disable the low-pass frequency filtering of the
   signals.
 * ``max_simulation_retries`` — maximum number of retries for a failed
-  simulation (default: 4).
+  simulation (default: 4). A simulation whose model Dynawo rejects, because its
+  PAR lacks a parameter, a PAR or DYD cannot be read or the DYD names a model, a
+  connection, a variable or a file Dynawo does not find, is not retried, and the
+  search of a fault impedance stops at it.
 
 
 User templates

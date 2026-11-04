@@ -9,6 +9,7 @@
 #
 from __future__ import annotations
 
+import re
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,6 +22,23 @@ from dycov.logging import dycov_logging
 
 Remedy = Callable[[SolverParams, Path], str]
 """A change tried on the solver, which reports what it changed."""
+
+# Dynawo ends an error with the source file that raised it. The ones that read the PAR and DYD
+# files of the models, compile those models and give them their parameters raise errors in those
+# inputs, which no change of the solver settles; so do the parameters a model looks up in its PAR
+# without finding them, the variables a connection names that the model lacks and the files the
+# inputs name that do not exist, whatever raises them.
+_INPUT_ERROR = re.compile(
+    r"\(\s*(?:(?:PAR|DYD)\w*\.cpp|DYN(?:Compiler|DynamicData)\.cpp|DYNParameter\.hpp):\d+\s*\)"
+    r"|failed to retrieve parameter|cardinality parameter is not set"
+    r"|not found in subModel|No such file or directory"
+)
+
+
+def rejects_inputs(timeline_error: str | None) -> bool:
+    """Whether the error Dynawo logged is one in the inputs of the models."""
+    return isinstance(timeline_error, str) and bool(_INPUT_ERROR.search(timeline_error))
+
 
 _SMALL_NETWORK_PARAMETERS = {
     "IDA": [
@@ -82,6 +100,9 @@ class SolverRetryStrategy:
         )
         for remedy in self._remedies():
             if result.succeeded or self._retries_exhausted():
+                return result
+            if rejects_inputs(result.timeline_error):
+                self._warn("Not retried: Dynawo rejected the inputs of the model")
                 return result
 
             self._warn(

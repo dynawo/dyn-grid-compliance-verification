@@ -191,7 +191,9 @@ class BisectionEngine:
     ) -> None:
         """
         Determines and applies the fault impedance that achieves the required voltage dip
-        using bisection. Modifies working_oc_dir/TSOModel.par in-place with the result.
+        using bisection. Modifies working_oc_dir/TSOModel.par in-place with the result. A step
+        whose model inputs Dynawo rejects ends the search and leaves TSOModel.par as it was, for
+        the simulation of the test to report that failure.
 
         Parameters
         ----------
@@ -222,8 +224,9 @@ class BisectionEngine:
         Raises
         ------
         SimulationOutcomeError
-            If no fault value yields a successful simulation, or if the required
-            voltage dip cannot be achieved within the bisection tolerance.
+            If no fault value yields a successful simulation, unless Dynawo rejects the model
+            inputs, or if the required voltage dip cannot be achieved within the bisection
+            tolerance.
         """
         fault_r_factor = config.get_float("GridCode", "fault_r_factor", 10.0)
         max_val = config.get_float("Global", "hiz_fault_max_impedance", 100.0)
@@ -278,6 +281,11 @@ class BisectionEngine:
                     manage_files.rename_path(
                         working_oc_dir_fault, working_oc_dir / target_dir_name
                     )
+                if fault_outcome.rejected_inputs:
+                    dycov_logging.get_logger("Bisection").warning(
+                        "The fault search stops: Dynawo rejected the inputs of the model"
+                    )
+                    return
                 if fault_outcome.succeeded:
                     if voltage_dip_classification == VoltDipResult.DIP_TOO_LARGE:
                         min_val = fault_xpu
@@ -373,7 +381,9 @@ class BisectionEngine:
         (see `_bolted_fault_max_residual_voltage`). Starts at `bolted_fault_min_impedance`
         (the most severe impedance), resolving the common case in a single simulation,
         and raises X by bisection only when the simulation fails to converge. Modifies
-        working_oc_dir/TSOModel.par in-place with the result.
+        working_oc_dir/TSOModel.par in-place with the result. A step whose model inputs Dynawo
+        rejects ends the search and leaves TSOModel.par as it was, for the simulation of the
+        test to report that failure.
 
         Parameters
         ----------
@@ -402,8 +412,9 @@ class BisectionEngine:
         Raises
         ------
         SimulationOutcomeError
-            If no fault value yields a successful simulation, or if no converging
-            impedance keeps the residual voltage under the threshold.
+            If no fault value yields a successful simulation, unless Dynawo rejects the model
+            inputs, or if no converging impedance keeps the residual voltage under the
+            threshold.
         """
         if self._producer.get_zone() != 1:
             return
@@ -460,6 +471,11 @@ class BisectionEngine:
                     manage_files.rename_path(
                         working_oc_dir_fault, working_oc_dir / target_dir_name
                     )
+                if fault_outcome.rejected_inputs:
+                    dycov_logging.get_logger("Bisection").warning(
+                        "The fault search stops: Dynawo rejected the inputs of the model"
+                    )
+                    return
                 if fault_outcome.succeeded:
                     if residual_classification == VoltDipResult.DIP_CORRECT:
                         accepted_fault_xpu = fault_xpu

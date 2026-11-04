@@ -222,6 +222,86 @@ def test_retry_stops_at_the_first_successful_attempt(
     assert len(recorded_warnings) == successful_attempt - 1
 
 
+def _failing_with(monkeypatch, timeline_error):
+    attempts = []
+
+    def fake_run_base(*args, **kwargs):
+        attempts.append(1)
+        return DynawoResult(False, "", timeline_error, None, 1.0)
+
+    monkeypatch.setattr(DynawoSimulator, "run_base", staticmethod(fake_run_base))
+    return attempts
+
+
+@pytest.mark.parametrize(
+    "timeline_error",
+    [
+        "parameter WPP_tLagM not found in set merged_Wind_Turbine ( PARParametersSet.cpp:156 )",
+        "error while parsing file Producer.par : error while parsing stream bad lexical cast: "
+        "source type value could not be interpreted as target ( PARXmlImporter.cpp:63 ) "
+        "( PARXmlImporter.cpp:45 )",
+        "error while parsing file Producer.dyd : unexpected element ( DYDXmlImporter.cpp:88 )",
+        "parameter voltageSetPointChange has no value ( DYNParameter.hpp:58 )",
+        "failed to retrieve parameter weight_gen cardinality (nbGen) ( DYNSubModel.cpp:458 )",
+        "failed to retrieve multiple variable's cardinality for weight_gen : the nbGen "
+        "cardinality parameter is not set ( DYNSubModel.cpp:512 )",
+        "unable to find lib DYNModelUnknown ( DYNCompiler.cpp:284 )",
+        "invalid dynamic connect between Gen_terminal and Bus_ACPIN : ACPIN is unknown "
+        "( DYNCompiler.cpp:1009 )",
+        "element WT_terminalX not found in subModel Wind_Turbine (type "
+        "IECWT4BCurrentSource2020) ( DYNSubModel.cpp:262 )",
+        "missing 'parFile' attribute for model Wind_Turbine in the dyd file (whereas 'parId' "
+        "is defined) ( DYNDynamicData.cpp:258 )",
+        'boost::filesystem::canonical: No such file or directory: "/work/Nope.par"',
+    ],
+    ids=[
+        "missing parameter",
+        "unreadable PAR",
+        "unreadable DYD",
+        "parameter without value",
+        "missing cardinality",
+        "cardinality not set",
+        "unknown library",
+        "unknown connection",
+        "unknown variable",
+        "PAR not named",
+        "missing PAR",
+    ],
+)
+def test_an_error_in_the_inputs_of_the_model_is_not_retried(
+    monkeypatch, recorded_warnings, recorded_writes, timeline_error
+):
+    attempts = _failing_with(monkeypatch, timeline_error)
+
+    result = _run(SolverRetryStrategy(RetrySettings()), _ida_solver())
+
+    assert result.succeeded is False
+    assert result.timeline_error == timeline_error
+    assert len(attempts) == 1
+    assert recorded_writes == []
+    assert not [message for message in recorded_warnings if message.startswith("Retry")]
+    assert "Not retried: Dynawo rejected the inputs of the model" in recorded_warnings
+
+
+@pytest.mark.parametrize(
+    "timeline_error",
+    [
+        "KINSOL fails to solve the problem ( DYNSolverKINAlgRestoration.cpp:432 )",
+        "no value found for mandatory solver parameter 'hMin' (parameter set 'SIM', "
+        "parameter file 'solvers.par') ( DYNSolverImpl.cpp:443 )",
+    ],
+    ids=["numerical", "solver setting"],
+)
+def test_an_error_a_solver_setting_may_settle_is_retried(
+    monkeypatch, recorded_warnings, recorded_writes, timeline_error
+):
+    attempts = _failing_with(monkeypatch, timeline_error)
+
+    _run(SolverRetryStrategy(RetrySettings()), _ida_solver())
+
+    assert len(attempts) == 5
+
+
 def test_the_small_network_parameters_are_declared_once_a_retry_adds_them(
     monkeypatch, recorded_warnings, recorded_writes
 ):
