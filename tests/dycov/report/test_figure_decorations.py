@@ -100,6 +100,41 @@ def test_draw_frequency_band_reads_f_nom_from_the_dynawo_section(monkeypatch, re
     assert ymax == pytest.approx(1.1)
 
 
+def _freq1_figure(name: str, bounds: str, **figure) -> "figure_decorations.FigureDescription":
+    band = FrequencyBand(upper=1.0, lower=1.0, source_key="freq1_frequency", bounds=bounds)
+    return figure_decorations.FigureDescription(
+        name=name, variables="NetworkFrequencyPu", ylabel="Hz", frequency_bands=[band], **figure
+    )
+
+
+_NETWORK_FIGURE = {"name": "fig_WRef", "bounds": "units", "in_hz": True}
+_CONDENSER_FIGURE = {"name": "fig_SyncCondFreq", "bounds": "sync_condenser", "curves_in_hz": True}
+
+
+@pytest.mark.parametrize(
+    "figure, bounded, drawn",
+    [
+        (_NETWORK_FIGURE, "units", True),
+        (_NETWORK_FIGURE, "sync_condenser", False),
+        (_CONDENSER_FIGURE, "sync_condenser", True),
+        (_CONDENSER_FIGURE, "units", False),
+    ],
+)
+def test_the_band_of_freq_1_goes_on_the_figure_of_the_frequency_it_bounded(
+    renderer, figure, bounded, drawn
+):
+    """#625: freq_1 bounds the frequency of the synchronous condenser when the test models one,
+    which differs from the one the units measure at the load step."""
+    description = _freq1_figure(**figure)
+
+    figure_decorations.draw_additional_curves(
+        renderer, description, [0.0, 1.0], 1.0, {"freq1_frequency": bounded}, 0.9, 1.1
+    )
+
+    hlines = sorted(y for kind, y in renderer.marks if kind == "hline")
+    assert hlines == ([pytest.approx(49.0), pytest.approx(51.0)] if drawn else [])
+
+
 # ---------------------------------------------------------------------------
 # MXE
 # ---------------------------------------------------------------------------

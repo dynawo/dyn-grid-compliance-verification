@@ -24,6 +24,12 @@ from dycov.model.parameters import Stability
 from dycov.model.producer import Producer
 from dycov.validation import checks, common, compliance_list
 
+# The results name the frequency freq_1 bounded: that of a synchronous condenser, or that the
+# units measure
+FREQ1_FREQUENCY = "freq1_frequency"
+SYNC_CONDENSER_FREQUENCY = "sync_condenser"
+UNITS_FREQUENCY = "units"
+
 GENERATOR_DISCONNECT_MSG = "GENERATOR : disconnecting"
 LOAD_DISCONNECT_MSG = "LOAD : disconnecting"
 IEC_DISCONNECT_PROTECTION_MSG = "IEC WT disconnected due to"
@@ -382,7 +388,9 @@ class PerformanceValidator(Validator):
             freq1_checks = []
             time_freq1 = -1
             f_nom = config.get_float("Dynawo", "f_nom", 50.0)
-            frequencies = self.__separated_network_frequencies(f_nom)
+            frequencies, compliance_values[FREQ1_FREQUENCY] = self.__separated_network_frequencies(
+                f_nom
+            )
             if not frequencies:
                 _warn_not_computable("The frequency of the separated network", "a frequency")
             for frequency in frequencies:
@@ -397,19 +405,25 @@ class PerformanceValidator(Validator):
             compliance_values["check_freq1"] = _combined_check(freq1_checks)
             compliance_values["time_freq1"] = time_freq1
 
-    def __separated_network_frequencies(self, f_nom: float) -> list:
+    def __separated_network_frequencies(self, f_nom: float) -> tuple[list, str]:
         """The frequency of the separated network, in pu of f_nom, which is what Fiche I10 bounds:
         that of the synchronous condenser when the test models one, as the frequency the units
         measure jumps for a few milliseconds at the load step; the units' own otherwise, or the
-        network frequency the curves carry when they give neither."""
-        sources = (("_GEN_TSO_FrequencyHz", 1.0 / f_nom), ("_GEN_NetworkFrequencyPu", 1.0))
-        for suffix, to_pu in sources:
+        network frequency the curves carry when they give neither. Says whether it is that of the
+        synchronous condenser or not, as the figure that draws the band of the check is the one
+        that draws that frequency, and the network frequency is drawn with that of the units."""
+        sources = (
+            ("_GEN_TSO_FrequencyHz", 1.0 / f_nom, SYNC_CONDENSER_FREQUENCY),
+            ("_GEN_NetworkFrequencyPu", 1.0, UNITS_FREQUENCY),
+        )
+        for suffix, to_pu, frequency in sources:
             columns = self.__get_filtered_columns(suffix)
             if columns:
-                return [[value * to_pu for value in self.__curve_list(c)] for c in columns]
+                curves = [[value * to_pu for value in self.__curve_list(c)] for c in columns]
+                return curves, frequency
         if naming.NETWORK_FREQUENCY in self._get_calculated_curves():
-            return [self.__curve_list(naming.NETWORK_FREQUENCY)]
-        return []
+            return [self.__curve_list(naming.NETWORK_FREQUENCY)], UNITS_FREQUENCY
+        return [], UNITS_FREQUENCY
 
     def __calculate_others(
         self,
@@ -832,6 +846,7 @@ class PerformanceValidator(Validator):
         if compliance_list.contains_key(["freq_1"], self._validations):
             results["freq1"] = compliance_values["time_freq1"]
             results["freq1_check"] = compliance_values["check_freq1"]
+            results[FREQ1_FREQUENCY] = compliance_values[FREQ1_FREQUENCY]
             results["compliance"] &= results["freq1_check"] is True
 
     def __check(
@@ -938,6 +953,8 @@ class PerformanceValidator(Validator):
                 'AVR_5_crvs': list,  # Plant-level voltage regulation 5% curves (if applicable)
                 'freq1': float,  # Frequency deviation (if applicable)
                 'freq1_check': bool,  # Frequency deviation check status (if applicable)
+                'freq1_frequency': str,  # The frequency freq_1 bounded, of the synchronous
+                    condenser or of the units (if applicable)
             }
             A check whose curves are missing ('stabilized', 'static_diff_check',
             'imax_reac_check', 'AVR_5_check', 'freq1_check') is 'N/A' instead of a bool.

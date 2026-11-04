@@ -760,6 +760,20 @@ def test_calculate_frequency_bounds_the_separated_network_not_the_frequency_the_
 
     assert compliance_values["check_freq1"] is True
     assert compliance_values["time_freq1"] == -1
+    assert compliance_values["freq1_frequency"] == "sync_condenser"
+
+
+def test_calculate_frequency_without_a_condenser_bounds_the_frequency_the_units_measure():
+    validator = _make_validator(
+        validations=["freq_1"],
+        calculated=_make_pdr_curves(G1_GEN_NetworkFrequencyPu=[1.0, 1.0, 0.99, 1.0, 1.0]),
+    )
+    compliance_values = {}
+
+    validator._PerformanceValidator__calculate_frequency(compliance_values)
+
+    assert compliance_values["check_freq1"] is True
+    assert compliance_values["freq1_frequency"] == "units"
 
 
 def test_calculate_frequency_reports_the_separated_network_leaving_the_band():
@@ -1536,6 +1550,7 @@ def test_check_others_avr_and_frequency():
         "AVR_5_crvs": [[1.0, 1.0]],
         "time_freq1": 0.1,
         "check_freq1": False,
+        "freq1_frequency": "sync_condenser",
     }
 
     validator._PerformanceValidator__check_others(
@@ -1547,6 +1562,7 @@ def test_check_others_avr_and_frequency():
     assert results["AVR_5_crvs"] == [[1.0, 1.0]]
     assert results["freq1"] == pytest.approx(0.1)
     assert results["freq1_check"] is False
+    assert results["freq1_frequency"] == "sync_condenser"
     assert results["compliance"] is False
 
 
@@ -1555,7 +1571,10 @@ def test_check_others_avr_and_frequency():
     [
         ("imax_reac", {"imax_reac": -1, "imax_reac_check": NOT_COMPUTABLE}),
         ("AVR_5", {"AVR_5_check": NOT_COMPUTABLE, "AVR_5": -1, "AVR_5_crvs": []}),
-        ("freq_1", {"time_freq1": -1, "check_freq1": NOT_COMPUTABLE}),
+        (
+            "freq_1",
+            {"time_freq1": -1, "check_freq1": NOT_COMPUTABLE, "freq1_frequency": "units"},
+        ),
     ],
 )
 def test_check_others_a_check_not_computable_is_reported_and_not_compliant(
