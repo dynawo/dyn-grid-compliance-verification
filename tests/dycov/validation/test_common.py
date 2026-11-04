@@ -72,6 +72,63 @@ def test_check_time_against_a_null_reference_reports_no_error():
     assert error == "-"
 
 
+@pytest.mark.parametrize("calculated", [1.111, 0.889], ids=["slower", "faster"])
+def test_check_time_fails_the_same_deviation_on_either_side_of_the_reference(calculated):
+    error, time_check = common.check_time(calculated, 1.0, 0.10)
+
+    assert error == pytest.approx(11.1)
+    assert time_check is False
+
+
+@pytest.mark.parametrize("calculated", [1.0999, 0.9001, 1.1, 0.9])
+def test_check_time_passes_up_to_the_threshold_on_either_side(calculated):
+    error, time_check = common.check_time(calculated, 1.0, 0.10)
+
+    assert error <= 10.0 + 1e-9
+    assert time_check is True
+
+
+@pytest.mark.parametrize("calculated", [1.176, 0.824])
+def test_check_time_of_the_overshoot_fails_past_its_threshold_on_either_side(calculated):
+    error, time_check = common.check_time(calculated, 1.0, 0.15, 1e-6)
+
+    assert error == pytest.approx(17.6)
+    assert time_check is False
+
+
+def test_check_time_verdict_follows_the_error_it_reports():
+    for calculated in (0.5, 0.85, 0.899, 0.95, 1.0, 1.05, 1.101, 1.111, 1.2, 2.0):
+        error, time_check = common.check_time(calculated, 1.0, 0.10)
+
+        assert time_check is (error <= 10.0 + 1e-9), calculated
+
+
+def test_check_time_keeps_the_absolute_tolerance_as_its_floor():
+    """Below the absolute tolerance the relative error means nothing: it is not reported, and
+    the deviation is held to that tolerance instead."""
+    within = common.check_time(0.0119, 0.01, 0.10, 0.002)
+    beyond = common.check_time(0.0125, 0.01, 0.10, 0.002)
+
+    assert within == ("-", True)
+    assert beyond == ("-", False)
+
+
+@pytest.mark.parametrize("calculated", [0.0201, 0.0161], ids=["above", "below"])
+def test_check_time_held_to_its_floor_reports_no_relative_error_on_either_side(calculated):
+    """A deviation of 11 % passes an overshoot of 0.0181 because its floor allows 0.002: the
+    report must not show the 11 % next to the pass, nor treat the two sides apart."""
+    assert common.check_time(calculated, 0.0181, 0.10, 0.002) == ("-", True)
+
+
+def test_check_time_reports_a_relative_error_only_where_it_decides_the_verdict():
+    for reference in (0.005, 0.0181, 0.02, 0.05, 1.0):
+        for factor in (0.5, 0.85, 0.89, 0.95, 1.05, 1.11, 1.2, 1.5):
+            error, time_check = common.check_time(reference * factor, reference, 0.10, 0.002)
+
+            if error != "-":
+                assert time_check is (error <= 10.0 + 1e-9), (reference, factor)
+
+
 # ---------------------------------------------------------------------------
 # Flat response detection
 # ---------------------------------------------------------------------------

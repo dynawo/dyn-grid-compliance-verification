@@ -17,7 +17,7 @@ from dycov.configuration.cfg import config
 from dycov.logging import dycov_logging
 from dycov.validation import compared_curves
 
-# when magnitudes are smaller than atol, switch to absolute error
+# Magnitudes under it count as zero, and a time check allows at least this deviation
 ATOL = 1.0e-6
 # Threshold below which relative tolerance becomes meaningless
 TUBE_TARGET_THRESHOLD = 0.01
@@ -38,10 +38,8 @@ def get_ss_tolerance() -> float:
 
 
 # Absolute tube for small targets avoids unrealistic relative tolerances near zero
-def _show_error(calculated_value: float, reference_value: float, rtol: float, atol: float) -> bool:
-    if rtol * max(abs(calculated_value), abs(reference_value)) > atol and reference_value != 0.0:
-        return True
-    return False
+def _show_error(reference_value: float, rtol: float, atol: float) -> bool:
+    return rtol * abs(reference_value) > atol and reference_value != 0.0
 
 
 def _compute_tube(target: float, percent: float, step: float = 0.0) -> tuple[float, float]:
@@ -84,14 +82,11 @@ def check_time(
         True if the calculated time is within the tolerances of the reference time, False otherwise
 
     """
-    # when magnitudes are smaller than atol, switch to absolute error
-    time_check = math.isclose(
-        calculated_time,
-        reference_time,
-        rel_tol=rtol,
-        abs_tol=atol,
-    )
-    if _show_error(calculated_time, reference_time, rtol, atol):
+    # The report shows the error relative to the reference wherever the verdict judges it so
+    deviation = abs(calculated_time - reference_time)
+    allowed = max(rtol * abs(reference_time), atol)
+    time_check = deviation <= allowed or math.isclose(deviation, allowed)
+    if _show_error(reference_time, rtol, atol):
         return 100 * (abs(calculated_time - reference_time) / reference_time), time_check
     else:
         return "-", time_check
