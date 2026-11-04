@@ -557,6 +557,25 @@ def test_a_magnitude_of_the_network_that_may_be_large_or_stays_within_its_limit_
     )
 
 
+@pytest.mark.parametrize(
+    "unit, column, value, diverged",
+    [
+        ("Synch_Gen_HighVoltage", "Synch_Gen_HighVoltage_GEN_InternalAngle", 3.14, False),
+        ("PV_Array_Power", "PV_Array_Power_GEN_NetworkFrequencyPu", 1.0, False),
+        ("Setpoint_WT", "Setpoint_WT_GEN_VoltageNode2", 4.2e6, True),
+    ],
+    ids=["angle of a unit named Voltage", "frequency of a unit named Power", "named Setpoint"],
+)
+def test_the_id_of_a_unit_does_not_decide_what_is_bounded(unit, column, value, diverged):
+    """#675: the producer names its units, and the topology check only asks the id to hold the
+    kind of the unit."""
+    divergence = curves_module.find_divergence(
+        _diverging(column, value), [DummyGenerator(unit)], 3.0, 0.5
+    )
+
+    assert (divergence is not None) is diverged
+
+
 def test_the_limits_of_a_divergence_are_those_given():
     curves = _diverging("BusPDR_BUS_ActivePower", 3.0)
 
