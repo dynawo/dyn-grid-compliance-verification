@@ -208,6 +208,8 @@ Under ``[PCSName.BenchmarkName.OCName.Model]``:
 * ``line_XPu`` — reactance of the line at the PDR, when the Benchmark has a
   single Operating Condition. Optional.
 * ``SCR`` — Short-Circuit Ratio. Optional.
+* ``line_XFaultPu`` — reactance of the fault of a three-phase fault test,
+  bolted without it. Optional.
 * ``pdr_P``, ``pdr_Q``, ``pdr_U`` — initial P, Q, and voltage at the PDR.
 
 Every multiplier-based value read from ``PCSDescription.ini`` is written as a
@@ -228,7 +230,9 @@ against a kV variant of the registry and divides by ``u_nom`` afterwards.
 Adding a new base magnitude
 is a matter of adding an entry to that registry — no per-key parsing code changes.
 (GFM keys and the ``line_XPu`` *key*, whose base is a DTR reactance-table entry,
-use their own resolution and are not part of this registry.)
+use their own resolution and are not part of this registry.) ``line_XFaultPu``
+resolves against the registry plus ``XFaultPu``, the reactance the DTR gives the
+impedant three-phase fault.
 
 A definition that cannot be resolved — empty, misspelled magnitude, or malformed
 — raises a ``ValueError`` naming the offending option, the configuration file it
@@ -251,8 +255,8 @@ shipped models:
   loads.
 * ``step_event_PPu``, ``step_event_QPu`` — magnitude of the islanding load
   steps.
-* ``line_RPu``, ``line_XPu``, ``bus_UNom``, ``event_start`` — grid-side
-  parameters of the benchmark.
+* ``line_RPu``, ``line_XPu``, ``line_XFaultPu``, ``bus_UNom``,
+  ``event_start`` — grid-side parameters of the benchmark.
 
 Under ``[PCSName.BenchmarkName.OCName.Event]``:
 

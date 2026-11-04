@@ -291,6 +291,24 @@ present the first of this list wins:
 Whichever is chosen also becomes the ``line_XPu`` magnitude of the value
 definitions of the operating condition.
 
+**The fault** of a three-phase fault test is bolted, unless the operating
+condition gives it a reactance:
+
+``line_XFaultPu``
+  Reactance of the fault, as a value definition that may also name
+  ``XFaultPu``: the reactance the DTR gives the impedant fault, in the base
+  Udim, Sn, so that the PDR falls to 0.6 Un while the unit injects no current,
+
+  .. math::
+
+     X_{defaut} = \frac{\frac{3}{4}b}{\frac{U_\infty U_{dim}}{0.6\,U_n} - 1},
+     \qquad
+     U_\infty = \sqrt{1 + \left(\frac{3}{4}b\,\frac{P_{max}}{S_n}\right)^2}
+
+  with the ``Pmax`` of the operating point, the consumed one in consumption.
+  DyCoV writes it in the base of Dynawo, Unom and SnRef. Used by the impedant
+  faults of I5 and I16 Zone 3 (``TransientImpedant``).
+
 **The operating point** at the connection bus, before the event:
 
 ``pdr_P``, ``pdr_Q``, ``pdr_U``
@@ -501,6 +519,9 @@ cleared. The duration depends on the voltage level.
    fault_duration_HTB1 = 0.150
    fault_duration_HTB2 = 0.085
    fault_duration_HTB3 = 0.085
+
+The revisions that add the impedant fault describe it as ``TransientImpedant``:
+the same test with ``bolted_fault = false`` and ``line_XFaultPu = XFaultPu``.
 
 **Zone 1** (``PCS_RTE-I16z1`` ``ThreePhaseFault.*``): a fault at the
 internal node whose impedance DyCoV searches. ``TSO_model =
