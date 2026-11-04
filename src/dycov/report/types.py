@@ -29,9 +29,19 @@ class ToleranceBand:
 
 @dataclass
 class FinalValueBand(ToleranceBand):
-    """Band relative to the last value of the curve (10P, 5P, imax_reac...)"""
+    """Band relative to the last value of the curve (imax_reac)"""
 
     unit: BandUnit = BandUnit.PERCENT
+    color: str = "#55a868"
+
+
+@dataclass
+class CheckBand:
+    """Band a check of the curve measures it against, as the check recorded it in the results
+    (time_5U, time_10P, time_10Pfloor...): ``source_key`` names its [lower, upper] limits, either
+    of them None when the check bounds one side only, as time_10Pfloor does."""
+
+    source_key: str
     color: str = "#55a868"
 
 
@@ -75,7 +85,7 @@ class FigureDescription:
     name: str
     variables: str | list[dict]
     ylabel: str
-    tolerance_band: ToleranceBand | None = None
+    tolerance_band: ToleranceBand | CheckBand | None = None
     frequency_bands: list[FrequencyBand] = field(default_factory=list)
     dynamic_band: DynamicBand | None = None
     event_markers: list[EventMarker] = field(default_factory=list)

@@ -212,6 +212,11 @@ kind of event it applies.
   ``InfiniteBus`` (the frequency of the voltage table, for the ``*FromTab``
   models) and ``DYNModelOmegaRef`` (the centre of inertia of the island).
 
+  Like the dictionaries, the parameter sets of these templates name only
+  parameters their Dynawo models have and do not compute themselves: when
+  Dynawo is installed, ``tests/dycov/curves/dynawo/dictionary`` checks them
+  against the model descriptors.
+
 A benchmark that uses a voltage table ships it in a directory named after
 the benchmark, next to the description (``GridVoltageDip/TableInfiniteBus.txt``);
 see :ref:`Table files <table-files>`.

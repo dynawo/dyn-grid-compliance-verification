@@ -21,7 +21,7 @@ from dycov.logging import dycov_logging
 
 def check_launchers(launcher_dwo: Path) -> None:
     """
-    Check if the required launchers are available in the system.
+    Check if the Dynawo launcher is available in the system.
 
     Parameters
     ----------
@@ -31,18 +31,25 @@ def check_launchers(launcher_dwo: Path) -> None:
     Raises
     ------
     OSError
-        If one or more required executables are not found in the system PATH.
+        If the launcher is not found in the system PATH.
 
     """
-    error_txt = ""
     if not shutil.which(str(launcher_dwo)):  # shutil.which expects a string
-        error_txt += "Dynawo not found.\n"
+        raise OSError("Dynawo not found.")
 
+
+def check_report_tools() -> None:
+    """
+    Check if the executables the report needs are available in the system.
+
+    Raises
+    ------
+    OSError
+        If pdflatex, which compiles the report, is not found in the system PATH.
+
+    """
     if not shutil.which("pdflatex"):
-        error_txt += "PdfLatex not found.\n"
-
-    if len(error_txt) > 0:
-        raise OSError(error_txt)
+        raise OSError("PdfLatex not found.")
 
     # Warn if 'open' command is not found on POSIX systems (less critical)
     if os.name == "posix" and not shutil.which("open"):

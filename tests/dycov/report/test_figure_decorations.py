@@ -13,7 +13,7 @@ import pytest
 
 from dycov.configuration.cfg import Config
 from dycov.report import figure_decorations
-from dycov.report.types import FrequencyBand
+from dycov.report.types import CheckBand, FinalValueBand, FrequencyBand
 
 
 def _mxe_results(measurement_type: str) -> dict:
@@ -31,6 +31,46 @@ _MXE_MARKS = [
     ("vline", 3.0),
     ("annotation", "MXE:\nBefore: 0.250\nDuring: 0.250\nAfter: 0.250\n"),
 ]
+
+
+# ---------------------------------------------------------------------------
+# Band of a check
+# ---------------------------------------------------------------------------
+
+
+def test_the_band_of_a_check_is_drawn_where_the_check_put_it(renderer):
+    """#694: the voltage of the I2 example changes by 0.00013 pu, and so narrow is its band."""
+    results = {"time_5U_band": [1.0445735, 1.0445865]}
+
+    figure_decorations.draw_tolerance_band(
+        renderer, CheckBand(source_key="time_5U_band"), 1.04458, results
+    )
+
+    assert renderer.marks == [("hline", 1.0445735), ("hline", 1.0445865)]
+
+
+def test_a_floor_draws_the_side_of_zero_only(renderer):
+    results = {"time_10Pfloor_band": [0.7497, None]}
+
+    figure_decorations.draw_tolerance_band(
+        renderer, CheckBand(source_key="time_10Pfloor_band"), 0.833, results
+    )
+
+    assert renderer.marks == [("hline", 0.7497)]
+
+
+def test_a_check_that_left_no_band_draws_none(renderer):
+    figure_decorations.draw_tolerance_band(renderer, CheckBand(source_key="time_5P_band"), 1.0, {})
+
+    assert renderer.marks == []
+
+
+def test_a_band_around_the_final_value_is_still_drawn_from_it(renderer):
+    figure_decorations.draw_tolerance_band(
+        renderer, FinalValueBand(upper=20.0, lower=10.0), 0.5, {}
+    )
+
+    assert renderer.marks == [("hline", pytest.approx(0.7)), ("hline", pytest.approx(0.4))]
 
 
 # ---------------------------------------------------------------------------

@@ -12,6 +12,8 @@ import logging
 import tempfile
 from pathlib import Path
 
+from lxml import etree
+
 
 def _patch_dycov_logging(monkeypatch):
     def _get_logger(name):
@@ -123,16 +125,45 @@ class TestReplacePlaceholders:
             path = Path(tmpdir)
             xml = """
             <root xmlns="http://test">
-                <par name="param" value="1"/>
+                <set id="IDA">
+                    <par name="param" value="1"/>
+                </set>
             </root>
             """
             f = path / "file.xml"
             f.write_text(xml, encoding="utf-8")
 
-            modify_par_file(path, "file.xml", "param", 5.0)
+            modify_par_file(path, "file.xml", "IDA", "param", 5.0)
 
             content = f.read_text()
             assert 'value="5.0"' in content
+
+    def test_modify_par_file_updates_the_value_of_the_set_it_names(self):
+        from dycov.files.replace_placeholders import modify_par_file
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir)
+            xml = """
+            <root xmlns="http://test">
+                <set id="IDA">
+                    <par name="minimalAcceptableStep" value="1e-06"/>
+                </set>
+                <set id="SIM">
+                    <par name="minimalAcceptableStep" value="1e-10"/>
+                </set>
+            </root>
+            """
+            f = path / "file.xml"
+            f.write_text(xml, encoding="utf-8")
+
+            modify_par_file(path, "file.xml", "SIM", "minimalAcceptableStep", 1e-11)
+
+            root = etree.parse(f).getroot()
+            values = {
+                parameter_set.get("id"): parameter_set[0].get("value")
+                for parameter_set in root.iter("{*}set")
+            }
+            assert values == {"IDA": "1e-06", "SIM": "1e-11"}
 
     # =========================
     # Add parameters

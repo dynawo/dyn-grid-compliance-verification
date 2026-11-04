@@ -10,14 +10,19 @@
 
 from __future__ import annotations
 
+from collections import namedtuple
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
+from dycov.configuration.cfg import config
 from dycov.core.global_variables import ABS_TOLERANCE_FACTOR, VOLTAGE_DIP_THRESHOLD
 from dycov.curves import naming
+from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs
 from dycov.logging import dycov_logging
+
+SimulatedCurves = namedtuple("SimulatedCurves", "curves divergence")
 
 
 def _get_modulus(complex_list: list) -> list:
@@ -644,3 +649,101 @@ def create_curves(
     report_unserved_requests(variable_translations, df_curves_imported)
     df_curves = translate_curves(variable_translations, df_curves_imported)
     return build_output_curves(df_curves, df_curves_imported, generators, s_nom, s_nref)
+
+
+def _producer_variable(column: str, generators: list) -> str | None:
+    """The variable a curve of the producer gives, after its PDR bus or its unit, whose id the
+    producer chooses; None for a curve of the network."""
+    if column.startswith("BusPDR_"):
+        return column[len("BusPDR_") :]
+    units = [f"{generator.id}_GEN_" for generator in generators]
+    prefixes = [unit for unit in units if column.startswith(unit)]
+    return column[len(max(prefixes, key=len)) :] if prefixes else None
+
+
+def _divergence_limit(
+    column: str, generators: list, voltage_limit: float, power_limit: float
+) -> float | None:
+    """The magnitude beyond which a curve of the producer has diverged, None for a curve of the
+    network, whose loads and machines may reach any magnitude in the base of the producer, for the
+    measurements at the PDR, in the base of the network, which the PDR curves repeat in that of
+    the producer, or for one that may legitimately reach any: a setpoint, a frequency, a tap or an
+    angle."""
+    variable = _producer_variable(column, generators)
+    if variable is None or "Setpoint" in variable:
+        return None
+    if "Voltage" in variable or "MagnitudeControlledByAVR" in variable:
+        return voltage_limit
+    if "Power" in variable or "Current" in variable:
+        return power_limit
+    return None
+
+
+def find_divergence(
+    curves: pd.DataFrame,
+    generators: list,
+    voltage_limit: float,
+    power_limit: float,
+    zone: int = 0,
+) -> str | None:
+    """Looks for a curve of the producer that has diverged: a voltage beyond voltage_limit, a
+    power or a current beyond power_limit, in absolute value, or a value that is not finite.
+
+    Parameters
+    ----------
+    curves : pd.DataFrame
+        The curves of a simulation, as create_curves gives them.
+    generators : list
+        The units of the producer, whose curves are named after their ids.
+    voltage_limit : float
+        Largest voltage, in pu, a simulation that has not diverged reaches.
+    power_limit : float
+        Largest power or current, in pu, a simulation that has not diverged reaches.
+    zone : int
+        The zone a model validation runs in, whose outputs name its connection bus.
+
+    Returns
+    -------
+    str | None
+        What the first diverged curve reached, None when none has diverged.
+    """
+    for column in curves.columns:
+        limit = _divergence_limit(column, generators, voltage_limit, power_limit)
+        if limit is None:
+            continue
+        values = curves[column].to_numpy(dtype=float)
+        name = naming.to_output_name(column, zone)
+        if not np.all(np.isfinite(values)):
+            return f"{name} is not finite"
+        peak = float(np.max(np.abs(values))) if len(values) else 0.0
+        if peak > limit:
+            return f"{name} reached {peak:.3g} pu, beyond {limit:g} pu"
+    return None
+
+
+def read_simulated_curves(run: DynawoRunInputs, curves_file: Path) -> SimulatedCurves:
+    """Reads the curves of a simulation and tells whether those of the producer have diverged,
+    beyond the limits of the Dynawo section of the configuration.
+
+    Parameters
+    ----------
+    run : DynawoRunInputs
+        The inputs of the run, which give the translations, units and bases of its curves.
+    curves_file : Path
+        The curves file Dynawo wrote.
+
+    Returns
+    -------
+    SimulatedCurves
+        The curves, as create_curves gives them, and what the first diverged curve reached,
+        None when none has diverged.
+    """
+    curves = create_curves(run.curves_dict, curves_file, run.generators, run.s_nom, run.s_nref)
+    divergence = find_divergence(
+        curves,
+        run.generators,
+        config.get_float("Dynawo", "divergence_voltage_limit", 10.0),
+        config.get_float("Dynawo", "divergence_power_limit", 100.0),
+        run.zone,
+    )
+    return SimulatedCurves(curves, divergence)
