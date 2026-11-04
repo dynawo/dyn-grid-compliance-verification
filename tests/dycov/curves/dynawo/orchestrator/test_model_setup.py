@@ -942,19 +942,27 @@ class TestGetLineBranches:
         assert rpu == pytest.approx(1.0 / (factor * 3.0))
         assert xpu == pytest.approx(10.0 / (factor * 3.0))
 
+    @pytest.mark.parametrize("zcc_voltage, uc_pu", [("Udim", 235.0 / 225.0), ("Unom", 1.0)])
     @patch(f"{_MS}.generator_variables")
     @patch(f"{_MS}.get_cfg_oc_name", return_value="SEC")
     @patch(f"{_MS}.config")
-    def test_zcc_branch_derives_impedance_from_scc(self, mock_config, mock_gcn, mock_gv):
+    def test_zcc_branch_derives_impedance_from_scc(
+        self, mock_config, mock_gcn, mock_gv, zcc_voltage, uc_pu
+    ):
+        """Zcc = U^2/Scc, with the voltage the revision of the DTR in use names."""
         mock_config.has_option.side_effect = lambda s, k: k == "Zcc"
         mock_config.get_float.side_effect = lambda s, k, d=None: 2.0 if k == "Ztanphi" else d
+        mock_config.get_value.side_effect = lambda s, k, d=None: {
+            ("GridCode", "zcc_voltage"): zcc_voltage
+        }.get((s, k), d)
         mock_gv.get_scc.return_value = 1000.0
-        mock_gv.get_generator_u_dim.return_value = 20.0
-        setup = _make_setup()
+        owner = _make_owner()
+        owner.get_unit_characteristics.return_value = {"Udim": 235.0 / 225.0, "Unom": 1.0}
+        setup = _make_setup(owner)
 
         rpu, xpu = setup._get_line("PCS1", "BM1", "OC1")
 
-        zcc = 1.0**2 / (1000.0 / 100.0)
+        zcc = uc_pu**2 / (1000.0 / 100.0)
         expected_xpu = 2.0 * zcc / math.sqrt(1 + 4.0)
         assert xpu == pytest.approx(expected_xpu)
         assert rpu == pytest.approx(expected_xpu / 2.0)

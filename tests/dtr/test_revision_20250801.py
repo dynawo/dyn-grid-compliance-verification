@@ -112,3 +112,12 @@ def test_the_reaction_time_keeps_its_limit(revision, selected, limit):
     revision(selected)
 
     assert config.get_threshold("GridCode", "thr_reaction_time", -1.0) == limit
+
+
+@pytest.mark.parametrize("selected, voltage", [(REVISION, "Udim"), (LATER_REVISION, "Unom")])
+def test_the_short_circuit_impedance_is_still_that_of_the_dimensioning_voltage(
+    revision, selected, voltage
+):
+    revision(selected)
+
+    assert config.get_value("GridCode", "zcc_voltage") == voltage
