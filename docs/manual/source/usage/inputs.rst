@@ -77,14 +77,8 @@ is all the tool needs to choose it: nothing is declared for it.
 
 The version for types C and D simulates the tests of the Fiche I18 in Zone 1,
 whose phase jumps and voltage steps are sized by the effective reactance of the
-unit. The INI file of ``Zone1/`` declares it, in pu of the nominal apparent
-power of the unit:
-
-.. code-block:: ini
-
-   [GFM Parameters]
-   # Effective reactance of the Grid Forming unit
-   Xeff = 0.2
+ideal converter of that fiche, 0.27 pu of the nominal apparent power of the
+unit, which the PCS fixes: the INI file of ``Zone1/`` declares nothing for it.
 
 .. note::
    The name *PDR* always refers to the real connection point of the complete

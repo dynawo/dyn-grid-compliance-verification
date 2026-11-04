@@ -13,6 +13,7 @@ import pandas as pd
 import pytest
 
 from dycov.model.parameters import ExclusionWindows
+from dycov.validation import common
 from dycov.validation.common import get_measurement_name
 from dycov.validation.model import ModelValidator, _get_column_name
 
@@ -47,6 +48,9 @@ class DummyConfig:
         return None if value == "none" else value
 
     def get_value(self, section: str, key: str, default=None):
+        return self._values.get(key, default)
+
+    def get_boolean(self, section: str, key: str, default: bool = False) -> bool:
         return self._values.get(key, default)
 
 
@@ -445,6 +449,33 @@ def test_compare_event_times_computes_reaction_and_rise_times():
     assert results["calc_rise_time"] == pytest.approx(0.0)
     assert results["ref_rise_time"] == pytest.approx(0.0)
     assert results["calc_rise_target"] == {"BusPDR_BUS_ActivePower": pytest.approx(0.9)}
+
+
+def test_a_transient_without_a_setpoint_is_measured_against_the_peak_of_the_reference():
+    time = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+    name = "BusPDR_BUS_ActiveCurrent"
+    reference = pd.DataFrame({"time": time, name: [0.5, 0.5, 0.8, 0.55, 0.5, 0.5]})
+    calculated = pd.DataFrame({"time": time, name: [0.5, 0.5, 0.7, 0.52, 0.5, 0.5]})
+    validator = _make_validator(
+        validations=["settling_time", "overshoot"],
+        curves_manager=DummyCurvesManager(calculated=calculated, reference=reference),
+    )
+    results = {}
+
+    validator._ModelValidator__compare_event_times(
+        measurement_name=name,
+        start_event=1.0,
+        setpoint_variation=0.0,
+        results=results,
+        tracks_response=True,
+        transient=True,
+    )
+
+    band = common.get_ss_tolerance() * 0.3
+    assert results["calc_settling_tube"][name] == pytest.approx([0.5 - band, 0.5 + band])
+    assert results["overshoot_tolerance"] == pytest.approx(band)
+    assert results["ref_overshoot"] == pytest.approx(0.3)
+    assert results["calc_overshoot"] == pytest.approx(0.2)
 
 
 def test_compare_event_times_computes_response_and_settling_times():

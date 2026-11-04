@@ -40,6 +40,7 @@ class _Curves(ProducerCurves):
         self._u_dim = u_dim
         self._line_Xpu = line_Xpu
         self._x_grid = x_grid
+        self._x_eff = None
         self._s_nref = 100.0
 
     def get_producer(self):
@@ -126,6 +127,13 @@ def test_obtain_value_sizes_an_event_with_the_reactances_of_the_test(definition)
 
     multiplier = 0.3 if "*" in definition else 1.0
     assert curves.obtain_value(definition) == pytest.approx(multiplier * 0.37)
+
+
+def test_the_effective_reactance_a_pcs_fixes_replaces_the_one_of_the_producer():
+    curves = _Curves(_producer(x_eff=0.2))
+    curves.complete_unit_characteristics(0.05, x_grid=0.1, x_eff=0.27)
+
+    assert curves.obtain_value("(Xeff+Xgrid)") == pytest.approx(0.37)
 
 
 @pytest.mark.parametrize("opaque", ["SomeSolverName", "KLU", "True", "2", "-1", "1e-6"])

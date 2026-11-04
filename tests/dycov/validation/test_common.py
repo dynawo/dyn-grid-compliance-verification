@@ -1046,6 +1046,30 @@ def test_get_overshoot_raises_on_length_mismatch():
         common.get_overshoot([0, 1, 2], [1, 2], sim_t_event_start=1)
 
 
+def test_the_overshoot_of_a_transient_is_taken_towards_its_peak():
+    """A response that returns to 0.5 after a peak of 0.8 ends a hair below where it started,
+    which as a step would make the dip below its end the overshoot."""
+    time = [0, 1, 2, 3, 4, 5]
+    curve = [0.5, 0.5, 0.8, 0.45, 0.49, 0.499]
+
+    assert common.get_overshoot(time, curve, 1, transient=True) == pytest.approx(0.301)
+    assert common.get_overshoot(time, curve, 1) == pytest.approx(0.049)
+
+
+def test_the_response_step_of_a_transient_is_its_peak():
+    time = [0, 1, 2, 3, 4]
+
+    step = common.get_response_step(time, [0.5, 0.5, 0.2, 0.45, 0.5], 1, transient=True)
+
+    assert step == pytest.approx(0.3)
+
+
+def test_the_response_step_of_a_step_is_its_change():
+    time = [0, 1, 2, 3, 4]
+
+    assert common.get_response_step(time, [0.0, 0.0, 0.2, 0.16, 0.15], 1) == pytest.approx(0.15)
+
+
 def test_get_overshoot_tolerance_of_a_step_is_the_settling_band_of_the_step():
     result = common.get_overshoot_tolerance([0.0, 0.5, 2.0], setpoint_variation=0.1)
 

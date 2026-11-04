@@ -74,9 +74,11 @@ The base magnitudes, case-sensitive, are ``Pmax``, ``PmaxInjection``,
 of the 100 MVA base of the simulation), ``Udim`` and ``Unom`` (voltages, in
 pu of the nominal voltage at the PDR), and ``line_XPu`` (the reactance
 computed for the operating condition). The tests of the Fiche I18 are sized
-by ``Xeff``, the effective reactance of a Grid Forming unit, which the INI file
-of ``Zone1/`` of the producer declares in its ``[GFM Parameters]`` section,
-and by ``Xgrid``, the short-circuit reactance of the grid of the operating
+by ``Xeff``, the effective reactance of a Grid Forming unit, the one the PCS
+fixes as ``Xeff`` in its own section (0.27 pu, that of the ideal converter of
+the fiche, in the version Type C/D of the Fiche I16) or else the one the INI
+file of ``Zone1/`` of the producer declares in its ``[GFM Parameters]``
+section, and by ``Xgrid``, the short-circuit reactance of the grid of the operating
 condition (``1/SCR``, or that of its line when it gives no ``SCR``), both in
 pu of the nominal apparent power of the unit, the base the fiche adds them in;
 each one is only a magnitude when it is known. ``Pmax`` and its two aliases
@@ -277,7 +279,17 @@ The operating-condition section
   Magnitude the setpoint tracking test follows when the event steps no
   setpoint, by the label of a compared curve (``active_current``,
   ``reactive_current``, ``active_power``, ``reactive_power``, ``voltage``).
-  The tests of the Fiche I18 that the Fiche I16.2 simulates name it.
+  The tests of the Fiche I18 that the Fiche I16.2 simulates name it. Its
+  step-response indicators are measured against the change of the reference
+  response, the step it has instead of a setpoint step.
+
+``transient_response``
+  ``true`` when the tracked magnitude returns from its response to the event
+  instead of stepping to a new value: its settling time and overshoot are then
+  measured against the peak of the reference response, and the overshoot is
+  taken in the direction of that peak. The phase jumps, the jumps of the
+  short-circuit ratio and the ramps of the frequency of the Fiche I18 declare
+  it.
 
 ``only_with_reference``
   ``true`` when the DTR asks for the test only under a condition the tool does

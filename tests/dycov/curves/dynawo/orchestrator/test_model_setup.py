@@ -672,8 +672,24 @@ class TestGetLine:
         setup = _make_setup()
         setup._get_line("PCS1", "BM1", "OC1")
         setup._owner.complete_unit_characteristics.assert_called_once_with(
-            pytest.approx(0.2), pytest.approx(0.2 * 100.0 / 100.0)
+            pytest.approx(0.2), pytest.approx(0.2 * 100.0 / 100.0), x_eff=None
         )
+
+    @patch(f"{_MS}.config")
+    def test_the_effective_reactance_the_pcs_fixes_reaches_the_characteristics(self, mock_config):
+        mock_config.has_option.side_effect = lambda section, key: key in ("SCR", "Xeff")
+        mock_config.get_float.side_effect = lambda s, k, d=None: {
+            "SCR": 10.0,
+            "SCR_r_factor": 10.0,
+            "Xeff": 0.27,
+        }.get(k, d)
+        setup = _make_setup()
+
+        setup._get_line("PCS1", "BM1", "OC1")
+
+        assert setup._owner.complete_unit_characteristics.call_args.kwargs == {
+            "x_eff": pytest.approx(0.27)
+        }
 
 
 # ---------------------------------------------------------------------------

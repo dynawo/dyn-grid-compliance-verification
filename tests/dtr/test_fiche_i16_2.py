@@ -128,8 +128,31 @@ def test_a_test_of_the_fiche_i18_is_set_up_as_its_tables_define_it(
 
     assert config.get_value(section, "tracked_magnitude") == tracked
     assert config.get_float(f"{section}.Model", "SCR", 0) == scr
-    assert config.get_value(f"{section}.Model", "pdr_P") == "0.5*Snom"
+    assert config.get_value(f"{section}.Model", "pdr_P") == "0.5*Pmax"
     assert config.get_value(f"{section}.Event", event[0]) == event[1]
+
+
+def test_the_tests_of_the_fiche_i18_are_sized_with_the_xeff_of_its_ideal_converter(version):
+    version("PCS_RTE-I16z1", "C")
+
+    assert config.get_float("PCS_RTE-I16z1", "Xeff", 0.0) == pytest.approx(0.27)
+
+
+@pytest.mark.parametrize(
+    "benchmark, transient",
+    [("S_VolAngStep1", True), ("S_SCRup1", True), ("S_Rocof1", True), ("S_VolAmpStep1", False)],
+)
+def test_a_test_of_the_fiche_i18_checks_the_times_its_response_has(version, benchmark, transient):
+    version("PCS_RTE-I16z1", "C")
+    test = f"PCS_RTE-I16z1.{benchmark}"
+
+    def checks(validation):
+        return test in config.get_list("Model-Validations", validation)
+
+    assert config.get_boolean(f"{test}.OC2", "transient_response", False) is transient
+    assert checks("rise_time") is not transient
+    assert checks("settling_time") and checks("overshoot")
+    assert not checks("reaction_time")
 
 
 def test_a_jump_of_the_short_circuit_ratio_switches_a_line_between_2_and_20(version):

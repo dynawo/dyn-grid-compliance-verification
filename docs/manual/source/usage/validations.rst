@@ -399,8 +399,7 @@ installations of type C, a Grid Forming converter of Dynawo in Zone 1, and
 
 The tests of the Fiche I18 keep the names of its scenarios, and each one is run
 from the operating points of the fiche, at InternalNode1, the active power in pu
-of Pn, the rating of the converter that the fiche takes as its base: the nominal
-apparent power of the unit, and not its ``p_max_injection``:
+of Pn, the maximum active power of Zone 1:
 
 .. list-table:: Tests of the Fiche I18 in Zone 1 of the version Type C/D.
    :header-rows: 1
@@ -439,27 +438,24 @@ The operating points are OC1 (:math:`P = 0`), OC2 (:math:`0.5\,P_n`), OC3
 (:math:`-0.5\,P_n`), OC4 (:math:`0.95\,P_n`), OC5 (:math:`-0.95\,P_n`), OC6
 (:math:`P = 0`, :math:`Q = -Q_{max}`) and OC7 (:math:`P = 0`,
 :math:`Q = Q_{max}`), with :math:`Q = 0` and :math:`U = U_n` otherwise.
-:math:`X_{eff}` is the effective reactance of the unit, which the INI file of
-``Zone1/`` declares as ``Xeff`` in its ``[GFM Parameters]`` section, and
+:math:`X_{eff}` is the effective reactance of the ideal converter of the Fiche
+I18, 0.27 pu, which the PCS fixes as ``Xeff`` whatever the unit's, and
 :math:`X_{grid} = 1/SCR`, both in pu of the nominal apparent power of the unit.
 The fiche asks for every test with OC2 and OC3, and for the others only when
 they drive the unit into current limitation: an operating condition other than
 those two runs when the producer delivers its reference curve, and is left out
 of the verification otherwise.
 
-Some scenarios of the Fiche I18 are not run as its tables give them, until RTE
-confirms how to read them. Its unbalanced faults (``S_Fault1`` to ``S_Fault3``)
-are left out: the model is validated on the positive sequence alone, as the
-Fiche I16.2 states. ``S_Fault7``, which its list of tests names and its table
-of faults does not define, is left out too. And ``S_VolAngStep12`` jumps by
+Some scenarios of the Fiche I18 are not run as its tables give them, as RTE
+reads them. Its unbalanced faults (``S_Fault1`` to ``S_Fault3``) are left out:
+the model is validated on the positive sequence alone, as the Fiche I16.2
+states. ``S_Fault7``, which its list of tests names and its table of faults does
+not define, is left out too. And ``S_VolAngStep12`` jumps by
 :math:`-0.6\,(X_{eff}+X_{grid})`, the opposite of ``S_VolAngStep11``, as every
 even step of the series does, where the table of the fiche prints the same
-positive jump as for ``S_VolAngStep11``. The phase jumps and the voltage steps
-are sized with the :math:`X_{eff}` of the unit, while the values the tables of
-the fiche print are those of its example unit, of :math:`X_{eff} = 0.27`. The
-active power of the operating points is taken in pu of the nominal apparent
-power of the unit, the base the Fiche I18 takes, where the Fiche I16.2 and the
-Fiche I11 call Pn the maximum power of Zone 1.
+positive jump as for ``S_VolAngStep11``. The unit runs as delivered: the
+controls the Fiche I18 switches off, of the voltage and of the frequency, belong
+to the plant controller, which the model of Zone 1 does not hold.
 
 A unit whose model has no input for the frequency reference of the network,
 such as the EPRI Grid Forming converter of Dynawo, sees the frequency of the
@@ -472,16 +468,22 @@ frequency) and after the event, with 20 ms excluded after each change, and the
 steady-state error after it. The tracked magnitude is the active current at
 InternalNode1, or the reactive current there for a step of the grid voltage,
 which each test names with ``tracked_magnitude``; since the event steps no
-setpoint, the errors are in pu and not relative to a step. The faults are
-checked with the criteria of the faults of type B, on the curves of
-InternalNode1. Until RTE confirms the criteria of the tests of the Fiche I18
-that are not faults, they take neither the reaction, rise and settling times
-nor the overshoot of a setpoint step, since their event changes no setpoint.
+setpoint, the errors are in pu and not relative to a step. The tracked
+magnitude is also checked for its step-response indicators, but the reaction
+time: a step of the grid voltage steps the reactive current, which is checked
+for its rise and settling times and overshoot as a setpoint step is, against
+the change of the reference; the other tests are transients the active current
+returns from, which have no rise time, and are checked for their settling time
+and overshoot against the peak of the reference response, with
+``transient_response``. The faults are checked with the criteria of the faults
+of type B, on the curves of InternalNode1.
 
 Dynawo initialises a model at the nominal frequency, so a ramp of the frequency
 starting at 49.5 or 50.5 Hz reaches that frequency with a slow ramp over the
 first half of the time before the event, which leaves the unit the second half
-to settle at it.
+to settle at it. The test starts from the power the unit settles at then: with
+a frequency droop, the power of the operating point and the part the deviation
+of the frequency adds to it.
 
 
 PCS F16

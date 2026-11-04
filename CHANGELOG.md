@@ -28,20 +28,19 @@ reference dictionaries declare them: `InternalNode1_BUS_Voltage`,
 
 The fiche asks for every test of the Fiche I18 at its operating conditions OC2 and OC3, and at the
 others only when they drive the unit into current limitation: the tool runs one of those when its
-reference curve is delivered, and leaves it out otherwise. Until RTE confirms how to read them,
-the unbalanced faults of the Fiche I18 are left out, and so is its `S_Fault7`, which no profile
-defines, and `S_VolAngStep12` jumps the other way from `S_VolAngStep11`; the phase jumps and the
-voltage steps are sized with the `Xeff` of the unit, where the tables of the fiche print the
-values of its example unit, of `Xeff` 0.27; and the active power of the operating points is taken
-in pu of the nominal apparent power of the unit, the base the Fiche I18 takes, where the Fiche
-I16.2 and the Fiche I11 call Pn the maximum power of Zone 1.
-
-The phase jumps and the voltage steps of the Fiche I18 are sized by the effective reactance of the
-unit, so the INI file of `Zone1/` of such an installation declares it, in pu of the nominal
-apparent power of the unit:
-
-    [GFM Parameters]
-    Xeff = 0.2
+reference curve is delivered, and leaves it out otherwise. As RTE reads the fiches, the
+unbalanced faults of the Fiche I18 are left out, and so is its `S_Fault7`, which no profile
+defines; `S_VolAngStep12` jumps the other way from `S_VolAngStep11`; the phase jumps and the
+voltage steps are sized with the effective reactance of the ideal converter of the fiche, 0.27 pu,
+whatever the unit's, so its events are those its tables print; and the active power of the
+operating points is in pu of Pn, the maximum active power of Zone 1. The tests of the Fiche I18
+that are not faults are tracking tests of the active current, or of the reactive one for a step of
+the grid voltage: besides their tracking and final errors, a step of the grid voltage checks the
+rise and settling times and the overshoot of the reactive current, and the other tests, transients
+the active current returns from, its settling time and overshoot against the peak of the
+reference. The unit runs as delivered, its controls of the plant being in Zone 3, and a ramp of the
+frequency starts from the power the unit settles at after the frequency reaches its starting
+value.
 
 Two of the Grid Forming converters of Dynawo, the droop one and the EPRI one, can be the Zone 1
 unit: the examples `BESS/GridFormingDroop` and `BESS/GridFormingEpri` are such installations, of

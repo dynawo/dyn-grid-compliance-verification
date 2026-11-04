@@ -72,7 +72,9 @@ copies the producer's table files into the working directory with its DYD and PA
 **Config value definitions** (any multiplier-based `PCSDescription.ini` value): resolved data-driven,
 not per-key. `value_registry.unit_characteristics(producer, u_dim)` is the single registry of base
 magnitudes (`Pmax`/`PmaxInjection`/`PmaxConsumption`/`Qmax`/`Qmin`/`Snom`/`Udim`/`Unom=1.0`/`line_XPu`,
-powers in s_nref pu, voltage in Unom pu; plus `Xeff` (`[GFM Parameters]` of the producer) and
+powers in s_nref pu, voltage in Unom pu; plus `Xeff` (the PCS's own `Xeff`, which
+`ModelSetup._fixed_x_eff` hands `complete_unit_characteristics`, else `[GFM Parameters]` of the
+producer) and
 `Xgrid` (the `1/SCR` of the OC or its line's reactance), in the unit's Snom pu, only when known);
 `resolve_value_definition(defn, chars, sign, origin)` evaluates `[±mult*]Name`|`[±mult*](Name+Name)`
 |numeric against it; `origin=(section, key)` makes a rejected definition name its config file+line
@@ -116,7 +118,9 @@ it closes (`line_SwitchOffSignal20 = true`, skipped by `get_line_values`) or an 
 marked `only_with_reference` runs only when its reference curve is there (`Benchmark.__is_run`,
 `manage_files.has_curves`): every I18 test but OC2/OC3. Criterion 5 tracks the `tracked_magnitude`
 an OC names (`ModelValidator.__tracked_magnitude`, `compared_curves.setpoint_label` taking a label)
-when its event steps no setpoint. Every page of the TypeCD Zone 1 report is the shared
+when its event steps no setpoint, and its step-response indicators are measured against the step
+of the reference response (`common.get_response_step`: its change, or the peak of a transient an
+OC marks `transient_response`, whose overshoot `get_overshoot` takes towards that peak). Every page of the TypeCD Zone 1 report is the shared
 `report.I16z1.TypeCD.Test.tex`, which prints the conditions of the test from its description
 (`report/tables/conditions.py`). The Grid Forming converters of Dynawo the tool supports
 (`GridFormingConverterDroopControl`, `GridFormingEpri`, family `GFM` in `Storage.ini`) state in the

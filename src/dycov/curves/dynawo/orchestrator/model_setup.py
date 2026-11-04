@@ -211,8 +211,17 @@ class ModelSetup:
 
         if self.has_line and x_grid is None:
             x_grid = line_xpu * producer.s_nom / self._s_nref
-        self._owner.complete_unit_characteristics(line_xpu, x_grid)
+        self._owner.complete_unit_characteristics(
+            line_xpu, x_grid, x_eff=self._fixed_x_eff(pcs_name)
+        )
         return line_rpu, line_xpu
+
+    def _fixed_x_eff(self, pcs_name: str) -> Optional[float]:
+        """The effective reactance the PCS fixes, as the DTR Fiche I18 does with the one of its
+        ideal converter, None when the PCS leaves it to the producer."""
+        if not config.has_option(pcs_name, "Xeff"):
+            return None
+        return config.get_float(pcs_name, "Xeff", 0.0)
 
     def _get_switched_line(
         self, config_section: str, line_zpu: complex, x_over_r: float

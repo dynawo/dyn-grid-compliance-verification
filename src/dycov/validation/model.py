@@ -83,6 +83,13 @@ class ModelValidator(Validator):
             get_cfg_oc_name(self._pcs_name, self._bm_name, oc_name), "tracked_magnitude"
         )
 
+    def __is_transient(self, oc_name: str) -> bool:
+        """Whether the magnitude a test tracks returns from its response to the event, as
+        ``transient_response`` declares it, instead of stepping to a new value."""
+        return config.get_boolean(
+            get_cfg_oc_name(self._pcs_name, self._bm_name, oc_name), "transient_response", False
+        )
+
     def __thresholds_family(self) -> str:
         """The family of [GridCode] thresholds the PCS applies to the controlled magnitude."""
         return config.get_value(self._pcs_name, "setpoint_tracking_thresholds", "")
@@ -128,8 +135,19 @@ class ModelValidator(Validator):
         start_event: float,
         setpoint_variation: float,
         results: dict,
+        tracks_response: bool = False,
+        transient: bool = False,
     ) -> None:
         results["t_event_start"] = start_event
+        if tracks_response and not setpoint_variation:
+            # An event that steps no setpoint measures the response against the step of the
+            # reference: its change, or the peak of a transient it returns from
+            setpoint_variation = common.get_response_step(
+                list(self._get_reference_curve_by_name(("time"))),
+                list(self._get_reference_curve_by_name((measurement_name))),
+                start_event,
+                transient,
+            )
 
         if compliance_list.contains_key(["reaction_time"], self._validations):
             res_reaction_time, res_reaction_target = common.get_reached_time(
@@ -214,11 +232,13 @@ class ModelValidator(Validator):
                 list(self._get_calculated_curve_by_name(("time"))),
                 list(self._get_calculated_curve_by_name((measurement_name))),
                 start_event,
+                transient,
             )
             ref_overshoot = common.get_overshoot(
                 list(self._get_reference_curve_by_name(("time"))),
                 list(self._get_reference_curve_by_name((measurement_name))),
                 start_event,
+                transient,
             )
             results["calc_overshoot"] = res_overshoot
             results["ref_overshoot"] = ref_overshoot
@@ -344,6 +364,8 @@ class ModelValidator(Validator):
         freq_peak: float,
         modified_setpoint: str,
         setpoint_variation: float,
+        tracks_response: bool = False,
+        transient: bool = False,
     ) -> dict:
         results = {}
         step_magnitude = setpoint_variation
@@ -384,6 +406,8 @@ class ModelValidator(Validator):
                 start_event,
                 setpoint_variation,
                 results,
+                tracks_response,
+                transient,
             )
             self.__compare_ideal_ramp(
                 measurement_name,
@@ -860,7 +884,8 @@ class ModelValidator(Validator):
         if event_params["connect_to"] == "NetworkFrequencyPu":
             freq_peak = float(event_params["step_value"])
 
-        tracked = self.__tracked_magnitude(oc_name) or event_params["connect_to"]
+        tracked_magnitude = self.__tracked_magnitude(oc_name)
+        tracked = tracked_magnitude or event_params["connect_to"]
         model_results = (
             self.__calculate(
                 self._producer.get_zone(),
@@ -870,6 +895,8 @@ class ModelValidator(Validator):
                 freq_peak,
                 tracked,
                 abs(self._setpoint_variation),
+                tracks_response=tracked_magnitude is not None,
+                transient=self.__is_transient(oc_name),
             )
             if has_reference
             else self.__without_reference(event_params["start_time"])
