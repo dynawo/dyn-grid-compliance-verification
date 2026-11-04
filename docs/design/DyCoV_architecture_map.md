@@ -10,14 +10,25 @@ DynawoCurves.obtain_simulated_curve()          orchestrator/curves.py
   └─ ModelSetup.complete_model()               orchestrator/model_setup.py:545   (writes .jobs/.par/.dyd/.crv/solvers.par)
   └─ [bisection, optional]                      orchestrator/bisection.py         (HIZ / bolted / CCT)
   └─ DynawoCurves.__execute_simulation()        orchestrator/curves.py
-       └─ SolverRetryStrategy.run()             runtime/retry_strategy.py         (backend-agnostic; up to 4 retries)
+       └─ SolverRetryStrategy.run()             runtime/retry_strategy.py         (up to 4 retries; reads the curves of each attempt)
             └─ DynawoSimulator.run_base()       runtime/dynawo_simulator.py       ← THE backend seam
-                 └─ run_dynawo_process()        runtime/_process.py:67           subprocess: [launcher, "jobs", "TSOModel.jobs"]
-                 └─ create_curves()             runtime/_curves.py:515            post-process outputs/curves/curves.csv
+            │    └─ run_dynawo_process()        runtime/_process.py:60           subprocess: [launcher, "jobs", "TSOModel.jobs"]
+            └─ read_simulated_curves()          runtime/_curves.py:723            post-process outputs/curves/curves.csv
 ```
 
-`DynawoResult(succeeded, log, timeline_error, curves, sim_time)` is the namedtuple returned by the seam
-(defined in `runtime/dynawo_simulator.py`). `run_simple()` is the retry-less variant used by CCT bisection.
+The seam only runs Dynawo and reports what it did:
+`DynawoResult(succeeded, log, timeline_error, curves_file, sim_time)` (defined in
+`runtime/dynawo_simulator.py`), `succeeded` being Dynawo's own verdict within the time limit and
+`curves_file` the curves Dynawo wrote. `run_simple()` is the retry-less variant used by CCT bisection.
+What the curves mean is read outside it: each attempt of the retry strategy, once Dynawo ended it
+well, reads them with `read_simulated_curves` (`create_curves` + `find_divergence`) and becomes a
+`SimulationAttempt(dynawo, curves, divergence)` (`runtime/retry_strategy.py`), `usable` when Dynawo
+succeeded and nothing diverged. `find_divergence` bounds the voltages, powers and currents of the
+PDR and of the units — not those of the loads and machines of the network, which may reach any
+magnitude in the base of the producer — by `[Dynawo] divergence_voltage_limit` /
+`divergence_power_limit` and catches a value that is not finite; a diverged attempt is retried,
+and the fault searches see it as a failed step (`SimulateOutcome.succeeded` is `usable`). The CCT
+search does not post-process the curves and keeps its own test on the internal angles.
 `timeline_error` carries the first error Dynawo logged, stripped of its timestamp and level
 (`find_timeline_error`, `runtime/_process.py`), so the retry message and the failure warning quote what
 Dynawo said instead of the fact that it said something; a run that reports nothing leaves no log file,
@@ -37,13 +48,14 @@ All extend `FileVariables` (`io/file_variables.py`); fill template placeholders 
 Templates live in `src/dycov/model_lib/`; DyCoV **copies templates and fills placeholders** — it does NOT
 build network structure dynamically.
 
-**Dynawo version coupling** (DyCoV targets 2.0.0): DyCoV writes model names Dynawo owns in two
+**Dynawo version coupling** (DyCoV targets 2.0.0): DyCoV writes model names Dynawo owns in three
 places — the dictionaries (`curves/dynawo/dictionary/*.ini`, every parameter and variable DyCoV
 reads or writes; `tests/dycov/curves/dynawo/dictionary` checks that each names a variable or a
 parameter that is not read-only, which Dynawo ignores in a PAR, in the model descriptors of the
 installation `DYNAWOPATH` or the `dynawo.sh` on the PATH points to, and is skipped without one; a
-tap changer's starting ratio is derived from its starting tap, as Dynawo does) and
-`files/omega_file.py` (the `DYNModelOmegaRef` connectors, `omega_grp_<n>_` /
+tap changer's starting ratio is derived from its starting tap, as Dynawo does), the TSO and Omega
+templates (`model_lib/`, whose parameter sets the same tests check against the descriptor of the
+model each set is for) and `files/omega_file.py` (the `DYNModelOmegaRef` connectors, `omega_grp_<n>_` /
 `omegaRef_grp_<n>_` / `running_grp_<n>_`: 2.0.0 drops the `_value` suffix and keeps the `_` that
 marks the array index, as Dynawo's own examples spell them). The rest of the names are the
 producer's, in its DYD and PAR, and a model written for an older Dynawo is migrated with the
@@ -66,8 +78,10 @@ powers in s_nref pu, voltage in Unom pu; plus `Xeff` (`[GFM Parameters]` of the 
 |numeric against it; `origin=(section, key)` makes a rejected definition name its config file+line
 (`config.describe_option`). Every
 non-GFM value read pulls from that one registry: `_get_pdr` + `_complete_loads` (`model_setup.py`; loads
-resolve voltage against a kV variant then ÷u_nom), `ProducerCurves.get_unit_characteristics`/`obtain_value`
-(`curves.py`, backing `setpoint_step_value` and the `{{step_event_*}}` TSO placeholders), and the report
+resolve voltage against a kV variant then ÷u_nom), the voltage of `Zcc` (`_zcc_voltage`,
+`[GridCode] zcc_voltage`, which a revision of the DTR sets),
+`ProducerCurves.get_unit_characteristics`/`obtain_value` (`curves.py`, backing `setpoint_step_value`
+and the `{{step_event_*}}` TSO placeholders), and the report
 `reference_step_size` scaling (`figure.py`; `report.py` overrides `Unom`→kV). Adding a base = adding a
 registry entry. `obtain_value` only resolves definitions that reference a magnitude (a `*`, or a
 possibly signed registry name); anything else is a Dynawo parameter value passed through verbatim.
@@ -75,7 +89,10 @@ A definition rejected while a test is simulated ends that test as `Invalid test`
 `obtain_simulated_curve` turns only `SimulationOutcomeError` (the bisection outcomes,
 `model/parameters.py`) into a failed `SimulationResult` and the rest reaches `Benchmark.validate`.
 Out of scope: GFM (own parsing of `mult*(Xeff+Xgrid)`, `extract_defined_value` for p0/q0)
-and `line_XPu` (DTR reactance-table base `a`/`b`).
+and `line_XPu` (DTR reactance-table base `a`/`b`). `line_XFaultPu` resolves against the registry
+plus `XFaultPu`, the reactance the DTR gives the impedant three-phase fault
+(`generator_variables.calculate_fault_xpu`, at the Pmax of the test); without it the fault of
+`Fault_4Lines_InfBus` is bolted.
 
 **Storage of types C and D (I16.2)**: the revision `20260723` splits the Fiche I16 of a storage
 installation into I16.1 for type B, the base fiche with what its delta writes (in Zone 3 alone), and
@@ -148,7 +165,12 @@ names.
 - **Retry** (`runtime/retry_strategy.py`): `run()` walks the remedies `_remedies()` yields —
   `_reduce_min_step` → `_increase_accuracy` → `_add_parameters_small_networks` → `_flip_solver`
   (SIM↔IDA) — and each one applies its change **and returns what it changed**, which `run()` quotes in
-  the retry warning along with the attempt number and why the previous attempt failed. Persists via
+  the retry warning along with the attempt number and why the previous attempt failed. It stops at
+  once when that error is one in the inputs of the models (`rejects_inputs`: raised by the Dynawo
+  layers that read, compile and parameterise the PAR and DYD, a parameter missing from a PAR, a variable
+  missing from a model or a file missing from the disk):
+  no remedy settles it. `SimulateOutcome.rejected_inputs` carries it to the bolted and HiZ searches,
+  which stop there and leave the failure to the test's own simulation. Persists via
   `replace_placeholders.modify_par_file` / `add_parameters` (`solvers.par`) and `modify_jobs_file` (`TSOModel.jobs`).
   The `SolverParams` dataclass (`runtime/run_types.py`) is **the** solver state, not a copy of it:
   `__reset_solver` builds it per OC and `__execute_simulation` hands that same object to `run()`, so
@@ -230,12 +252,22 @@ in Zone 1 reference-curve dictionaries. The curves of a unit are named after the
 `dycov_logging` is one process-wide `DycovLogger`. `init_handlers` (from `core/initialization.py`) keeps
 the arguments it was called with, so a pool worker that did not inherit the handlers rebuilds the same
 ones through `worker_initializer` — which is what happens from Python 3.14, where `forkserver` is the
-default start method on Linux. Its handlers: the console; the shared, rotating
+default start method on Linux. Such a worker also reads the configuration from the files again, so the
+same initializer puts back what the run set up in memory (`config.run_layers()`: the default and user
+layers with `--dtr`, `--user-config` and run-time `set_value` applied, and the revision delta).
+The handlers of `dycov_logging`: the console; the shared, rotating
 `~/.config/dycov/log/dycov.log`, which accumulates every run of the user; and the execution log,
 `dycov_run.log`, added by `add_run_handler` once the working dir exists and closed by
 `close_run_handler` right before that dir is moved to the `-o`. The execution log is a plain
 `FileHandler` on purpose: several processes append to it, and a rotation they could interleave would
 corrupt it.
+
+`worker_initializer` also traps the end signals in the worker, which a forked one would otherwise
+answer with the shutdown of the main process: `_end_worker` stops the Dynawo and LaTeX processes the
+worker launched, then unwinds it while it is in the task loop of its pool and exits it at once once it
+has left that loop, where an exception would reach the exit handlers it runs. A signal that arrives
+as the worker starts to wait, for a task or for the lock of the queue, leaves that wait blocked and the
+handler pending, so a thread `signal.set_wakeup_fd` wakes delivers it again until the handler runs.
 
 Every record names the test it belongs to — `set_test_context(pcs, benchmark, oc, producer)`
 (`logging/test_context.py`, thread-local) and the `_ContextAdapter` that prefixes it.

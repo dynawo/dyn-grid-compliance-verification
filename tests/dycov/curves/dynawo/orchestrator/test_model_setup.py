@@ -677,6 +677,69 @@ class TestGetLine:
 
 
 # ---------------------------------------------------------------------------
+# _get_fault_xpu
+# ---------------------------------------------------------------------------
+
+
+class TestGetFaultXpu:
+    def _setup(self, mock_config, definition, p_max_pu=0.94):
+        mock_config.has_option.side_effect = lambda section, key: key == "line_XFaultPu"
+        mock_config.get_value.return_value = definition
+        producer = _make_producer(u_nom=225.0, s_nom=100.0, p_max_pu=p_max_pu)
+        producer.get_sim_type_str.return_value = "performance/PPM"
+        owner = _make_owner(producer)
+        owner.get_unit_characteristics.return_value = {"Pmax": p_max_pu, "line_XPu": 0.9}
+        return _make_setup(owner)
+
+    @patch(f"{_MS}.generator_variables")
+    @patch(f"{_MS}.config")
+    def test_a_fault_without_reactance_is_bolted(self, mock_config, mock_gv):
+        mock_config.has_option.return_value = False
+        setup = _make_setup()
+
+        assert setup._get_fault_xpu("PCS1", "BM1", "OC1") == 0.0
+        mock_gv.calculate_fault_xpu.assert_not_called()
+
+    @pytest.mark.parametrize("p_max_pu", [0.94, -0.94])
+    @patch(f"{_MS}.generator_variables")
+    @patch(f"{_MS}.config")
+    def test_xfaultpu_is_the_reactance_the_dtr_gives_at_the_pmax_of_the_test(
+        self, mock_config, mock_gv, p_max_pu
+    ):
+        mock_gv.calculate_fault_xpu.return_value = 0.315
+        setup = self._setup(mock_config, "XFaultPu", p_max_pu)
+
+        assert setup._get_fault_xpu("PCS1", "BM1", "OC1") == pytest.approx(0.315)
+        mock_gv.calculate_fault_xpu.assert_called_once_with(-0.94, 100.0, 225.0, 100.0, "PPM")
+
+    @pytest.mark.parametrize(
+        "definition, fault_xpu", [("0.5*XFaultPu", 0.1575), ("0.02", 0.02), ("0.1*line_XPu", 0.09)]
+    )
+    @patch(f"{_MS}.generator_variables")
+    @patch(f"{_MS}.config")
+    def test_the_reactance_is_a_value_definition(
+        self, mock_config, mock_gv, definition, fault_xpu
+    ):
+        mock_gv.calculate_fault_xpu.return_value = 0.315
+        setup = self._setup(mock_config, definition)
+
+        assert setup._get_fault_xpu("PCS1", "BM1", "OC1") == pytest.approx(fault_xpu)
+
+    @patch(f"{_MS}.generator_variables")
+    @patch(f"{_MS}.config")
+    def test_an_unknown_reactance_raises_naming_the_option(self, mock_config, mock_gv):
+        mock_gv.calculate_fault_xpu.return_value = 0.315
+        setup = self._setup(mock_config, "XFaultpu")
+
+        with pytest.raises(ValueError) as error:
+            setup._get_fault_xpu("PCS1", "BM1", "OC1")
+
+        message = str(error.value)
+        assert "'line_XFaultPu'" in message
+        assert "XFaultPu" in message.split("magnitudes are")[1]
+
+
+# ---------------------------------------------------------------------------
 # _get_pdr
 # ---------------------------------------------------------------------------
 
@@ -825,6 +888,7 @@ class TestCompleteModel:
         applicable=True,
         has_line=False,
         event_params=None,
+        fault_xpu=0.0,
     ):
         """
         Runs the complete_model orchestration setup.
@@ -854,8 +918,14 @@ class TestCompleteModel:
             mock_table = stack.enter_context(patch(f"{_MS}.TableFile"))
             mock_solvers = stack.enter_context(patch(f"{_MS}.SolversFile"))
 
-            stack.enter_context(patch.object(setup, "_get_pdr"))
+            mock_get_pdr = stack.enter_context(patch.object(setup, "_get_pdr"))
             stack.enter_context(patch.object(setup, "_get_line", return_value=(0.01, 0.1)))
+            mock_get_fault_xpu = stack.enter_context(
+                patch.object(setup, "_get_fault_xpu", return_value=fault_xpu)
+            )
+            order = MagicMock()
+            order.attach_mock(mock_get_pdr, "get_pdr")
+            order.attach_mock(mock_get_fault_xpu, "get_fault_xpu")
             stack.enter_context(patch.object(setup, "_get_lines_for_initial_calcs"))
             stack.enter_context(
                 patch.object(setup, "_sort_group_xfmrs_to_generators", return_value=[])
@@ -888,6 +958,7 @@ class TestCompleteModel:
                 dyd=mock_dyd,
                 table=mock_table,
                 solvers=mock_solvers,
+                order=order,
             )
 
         return setup, result, mocks
@@ -932,6 +1003,20 @@ class TestCompleteModel:
         _, _, mocks = self._run(has_line=False)
         mocks["pcs"].get_pcs_lines_params.assert_not_called()
 
+    def test_the_reactance_of_the_fault_reaches_the_par_file(self):
+        _, _, mocks = self._run(fault_xpu=0.315)
+
+        line_rpu, line_xpu, fault_xpu = mocks["par"].return_value.complete_file.call_args[0][1:4]
+        assert (line_rpu, line_xpu, fault_xpu) == (0.01, 0.1, 0.315)
+
+    def test_the_reactance_of_the_fault_is_that_of_the_operating_point_of_the_test(self):
+        """_get_pdr puts a storage unit in consumption for a consumption test, and the reactance
+        of the fault is computed from the Pmax of that operating point."""
+        _, _, mocks = self._run()
+
+        called = [name for name, _, _ in mocks["order"].mock_calls]
+        assert called.index("get_pdr") < called.index("get_fault_xpu")
+
     def test_aux_and_main_xfmrs_included_in_curves_file(self):
         producer = _make_producer()
         aux_xfmr = MagicMock(id="AUX_XFMR")
@@ -971,6 +1056,28 @@ class TestComputeRxFromScr:
 
 
 class TestGetLineBranches:
+    @pytest.mark.parametrize(
+        "sim_type, technology",
+        [("performance/SM", "SM"), ("performance/PPM", "PPM"), ("model/BESS", "BESS")],
+    )
+    @patch(f"{_MS}.generator_variables")
+    @patch(f"{_MS}.get_cfg_oc_name", return_value="SEC")
+    @patch(f"{_MS}.config")
+    def test_the_reactance_of_the_line_is_that_of_the_technology(
+        self, mock_config, mock_gcn, mock_gv, sim_type, technology
+    ):
+        """The capability specifications of the DTR give the reactances by technology."""
+        mock_config.has_option.side_effect = lambda s, k: k == "line_XPu"
+        mock_config.get_value.return_value = "3*b"
+        producer = _make_producer()
+        producer.get_sim_type_str.return_value = sim_type
+        setup = _make_setup(_make_owner(producer))
+
+        setup._get_line("PCS1", "BM1", "OC1")
+
+        assert mock_gv.calculate_line_xpu.call_args[0][0] == "b"
+        assert mock_gv.calculate_line_xpu.call_args[0][5] == technology
+
     @patch(f"{_MS}.generator_variables")
     @patch(f"{_MS}.get_cfg_oc_name", return_value="SEC")
     @patch(f"{_MS}.config")
@@ -1002,19 +1109,27 @@ class TestGetLineBranches:
         assert rpu == pytest.approx(1.0 / (factor * 3.0))
         assert xpu == pytest.approx(10.0 / (factor * 3.0))
 
+    @pytest.mark.parametrize("zcc_voltage, uc_pu", [("Udim", 235.0 / 225.0), ("Unom", 1.0)])
     @patch(f"{_MS}.generator_variables")
     @patch(f"{_MS}.get_cfg_oc_name", return_value="SEC")
     @patch(f"{_MS}.config")
-    def test_zcc_branch_derives_impedance_from_scc(self, mock_config, mock_gcn, mock_gv):
+    def test_zcc_branch_derives_impedance_from_scc(
+        self, mock_config, mock_gcn, mock_gv, zcc_voltage, uc_pu
+    ):
+        """Zcc = U^2/Scc, with the voltage the revision of the DTR in use names."""
         mock_config.has_option.side_effect = lambda s, k: k == "Zcc"
         mock_config.get_float.side_effect = lambda s, k, d=None: 2.0 if k == "Ztanphi" else d
+        mock_config.get_value.side_effect = lambda s, k, d=None: {
+            ("GridCode", "zcc_voltage"): zcc_voltage
+        }.get((s, k), d)
         mock_gv.get_scc.return_value = 1000.0
-        mock_gv.get_generator_u_dim.return_value = 20.0
-        setup = _make_setup()
+        owner = _make_owner()
+        owner.get_unit_characteristics.return_value = {"Udim": 235.0 / 225.0, "Unom": 1.0}
+        setup = _make_setup(owner)
 
         rpu, xpu = setup._get_line("PCS1", "BM1", "OC1")
 
-        zcc = 1.0**2 / (1000.0 / 100.0)
+        zcc = uc_pu**2 / (1000.0 / 100.0)
         expected_xpu = 2.0 * zcc / math.sqrt(1 + 4.0)
         assert xpu == pytest.approx(expected_xpu)
         assert rpu == pytest.approx(expected_xpu / 2.0)

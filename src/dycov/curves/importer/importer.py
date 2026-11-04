@@ -139,6 +139,18 @@ class CurvesImporter:
             }
         return {channel: naming.from_legacy_name(name) for channel, name in curves_dict.items()}
 
+    def get_declared_units(self) -> set:
+        """
+        Gets the generating units the curves dictionary names, those whose curves it leaves
+        blank among them.
+
+        Returns
+        -------
+        set
+            Ids of the units
+        """
+        return naming.units_of(self._curves_cfg.options("Curves-Dictionary"))
+
     @property
     def metadata(self) -> CurvesMetadata:
         """

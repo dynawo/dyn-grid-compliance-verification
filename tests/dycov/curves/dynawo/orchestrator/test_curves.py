@@ -23,6 +23,8 @@ from unittest.mock import MagicMock, patch
 import pandas as pd
 import pytest
 
+from dycov.curves.dynawo.runtime.dynawo_simulator import DynawoResult
+from dycov.curves.dynawo.runtime.retry_strategy import SimulationAttempt
 from dycov.curves.dynawo.runtime.run_types import SolverParams
 from dycov.files.simulation_files import SIMULATION_INPUTS_FILE
 from dycov.model.parameters import PdrParams, SimulationError, SimulationOutcomeError
@@ -611,26 +613,6 @@ class TestObtainSimulatedCurve:
 
     @patch(f"{_MODULE}.measure_voltage_dip")
     @patch(f"{_MODULE}.config")
-    def test_curves_dict_synced_to_bisection_after_setup(self, mc, mock_mvd, tmp_path):
-        mc.get_value.side_effect = _cfg_get_value
-        mc.get_float.side_effect = _cfg_get_float
-        mc.get_boolean.return_value = False
-
-        curves, ms, be, outcome, _ = self._prepare()
-        ms.curves_dict = {"new_var": "new_val"}
-        curves._DynawoCurves__simulate = MagicMock(return_value=outcome)
-        curves._DynawoCurves__prepare_oc_validation = MagicMock(
-            return_value=(Path("/out"), Path("/jobs"))
-        )
-        curves._DynawoCurves__reset_solver = MagicMock()
-
-        with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
-            curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
-
-        assert be.curves_dict is ms.curves_dict
-
-    @patch(f"{_MODULE}.measure_voltage_dip")
-    @patch(f"{_MODULE}.config")
     def test_simulation_record_carries_the_curves_metadata(self, mc, mock_mvd, tmp_path):
         mc.get_value.side_effect = _cfg_get_value
         mc.get_float.side_effect = _cfg_get_float
@@ -815,6 +797,7 @@ def _make_real_curves(solver_lib="dynawo_SolverIDA"):
 
         parameters = MagicMock()
         parameters.get_output_dir.return_value = Path("/output")
+        parameters.get_working_dir.return_value = Path("/work")
         parameters.get_launcher_dwo.return_value = "/dynawo"
 
         instance = DynawoCurves(
@@ -873,23 +856,45 @@ class TestPrepareOcValidation:
         mock_sf.find_output_dir.return_value = Path("outputs")
 
         output_dir, jobs_output_dir = curves._DynawoCurves__prepare_oc_validation(
-            Path("/work"), "PCS1", "BM1", "OC1"
+            Path("/work/Producer/PCS1/BM1/OC1"), "BM1"
         )
 
         mock_mf.copy_base_case_files.assert_called_once()
         assert jobs_output_dir == Path("outputs")
-        assert output_dir == Path("/output") / "PCS1" / "BM1" / "OC1"
+        assert output_dir == Path("/output") / "Producer" / "PCS1" / "BM1" / "OC1"
+
+    @patch(f"{_MODULE}.simulation_files")
+    @patch(f"{_MODULE}.manage_files")
+    def test_the_output_dir_is_where_the_results_tree_puts_the_test(self, mock_mf, mock_sf):
+        """The working directory becomes the results directory, so a test lands under the
+        directory of its producer, which the Dynawo log quoted on a failure has to name."""
+        curves, _, _ = _make_real_curves()
+        mock_sf.find_output_dir.return_value = Path("outputs")
+
+        output_dir, _ = curves._DynawoCurves__prepare_oc_validation(
+            Path("/work/WindFarm/PCS_RTE-I16z3/USetPointStep/AReactance"), "USetPointStep"
+        )
+
+        assert output_dir == Path("/output/WindFarm/PCS_RTE-I16z3/USetPointStep/AReactance")
+
+
+def _attempt(succeeded=True, sim_time=1.0, log=None, curves=None, divergence=None):
+    return SimulationAttempt(
+        DynawoResult(succeeded, log, None, None, sim_time),
+        pd.DataFrame() if curves is None else curves,
+        divergence,
+    )
 
 
 class TestSimulateOutcomeAssembly:
-    def _simulate(self, curves, result, working_dir=Path("/work")):
+    def _simulate(self, curves, attempt, working_dir=Path("/work")):
         with (
             patch(f"{_MODULE}.SolverRetryStrategy") as strat_cls,
             patch(f"{_MODULE}.RetrySettings"),
             patch(f"{_MODULE}.config") as mc,
         ):
             mc.get_float.side_effect = _cfg_get_float
-            strat_cls.return_value.run.return_value = result
+            strat_cls.return_value.run.return_value = attempt
             outcome = curves._DynawoCurves__simulate(
                 Path("/out"), working_dir, Path("outputs"), "BM1", "OC1"
             )
@@ -897,21 +902,40 @@ class TestSimulateOutcomeAssembly:
 
     def test_success_outcome_within_time(self):
         curves, _, _ = _make_real_curves()
-        result = MagicMock(succeeded=True, sim_time=10.0, curves=pd.DataFrame(), log="")
 
-        outcome = self._simulate(curves, result)
+        outcome = self._simulate(curves, _attempt(sim_time=10.0))
 
         assert outcome.succeeded is True
         assert outcome.time_exceeds is False
         assert outcome.has_curves is False
         assert outcome.sim_time == pytest.approx(10.0)
 
+    @pytest.mark.parametrize(
+        "timeline_error, rejected",
+        [
+            (
+                "parameter WT_Kpq not found in set merged_Wind_Turbine "
+                "( PARParametersSet.cpp:156 )",
+                True,
+            ),
+            ("KINSOL fails to solve the problem ( DYNSolverKINAlgRestoration.cpp:432 )", False),
+            (None, False),
+        ],
+    )
+    def test_the_outcome_says_whether_dynawo_rejected_the_inputs(self, timeline_error, rejected):
+        curves, _, _ = _make_real_curves()
+        attempt = SimulationAttempt(DynawoResult(False, "failed", timeline_error, None, 1.0))
+
+        outcome = self._simulate(curves, attempt)
+
+        assert outcome.rejected_inputs is rejected
+
     def test_a_retry_mutation_reaches_the_solver_the_report_reads(self):
         curves, _, _ = _make_real_curves()
 
         def run(**kwargs):
             kwargs["solver"].minimum_time_step = 1e-9
-            return MagicMock(succeeded=True, sim_time=1.0, curves=pd.DataFrame(), log="")
+            return _attempt()
 
         with (
             patch(f"{_MODULE}.SolverRetryStrategy") as strat_cls,
@@ -933,21 +957,101 @@ class TestSimulateOutcomeAssembly:
 
     def test_failure_outcome_exceeding_time(self):
         curves, _, _ = _make_real_curves()
-        result = MagicMock(succeeded=False, sim_time=50.0, curves=pd.DataFrame(), log="boom")
 
-        outcome = self._simulate(curves, result)
+        outcome = self._simulate(curves, _attempt(succeeded=False, sim_time=50.0, log="boom"))
 
         assert outcome.succeeded is False
         assert outcome.time_exceeds is True
         assert outcome.has_curves is False
+
+    def test_a_failure_after_a_faster_success_is_not_a_time_out(self):
+        """Every test of a benchmark runs on one simulator: a success of 2 s before a failure
+        of 3.3 s is no reason to report the failure as over the 30 s limit."""
+        curves, _, _ = _make_real_curves()
+        self._simulate(curves, _attempt(sim_time=2.0))
+
+        outcome = self._simulate(curves, _attempt(succeeded=False, sim_time=3.3, log="KINSOL"))
+
+        assert outcome.succeeded is False
+        assert outcome.time_exceeds is False
+
+    def test_a_failure_over_the_limit_is_a_time_out_whatever_ran_before(self):
+        curves, _, _ = _make_real_curves()
+        self._simulate(curves, _attempt(sim_time=2.0))
+
+        outcome = self._simulate(curves, _attempt(succeeded=False, sim_time=30.5, log="slow"))
+
+        assert outcome.time_exceeds is True
+
+    def test_the_cct_search_still_bounds_its_runs_by_the_last_success(self):
+        curves, _, bisection = _make_real_curves()
+        self._simulate(curves, _attempt(sim_time=2.0))
+
+        curves.get_time_cct(Path("/work"), Path("outputs"), 0.15, "BM1", "OC1")
+
+        assert bisection.sim_time == pytest.approx(2.0)
 
     def test_has_curves_when_csv_exists(self, tmp_path):
         curves, _, _ = _make_real_curves()
         csv_dir = tmp_path / "outputs" / "curves"
         csv_dir.mkdir(parents=True)
         (csv_dir / "curves.csv").write_text("time;\n")
-        result = MagicMock(succeeded=True, sim_time=1.0, curves=pd.DataFrame(), log="")
 
-        outcome = self._simulate(curves, result, working_dir=tmp_path)
+        outcome = self._simulate(curves, _attempt(), working_dir=tmp_path)
 
         assert outcome.has_curves is True
+
+    def test_the_curves_of_the_attempt_are_those_of_the_outcome(self):
+        curves, _, _ = _make_real_curves()
+        simulated = pd.DataFrame({"time": [0.0, 1.0], "BusPDR_BUS_Voltage": [1.0, 0.9]})
+
+        outcome = self._simulate(curves, _attempt(curves=simulated))
+
+        assert outcome.curves is simulated
+
+    def test_a_diverged_simulation_has_not_succeeded_and_says_why(self, tmp_path, caplog):
+        """#675: Dynawo ended the run well, but its curves cannot be used."""
+        curves, _, _ = _make_real_curves()
+        csv_dir = tmp_path / "outputs" / "curves"
+        csv_dir.mkdir(parents=True)
+        (csv_dir / "curves.csv").write_text("time;\n")
+        attempt = _attempt(divergence="BusPDR_BUS_Voltage reached 4.2e+06 pu, beyond 10 pu")
+
+        with caplog.at_level(logging.WARNING):
+            outcome = self._simulate(curves, attempt, working_dir=tmp_path)
+
+        assert outcome.succeeded is False
+        assert outcome.has_curves is False
+        assert outcome.curves.empty
+        assert (
+            "Simulation diverged: BusPDR_BUS_Voltage reached 4.2e+06 pu, beyond 10 pu"
+            in caplog.text
+        )
+
+    def test_a_failed_simulation_says_what_dynawo_reported(self, caplog):
+        curves, _, _ = _make_real_curves()
+
+        with caplog.at_level(logging.WARNING):
+            self._simulate(curves, _attempt(succeeded=False, log="Simulation Fails: boom"))
+
+        assert "Simulation Fails: boom" in caplog.text
+        assert "diverged" not in caplog.text
+
+    def test_a_diverged_simulation_does_not_set_the_time_later_runs_are_held_to(self):
+        curves, _, _ = _make_real_curves()
+        curves._sim_time = 30.0
+
+        self._simulate(
+            curves, _attempt(sim_time=2.0, divergence="BusPDR_BUS_Voltage is not finite")
+        )
+
+        assert curves._sim_time == pytest.approx(30.0)
+
+
+class TestBuildRunInputs:
+    @pytest.mark.parametrize("zone", [0, 1, 3])
+    def test_the_run_carries_the_zone_its_outputs_are_named_for(self, zone):
+        curves, _, _ = _make_real_curves()
+        curves.get_producer().get_zone.return_value = zone
+
+        assert curves._DynawoCurves__build_run_inputs().zone == zone

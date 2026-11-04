@@ -147,6 +147,25 @@ def rename_columns_for_output(curves: pd.DataFrame, zone: int) -> pd.DataFrame:
     return curves.rename(columns={col: to_output_name(col, zone) for col in curves.columns})
 
 
+def units_of(names) -> set:
+    """Gets the generating units a set of curve names belong to, the machines of the network
+    aside. A unit names its curves <id>_GEN_<variable>, and its id may hold _GEN_ itself.
+
+    Parameters
+    ----------
+    names: Iterable[str]
+        Curve names
+
+    Returns
+    -------
+    set
+        Ids of the units
+    """
+    names = [name for name in names if _GENERATOR_SELECTOR in name]
+    network = {name.split("_GEN_TSO_")[0] for name in names if "_GEN_TSO_" in name}
+    return {name.rsplit(_GENERATOR_SELECTOR, 1)[0] for name in names} - network
+
+
 def get_network_frequency_curve(curves: dict | pd.DataFrame) -> None:
     """Name the network frequency NetworkFrequencyPu after the first frequency a unit measures,
     unless the curves already carry it under that name.

@@ -173,7 +173,7 @@ class GFMGeneration:
             with multiprocessing.Pool(
                 processes=num_processes,
                 initializer=worker_initializer,
-                initargs=(dycov_logging.get_handler_settings(),),
+                initargs=(dycov_logging.get_handler_settings(), config.run_layers()),
             ) as pool:
                 pool.map(_generate_pcs, self._pcs_list)
         else:

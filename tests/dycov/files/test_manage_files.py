@@ -15,6 +15,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pandas as pd
+import pytest
 
 from dycov.files.manage_files import (
     _copy_curve_files_by_name,
@@ -512,6 +513,89 @@ def test_create_config_file(tmp_path):
 # ---------------------------------------------------------------------------
 # Output dir
 # ---------------------------------------------------------------------------
+
+
+def _results_dir(tmp_path):
+    results = tmp_path / "out"
+    results.mkdir()
+    (results / "MARKER.txt").write_text("x")
+    return results
+
+
+@pytest.mark.parametrize("answer", ["y", "yes", "Y", "YES", "Yes", " y", "yes "])
+def test_check_output_dir_deletes_on_a_yes(tmp_path, answer):
+    results = _results_dir(tmp_path)
+
+    with patch("builtins.input", return_value=answer):
+        keep = check_output_dir(results)
+
+    assert keep is False
+    assert not results.exists()
+
+
+@pytest.mark.parametrize("answer", ["n", "no", "", "N", "NO", " n", "n "])
+def test_check_output_dir_keeps_on_a_no(tmp_path, answer):
+    results = _results_dir(tmp_path)
+
+    with patch("builtins.input", return_value=answer) as prompt:
+        keep = check_output_dir(results)
+
+    assert keep is True
+    assert (results / "MARKER.txt").is_file()
+    assert prompt.call_count == 1
+
+
+@pytest.mark.parametrize("unexpected", ["non", "q", "nope", "abort", "yy", "si", "1"])
+def test_check_output_dir_asks_again_on_an_unexpected_answer(tmp_path, unexpected):
+    results = _results_dir(tmp_path)
+
+    with patch("builtins.input", side_effect=[unexpected, "n"]) as prompt:
+        keep = check_output_dir(results)
+
+    assert keep is True
+    assert (results / "MARKER.txt").is_file()
+    assert prompt.call_count == 2
+
+
+def test_check_output_dir_deletes_on_a_yes_given_after_an_unexpected_answer(tmp_path):
+    results = _results_dir(tmp_path)
+
+    with patch("builtins.input", side_effect=["nope", "abort", "y"]) as prompt:
+        keep = check_output_dir(results)
+
+    assert keep is False
+    assert not results.exists()
+    assert prompt.call_count == 3
+
+
+def test_check_output_dir_keeps_the_directory_when_no_answer_can_be_read(tmp_path):
+    results = _results_dir(tmp_path)
+
+    with patch("builtins.input", side_effect=EOFError):
+        keep = check_output_dir(results)
+
+    assert keep is True
+    assert (results / "MARKER.txt").is_file()
+
+
+def test_check_output_dir_asks_nothing_for_an_empty_or_missing_directory(tmp_path):
+    (tmp_path / "empty").mkdir()
+
+    with patch("builtins.input", side_effect=AssertionError("asked")):
+        assert check_output_dir(tmp_path / "empty") is False
+        assert check_output_dir(tmp_path / "missing") is False
+
+    assert (tmp_path / "empty").is_dir()
+
+
+def test_check_output_dir_forced_deletes_without_asking(tmp_path):
+    results = _results_dir(tmp_path)
+
+    with patch("builtins.input", side_effect=AssertionError("asked")):
+        keep = check_output_dir(results, force_overwrite=True)
+
+    assert keep is False
+    assert not results.exists()
 
 
 def test_check_output_dir_overwrite(tmp_path):

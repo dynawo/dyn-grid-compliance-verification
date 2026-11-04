@@ -18,7 +18,12 @@ from dycov.core.parameters import Parameters
 from dycov.curves.curves import ProducerCurves, get_cfg_oc_name
 from dycov.curves.dynawo.orchestrator.bisection import BisectionEngine
 from dycov.curves.dynawo.orchestrator.model_setup import ModelSetup
-from dycov.curves.dynawo.runtime.retry_strategy import RetrySettings, SolverRetryStrategy
+from dycov.curves.dynawo.runtime.retry_strategy import (
+    RetrySettings,
+    SimulationAttempt,
+    SolverRetryStrategy,
+    rejects_inputs,
+)
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 from dycov.curves.naming import to_output_name
 from dycov.curves.voltage_dip import measure_voltage_dip
@@ -35,7 +40,9 @@ _SIMULATION_SECTION = "Simulation"
 _NOT_CONFIGURED = "not set"
 
 SimulateOutcome = namedtuple(
-    "SimulateOutcome", "succeeded time_exceeds has_curves curves sim_time"
+    "SimulateOutcome",
+    "succeeded time_exceeds has_curves curves sim_time rejected_inputs",
+    defaults=(False,),
 )
 SolverParam = namedtuple("SolverParam", "actual default")
 
@@ -89,6 +96,7 @@ class DynawoCurves(ProducerCurves):
         """
         super().__init__(producer)
         self._output_dir = parameters.get_output_dir()
+        self._working_dir = parameters.get_working_dir()
         self._launcher_dwo = parameters.get_launcher_dwo()
         self._pcs_name = pcs_name
         self._model_path = model_path
@@ -150,18 +158,14 @@ class DynawoCurves(ProducerCurves):
             pcs_name=self._pcs_name,
             launcher_dwo=self._launcher_dwo,
             producer=self.get_producer(),
-            s_nref=self.get_snref(),
             sim_time=self._sim_time,
             thr_ss_tol=self._thr_ss_tol,
-            curves_dict=self._setup.curves_dict,
         )
 
     def __prepare_oc_validation(
         self,
         working_oc_dir: Path,
-        pcs_name: str,
         bm_name: str,
-        oc_name: str,
     ) -> tuple[Path, Path]:
         """
         Copies base-case and producer files into working_oc_dir.
@@ -171,9 +175,8 @@ class DynawoCurves(ProducerCurves):
         tuple[Path, Path]
             (output_dir, jobs_output_dir)
         """
-        op_path = self._model_path / oc_name
-        op_path_name = op_path.resolve().name
-        output_dir = self._output_dir / self._pcs_name / bm_name / op_path_name
+        # The working directory is moved whole to the output directory once the run ends
+        output_dir = self._output_dir / working_oc_dir.relative_to(self._working_dir)
 
         manage_files.copy_base_case_files(
             ModelFiles(
@@ -199,25 +202,27 @@ class DynawoCurves(ProducerCurves):
             generators=self.get_producer().generators,
             s_nom=self.get_producer().s_nom,
             s_nref=self.get_snref(),
+            zone=self.get_producer().get_zone(),
         )
 
     def __execute_simulation(
         self,
-        output_dir: Path,
+        output_dir: Path | None,
         working_oc_dir: Path,
         jobs_output_dir: Path,
         bm_name: str,
         oc_name: str,
         max_sim_time: float | None = None,
         disable_retry_logs: bool = False,
-    ):
+    ) -> SimulationAttempt:
         """
-        Runs Dynawo via SolverRetryStrategy and returns a DynawoResult.
+        Runs Dynawo via SolverRetryStrategy and returns what its last attempt left.
 
         Parameters
         ----------
-        output_dir : Path
-            Final output directory for saved results.
+        output_dir : Path | None
+            Final output directory for saved results, where a failure says Dynawo's log is;
+            None for a run in a directory that does not outlive it.
         working_oc_dir : Path
             Working directory for the current run.
         jobs_output_dir : Path
@@ -234,7 +239,7 @@ class DynawoCurves(ProducerCurves):
         strategy = SolverRetryStrategy(
             RetrySettings.from_config(disable_retry_logs=disable_retry_logs)
         )
-        result = strategy.run(
+        attempt = strategy.run(
             run=self.__build_run_inputs(),
             solver=self._solver,
             output_dir=output_dir,
@@ -244,13 +249,13 @@ class DynawoCurves(ProducerCurves):
             oc_name=oc_name,
             max_sim_time=max_sim_time,
         )
-        if result.succeeded:
-            self._sim_time = result.sim_time
-        return result
+        if attempt.usable:
+            self._sim_time = attempt.dynawo.sim_time
+        return attempt
 
     def __simulate(
         self,
-        output_dir: Path,
+        output_dir: Path | None,
         working_oc_dir: Path,
         jobs_output_dir: Path,
         bm_name: str,
@@ -262,8 +267,9 @@ class DynawoCurves(ProducerCurves):
 
         Parameters
         ----------
-        output_dir : Path
-            Final output directory for saved results.
+        output_dir : Path | None
+            Final output directory for saved results, where a failure says Dynawo's log is;
+            None for a run in a directory that does not outlive it.
         working_oc_dir : Path
             Working directory for the current run.
         jobs_output_dir : Path
@@ -273,7 +279,7 @@ class DynawoCurves(ProducerCurves):
         oc_name : str
             Operating Condition name.
         """
-        result = self.__execute_simulation(
+        attempt = self.__execute_simulation(
             output_dir,
             working_oc_dir,
             jobs_output_dir,
@@ -281,17 +287,23 @@ class DynawoCurves(ProducerCurves):
             oc_name,
             disable_retry_logs=disable_retry_logs,
         )
-        if not result.succeeded:
-            dycov_logging.get_logger("ProducerCurves").warning(result.log)
+        if attempt.divergence:
+            dycov_logging.get_logger("ProducerCurves").warning(
+                f"Simulation diverged: {attempt.divergence}"
+            )
+        elif not attempt.dynawo.succeeded:
+            dycov_logging.get_logger("ProducerCurves").warning(attempt.dynawo.log)
         else:
             dycov_logging.get_logger("ProducerCurves").debug("Simulation successful")
-        has_curves = (working_oc_dir / jobs_output_dir / _CURVES_CSV).exists() and result.succeeded
+        has_curves = (working_oc_dir / jobs_output_dir / _CURVES_CSV).exists() and attempt.usable
         return SimulateOutcome(
-            succeeded=result.succeeded,
-            time_exceeds=result.sim_time > self._sim_time,
+            succeeded=attempt.usable,
+            time_exceeds=attempt.dynawo.sim_time
+            > config.get_float("Dynawo", "simulation_limit", 30.0),
             has_curves=has_curves,
-            curves=result.curves,
-            sim_time=result.sim_time,
+            curves=attempt.curves,
+            sim_time=attempt.dynawo.sim_time,
+            rejected_inputs=rejects_inputs(attempt.dynawo.timeline_error),
         )
 
     # ------------------------------------------------------------------
@@ -387,9 +399,7 @@ class DynawoCurves(ProducerCurves):
             ``SimulationResult``; anything else aborts the run.
         """
         self.__reset_solver()
-        output_dir, jobs_output_dir = self.__prepare_oc_validation(
-            working_oc_dir, pcs_name, bm_name, oc_name
-        )
+        output_dir, jobs_output_dir = self.__prepare_oc_validation(working_oc_dir, bm_name)
         event_params: dict = {}
         outcome = SimulateOutcome(
             succeeded=False,
@@ -418,14 +428,11 @@ class DynawoCurves(ProducerCurves):
                     ),
                     pd.DataFrame(),
                 )
-            # Sync curves_dict into bisection engine after model setup
-            self._bisection.curves_dict = self._setup.curves_dict
             self._bisection.sim_time = self._sim_time
 
             pcs_bm_oc_name = get_cfg_oc_name(pcs_name, bm_name, oc_name)
             if config.get_boolean(pcs_bm_oc_name, "hiz_fault"):
                 self._bisection.find_hiz_fault(
-                    output_dir,
                     working_oc_dir,
                     jobs_output_dir,
                     event_params["start_time"],
@@ -438,7 +445,6 @@ class DynawoCurves(ProducerCurves):
                 )
             elif config.get_boolean(pcs_bm_oc_name, "bolted_fault"):
                 self._bisection.find_bolted_fault(
-                    output_dir,
                     working_oc_dir,
                     jobs_output_dir,
                     event_params["start_time"],
