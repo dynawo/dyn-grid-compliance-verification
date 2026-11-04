@@ -338,8 +338,9 @@ The delta of `20251013` writes:
 | The fiche I7 gives one operating point, at Q = 0 | the list of operating conditions, one description, one report |
 | The fiche I5 adds the impedant fault | the list of operating conditions, one description, one report |
 | The reaction time carries no verdict | `thr_reaction_time = none` in `revision_art_8_3_3.ini` |
+| The short-circuit impedance of I6 and I7 is Un²/Scc, not Uc²/Scc | `zcc_voltage = Unom` in `revision_art_8_3_3.ini` |
 
-The delta of `20260723` is not compared yet. It carries the five points above, because its
+The delta of `20260723` is not compared yet. It carries the six points above, because its
 revision keeps them, and it writes them itself: a delta is measured against the base.
 
 Two fiches of those revisions are not in the tool at all: I17 and F17, on the damping of

@@ -77,8 +77,10 @@ powers in s_nref pu, voltage in Unom pu);
 `origin=(section, key)` makes a rejected definition name its config file+line
 (`config.describe_option`). Every
 non-GFM value read pulls from that one registry: `_get_pdr` + `_complete_loads` (`model_setup.py`; loads
-resolve voltage against a kV variant then ÷u_nom), `ProducerCurves.get_unit_characteristics`/`obtain_value`
-(`curves.py`, backing `setpoint_step_value` and the `{{step_event_*}}` TSO placeholders), and the report
+resolve voltage against a kV variant then ÷u_nom), the voltage of `Zcc` (`_zcc_voltage`,
+`[GridCode] zcc_voltage`, which a revision of the DTR sets),
+`ProducerCurves.get_unit_characteristics`/`obtain_value` (`curves.py`, backing `setpoint_step_value`
+and the `{{step_event_*}}` TSO placeholders), and the report
 `reference_step_size` scaling (`figure.py`; `report.py` overrides `Unom`→kV). Adding a base = adding a
 registry entry. `obtain_value` only resolves definitions that reference a magnitude (a `*`, or a
 possibly signed registry name); anything else is a Dynawo parameter value passed through verbatim.
