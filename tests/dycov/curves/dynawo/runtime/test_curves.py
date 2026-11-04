@@ -534,6 +534,28 @@ def test_a_magnitude_of_the_producer_beyond_its_limit_has_diverged(column, value
 @pytest.mark.parametrize(
     "column, value",
     [
+        ("BusPDR_BUS_Voltage", 2.0e3),
+        ("BusPDR_BUS_ReactivePower", 1.4e8),
+        ("Wind_Turbine_GEN_ActiveCurrentNode2", float("nan")),
+    ],
+)
+def test_a_divergence_the_curve_recovers_from_has_diverged(column, value):
+    curves = pd.DataFrame(
+        {
+            "time": [0.0, 1.0, 2.0],
+            "BusPDR_BUS_Voltage": [1.0, 1.0, 1.0],
+            column: [0.5, value, 0.5],
+        }
+    )
+
+    divergence = curves_module.find_divergence(curves, _PRODUCER_UNITS, 10.0, 100.0)
+
+    assert divergence is not None and column in divergence
+
+
+@pytest.mark.parametrize(
+    "column, value",
+    [
         ("SyncCompensator_GEN_TSO_ActivePower", 1.0e4),
         ("SyncCompensator_GEN_ActivePower", 1.0e4),
         ("SyncCompensator_GEN_TSO_FrequencyHz", 50.0),
