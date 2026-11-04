@@ -9,6 +9,7 @@
 #
 """Checks run on the files supplied as tool inputs."""
 
+import configparser
 import logging
 import re
 from pathlib import Path
@@ -17,6 +18,7 @@ import pytest
 from lxml import etree
 from tests.dycov.utils import listed_in_order
 
+from dycov.files import producer_curves
 from dycov.sanity_checks import file_checks
 
 _MODEL_EXTENSIONS = ("dyd", "par", "ini")
@@ -218,7 +220,7 @@ def test_check_curves_files_generates_the_configuration_from_the_model(tmp_path,
     monkeypatch.setattr(
         file_checks,
         "create_producer_curves",
-        lambda model_path, curves_path, template: created_curves.append(template),
+        lambda model_path, curves_path, template, delivery: created_curves.append(template),
     )
     model_path = _write_model_files(tmp_path / "Dynawo")
 
@@ -226,6 +228,199 @@ def test_check_curves_files_generates_the_configuration_from_the_model(tmp_path,
         file_checks.check_curves_files(model_path, tmp_path / "Curves", "performance/SM")
 
     assert created_curves == ["performance_SM"]
+
+
+def test_check_curves_files_generates_the_index_from_the_root_of_the_references(
+    tmp_path, monkeypatch
+):
+    created_curves = []
+    monkeypatch.setattr(
+        file_checks,
+        "create_producer_curves",
+        lambda model_path, curves_path, template, delivery: created_curves.append(
+            (curves_path, template, delivery)
+        ),
+    )
+    model_path = _write_model_files(tmp_path / "Dynawo")
+
+    with pytest.raises(FileNotFoundError):
+        file_checks.check_curves_files(model_path, tmp_path / "References" / "G1", "model/BESS")
+
+    assert created_curves == [(tmp_path / "References", "model_BESS", True)]
+
+
+_EXAMPLES = Path(__file__).resolve().parents[3] / "examples" / "Model"
+
+
+def _index(path: Path) -> configparser.ConfigParser:
+    parser = configparser.ConfigParser(inline_comment_prefixes=("#",))
+    parser.optionxform = str
+    parser.read(path, encoding="utf-8")
+    return parser
+
+
+def _tests_of(index: configparser.ConfigParser) -> set:
+    return {key.split(".")[0] for key in index["Curves-Files"]}
+
+
+def test_an_empty_reference_directory_gets_the_index_of_its_model(tmp_path, caplog):
+    """The unit of the Zone 1 of this model has the name of the Zone 3 one, so both zones share
+    the directory of the reference curves, and one index holds them."""
+    references = tmp_path / "References"
+    references.mkdir()
+
+    with pytest.raises(FileNotFoundError):
+        file_checks.check_curves_files(
+            _EXAMPLES / "Wind" / "IECB2015" / "Dynawo", references / "Producer", "model/PPM"
+        )
+
+    index = _index(references / "Producer" / "CurvesFiles.ini")
+    assert _tests_of(index) == {"PCS_RTE-I16z1", "PCS_RTE-I16z3"}
+    assert index.has_section("Curves-Dictionary-Zone1")
+    assert index.has_section("Curves-Dictionary-Zone3")
+    assert not (references / "Producer" / "Producer").exists()
+    assert "complete it" in caplog.text
+
+
+def test_each_unit_of_zone_1_gets_an_index_of_its_own(tmp_path):
+    references = tmp_path / "References"
+    references.mkdir()
+
+    with pytest.raises(FileNotFoundError):
+        file_checks.check_curves_files(
+            _EXAMPLES / "Wind" / "WECC4" / "Dynawo", references / "Producer", "model/PPM"
+        )
+
+    zone3 = _index(references / "Producer" / "CurvesFiles.ini")
+    assert _tests_of(zone3) == {"PCS_RTE-I16z3"}
+    assert zone3.has_section("Curves-Dictionary-Zone3")
+    for unit in ("Producer_G1", "Producer_G2"):
+        zone1 = _index(references / unit / "CurvesFiles.ini")
+        assert _tests_of(zone1) == {"PCS_RTE-I16z1"}
+        assert zone1.has_section("Curves-Dictionary-Zone1")
+
+
+def test_a_storage_model_gets_the_index_of_a_storage_unit(tmp_path):
+    references = tmp_path / "References"
+    references.mkdir()
+
+    with pytest.raises(FileNotFoundError):
+        file_checks.check_curves_files(
+            _EXAMPLES / "BESS" / "WECC" / "Dynawo", references / "Producer", "model/BESS"
+        )
+
+    index = _index(references / "Producer" / "CurvesFiles.ini")
+    assert "PCS_RTE-I16z3.PSetPointStep.Inc40Injection" in index["Curves-Files"]
+    assert "PCS_RTE-I16z1.SetPointStep.ActiveConsumption" in index["Curves-Files"]
+
+
+_FILLED_INDEX = "[Curves-Files]\nPCS_RTE-I16z1.SetPointStep.Active = Active\n"
+
+
+def test_a_missing_index_leaves_the_indexes_of_the_other_units_as_they_are(tmp_path):
+    references = tmp_path / "References"
+    for unit in ("Producer_G1", "Producer_G2"):
+        (references / unit).mkdir(parents=True)
+        (references / unit / "CurvesFiles.ini").write_text(_FILLED_INDEX)
+
+    with pytest.raises(FileNotFoundError):
+        file_checks.check_curves_files(
+            _EXAMPLES / "Wind" / "WECC4" / "Dynawo", references / "Producer", "model/PPM"
+        )
+
+    for unit in ("Producer_G1", "Producer_G2"):
+        assert (references / unit / "CurvesFiles.ini").read_text() == _FILLED_INDEX
+    assert _tests_of(_index(references / "Producer" / "CurvesFiles.ini")) == {"PCS_RTE-I16z3"}
+
+
+def test_an_index_left_as_generated_stops_every_test_that_reads_it(tmp_path):
+    """The PCS of a run check their units at the same time: the one that generates the index
+    stops, and the others must not simulate against it while it names no curve file."""
+    references = tmp_path / "References"
+    model_path = _EXAMPLES / "Wind" / "IECB2015" / "Dynawo"
+    with pytest.raises(FileNotFoundError):
+        file_checks.check_curves_files(model_path, references / "Producer", "model/PPM")
+
+    with pytest.raises(ValueError, match="names no curve file yet: complete it"):
+        file_checks.check_curves_files(model_path, references / "Producer", "model/PPM")
+
+
+def test_a_test_reading_the_index_another_is_writing_does_not_accept_it(tmp_path, monkeypatch):
+    references = tmp_path / "References"
+    model_path = _EXAMPLES / "Wind" / "IECB2015" / "Dynawo"
+    readings = []
+
+    def check_the_unit():
+        try:
+            return file_checks.check_curves_files(model_path, references / "Producer", "model/PPM")
+        except (FileNotFoundError, ValueError) as stop:
+            return stop
+
+    class ReadWhileWritten:
+        def __init__(self, stream):
+            self._stream = stream
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exception):
+            self._stream.close()
+
+        def write(self, text):
+            if not readings:
+                readings.append(None)
+                readings[0] = check_the_unit()
+            return self._stream.write(text)
+
+    def open_read_while_written(file, mode="r", *args, **kwargs):
+        stream = open(file, mode, *args, **kwargs)
+        return ReadWhileWritten(stream) if "w" in mode else stream
+
+    monkeypatch.setattr(producer_curves, "open", open_read_while_written, raising=False)
+
+    written = check_the_unit()
+
+    assert isinstance(written, FileNotFoundError) and written.filename == "CurvesFiles.ini"
+    assert isinstance(readings[0], FileNotFoundError) and readings[0].filename == "CurvesFiles.ini"
+    assert [path.name for path in (references / "Producer").iterdir()] == ["CurvesFiles.ini"]
+    index = references / "Producer" / "CurvesFiles.ini"
+    assert producer_curves.is_left_to_complete(index)
+    assert _tests_of(_index(index)) == {"PCS_RTE-I16z1", "PCS_RTE-I16z3"}
+
+
+def test_an_index_generated_and_completed_is_accepted(tmp_path):
+    references = tmp_path / "References"
+    model_path = _EXAMPLES / "Wind" / "IECB2015" / "Dynawo"
+    with pytest.raises(FileNotFoundError):
+        file_checks.check_curves_files(model_path, references / "Producer", "model/PPM")
+    index = references / "Producer" / "CurvesFiles.ini"
+    index.write_text(
+        index.read_text().replace(
+            "PCS_RTE-I16z3.PSetPointStep.Inc40 = ", "PCS_RTE-I16z3.PSetPointStep.Inc40 = Inc40"
+        )
+    )
+
+    assert file_checks.check_curves_files(model_path, references / "Producer", "model/PPM") is None
+
+
+def test_generating_the_index_leaves_the_records_of_the_producer_where_they_are(tmp_path):
+    producer = tmp_path / "References" / "Producer"
+    producer.mkdir(parents=True)
+    for extension in ("csv", "dict"):
+        (producer / f"PCS_RTE-I16z1.SetPointStep.Active.{extension}").write_text("")
+
+    with pytest.raises(FileNotFoundError):
+        file_checks.check_curves_files(
+            _EXAMPLES / "Wind" / "WECC4" / "Dynawo", producer, "model/PPM"
+        )
+
+    assert {path.name for path in producer.iterdir()} == {
+        "CurvesFiles.ini",
+        "PCS_RTE-I16z1.SetPointStep.Active.csv",
+        "PCS_RTE-I16z1.SetPointStep.Active.dict",
+    }
+    for unit in ("Producer_G1", "Producer_G2"):
+        assert [path.name for path in (producer.parent / unit).iterdir()] == ["CurvesFiles.ini"]
 
 
 # ---------------------------------------------------------------------------
