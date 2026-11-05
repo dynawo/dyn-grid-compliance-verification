@@ -15,6 +15,7 @@ from dycov.electrical.initialization_calcs import (
     _calc_pimodel,
     _calc_twobus_pf,
     _zero_imp_line,
+    behind_series_impedance,
     init_calcs,
 )
 from dycov.electrical.pimodel_parameters import line_pimodel
@@ -861,3 +862,19 @@ def test_initialize_int_line_is_solved_from_the_main_xfmr_side():
     # The main transformer takes the PDR delivery on its declared PDR terminal
     assert _is_equal(main_xfmr.terminals[0].u0, 1.04444444444444444444)
     assert _is_equal(main_xfmr.terminals[0].p0, -4.567)
+
+
+def test_behind_a_series_impedance_the_unit_also_supplies_its_losses():
+    v_behind, s_behind = behind_series_impedance(complex(1.0, 0.0), complex(0.9, 0.0), 0.01 + 0.2j)
+
+    assert _is_equal(s_behind.real, 0.9 + 0.01 * 0.81)
+    assert _is_equal(s_behind.imag, 0.2 * 0.81)
+    assert _is_equal(abs(v_behind), abs(1.0 + (0.01 + 0.2j) * 0.9))
+
+
+def test_behind_no_impedance_is_the_terminal_itself():
+    v_behind, s_behind = behind_series_impedance(complex(1.02, 0.1), complex(-0.5, 0.2), 0j)
+
+    assert v_behind == complex(1.02, 0.1)
+    assert _is_equal(s_behind.real, -0.5)
+    assert _is_equal(s_behind.imag, 0.2)

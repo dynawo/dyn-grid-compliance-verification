@@ -224,6 +224,25 @@ def test_a_test_without_a_type_draws_no_setpoint():
     assert _setpoints_by_figure(drawn) == {}
 
 
+def test_a_setpoint_step_draws_its_setpoint_over_a_curve_of_internal_node1(set_user_option):
+    """A Zone 1 that compares InternalNode1, as the Fiche I16.2 does, draws the active power
+    of the bus, which the figure names in full."""
+    set_user_option(_OC, "setpoint_change_test_type", "PSetpoint")
+    fig_p = FigureDescription(
+        name="fig_P",
+        variables="BusPDR_BUS_ActivePower",
+        ylabel="P",
+        setpoint="ActivePowerSetpointPu",
+    )
+
+    drawn = report._with_stepped_setpoint(fig_p, _OC, 1)
+
+    assert drawn.variables == [
+        {"type": "bus", "variable": "ActivePower"},
+        {"type": "generator", "variable": "ActivePowerSetpointPu"},
+    ]
+
+
 def test_a_setpoint_step_of_zone_3_draws_no_setpoint(set_user_option):
     set_user_option(_OC, "setpoint_change_test_type", "PSetpoint")
     fig_p = FigureDescription(name="fig_P", variables="BusPDR_BUS_ActivePower", ylabel="P")
@@ -451,3 +470,44 @@ def test_the_summary_of_a_workbook_names_the_workbook_alone(monkeypatch, caplog)
     assert "***Workbook: Producer.xlsx***" in summary
     assert "Model dir" not in summary
     assert "Reference curves dir" not in summary
+
+
+@pytest.mark.parametrize("group_xfmrs, has_group_xfmr", [([], False), (None, True)])
+def test_the_switched_line_is_drawn_closing_and_opening_for_the_jumps_of_the_short_circuit_ratio(
+    tmp_path, group_xfmrs, has_group_xfmr
+):
+    templates = (
+        Path(report.__file__).resolve().parent.parent
+        / "templates/revisions/20260723/reports/model/BESS/PCS_RTE-I16z1"
+    )
+    (tmp_path / "circuit_z1_switched_line.tikz").write_text(
+        (templates / "circuit_z1_switched_line.tikz").read_text()
+    )
+
+    report._render_zone1_circuits(tmp_path, type("Producer", (), {"group_xfmrs": group_xfmrs}))
+
+    drawn_closing = (tmp_path / "circuit_z1_switched_line_closes.tikz").read_text()
+    drawn_opening = (tmp_path / "circuit_z1_switched_line_opens.tikz").read_text()
+    assert "[cspst]" in drawn_closing and "[ospst]" not in drawn_closing
+    assert "[ospst]" in drawn_opening and "[cspst]" not in drawn_opening
+    for drawn in (drawn_closing, drawn_opening):
+        assert "BLOCK" not in drawn
+        assert ("Group\\\\ transformer" in drawn) is has_group_xfmr
+
+    report._render_zone1_circuits(tmp_path, type("Producer", (), {"group_xfmrs": [object()]}))
+
+    assert (tmp_path / "circuit_z1_switched_line_closes.tikz").read_text() == drawn_closing
+    assert (tmp_path / "circuit_z1_switched_line_opens.tikz").read_text() == drawn_opening
+
+
+def test_no_report_of_a_pcs_defines_a_macro_its_copy_for_another_unit_would_define_again():
+    templates = Path(report.__file__).resolve().parent.parent / "templates"
+    reports_of_a_pcs = [
+        path
+        for path in templates.rglob("report.*.tex")
+        if "reports" in path.relative_to(templates).parts
+    ]
+
+    assert reports_of_a_pcs
+    for path in reports_of_a_pcs:
+        assert "\\newcommand" not in path.read_text(encoding="utf-8"), path

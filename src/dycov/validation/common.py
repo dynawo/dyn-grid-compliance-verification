@@ -940,7 +940,9 @@ def get_rise_time(time: list, curve: list, sim_t_event_start: float) -> tuple[fl
     return reached_time - reaction_time, target
 
 
-def get_overshoot(time: list, curve: list, sim_t_event_start: float) -> float:
+def get_overshoot(
+    time: list, curve: list, sim_t_event_start: float, transient: bool = False
+) -> float:
     """Gets how far the curve goes beyond its final value, in the direction of the step, after
     the event: the undershoot of a downward step is its overshoot.
 
@@ -952,6 +954,9 @@ def get_overshoot(time: list, curve: list, sim_t_event_start: float) -> float:
         List of values that make up the curve
     sim_t_event_start: float
         Instant of time when the event is triggered
+    transient: bool
+        True for a transient the curve returns from, whose overshoot is taken in the direction
+        of its peak: it has no step to give one
 
     Returns
     -------
@@ -964,8 +969,46 @@ def get_overshoot(time: list, curve: list, sim_t_event_start: float) -> float:
     pos_t_event = _position_at(time, sim_t_event_start)
     response = np.asarray(curve[pos_t_event:], dtype=float)
     final_value = response[-1]
-    direction = -1.0 if final_value < curve[max(pos_t_event - 1, 0)] else 1.0
+    pre_event = curve[max(pos_t_event - 1, 0)]
+    if transient:
+        peak = response[np.argmax(np.abs(response - pre_event))]
+        direction = -1.0 if peak < pre_event else 1.0
+    else:
+        direction = -1.0 if final_value < pre_event else 1.0
     return float(max(direction * (response - final_value)))
+
+
+def get_response_step(
+    time: list, curve: list, sim_t_event_start: float, transient: bool = False
+) -> float:
+    """Gets the magnitude of the response of a curve to an event that steps no setpoint: its
+    change from before the event to its end or, for a transient it returns from, its peak.
+
+    Parameters
+    ----------
+    time: list
+        List of time instants that make up the curve
+    curve: list
+        List of values that make up the curve
+    sim_t_event_start: float
+        Instant of time when the event is triggered
+    transient: bool
+        True for a transient the curve returns from
+
+    Returns
+    -------
+    float
+        The magnitude of the response, never negative
+    """
+    if len(time) != len(curve):
+        raise ValueError("curve values and time values have different length")
+
+    pos_t_event = _position_at(time, sim_t_event_start)
+    response = np.asarray(curve[pos_t_event:], dtype=float)
+    pre_event = curve[max(pos_t_event - 1, 0)]
+    if transient:
+        return float(np.max(np.abs(response - pre_event)))
+    return float(abs(response[-1] - pre_event))
 
 
 def get_overshoot_tolerance(curve: list, setpoint_variation: float) -> float:

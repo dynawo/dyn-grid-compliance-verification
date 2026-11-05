@@ -57,7 +57,10 @@ def _magnitude_name(value_definition: str) -> str:
 def _references_base_magnitude(
     value_definition: str, unit_characteristics: dict[str, float]
 ) -> bool:
-    return "*" in value_definition or _magnitude_name(value_definition) in unit_characteristics
+    magnitude = _magnitude_name(value_definition)
+    return (
+        "*" in value_definition or magnitude.startswith("(") or magnitude in unit_characteristics
+    )
 
 
 class ProducerCurves:
@@ -79,6 +82,8 @@ class ProducerCurves:
     ):
         self._producer = producer
         self._line_Xpu = 0.0
+        self._x_grid = None
+        self._x_eff = None
         self._s_nref = config.get_float("Dynawo", "s_nref", 100.0)
 
     def obtain_value(
@@ -117,15 +122,25 @@ class ProducerCurves:
             value_definition, unit_characteristics, origin=origin
         )
 
-    def complete_unit_characteristics(self, line_Xpu: float) -> None:
+    def complete_unit_characteristics(
+        self, line_Xpu: float, x_grid: Optional[float] = None, x_eff: Optional[float] = None
+    ) -> None:
         """Complete the parameters used as unit characteristics.
 
         Parameters
         ----------
         line_Xpu: float
             Line reactance in per unit.
+        x_grid: Optional[float]
+            Short-circuit reactance of the grid of the test, in pu of the nominal apparent
+            power of the unit, None when the test has no grid impedance.
+        x_eff: Optional[float]
+            Effective reactance the PCS of the test fixes, in pu of the nominal apparent power
+            of the unit, in place of the one the producer declares; None when it fixes none.
         """
         self._line_Xpu = line_Xpu
+        self._x_grid = x_grid
+        self._x_eff = x_eff
 
     def get_unit_characteristics(self) -> dict[str, float]:
         """Get a set of unit characteristics.
@@ -135,9 +150,12 @@ class ProducerCurves:
         dict[str, float]
             set of unit characteristics.
         """
-        return value_registry.unit_characteristics(
-            self.get_producer(), self.get_generator_u_dim(), self._line_Xpu
+        characteristics = value_registry.unit_characteristics(
+            self.get_producer(), self.get_generator_u_dim(), self._line_Xpu, self._x_grid
         )
+        if self._x_eff is not None:
+            characteristics["Xeff"] = self._x_eff
+        return characteristics
 
     def get_snref(self) -> float:
         """Get the reference power (S_nref).

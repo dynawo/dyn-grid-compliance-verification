@@ -9,10 +9,13 @@
 #
 """Unit tests for the model validation (ModelValidator) compliance criteria."""
 
+import inspect
+
 import pandas as pd
 import pytest
 
 from dycov.model.parameters import ExclusionWindows
+from dycov.validation import common
 from dycov.validation.common import get_measurement_name
 from dycov.validation.model import ModelValidator, _get_column_name
 
@@ -47,6 +50,9 @@ class DummyConfig:
         return None if value == "none" else value
 
     def get_value(self, section: str, key: str, default=None):
+        return self._values.get(key, default)
+
+    def get_boolean(self, section: str, key: str, default: bool = False) -> bool:
         return self._values.get(key, default)
 
 
@@ -230,6 +236,8 @@ def dummy_config(monkeypatch):
         ("ReactivePowerSetpointPu", "Q"),
         ("VoltageSetpointPu", "V"),
         ("NetworkFrequencyPu", "$\\omega"),
+        ("active_current", "$I_p$"),
+        ("reactive_current", "$I_q$"),
         ("", "Q"),
     ],
 )
@@ -443,6 +451,72 @@ def test_compare_event_times_computes_reaction_and_rise_times():
     assert results["calc_rise_time"] == pytest.approx(0.0)
     assert results["ref_rise_time"] == pytest.approx(0.0)
     assert results["calc_rise_target"] == {"BusPDR_BUS_ActivePower": pytest.approx(0.9)}
+
+
+def test_a_transient_without_a_setpoint_is_measured_against_the_peak_of_the_reference():
+    time = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+    name = "BusPDR_BUS_ActiveCurrent"
+    reference = pd.DataFrame({"time": time, name: [0.5, 0.5, 0.8, 0.55, 0.5, 0.5]})
+    calculated = pd.DataFrame({"time": time, name: [0.5, 0.5, 0.7, 0.52, 0.5, 0.5]})
+    validator = _make_validator(
+        validations=["settling_time", "overshoot"],
+        curves_manager=DummyCurvesManager(calculated=calculated, reference=reference),
+    )
+    results = {}
+
+    validator._ModelValidator__compare_event_times(
+        measurement_name=name,
+        start_event=1.0,
+        setpoint_variation=0.0,
+        results=results,
+        tracks_response=True,
+        transient=True,
+    )
+
+    band = common.get_ss_tolerance() * 0.3
+    assert results["calc_settling_tube"][name] == pytest.approx([0.5 - band, 0.5 + band])
+    assert results["overshoot_tolerance"] == pytest.approx(band)
+    assert results["ref_overshoot"] == pytest.approx(0.3)
+    assert results["calc_overshoot"] == pytest.approx(0.2)
+
+
+_MEASURED_AS = ("modified_setpoint", "tracks_response", "transient")
+
+
+@pytest.mark.parametrize(
+    "tracked, transient", [(None, False), ("reactive_current", False), ("active_current", True)]
+)
+def test_validate_measures_a_tracked_magnitude_as_its_test_declares_it(
+    monkeypatch, dummy_config, tmp_path, tracked, transient
+):
+    dummy_config._values.update(tracked_magnitude=tracked, transient_response=transient)
+    signature = inspect.signature(ModelValidator._ModelValidator__calculate)
+    calls = []
+
+    def calculate(*args, **kwargs):
+        arguments = signature.bind(*args, **kwargs).arguments
+        calls.append({key: arguments[key] for key in _MEASURED_AS})
+        raise StopIteration
+
+    monkeypatch.setattr(ModelValidator, "_ModelValidator__calculate", calculate)
+    validator = _make_validator(curves_manager=_make_zone1_manager())
+    event_params = {
+        "start_time": 1.0,
+        "duration_time": 0.0,
+        "connect_to": "grid_phase_jump",
+        "step_value": 0.1,
+    }
+
+    with pytest.raises(StopIteration):
+        validator.validate("OC2", tmp_path, "outputs", event_params)
+
+    assert calls == [
+        {
+            "modified_setpoint": tracked or "grid_phase_jump",
+            "tracks_response": tracked is not None,
+            "transient": transient,
+        }
+    ]
 
 
 def test_compare_event_times_computes_response_and_settling_times():
@@ -1377,3 +1451,17 @@ def test_get_measurement_names_in_zone3_includes_the_network_frequency():
         "BusPDR_BUS_ReactiveCurrent",
         "NetworkFrequencyPu",
     ]
+
+
+def test_a_test_names_the_magnitude_it_tracks_in_its_own_section(monkeypatch):
+    sections = {"PCS_RTE-I16z3.GridFreqRamp.Ramp": {"tracked_magnitude": "active_current"}}
+
+    class _Config:
+        def get_value(self, section, key, default=None):
+            return sections.get(section, {}).get(key, default)
+
+    monkeypatch.setattr(f"{MODEL_MODULE}.config", _Config())
+    validator = _make_validator()
+
+    assert validator._ModelValidator__tracked_magnitude("Ramp") == "active_current"
+    assert validator._ModelValidator__tracked_magnitude("Other") is None

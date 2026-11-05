@@ -196,3 +196,19 @@ def test_create_map_leaves_an_untouched_pcs_unmarked():
     ]
 
     assert create_map(summary_list)[0][1] == "PCS1"
+
+
+def test_create_map_escapes_underscores_in_the_names_of_the_tests():
+    summary_list = [
+        DummySummary(
+            producer_name="Producer",
+            pcs="PCS_RTE-I16z1",
+            benchmark="S_Fault4",
+            operating_condition="OC2_SCR10",
+            compliance=Compliance.Compliant,
+        )
+    ]
+
+    result = create_map(summary_list)
+
+    assert result[0][2:4] == ["S\\_Fault4", "OC2\\_SCR10"]

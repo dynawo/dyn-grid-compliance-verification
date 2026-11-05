@@ -56,7 +56,8 @@
 }
 
 % #1 = figure name, #2 = description item
-\newcommand{\GridCurveDescriptionZone}[2]{\IfFigureDrawnZone{#1}{\item #2}}
+\newif\iffiguredrawnzone
+\newcommand{\GridCurveDescriptionZone}[2]{\IfFigureDrawnZone{#1}{\figuredrawnzonetrue\item #2}}
 
 \newcounter{gridfigure}
 
@@ -80,7 +81,9 @@
     }%
 }
 
+% A test of the Fiche I18 that produced no curve has no figure, and a description list needs an item
 \newcommand{\GridCurvesDescriptionZone}{
+    \figuredrawnzonefalse
     \GridCurveDescriptionZone{fig_V}{Voltage at InternalNode1.}
     \GridCurveDescriptionZone{fig_UIt}{Voltage magnitude at InternalNode2 (injector terminal).}
     \GridCurveDescriptionZone{fig_P}{Active power injected by the converter at its control
@@ -97,6 +100,8 @@
     terminal).}
     \GridCurveDescriptionZone{fig_I}{Active, reactive, and magnitude currents at InternalNode2
     (injector terminal), with all BESS units displayed on a single plot.}
+    \GridCurveDescriptionZone{fig_W}{Frequency of the converter.}
+    \iffiguredrawnzone\else\item No figure: the test produced no curve.\fi
 }
 
 % For now we won't use floats for figures, to get more precise placement
@@ -118,5 +123,6 @@
         terminal).}
     \GridCurveZone{fig_I}{Active (light blue), reactive (violet), and magnitude (yellow)
         currents at InternalNode2 (injector terminal). All BESS units shown on one plot.}
+    \GridCurveZone{fig_W}{Frequency of the converter.}
 }
 %End snippet for the figures of a test

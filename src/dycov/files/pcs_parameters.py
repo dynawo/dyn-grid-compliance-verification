@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Optional
 
 from lxml import etree
 
@@ -120,7 +121,13 @@ def get_grid_load(loads: list) -> LoadParams:
     )
 
 
-def get_pcs_lines_params(pcs_dyd: Path, pcs_par: Path, line_rpu: float, line_xpu: float) -> list:
+def get_pcs_lines_params(
+    pcs_dyd: Path,
+    pcs_par: Path,
+    line_rpu: float,
+    line_xpu: float,
+    switched_line_zpu: Optional[complex] = None,
+) -> list:
     """Gets the line parameters of the pcs model.
 
     Parameters
@@ -133,11 +140,13 @@ def get_pcs_lines_params(pcs_dyd: Path, pcs_par: Path, line_rpu: float, line_xpu
         Line resistance value
     line_xpu: float
         Line reactance value
+    switched_line_zpu: Optional[complex]
+        Impedance of the line a test of the short-circuit ratio switches, if it has one
 
     Returns
     -------
     list
-        Line parameters of the pcs model
+        Parameters of the lines of the pcs model in service when the simulation starts
     """
     pcs_dyd_tree = etree.parse(pcs_dyd, etree.XMLParser(remove_blank_text=True))
     pcs_dyd_root = pcs_dyd_tree.getroot()
@@ -145,6 +154,8 @@ def get_pcs_lines_params(pcs_dyd: Path, pcs_par: Path, line_rpu: float, line_xpu
     pcs_par_tree = etree.parse(pcs_par, etree.XMLParser(remove_blank_text=True))
     pcs_par_root = pcs_par_tree.getroot()
 
-    lines = model_parameters.get_line_values(pcs_dyd_root, pcs_par_root, line_rpu, line_xpu)
+    lines = model_parameters.get_line_values(
+        pcs_dyd_root, pcs_par_root, line_rpu, line_xpu, switched_line_zpu
+    )
 
     return lines

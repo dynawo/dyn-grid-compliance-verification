@@ -11,6 +11,7 @@
 import logging
 from pathlib import Path
 
+import pandas as pd
 import pytest
 
 
@@ -67,6 +68,9 @@ class DummyCurvesManager:
 
     def get_voltage_dip(self):
         return None
+
+    def release_curves(self):
+        self.released = True
 
 
 class DummyValidator:
@@ -318,3 +322,34 @@ def test_a_curves_only_run_reports_the_simulation_without_checking_it(
     assert compliance == Compliance[expected]
     assert results["summary"] == Compliance[expected]
     assert op_cond_success == (compliance == Compliance.Simulated)
+
+
+def test_the_curves_of_each_test_wait_on_disk_for_the_report(benchmark, monkeypatch, tmp_path):
+    from dycov.model.compliance import Compliance
+
+    curves = pd.DataFrame({"time": [0.0, 0.001], "BusPDR_BUS_Voltage": [1.0, 0.99]})
+    monkeypatch.setattr(
+        benchmark,
+        "_Benchmark__validate_operating_condition",
+        lambda op_cond: (
+            True,
+            Compliance.Compliant,
+            {"summary": Compliance.Compliant, "curves": curves},
+        ),
+        raising=False,
+    )
+    benchmark._working_dir = tmp_path
+    for oc_name in ("First", "Second"):
+        (tmp_path / "Prod" / "PCS" / "Bench" / oc_name).mkdir(parents=True)
+    pcs_results = {}
+
+    benchmark.validate([], pcs_results)
+
+    for oc_name in ("First", "Second"):
+        results = pcs_results[f"PCS.Bench.{oc_name}"]
+        assert "curves" not in results
+        assert results["curves_set_aside"] == (
+            tmp_path / "Prod" / "PCS" / "Bench" / oc_name / "curves_set_aside.pkl"
+        )
+        assert results["curves_set_aside"].exists()
+    assert benchmark._curves_manager.released
