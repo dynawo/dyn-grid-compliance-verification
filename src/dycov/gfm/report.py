@@ -232,6 +232,7 @@ def _test_map(test: GFMTestReport, outputs_by_producer: bool) -> dict:
         "threshold": config.get_float("GFM", "thr_damping_ratio", 0.40),
         "timestep": config.get_float("GFM", "damping_time_step", 0.005),
         "pencil": config.get_int("GFM", "damping_pencil_order", 6),
+        "min_amplitude": config.get_float("GFM", "damping_min_amplitude", 0.001),
         "fmin": config.get_float("GFM", "damping_f_min", 0.1),
         "fmax": config.get_float("GFM", "damping_f_max", 10.0),
         "compliance": summary.translate_compliance(test.compliance) if test.compliance else "",

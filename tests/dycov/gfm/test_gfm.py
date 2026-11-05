@@ -229,6 +229,55 @@ def test_a_verification_warns_of_a_pgu_given_the_limits_of_the_installation(
     assert len(warnings) == 1
 
 
+def test_a_pgu_declaring_its_own_powers_above_its_snom_is_not_warned(
+    tmp_path, i18_description, caplog
+):
+    pgu = _GFM_PARAMETERS + "p_max_injection = 120\np_max_consumption = 120\n"
+    parameters = _set_section(
+        _parameters(tmp_path, _UNIT + pgu, producer_curves=tmp_path / "Curves")
+    )
+
+    assert parameters.get_max_active_power() == pytest.approx(1.2)
+    assert not [record for record in caplog.records if "exceeds" in record.message]
+
+
+@pytest.mark.parametrize("benchmark, fraction", [("S_VolAngStep1", 0.95), ("S_Rocof1", 0.98)])
+def test_the_tunnel_of_the_envelopes_is_in_pu_of_pn_as_the_operating_points(
+    tmp_path, i18_description, benchmark, fraction
+):
+    unit = _UNIT.replace("p_max_injection = 100", "p_max_injection = 120")
+    parameters = _parameters(tmp_path, unit + _GFM_PARAMETERS)
+    parameters.set_section(_PCS, benchmark, "OC4")
+
+    assert parameters.get_pmax_mois_tunnel() == pytest.approx(fraction * 1.2)
+    assert parameters.get_pmin_mois_tunnel() == pytest.approx(-fraction * 1.2)
+
+
+def test_an_operating_point_beyond_the_limits_of_the_unit_is_warned(
+    tmp_path, i18_description, caplog
+):
+    unit = _UNIT.replace("p_max_consumption = 100", "p_max_consumption = 50")
+    parameters = _parameters(tmp_path, unit + _GFM_PARAMETERS)
+    parameters.set_section(_PCS, _BM, "OC5")
+
+    assert parameters.get_initial_active_power() == pytest.approx(-0.95)
+    parameters.get_initial_active_power()
+
+    warnings = [record for record in caplog.records if "beyond the limits" in record.message]
+    assert len(warnings) == 1
+
+
+def test_an_operating_point_within_the_limits_of_the_unit_is_not_warned(
+    tmp_path, i18_description, caplog
+):
+    parameters = _parameters(tmp_path, _UNIT + _GFM_PARAMETERS)
+    parameters.set_section(_PCS, _BM, "OC5")
+
+    parameters.get_initial_active_power()
+
+    assert not [record for record in caplog.records if "beyond the limits" in record.message]
+
+
 def test_a_unit_whose_parameters_are_incomplete_has_an_invalid_test(tmp_path, i18_description):
     test_report = _generate(
         _parameters(tmp_path, _UNIT + _GFM_PARAMETERS.replace("Snom = 100\n", "")),

@@ -69,8 +69,11 @@ Which tests a unit is given follows from what it is, declared with
   The scenarios of a test inherit its settings from the alias file next to
   the PCS (``PhaseJumpTest``, ``AmplitudeStepTest``, ``SCRJumpTest`` and
   ``RoCoFTest``). The active power of the operating points is given in pu of
-  Pn, the maximum active power of the PGU, and the rest of the fiche, the
-  envelopes, the reactances and the short-circuit ratios, in pu of the rating
+  Pn, the maximum active power of the PGU, as is the power near its limits the
+  envelopes hold the unit to (``PmaxMOISTunnel`` and ``PminMOISTunnel``); an
+  operating point beyond the limits of the unit is warned of, since its
+  envelopes are cut by them. The rest of the fiche, the
+  envelopes, the reactances and the short-circuit ratios, is in pu of the rating
   of the converter (Snom). The grid short-circuit ratios are those of the
   fiche: ``SCRmin = 2``, ``SCRmed = 10`` and ``SCRmax = 20`` (``[GFM]``
   section of the configuration). The events and the envelopes are drawn from
@@ -347,8 +350,13 @@ A test is **compliant** when:
   ``damping_event_delay`` (5 ms) after each discontinuity of the event to the
   end of the envelope (during the frequency ramp and after it, for the RoCoF
   tests), is sampled every ``damping_time_step`` (5 ms) and fitted with a
-  pencil of ``damping_pencil_order`` (6) poles, and every mode in the band
-  counts, whatever its amplitude.
+  pencil of ``damping_pencil_order`` (6) poles. The fit is complex and its
+  poles are the eigenvalues SciPy gives, as in RTE's implementation, which
+  finds the same modes in the same samples. The fiche judges every oscillation
+  present in the curve, so a mode of the band counts unless its window does
+  not hold half of its period (the fit follows a trend of the curve with it,
+  such as the response to a ramp of the frequency), or its amplitude is below
+  ``damping_min_amplitude`` (0.001 pu), the numerical noise of the curve.
 
 The last criterion of the fiche, that the converter stays connected and
 stable, is not checked apart: a curve that leaves the envelopes or oscillates
@@ -367,12 +375,12 @@ checks with their verdict. The results of each test are under
 ``Results/<producer>/PCS_RTE-I18z1/S_<Scenario>/OC<k>/``, as for the envelope
 generation, and its ``results.json`` adds the compliance, how far the curve
 leaves the envelope and over which time they are compared, and every
-oscillating mode found (curve, window, frequency, damping ratio and
+oscillating mode that counts (curve, window, frequency, damping ratio and
 amplitude, in pu).
 
 .. note::
    The Matrix Pencil method fits the response with a sum of damped
    exponentials, here six of them, as in RTE's implementation: up to three
    oscillating modes besides the trend of the curve. A response with more
-   modes than that is fitted with the most significant ones. Every mode found
-   is listed, with its amplitude, in the ``results.json`` of the test.
+   modes than that is fitted with the most significant ones. Every mode that
+   counts is listed, with its amplitude, in the ``results.json`` of the test.

@@ -10,6 +10,7 @@
 
 import numpy as np
 import pytest
+from scipy import linalg
 
 from dycov.sigpro import matrix_pencil
 
@@ -80,3 +81,38 @@ def test_window_with_too_few_samples_for_the_pencil_has_no_mode():
 @pytest.mark.parametrize("time", [np.array([]), np.array([1.0])])
 def test_signal_without_two_instants_has_no_mode(time):
     assert _modes(np.ones_like(time), time=time) == []
+
+
+def _rte_modes(samples, pencil, time_step, f_min=0.1, f_max=10.0):
+    """The frequency and damping ratio of the modes RTE's implementation finds in the samples."""
+    hankel = np.zeros((len(samples) - pencil, pencil + 1), dtype=complex)
+    for row in range(len(samples) - pencil):
+        hankel[row, :] = samples[row : row + pencil + 1]
+    poles = linalg.eig(np.linalg.pinv(hankel[:, :-1]) @ hankel[:, 1:])[0]
+    decay = np.log(np.abs(poles)) / time_step
+    frequency = np.angle(poles) / (2 * np.pi * time_step)
+    damping = -decay / np.sqrt((2 * np.pi * frequency) ** 2 + decay**2)
+    in_band = (frequency >= f_min) & (frequency <= f_max)
+    return sorted(zip(frequency[in_band], damping[in_band]))
+
+
+def _random_response(rng):
+    response = 0.5 + rng.normal(0, 0.3) * np.exp(-_TIME / rng.uniform(0.05, 1.0))
+    for _ in range(rng.integers(1, 3)):
+        decay, frequency, phase = rng.uniform(0.1, 5), rng.uniform(0.2, 12), rng.uniform(0, 6)
+        amplitude = rng.uniform(0.01, 0.5)
+        oscillation = np.cos(2 * np.pi * frequency * _TIME + phase)
+        response += amplitude * np.exp(-decay * _TIME) * oscillation
+    return response
+
+
+def test_the_modes_are_those_rte_finds_in_the_same_samples():
+    rng = np.random.default_rng(0)
+    for _ in range(20):
+        response = _random_response(rng)
+        samples = matrix_pencil._sampled(_TIME, response, 1.005, 4.5, 0.005)
+
+        modes = matrix_pencil.oscillation_modes(_TIME, response, 1.005, 4.5, 0.1, 10.0, 0.005, 6)
+
+        expected = _rte_modes(samples, 6, 0.005)
+        assert [(m.frequency, m.damping_ratio) for m in modes] == pytest.approx(expected)

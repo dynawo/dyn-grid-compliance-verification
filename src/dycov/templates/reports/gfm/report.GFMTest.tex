@@ -56,7 +56,8 @@
     {{ fmax }}~Hz must have a damping ratio of at least {{ threshold }}. The damping ratio is
     estimated with the Matrix Pencil method as RTE implements it: the unfiltered curve, during
     the event and after it up to the end of the envelope, is sampled every {{ timestep }}~s and
-    fitted with {{ pencil }} poles:
+    fitted with {{ pencil }} poles. A mode of the fit is an oscillation of the curve when its
+    window holds half of its period and its amplitude reaches {{ min_amplitude }}~pu:
     \BLOCK{if modes}
     \begin{center}
         \scriptsize

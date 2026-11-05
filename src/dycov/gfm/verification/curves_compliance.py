@@ -101,7 +101,7 @@ def check(
         logger.warning(f"No producer curves for the test in '{curves_path}'")
         return CurvesCheck(Compliance.WithoutProducerCurves, None, None, [])
 
-    missing = [curve for curve in _CURVES.values() if curve not in curves]
+    missing = [magnitude for magnitude, curve in _CURVES.items() if curve not in curves]
     if missing:
         logger.warning(f"The producer curves of the test miss {', '.join(missing)}")
         return CurvesCheck(Compliance.WithoutProducerCurves, None, None, [])
@@ -187,6 +187,7 @@ def _damped_modes(
     of the envelope. Each window starts a moment after the discontinuity that opens it, as in
     RTE's implementation, so that the fit does not read the step itself."""
     f_min = config.get_float("GFM", "damping_f_min", 0.1)
+    min_amplitude = config.get_float("GFM", "damping_min_amplitude", 0.001)
     f_max = config.get_float("GFM", "damping_f_max", 10.0)
     delay = config.get_float("GFM", "damping_event_delay", 0.005)
     time_step = config.get_float("GFM", "damping_time_step", 0.005)
@@ -206,5 +207,13 @@ def _damped_modes(
                 for mode in matrix_pencil.oscillation_modes(
                     time, values, t_from, t_to, f_min, f_max, time_step, pencil
                 )
+                if _oscillates_in(mode, t_to - t_from, min_amplitude)
             ]
     return modes
+
+
+def _oscillates_in(mode: matrix_pencil.Mode, duration: float, min_amplitude: float) -> bool:
+    """Whether a mode of the fit is an oscillation of the curve: one whose window holds half of
+    its period, a swing, the fit following a trend with a slower one, such as the response to a
+    ramp of the frequency, and whose amplitude is above the numerical noise of the curve."""
+    return 2 * mode.frequency * duration >= 1 and mode.amplitude >= min_amplitude

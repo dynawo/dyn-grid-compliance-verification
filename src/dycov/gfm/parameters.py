@@ -17,6 +17,8 @@ from dycov.files import value_registry
 from dycov.gfm.producer import GFMProducer
 from dycov.logging import dycov_logging
 
+_POWER_TOLERANCE = 1e-9
+
 
 class GFMParameters:
     """What the Grid Forming tests of a unit are generated or checked with: the unit, the PCS
@@ -268,8 +270,24 @@ class GFMParameters:
             The initial active power in pu.
         """
         p0_definition = self.__get_value("P0")
-        return value_registry.extract_defined_value(
+        p0 = value_registry.extract_defined_value(
             p0_definition, "Pmax", self.get_max_active_power(), 1
+        )
+        self.__report_beyond_limits(p0)
+        return p0
+
+    def __report_beyond_limits(self, p0: float) -> None:
+        """Warns of an operating point the unit cannot reach, whose envelopes its limits cut."""
+        try:
+            p_min, p_max = self.get_min_active_power(), self.get_max_active_power()
+        except ValueError:
+            return
+        if p_min - _POWER_TOLERANCE <= p0 <= p_max + _POWER_TOLERANCE:
+            return
+        self.__report_once(
+            f"P0 of {self._oc_section}",
+            f"The active power of {p0:.4g} pu of {self._oc_section} lies beyond the limits of "
+            f"the unit, from {p_min:.4g} to {p_max:.4g} pu: its envelopes are bounded by them",
         )
 
     def get_min_active_power(self) -> float:
@@ -343,14 +361,14 @@ class GFMParameters:
         In a performance verification [DEFAULT] describes the whole installation, and a power
         above the rating of the converter is one of its limits that [GFM Parameters] does not
         restate for the PGU."""
-        option, value = self.__unit_option(*options)
+        option, value, of_installation = self.__unit_option(*options)
         snom = self.get_nominal_apparent_power()
-        if self._producer_curves is not None and abs(float(value)) > snom:
+        if self._producer_curves is not None and of_installation and abs(float(value)) > snom:
             self.__report_once(
                 option,
-                f"The {option} of {value} the producer declares for the PGU exceeds its Snom of "
-                f"{snom} MVA: the [GFM Parameters] section is to declare the limits of the PGU "
-                "when they differ from those of the installation",
+                f"The {option} of {value} the producer declares exceeds the Snom of {snom} MVA of "
+                "the PGU: if [DEFAULT] describes the whole installation, the [GFM Parameters] "
+                "section is to declare the limits of the PGU",
             )
         return option, float(value) / snom
 
@@ -359,7 +377,7 @@ class GFMParameters:
             self._reported_declarations.add(declaration)
             dycov_logging.get_logger("GFMParameters").warning(message)
 
-    def __unit_option(self, *options: str) -> tuple[str, str]:
+    def __unit_option(self, *options: str) -> tuple[str, str, bool]:
         """A power of the unit under test. The [GFM Parameters] section describes the PGU and
         overrides [DEFAULT], which describes the whole installation when the INI file also
         serves the tests of the PDR, such as those of a performance verification.
@@ -372,8 +390,9 @@ class GFMParameters:
 
         Returns
         -------
-        tuple[str, str]
-            The name the power is declared under and its value, in MW or MVAr.
+        tuple[str, str, bool]
+            The name the power is declared under, its value, in MW or MVAr, and whether it is
+            that of the installation, [GFM Parameters] not declaring it.
 
         Raises
         ------
@@ -387,10 +406,10 @@ class GFMParameters:
             for option in options:
                 # Every option of [DEFAULT] shows in the section too
                 if option in pgu and pgu.get(option, raw=True) != defaults.get(option):
-                    return option, pgu[option]
+                    return option, pgu[option], False
         for option in options:
             if option in defaults:
-                return option, producer_config.get("DEFAULT", option)
+                return option, producer_config.get("DEFAULT", option), True
         raise ValueError(f"The INI file of the producer declares no {' nor '.join(options)}")
 
     def get_initial_voltage(self) -> float:
@@ -483,25 +502,35 @@ class GFMParameters:
 
     def get_pmax_mois_tunnel(self) -> float:
         """
-        Retrieves the maximum power limit for the MOIS tunnel.
+        Retrieves the maximum power limit for the MOIS tunnel, which the PCS may give as a
+        fraction of Pmax, as it gives its operating points.
 
         Returns
         -------
         float
             The maximum power limit in pu.
         """
-        return self.__get_float_value("PmaxMOISTunnel", 0.95)
+        return self.__power_limit("PmaxMOISTunnel", 0.95)
 
     def get_pmin_mois_tunnel(self) -> float:
         """
-        Retrieves the minimum power limit for the MOIS tunnel.
+        Retrieves the minimum power limit for the MOIS tunnel, which the PCS may give as a
+        fraction of Pmax, as it gives its operating points.
 
         Returns
         -------
         float
             The minimum power limit in pu.
         """
-        return self.__get_float_value("PminMOISTunnel", 0.95)
+        return self.__power_limit("PminMOISTunnel", 0.95)
+
+    def __power_limit(self, option: str, default_value: float) -> float:
+        definition = self.__get_value(option)
+        if not definition:
+            return default_value
+        return value_registry.extract_defined_value(
+            definition, "Pmax", self.get_max_active_power(), 1
+        )
 
     def get_min_ratio(self) -> float:
         """

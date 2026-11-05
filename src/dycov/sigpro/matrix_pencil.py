@@ -20,6 +20,7 @@ from collections import namedtuple
 
 import numpy as np
 import numpy.typing as npt
+from scipy import linalg
 
 Mode = namedtuple("Mode", ["frequency", "damping_ratio", "amplitude"])
 
@@ -97,8 +98,10 @@ def _sampled(
 
 def _poles(values: np.ndarray, pencil: int) -> np.ndarray:
     """Poles of the exponentials that fit a uniformly sampled signal."""
-    hankel = np.lib.stride_tricks.sliding_window_view(values, pencil + 1)
-    return np.linalg.eigvals(np.linalg.pinv(hankel[:, :-1]) @ hankel[:, 1:])
+    # The pencil is ill-conditioned: only the complex fit and the eigenvalues of SciPy that RTE's
+    # implementation uses find its poles in the same samples
+    hankel = np.lib.stride_tricks.sliding_window_view(values.astype(complex), pencil + 1)
+    return linalg.eigvals(np.linalg.pinv(hankel[:, :-1]) @ hankel[:, 1:])
 
 
 def _amplitudes(poles: np.ndarray, values: np.ndarray) -> np.ndarray:

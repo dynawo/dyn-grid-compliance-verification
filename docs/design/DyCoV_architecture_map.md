@@ -210,8 +210,8 @@ does). The producer INI declares `generator_type` (`gfm/producer.py`, which read
 it is given), which picks the PCS tree: `gfm/BESS` holds the DTR Fiche I18 as one Zone 1 PCS,
 `PCS_RTE-I18z1`, which the revision `20260723` adds and so describes in its delta alone
 (`templates/revisions/20260723/PCS/gfm/BESS`; its scenarios inherit the settings of their test
-from the `*Test` aliases of `config_aliases.ini`, the active power of its OCs in pu of Pn, the rest
-in pu of the converter rating; its PCS fixes `Xeff` 0.27 and `H` 5 whatever the producer
+from the `*Test` aliases of `config_aliases.ini`, the active power of its OCs and its
+`Pmax/PminMOISTunnel` in pu of Pn, the rest in pu of the converter rating; its PCS fixes `Xeff` 0.27 and `H` 5 whatever the producer
 declares), `gfm/PPM` the four PCS agreed before the fiche. Generator and
 validation list the PCS of the shipped tree, of the delta and of the user's directory. A declared
 `Imax` bounds every envelope (`gfm.py`). `GFMParameters` holds the run (`Parameters` of the CLI,
@@ -242,7 +242,9 @@ Iq, or stopping before the end of the envelope, are `WithoutProducerCurves`. `ve
 `signal_windows.filter_windows` to check the envelope, estimates the damping of Ip and Iq on the
 unfiltered curves with `sigpro/matrix_pencil.py`, a port of RTE's implementation that the fiche
 names (6 poles on the curve sampled every 5 ms, from 5 ms after the event to the end of the
-envelope), and `results.json` adds the verdict. `report.create_pdf` inputs
+envelope; a complex fit and SciPy's eigenvalues, without which the ill-conditioned pencil finds
+other poles; `_oscillates_in` drops the modes whose window holds less than half of their period or that
+are below `damping_min_amplitude`), and `results.json` adds the verdict. `report.create_pdf` inputs
 `commonz1`/`commonz3` only when they were copied, which a performance verification does not.
 
 ## Logging (`logging/`)

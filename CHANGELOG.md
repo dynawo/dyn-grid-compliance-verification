@@ -14,7 +14,8 @@ checks the tests of the Fiche I18 that the revision 20260723 of the DTR adds: th
 test against its envelope, generated from the `[GFM Parameters]` of the INI file of the producer
 or read from the output of `dycov generate_gfm_envelopes` given with `-g`, and the damping of
 the oscillations of their currents, estimated as in RTE's implementation of the Matrix Pencil
-method, the one the fiche names. A run on a model leaves those tests out, as does a run on an
+method, the one the fiche names, of which only the modes that oscillate in their window above the
+numerical noise count. A run on a model leaves those tests out, as does a run on an
 earlier revision or for an installation of another type. The curves of a test hold the active and
 reactive currents and the voltage at the terminals of the converter (the PGU), and cover the whole
 envelope.
@@ -34,7 +35,9 @@ envelope, and `emt = true` when the curves of the unit come from EMT simulations
 fixes the effective reactance, 0.27 pu, and the inertia, H = 5 s, of its events and envelopes,
 whatever the producer declares, and the values RTE sets otherwise go in a description of the
 user (`Xeff`, and `H`, `H_Overdamped` and `H_Underdamped` for the inertia). The active power of
-its operating points is in pu of Pn, the maximum active power of the PGU.
+its operating points is in pu of Pn, the maximum active power of the PGU, and so is the power the
+envelopes hold the unit to near its limits; an operating point beyond the limits of the unit is
+warned of.
 
 The Grid Forming templates of the user move by kind of unit, as the tool's do: a PCS under
 `templates/PCS/gfm/` or `templates/reports/gfm/` goes under `gfm/PPM/` or `gfm/BESS/`, and the

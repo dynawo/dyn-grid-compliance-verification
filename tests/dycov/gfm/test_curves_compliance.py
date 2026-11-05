@@ -113,6 +113,59 @@ def test_lightly_damped_oscillation_inside_the_envelope_is_not_compliant(tmp_pat
     assert [(mode.curve, round(mode.damping_ratio, 1)) for mode in result.modes] == [("Ip", 0.1)]
 
 
+def test_an_oscillation_below_the_numerical_noise_does_not_fail_the_damping(tmp_path):
+    def faintly_oscillating(time):
+        return _ideal(time) + 1e-4 * np.sin(2 * np.pi * 2 * time)
+
+    _write_curves(tmp_path / "curves", faintly_oscillating)
+
+    result = _check(tmp_path)
+
+    assert result.compliance == Compliance.Compliant
+    assert result.modes == []
+
+
+def _check_during_an_event(tmp_path, response, event_duration):
+    _write_curves(tmp_path / "curves", response)
+    working_path = tmp_path / "working"
+    working_path.mkdir()
+    return curves_compliance.check(
+        tmp_path / "curves",
+        working_path,
+        _TEST,
+        "Ip",
+        _ENVELOPE_TIME,
+        0.0,
+        event_duration,
+        np.full_like(_ENVELOPE_TIME, 0.0),
+        np.full_like(_ENVELOPE_TIME, 1.0),
+    )
+
+
+def test_a_mode_whose_window_holds_less_than_half_its_period_does_not_fail_the_damping(
+    tmp_path,
+):
+    def slow_trend_during_the_event(time):
+        return 0.5 + 0.4 * np.sin(2 * np.pi * 0.4 * np.minimum(time, 0.5))
+
+    result = _check_during_an_event(tmp_path, slow_trend_during_the_event, 0.5)
+
+    assert result.compliance == Compliance.Compliant
+    assert result.modes == []
+
+
+def test_a_slow_oscillation_whose_window_holds_half_its_period_fails_the_damping(tmp_path):
+    def oscillating_after_a_long_ramp(time):
+        after = np.maximum(time - 3.0, 0.0)
+        decay = np.exp(-0.05 * 2 * np.pi * 0.4 * after)
+        return 0.5 + 0.2 * decay * np.sin(2 * np.pi * 0.4 * after)
+
+    result = _check_during_an_event(tmp_path, oscillating_after_a_long_ramp, 3.0)
+
+    assert result.compliance == Compliance.NonCompliant
+    assert [(mode.window, round(mode.frequency, 1)) for mode in result.modes] == [("after", 0.4)]
+
+
 def test_curves_without_the_reactive_current_are_missing(tmp_path):
     _write_curves(tmp_path / "curves", _ideal, with_iq=False)
 

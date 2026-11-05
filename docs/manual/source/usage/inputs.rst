@@ -131,9 +131,10 @@ A typical file looks like this:
    # Nominal voltage at the PDR bus (in kV)
    # Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)
    u_nom = 225
-   # Active power limits (in MW)
+   # Active power limits (in MW), the consumption of a storage unit as a
+   # negative minimum injection
    p_max_injection = 100.0
-   p_min_injection = 0.0
+   p_min_injection = -100.0
    # Reactive power limits (in MVar)
    q_max = 50.0
    q_min = -50.0
@@ -171,9 +172,9 @@ inertia as ``H`` and, for the Hybrid mode, ``H_Overdamped`` and
 
 For **Hybrid mode** (combining overdamped and underdamped envelopes), the
 ``[GFM Parameters]`` section should instead define separate damping and
-inertia sets — ``Xeff`` is still required, and ``save_all_envelopes`` controls
-whether the intermediate overdamped and underdamped traces are kept in the
-CSV output alongside the merged envelope:
+inertia sets — ``Xeff`` is still required by the PCS that fix none, and
+``save_all_envelopes`` controls whether the intermediate overdamped and
+underdamped traces are kept in the CSV output alongside the merged envelope:
 
 .. code-block:: ini
 
