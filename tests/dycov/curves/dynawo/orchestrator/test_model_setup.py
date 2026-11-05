@@ -691,6 +691,20 @@ class TestGetLine:
             "x_eff": pytest.approx(0.27)
         }
 
+    @patch(f"{_MS}.config")
+    def test_an_empty_effective_reactance_leaves_it_to_the_producer(self, mock_config):
+        mock_config.has_option.side_effect = lambda section, key: key in ("SCR", "Xeff")
+        mock_config.get_value.side_effect = lambda s, k, d=None: "" if k == "Xeff" else d
+        mock_config.get_float.side_effect = lambda s, k, d=None: {
+            "SCR": 10.0,
+            "SCR_r_factor": 10.0,
+        }.get(k, d)
+        setup = _make_setup()
+
+        setup._get_line("PCS1", "BM1", "OC1")
+
+        assert setup._owner.complete_unit_characteristics.call_args.kwargs == {"x_eff": None}
+
 
 # ---------------------------------------------------------------------------
 # _get_fault_xpu

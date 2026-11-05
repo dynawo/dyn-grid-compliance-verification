@@ -219,7 +219,7 @@ class ModelSetup:
     def _fixed_x_eff(self, pcs_name: str) -> Optional[float]:
         """The effective reactance the PCS fixes, as the DTR Fiche I18 does with the one of its
         ideal converter, None when the PCS leaves it to the producer."""
-        if not config.has_option(pcs_name, "Xeff"):
+        if not config.has_option(pcs_name, "Xeff") or not config.get_value(pcs_name, "Xeff"):
             return None
         return config.get_float(pcs_name, "Xeff", 0.0)
 

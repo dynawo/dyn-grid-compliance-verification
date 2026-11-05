@@ -36,9 +36,9 @@ whatever the unit's, so its events are those its tables print; and the active po
 operating points is in pu of Pn, the maximum active power of Zone 1. The tests of the Fiche I18
 that are not faults are tracking tests of the active current, or of the reactive one for a step of
 the grid voltage: besides their tracking and final errors, a step of the grid voltage checks the
-rise and settling times and the overshoot of the reactive current, and the other tests, transients
-the active current returns from, its settling time and overshoot against the peak of the
-reference. The unit runs as delivered, its controls of the plant being in Zone 3, and a ramp of the
+rise and settling times and the overshoot of the reactive current and reports its reaction time
+without a verdict, and the other tests, transients the active current returns from, its settling
+time and overshoot against the peak of the reference. The unit runs as delivered, its controls of the plant being in Zone 3, and a ramp of the
 frequency starts from the power the unit settles at after the frequency reaches its starting
 value.
 

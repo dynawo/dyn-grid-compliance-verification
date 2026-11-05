@@ -132,6 +132,13 @@ The PCS section
   a setpoint test: absent for the I16 table, ``FT`` for the F16 one. See
   the *Compliance tests* chapter of the user manual.
 
+``Xeff``
+  Effective reactance, in pu of the nominal apparent power of the unit, that
+  sizes the events whose definitions name ``Xeff``, in place of the one the INI
+  file of the producer declares in its ``[GFM Parameters]`` section: 0.27, that
+  of the ideal converter of the Fiche I18, in the version Type C/D of the Fiche
+  I16.
+
 ``only_with_reference_condition``
   The condition under which the DTR asks for the operating conditions marked
   ``only_with_reference``, in the few words the log quotes when one of them is

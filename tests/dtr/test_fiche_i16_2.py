@@ -152,7 +152,22 @@ def test_a_test_of_the_fiche_i18_checks_the_times_its_response_has(version, benc
     assert config.get_boolean(f"{test}.OC2", "transient_response", False) is transient
     assert checks("rise_time") is not transient
     assert checks("settling_time") and checks("overshoot")
-    assert not checks("reaction_time")
+    assert checks("reaction_time") is not transient
+
+
+def test_the_reaction_time_of_a_test_of_the_fiche_i18_is_reported_without_a_verdict(version):
+    version("PCS_RTE-I16z1", "C")
+
+    assert config.get_threshold("GridCode", "thr_reaction_time", 0.1) is None
+
+
+@pytest.mark.parametrize(
+    "oc, power", [("OC1", "0"), ("OC3", "-0.5*Pmax"), ("OC4", "0.95*Pmax"), ("OC5", "-0.95*Pmax")]
+)
+def test_the_operating_points_of_the_fiche_i18_are_fractions_of_pn(version, oc, power):
+    version("PCS_RTE-I16z1", "C")
+
+    assert config.get_value(f"PCS_RTE-I16z1.S_VolAngStep1.{oc}.Model", "pdr_P") == power
 
 
 def test_a_jump_of_the_short_circuit_ratio_switches_a_line_between_2_and_20(version):

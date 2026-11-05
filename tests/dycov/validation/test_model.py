@@ -9,6 +9,8 @@
 #
 """Unit tests for the model validation (ModelValidator) compliance criteria."""
 
+import inspect
+
 import pandas as pd
 import pytest
 
@@ -476,6 +478,45 @@ def test_a_transient_without_a_setpoint_is_measured_against_the_peak_of_the_refe
     assert results["overshoot_tolerance"] == pytest.approx(band)
     assert results["ref_overshoot"] == pytest.approx(0.3)
     assert results["calc_overshoot"] == pytest.approx(0.2)
+
+
+_MEASURED_AS = ("modified_setpoint", "tracks_response", "transient")
+
+
+@pytest.mark.parametrize(
+    "tracked, transient", [(None, False), ("reactive_current", False), ("active_current", True)]
+)
+def test_validate_measures_a_tracked_magnitude_as_its_test_declares_it(
+    monkeypatch, dummy_config, tmp_path, tracked, transient
+):
+    dummy_config._values.update(tracked_magnitude=tracked, transient_response=transient)
+    signature = inspect.signature(ModelValidator._ModelValidator__calculate)
+    calls = []
+
+    def calculate(*args, **kwargs):
+        arguments = signature.bind(*args, **kwargs).arguments
+        calls.append({key: arguments[key] for key in _MEASURED_AS})
+        raise StopIteration
+
+    monkeypatch.setattr(ModelValidator, "_ModelValidator__calculate", calculate)
+    validator = _make_validator(curves_manager=_make_zone1_manager())
+    event_params = {
+        "start_time": 1.0,
+        "duration_time": 0.0,
+        "connect_to": "grid_phase_jump",
+        "step_value": 0.1,
+    }
+
+    with pytest.raises(StopIteration):
+        validator.validate("OC2", tmp_path, "outputs", event_params)
+
+    assert calls == [
+        {
+            "modified_setpoint": tracked or "grid_phase_jump",
+            "tracks_response": tracked is not None,
+            "transient": transient,
+        }
+    ]
 
 
 def test_compare_event_times_computes_response_and_settling_times():

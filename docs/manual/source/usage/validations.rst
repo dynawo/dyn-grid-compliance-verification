@@ -399,7 +399,8 @@ installations of type C, a Grid Forming converter of Dynawo in Zone 1, and
 
 The tests of the Fiche I18 keep the names of its scenarios, and each one is run
 from the operating points of the fiche, at InternalNode1, the active power in pu
-of Pn, the maximum active power of Zone 1:
+of Pn, the maximum active power of Zone 1, which the points of consumption take
+as well:
 
 .. list-table:: Tests of the Fiche I18 in Zone 1 of the version Type C/D.
    :header-rows: 1
@@ -439,7 +440,8 @@ The operating points are OC1 (:math:`P = 0`), OC2 (:math:`0.5\,P_n`), OC3
 (:math:`P = 0`, :math:`Q = -Q_{max}`) and OC7 (:math:`P = 0`,
 :math:`Q = Q_{max}`), with :math:`Q = 0` and :math:`U = U_n` otherwise.
 :math:`X_{eff}` is the effective reactance of the ideal converter of the Fiche
-I18, 0.27 pu, which the PCS fixes as ``Xeff`` whatever the unit's, and
+I18, 0.27 pu, which the PCS fixes as ``Xeff`` whatever the unit's (a
+description of the user may give it another value), and
 :math:`X_{grid} = 1/SCR`, both in pu of the nominal apparent power of the unit.
 The fiche asks for every test with OC2 and OC3, and for the others only when
 they drive the unit into current limitation: an operating condition other than
@@ -469,13 +471,13 @@ steady-state error after it. The tracked magnitude is the active current at
 InternalNode1, or the reactive current there for a step of the grid voltage,
 which each test names with ``tracked_magnitude``; since the event steps no
 setpoint, the errors are in pu and not relative to a step. The tracked
-magnitude is also checked for its step-response indicators, but the reaction
-time: a step of the grid voltage steps the reactive current, which is checked
-for its rise and settling times and overshoot as a setpoint step is, against
-the change of the reference; the other tests are transients the active current
-returns from, which have no rise time, and are checked for their settling time
-and overshoot against the peak of the reference response, with
-``transient_response``. The faults are checked with the criteria of the faults
+magnitude is also checked for its step-response indicators: a step of the grid
+voltage steps the reactive current, which is checked for its rise and settling
+times and overshoot as a setpoint step is, against the change of the reference,
+its reaction time reported without a verdict; the other tests are transients
+the active current returns from, which have neither a reaction nor a rise time,
+and are checked for their settling time and overshoot against the peak of the
+reference response, with ``transient_response``. The faults are checked with the criteria of the faults
 of type B, on the curves of InternalNode1.
 
 Dynawo initialises a model at the nominal frequency, so a ramp of the frequency

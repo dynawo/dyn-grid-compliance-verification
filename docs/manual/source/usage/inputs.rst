@@ -78,7 +78,8 @@ is all the tool needs to choose it: nothing is declared for it.
 The version for types C and D simulates the tests of the Fiche I18 in Zone 1,
 whose phase jumps and voltage steps are sized by the effective reactance of the
 ideal converter of that fiche, 0.27 pu of the nominal apparent power of the
-unit, which the PCS fixes: the INI file of ``Zone1/`` declares nothing for it.
+unit, which the PCS fixes: the INI file of ``Zone1/`` declares nothing for it,
+and only a description of the user may change it.
 
 .. note::
    The name *PDR* always refers to the real connection point of the complete
