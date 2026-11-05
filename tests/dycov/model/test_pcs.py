@@ -62,6 +62,7 @@ class DummyBenchmark:
 
     def generate(self):
         self.generated = True
+        return []
 
 
 class DummyConfig:

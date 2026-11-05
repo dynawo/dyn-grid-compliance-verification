@@ -32,7 +32,9 @@ to the DTR's PCS structure. The following tests are currently implemented:
 * **Electrical performance (Power Park Modules)**: PCSs I2, I5, I6, I7, and I10.
 
 * **Electrical performance (Battery Energy Storage Systems)**: PCSs I2, I5, I6,
-  I7, and I10.
+  I7, and I10, and PCS I18 (Grid Forming), whose curves are checked against
+  envelopes instead of being simulated: phase jump, amplitude step of the grid
+  voltage, short-circuit ratio jump and frequency variation.
 
 * **Electrical performance (Synchronous Machines)**: PCSs I2, I3, I4, I6, I7,
   I8, and I10.
@@ -489,6 +491,28 @@ condenser unit provides inertia and frequency reference for the island.
    :width: 70%
    :alt: network setup for PCS I10 (PPMs)
    :align: center
+
+
+Electrical performance verification  (Battery Energy Storage Systems)
+---------------------------------------------------------------------
+
+A storage unit is given the PCS I2, I5, I6, I7 and I10 of a Power Park Module,
+each operating condition both injecting and consuming, and PCS I18.
+
+PCS I18
+^^^^^^^
+
+PCS I18 checks the Grid Forming capability of a storage unit of type C or D
+at its PGU terminals, the Node 1 of the Zone 1, from the revision of the DTR
+of 20260723, which adds the fiche: a run on an earlier revision, or for an
+installation of another type, leaves it out. Its tests are not simulated
+with Dynawo, so a verification run on a model leaves them out: the producer
+delivers the curves of each test (``dycov performance -c``), and DyCoV checks
+them against the envelopes of the test and the damping criterion of the
+fiche. The envelopes are the output of ``dycov generate_gfm_envelopes`` given
+with ``-g``, or are generated from the ``[GFM Parameters]`` of the INI file of
+the producer. The tests, their envelopes and their criteria are described in
+:ref:`Grid Forming tests in the performance verification <gfm_performance>`.
 
 
 Electrical performance verification  (Synchronous Machines)

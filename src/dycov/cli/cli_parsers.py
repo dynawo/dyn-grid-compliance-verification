@@ -431,6 +431,29 @@ def _add_reference_argument(
     )
 
 
+def _add_gfm_envelopes_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--gfm-envelopes' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
+    _add_argument(
+        parser,
+        "-g",
+        "--gfm-envelopes",
+        arg_type=Path,
+        help_msg=(
+            "Path to the output of 'dycov generate_gfm_envelopes', whose envelopes the curves "
+            "of the Grid Forming tests of the DTR Fiche I18 are checked against instead of "
+            "being generated from the INI files of the producers: a subdirectory per producer, "
+            "named after it, or one output for all of them."
+        ),
+        completion=shtab.DIRECTORY,
+    )
+
+
 def _add_pcs_argument(parser: argparse.ArgumentParser) -> None:
     """Adds the '--pcs' argument to the given parser.
 
@@ -759,7 +782,8 @@ def _add_performance_subparser(subparsers: argparse._SubParsersAction) -> None:
             " [--curves-only]\n"
             "       dycov performance -m MODEL  [-c CURVES] [-h] [-l LAUNCHER] [-o OUTPUT]"
             " [-p PCS] [-od] [--curves-only]\n"
-            "       dycov performance -c CURVES [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]"
+            "       dycov performance -c CURVES [-h] [-l LAUNCHER] [-g GFM_ENVELOPES] [-o OUTPUT]"
+            " [-p PCS] [-od]"
         ),
     )
     _add_launcher_argument(performance)
@@ -774,6 +798,7 @@ def _add_performance_subparser(subparsers: argparse._SubParsersAction) -> None:
         as_option=True,
         explain=("The model is generated from it, so neither the model nor the curves are given."),
     )
+    _add_gfm_envelopes_argument(performance)
     _add_output_argument(performance)
     _add_pcs_argument(performance)
     _add_only_dtr_argument(performance)

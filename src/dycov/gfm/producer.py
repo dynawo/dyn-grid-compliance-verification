@@ -7,10 +7,12 @@
 #     demiguelm@aia.es
 
 import configparser
-import re
 from pathlib import Path
 
 from dycov.model.producer import Producer
+
+# Each kind of producer is given its own tests: the DTR Fiche I18 applies to storage alone
+_GENERATOR_TYPES = ("PPM", "BESS")
 
 
 class GFMProducer(Producer):
@@ -24,9 +26,18 @@ class GFMProducer(Producer):
         ----------
         producer_ini : Path
             The file path to the producer's INI configuration.
+
+        Raises
+        ------
+        FileNotFoundError
+            If the INI file does not exist.
+        ValueError
+            If the INI file does not declare a supported generator type.
         """
         super().__init__(None, producer_ini)
+        self._producer_ini = producer_ini
         self._config = self.__read_producer_ini()
+        self._generator_type = self.__read_generator_type()
 
     def get_producer_path(self) -> Path:
         """
@@ -41,7 +52,7 @@ class GFMProducer(Producer):
 
     def get_filenames(self, zone: int = 0) -> list[str]:
         """
-        Returns a list of INI filenames found in the producer's directory.
+        Returns the name of the unit, that of its INI file.
 
         Parameters
         ----------
@@ -51,17 +62,9 @@ class GFMProducer(Producer):
         Returns
         -------
         list[str]
-            A sorted list of configuration filename stems.
+            The stem of the INI file.
         """
-        # Case-insensitive regex to capture both .ini and .INI extensions
-        pattern = re.compile(r".*\.[iI][nN][iI]")
-        return sorted(
-            [
-                file.stem
-                for file in self._producer_ini_path.resolve().iterdir()
-                if pattern.match(str(file))
-            ]
-        )
+        return [self._producer_ini.stem]
 
     def get_sim_type_str(self) -> str:
         """
@@ -70,9 +73,9 @@ class GFMProducer(Producer):
         Returns
         -------
         str
-            The simulation string identifier (e.g., "gfm").
+            The directory of the PCS the producer is given, 'gfm/PPM' or 'gfm/BESS'.
         """
-        return "gfm"
+        return f"gfm/{self._generator_type}"
 
     def set_zone(self, zone: int, filename: str) -> None:
         """
@@ -100,7 +103,7 @@ class GFMProducer(Producer):
 
     def __read_producer_ini(self) -> configparser.ConfigParser:
         """
-        Locates and parses the producer's INI configuration file.
+        Parses the producer's INI configuration file.
 
         Returns
         -------
@@ -110,20 +113,36 @@ class GFMProducer(Producer):
         Raises
         ------
         FileNotFoundError
-            If the INI file cannot be located in the directory.
+            If the INI file does not exist.
         """
-
-        def __get_producer_ini(path: Path, pattern: re.Pattern) -> Path:
-            for file in path.resolve().iterdir():
-                if pattern.match(str(file)):
-                    return path.resolve() / file
-            raise FileNotFoundError("Producer INI file not found.")
-
-        pattern_ini = re.compile(r".*\.[iI][nN][iI]")
-        producer_ini_path = __get_producer_ini(self.get_producer_path(), pattern_ini)
+        if not self._producer_ini.is_file():
+            raise FileNotFoundError(f"Producer INI file not found: {self._producer_ini}")
 
         # Allow inline comments starting with '#' in the INI file
         producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
-        producer_config.read(producer_ini_path)
+        producer_config.read(self._producer_ini)
 
         return producer_config
+
+    def __read_generator_type(self) -> str:
+        """
+        Reads the kind of producer the INI file declares.
+
+        Returns
+        -------
+        str
+            One of the supported generator types.
+
+        Raises
+        ------
+        ValueError
+            If the generator type is missing or not supported.
+        """
+        generator_type = self._config.get("DEFAULT", "generator_type", fallback="").strip()
+        if generator_type not in _GENERATOR_TYPES:
+            raise ValueError(
+                f"The producer INI '{self._producer_ini}' declares generator_type = "
+                f"'{generator_type}' in its [DEFAULT] section; it must be one of "
+                f"{', '.join(_GENERATOR_TYPES)}, as the Grid Forming tests depend on it"
+            )
+        return generator_type

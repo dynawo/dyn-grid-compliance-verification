@@ -49,6 +49,7 @@ def test_completion_script_covers_every_command(parser):
         ("validate", "--curves", shtab.DIRECTORY),
         ("validate", "--excel", shtab.FILE),
         ("validate", "--output", shtab.DIRECTORY),
+        ("performance", "--gfm-envelopes", shtab.DIRECTORY),
         ("performance", "--launcher", shtab.FILE),
         ("generate_gfm_envelopes", "--producer_ini", shtab.FILE),
         ("anonymize", "--results", shtab.DIRECTORY),
@@ -94,3 +95,8 @@ def test_print_completion_writes_the_script_and_exits(parser, capsys):
 def test_the_dtr_option_is_global_and_empty_by_default(parser):
     assert parser.parse_args(["performance"]).dtr is None
     assert parser.parse_args(["--dtr", "20240215", "performance"]).dtr == "20240215"
+
+
+def test_envelope_generation_no_longer_takes_producer_curves(parser):
+    with pytest.raises(SystemExit):
+        parser.parse_args(["generate_gfm_envelopes", "-i", "Producer.ini", "-c", "Curves"])

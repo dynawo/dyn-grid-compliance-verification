@@ -13,12 +13,15 @@ from pathlib import Path
 
 from dycov.configuration.cfg import config
 from dycov.files import manage_files
+from dycov.gfm import report
 from dycov.gfm.parameters import GFMParameters
+from dycov.gfm.report import PcsReport
 from dycov.logging import dycov_logging, worker_initializer
+from dycov.model.compliance import Compliance
 from dycov.model.pcs import Pcs
 
 
-def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
+def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> PcsReport:
     """
     Worker function that generates envelopes for a specific PCS.
 
@@ -27,15 +30,21 @@ def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
     pcs_args : tuple[GFMParameters, str, str]
         A tuple containing the
         simulation parameters, the PCS name, and the producer name.
+
+    Returns
+    -------
+    PcsReport
+        What the report shows of every test of the PCS, none when the PCS cannot be generated.
     """
     parameters, pcs_name, producer_name = pcs_args
     pcs = Pcs(producer_name, pcs_name, parameters)
+    pcs_report = PcsReport(producer_name, pcs_name, pcs.get_report_name(), [])
 
     try:
         if not pcs.is_valid():
             dycov_logging.get_logger("GFMGeneration").error(f"{pcs.get_name()} is not a valid PCS")
-            return
-        pcs.generate()
+            return pcs_report
+        return pcs_report._replace(tests=pcs.generate())
     except (FileNotFoundError, IOError, ValueError) as e:
         # Provide full traceback only when debug mode is enabled
         if dycov_logging.get_logger("GFMGeneration").getEffectiveLevel() == logging.DEBUG:
@@ -46,6 +55,7 @@ def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
             dycov_logging.get_logger("GFMGeneration").error(
                 f"Aborted execution for {pcs.get_name()}. {e}"
             )
+        return pcs_report
 
 
 class GFMGeneration:
@@ -64,6 +74,11 @@ class GFMGeneration:
         self._templates_path = Path(config.get_value("Global", "templates_path"))
         self.__initialize_working_environment()
         self._validation_pcs = self.__get_validation_pcs()
+        if not self._validation_pcs:
+            dycov_logging.get_logger("GFMGeneration").error(
+                f"The DTR revision {config.get_value('DTR', 'current')} gives the units of "
+                f"{self._parameters.get_producer().get_sim_type_str()} no Grid Forming PCS"
+            )
         self._pcs_list = self.__prepare_pcs_list()
 
     def __initialize_working_environment(self) -> None:
@@ -99,7 +114,9 @@ class GFMGeneration:
         if self._parameters.get_selected_pcs():
             validation_pcs.add(self._parameters.get_selected_pcs())
 
-        self.__populate_validation_pcs(validation_pcs, "gridforming_pcs", "gfm")
+        self.__populate_validation_pcs(
+            validation_pcs, "gridforming_pcs", self._parameters.get_producer().get_sim_type_str()
+        )
 
         return sorted(list(validation_pcs))
 
@@ -123,15 +140,13 @@ class GFMGeneration:
         if not validation_pcs:
             validation_pcs.update(config.get_list("Global", validation_key))
         if not validation_pcs:
+            shipped = tool_path / self._templates_path
+            sources = [shipped, manage_files.dtr_delta_path(shipped)]
             if not self._parameters.get_only_dtr():
-                validation_pcs.update(
-                    manage_files.list_directories(
-                        config.get_config_dir() / self._templates_path / validation_path
-                    )
-                )
-            validation_pcs.update(
-                manage_files.list_directories(tool_path / self._templates_path / validation_path)
-            )
+                sources.append(config.get_config_dir() / self._templates_path)
+            for source in sources:
+                if source is not None and (source / validation_path).is_dir():
+                    validation_pcs.update(manage_files.list_directories(source / validation_path))
 
         # Exclude alias references to avoid redundant or recursive generation
         for item in list(validation_pcs):
@@ -154,7 +169,7 @@ class GFMGeneration:
             for pcs_name in self._validation_pcs
         ]
 
-    def generate(self, use_parallel: bool = False, num_processes: int = 4) -> None:
+    def generate(self, use_parallel: bool = False, num_processes: int = 4) -> bool:
         """
         Executes the envelope generation process for all configured PCS.
 
@@ -164,6 +179,11 @@ class GFMGeneration:
             Whether to run using multiprocessing. Defaults to False.
         num_processes : int, optional
             Number of CPU cores to utilize. Defaults to 4.
+
+        Returns
+        -------
+        bool
+            True if the envelopes of at least one test were generated.
         """
         if use_parallel:
             dycov_logging.get_logger("GFMGeneration").info(
@@ -175,17 +195,28 @@ class GFMGeneration:
                 initializer=worker_initializer,
                 initargs=(dycov_logging.get_handler_settings(), config.run_layers()),
             ) as pool:
-                pool.map(_generate_pcs, self._pcs_list)
+                pcs_reports = pool.map(_generate_pcs, self._pcs_list)
+                pool.close()
+                pool.join()
         else:
             dycov_logging.get_logger("GFMGeneration").info("Generating envelopes sequentially.")
-            for pcs_tuple in self._pcs_list:
-                _generate_pcs(pcs_tuple)
+            pcs_reports = [_generate_pcs(pcs_tuple) for pcs_tuple in self._pcs_list]
 
-        # Post-processing: Migrate generated files to final output directory and cleanup temp space
-        for _, pcs_name, producer_name in self._pcs_list:
-            manage_files.copy_directory(
-                self._parameters.get_working_dir() / producer_name,
-                self._parameters.get_output_dir(),
-                pcs_name,
-            )
-        manage_files.remove_dir(self._parameters.get_working_dir())
+        try:
+            # The report reads the figures from the working directory, before it is moved
+            report.create_pdf(pcs_reports, self._parameters)
+        finally:
+            # Migrate generated files to final output directory and cleanup temp space
+            for _, pcs_name, producer_name in self._pcs_list:
+                manage_files.copy_directory(
+                    self._parameters.get_working_dir() / producer_name,
+                    self._parameters.get_output_dir(),
+                    pcs_name,
+                )
+            manage_files.remove_dir(self._parameters.get_working_dir())
+
+        return any(
+            test.compliance not in (Compliance.WithoutEnvelopes, Compliance.InvalidTest)
+            for pcs_report in pcs_reports
+            for test in pcs_report.tests
+        )

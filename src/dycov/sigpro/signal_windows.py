@@ -91,26 +91,36 @@ def _get_windows_times(
     return t_w1_init, t_w1_end, t_w2_init, t_w2_end, t_w3_init, t_w3_end
 
 
-def _get_filter_windows_times(
-    time_values: list,
-    t_fault: float,
-    fault_duration: float,
-) -> tuple[float, float, float, float, float, float]:
+def filter_windows(time_values: list, t_fault: float, fault_duration: float) -> dict:
+    """Calculate the windows that the low-pass filter treats separately.
+
+    Each event is a discontinuity of the signal, so the filter is applied between consecutive
+    events and never across one: before the event, while it lasts and after it.
+
+    Parameters
+    ----------
+    time_values: list
+        list with all time values
+    t_fault: float
+        Start time of an event in the curve
+    fault_duration: float
+        Duration of the event in the curve
+
+    Returns
+    -------
+    dict
+        The "before", "during" and "after" windows, each as a (t_from, t_to) tuple.
+    """
     if fault_duration > time_values[-1]:
         fault_duration = 0.0
 
     t_clear = t_fault + fault_duration
 
-    t_w1_init = time_values[0]
-    t_w1_end = t_fault
-
-    t_w2_init = t_fault
-    t_w2_end = t_clear
-
-    t_w3_init = t_clear
-    t_w3_end = time_values[-1]
-
-    return t_w1_init, t_w1_end, t_w2_init, t_w2_end, t_w3_init, t_w3_end
+    return {
+        "before": (time_values[0], t_fault),
+        "during": (t_fault, t_clear),
+        "after": (t_clear, time_values[-1]),
+    }
 
 
 def calculate(
@@ -159,21 +169,13 @@ def calculate(
         exclusion_zones,
     )
 
-    tf_w1_init, tf_w1_end, tf_w2_init, tf_w2_end, tf_w3_init, tf_w3_end = (
-        _get_filter_windows_times(time_values, t_fault, fault_duration)
-    )
-
     return {
         "validate": {
             "before": (t_w1_init, t_w1_end),
             "during": (t_w2_init, t_w2_end),
             "after": (t_w3_init, t_w3_end),
         },
-        "sigpro": {
-            "before": (tf_w1_init, tf_w1_end),
-            "during": (tf_w2_init, tf_w2_end),
-            "after": (tf_w3_init, tf_w3_end),
-        },
+        "sigpro": filter_windows(time_values, t_fault, fault_duration),
         "exclusion-data": {  # Exclusion data for the windows for debugging purposes
             "t_windowLPF_excl_start": exclusion_zones.t_windowLPF_excl_start,
             "t_windowLPF_excl_end": exclusion_zones.t_windowLPF_excl_end,

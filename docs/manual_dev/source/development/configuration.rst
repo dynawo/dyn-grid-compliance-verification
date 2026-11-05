@@ -58,8 +58,11 @@ PCS Configuration
 ------------------
 
 Each PCS has its own ``PCSDescription.ini`` file, located under
-``src/dycov/templates/PCS/<workflow>/<technology>/<PCSName>/`` (the ``gfm``
-workflow has no technology level: ``templates/PCS/gfm/<PCSName>/``). This file
+``src/dycov/templates/PCS/<workflow>/<technology>/<PCSName>/``. The ``gfm``
+workflow has a ``BESS`` and a ``PPM`` technology too, because the DTR Fiche I18
+applies to storage alone: the ``generator_type`` of the GFM producer picks the
+tree, and the performance verification of a storage given its curves runs the
+PCS of ``gfm/BESS`` along with those of ``performance/BESS``. This file
 defines the complete structure of the PCS — its benchmarks, operating
 conditions, validation tests, and report curves.
 
@@ -507,8 +510,24 @@ Grid connection parameters by generator type (HTB1, HTB2, HTB3):
 GFM section
 ^^^^^^^^^^^^
 
-* ``SCRmin`` — minimum Short-Circuit Ratio for GFM envelope generation.
-* ``SCRmax`` — maximum Short-Circuit Ratio for GFM envelope generation.
+* ``SCRmin``, ``SCRmed``, ``SCRmax`` — the short-circuit ratios of the DTR
+  Fiche I18 (2, 10 and 20), which the GFM PCS name in their ``SCR`` keys.
+
+The checks the performance verification of a storage applies to the curves of
+its Grid Forming tests (``PCS_RTE-I18z1``):
+
+* ``cutoff`` — low-pass filter cut-off frequency (Hz) of those curves, 30 Hz
+  as the DTR asks for Grid Forming units, apart from the ``[GridCode]`` one.
+* ``envelope_tolerance`` — tolerance (pu) with which a curve is still inside
+  its envelope; it also absorbs the narrowing of the envelopes in their first
+  20 ms.
+* ``thr_damping_ratio`` — minimum damping ratio of the oscillations of the
+  active and reactive currents (0.40).
+* ``damping_f_min``, ``damping_f_max`` — band (Hz) of the oscillations whose
+  damping is checked.
+* ``damping_event_delay``, ``damping_time_step``, ``damping_pencil_order`` —
+  the Matrix Pencil estimate as RTE implements it: the unfiltered curve is read
+  from 5 ms after the event, sampled every 5 ms and fitted with 6 poles.
 
 
 CurvesVariables section

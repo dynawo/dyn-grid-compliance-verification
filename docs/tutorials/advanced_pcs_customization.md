@@ -67,6 +67,8 @@ The relevant substructure is:
 └── templates/
     ├── PCS/
     │   ├── gfm/
+    │   │   ├── BESS/
+    │   │   └── PPM/
     │   ├── model/
     │   │   ├── BESS/
     │   │   └── PPM/
@@ -75,6 +77,9 @@ The relevant substructure is:
     │       ├── PPM/
     │       └── SM/
     └── reports/
+        ├── gfm/
+        │   ├── BESS/
+        │   └── PPM/
         ├── model/
         │   ├── BESS/
         │   └── PPM/
@@ -84,9 +89,10 @@ The relevant substructure is:
             └── SM/
 ```
 
-The `gfm/` category holds its PCS directories directly, without a technology
-level, and has no `reports/` counterpart: the GFM workflow produces no LaTeX
-report.
+The `gfm/` category has a technology level as well, because the DTR Fiche I18
+applies to storage alone: `gfm/BESS` holds its PCS, `PCS_RTE-I18z1`, which the
+performance verification of a storage also runs, and `gfm/PPM` the tests agreed before
+the fiche. Its reports are under `templates/reports/gfm/<technology>/<PCSName>/`.
 
 Conceptually:
 
@@ -102,8 +108,8 @@ the PCS you are adapting:
 ~/.config/dycov/templates/PCS/<workflow>/<technology>/<PCSName>/PCSDescription.ini
 ```
 
-(For the `gfm` workflow there is no technology level:
-`templates/PCS/gfm/<PCSName>/PCSDescription.ini`.)
+(The `gfm` workflow has its `BESS` and `PPM` technologies as well:
+`templates/PCS/gfm/BESS/<PCSName>/PCSDescription.ini`.)
 
 That file is a **patch over** the one shipped with the tool, not a replacement:
 write only the sections and keys you change, and everything you leave out keeps

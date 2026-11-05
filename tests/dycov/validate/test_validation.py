@@ -79,6 +79,9 @@ class DummyProducer:
     def is_dynawo_model(self):
         return self._is_dynawo_model
 
+    def is_gfm(self):
+        return False
+
     def is_user_curves(self):
         return self._is_user_curves
 
@@ -117,6 +120,7 @@ class DummyParameters(ValidationParameters):
         self._producer = DummyProducer(sim_type)
         self._working_dir = Path(tempfile.mkdtemp())
         self._verification_type = verification_type
+        self._gfm_envelopes = None
         self._curves_only = curves_only
 
     def get_launcher_dwo(self):
@@ -347,6 +351,28 @@ def test_a_pcs_that_declares_no_test_is_not_validated(monkeypatch):
     result = _validate_pcs((None, "PCS_RTE-F16z3", "Producer", Path("/tmp")))
 
     assert result == ("Producer", "PCS_RTE-F16z3", [], {})
+
+
+def test_an_invalid_pcs_adds_nothing_to_the_summary(monkeypatch):
+    class InvalidPcs:
+        def __init__(self, producer_name, pcs_name, parameters):
+            self._producer_name = producer_name
+            self._name = pcs_name
+
+        def is_valid(self):
+            return False
+
+        def get_producer_name(self):
+            return self._producer_name
+
+        def get_name(self):
+            return self._name
+
+    monkeypatch.setattr("dycov.validate.validation.Pcs", InvalidPcs)
+
+    result = _validate_pcs((None, "PCS_RTE-I99", "Producer", Path("/tmp")))
+
+    assert result == ("Producer", "PCS_RTE-I99", [], {})
 
 
 def test_a_run_without_tests_generates_no_report(monkeypatch, tmp_path):

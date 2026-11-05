@@ -13,6 +13,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from dycov.cli.command_handlers import (
+    _generate_gfm_envelopes,
     handle_excel2inputs_command,
     handle_performance_command,
     handle_validate_command,
@@ -22,11 +23,12 @@ from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
 _LAUNCHER = Path("dynawo.sh")
 
 
-def _performance_args(model=None, curves=None, excel=None, curves_only=False):
+def _performance_args(model=None, curves=None, excel=None, gfm_envelopes=None, curves_only=False):
     args = MagicMock()
     args.model = model
     args.curves = curves
     args.excel = excel
+    args.gfm_envelopes = gfm_envelopes
     args.output = "output_dir"
     args.pcs = None
     args.only_dtr = True
@@ -83,6 +85,28 @@ def test_performance_with_curves_only_validates_the_curves(mocker):
     assert kwargs["producer_model"] is None
     assert kwargs["producer_curves"] == Path("ProducerCurves/PPM")
     assert kwargs["reference_curves"] is None
+
+
+def test_performance_passes_the_grid_forming_envelopes(mocker, tmp_path):
+    run_verification = mocker.patch("dycov.cli.command_handlers._run_verification", return_value=0)
+    parser = MagicMock()
+    args = _performance_args(curves="ProducerCurves/BESS", gfm_envelopes=tmp_path)
+
+    result = handle_performance_command(parser, args, _LAUNCHER)
+
+    assert result == 0
+    assert run_verification.call_args.kwargs["gfm_envelopes"] == tmp_path
+
+
+def test_performance_refuses_grid_forming_envelopes_that_do_not_exist(mocker, tmp_path):
+    run_verification = mocker.patch("dycov.cli.command_handlers._run_verification")
+    parser = MagicMock()
+    args = _performance_args(curves="ProducerCurves/BESS", gfm_envelopes=tmp_path / "absent")
+
+    handle_performance_command(parser, args, _LAUNCHER)
+
+    assert "envelopes" in parser.error.call_args.args[0]
+    run_verification.assert_not_called()
 
 
 def test_performance_without_inputs_reports_a_parser_error(mocker):
@@ -434,3 +458,18 @@ def test_performance_refuses_a_workbook_together_with_curves(mocker, tmp_path):
 
     parser.error.assert_called_once()
     generate.assert_not_called()
+
+
+def test_an_envelope_generation_without_parameters_fails(tmp_path):
+    producer_ini = tmp_path / "Producer.ini"
+    producer_ini.write_text("[DEFAULT]\ngenerator_type = BESS\np_max_injection = 40\n")
+
+    result = _generate_gfm_envelopes(
+        output_dir=tmp_path / "Results",
+        producer_ini=producer_ini,
+        emt=False,
+        user_pcs=None,
+        only_dtr=True,
+    )
+
+    assert result == 1

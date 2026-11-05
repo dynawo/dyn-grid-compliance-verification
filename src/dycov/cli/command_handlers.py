@@ -17,11 +17,13 @@ from typing import Optional
 
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import ELECTRIC_PERFORMANCE, MODEL_VALIDATION
+from dycov.core.parameters import Parameters
 from dycov.curves import anonymizer
 from dycov.excel import generator as excel_generator
 from dycov.files import producer_ini_migration
 from dycov.gfm.generator import GFMGeneration
 from dycov.gfm.parameters import GFMParameters
+from dycov.gfm.producer import GFMProducer
 from dycov.gfm.verification.functional_tests import compare_csv_directories
 from dycov.logging import dycov_logging
 from dycov.validate.parameters import ValidationParameters
@@ -275,6 +277,7 @@ def _verify_from_workbook(
             testing=args.testing,
             verification_type=verification_type,
             producer_workbook=workbook,
+            gfm_envelopes=getattr(args, "gfm_envelopes", None),
             curves_only=args.curves_only,
         )
 
@@ -301,6 +304,9 @@ def handle_performance_command(
         Path to the Dynawo launcher.
     """
     dycov_logging.get_logger("CommandHandlers").info("Handling 'performance' command.")
+    if args.gfm_envelopes and not Path(args.gfm_envelopes).is_dir():
+        parser.error(f"Grid Forming envelopes not found: {args.gfm_envelopes}")
+        return 1
     if args.excel:
         return _verify_from_workbook(parser, args, dwo_launcher, ELECTRIC_PERFORMANCE)
     if _curves_only_without_model(parser, args):
@@ -344,6 +350,7 @@ def handle_performance_command(
         only_dtr=args.only_dtr,
         testing=args.testing,
         verification_type=ELECTRIC_PERFORMANCE,
+        gfm_envelopes=args.gfm_envelopes,
         curves_only=args.curves_only,
     )
 
@@ -490,6 +497,7 @@ def _run_verification(
     testing: bool,
     verification_type: int,
     producer_workbook: Optional[Path] = None,
+    gfm_envelopes: Optional[Path] = None,
     curves_only: bool = False,
 ) -> int:
     """Initializes and runs a model validation or performance verification.
@@ -519,6 +527,8 @@ def _run_verification(
         Type of verification (MODEL_VALIDATION or ELECTRIC_PERFORMANCE).
     producer_workbook: Optional[Path]
         Workbook the producer inputs were generated from, if applicable.
+    gfm_envelopes: Optional[Path]
+        Directory of the Grid Forming envelopes to check the producer curves against, if given.
     curves_only: bool
         If True, run the simulations and keep their curves, without the checks or the report.
 
@@ -542,6 +552,7 @@ def _run_verification(
             only_dtr=only_dtr,
             verification_type=verification_type,
             producer_workbook=producer_workbook,
+            gfm_envelopes=gfm_envelopes,
             curves_only=curves_only,
         )
     except ValueError as e:
@@ -618,25 +629,29 @@ def _generate_gfm_envelopes(
 ):
     dycov_logging.get_logger("CommandHandlers").info("Running generation of envelopes")
     try:
-        params = GFMParameters(
-            producer_ini=producer_ini,
-            selected_pcs=user_pcs,
-            output_dir=output_dir,
-            only_dtr=only_dtr,
-            emt=emt,
-        )
+        run = Parameters(None, user_pcs, output_dir, only_dtr)
+        params = GFMParameters(run, GFMProducer(producer_ini), emt=emt)
 
         # Determine if the parameters are valid.
         if not params.is_valid():
             return -1
+        if not params.declares_unit_parameters():
+            dycov_logging.get_logger("CommandHandlers").error(
+                f"{producer_ini} declares no [GFM Parameters] section: there are no parameters "
+                "to generate the envelopes from"
+            )
+            return 1
 
         use_parallel = config.get_boolean("Global", "parallel_pcs_validation", True)
         num_processes = config.get_int("Global", "parallel_num_processes", 4)
 
         gfm = GFMGeneration(params)
         start_time = time.time()
-        gfm.generate(use_parallel=use_parallel, num_processes=num_processes)
+        generated = gfm.generate(use_parallel=use_parallel, num_processes=num_processes)
         end_time = time.time()
+        if not generated:
+            dycov_logging.get_logger("CommandHandlers").error("No envelope was generated")
+            return 1
 
         dycov_logging.get_logger("CommandHandlers").info(
             f"Generation completed in {end_time - start_time:.2f} seconds."
@@ -679,7 +694,7 @@ def _generate_gfm_envelopes(
                 return 1
 
         # SUCCESS: always delete the temporary directory
-        params.cleanup_working_dir()
+        run.cleanup_working_dir()
         return 0
 
     except Exception as e:
@@ -689,7 +704,7 @@ def _generate_gfm_envelopes(
             dycov_logging.get_logger("CommandHandlers").error(f"Error during generation: {e}")
         # Keep artifacts in DEBUG for diagnostics; otherwise, delete
         try:
-            params.cleanup_working_dir(preserve_on_debug=True)
+            run.cleanup_working_dir(preserve_on_debug=True)
         except Exception:
             pass
         return 1

@@ -16,6 +16,7 @@ from dycov.configuration import cfg
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.core.parameters import Parameters
+from dycov.gfm.report import GFMTestReport
 from dycov.logging import dycov_logging
 from dycov.model.benchmark import Benchmark
 from dycov.model.producer import Producer
@@ -166,11 +167,35 @@ class Pcs:
 
         return self._report_name, success, pcs_results
 
-    def generate(self) -> None:
-        """Execute the generation step for all benchmarks of the current PCS."""
+    def generate(self) -> list[GFMTestReport]:
+        """Execute the generation step for all benchmarks of the current PCS.
 
-        for bm in self._bm_list:
-            bm.generate()
+        Returns
+        -------
+        list[GFMTestReport]
+            What the report shows of every operating condition.
+        """
+        return [test_report for bm in self._bm_list for test_report in bm.generate()]
+
+    def get_report_name(self) -> str:
+        """Get the name of the LaTeX template of the PCS.
+
+        Returns
+        -------
+        str
+            Name of the LaTeX template, None when the PCS declares none
+        """
+        return self._report_name
+
+    def get_id(self) -> int:
+        """Get the id of the PCS, which sorts the report.
+
+        Returns
+        -------
+        int
+            Id of the PCS
+        """
+        return self._id
 
     def get_zone(self) -> int:
         """Get the zone of the PCS.
