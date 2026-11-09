@@ -115,4 +115,5 @@ def test_the_modes_are_those_rte_finds_in_the_same_samples():
         modes = matrix_pencil.oscillation_modes(_TIME, response, 1.005, 4.5, 0.1, 10.0, 0.005, 6)
 
         expected = _rte_modes(samples, 6, 0.005)
-        assert [(m.frequency, m.damping_ratio) for m in modes] == pytest.approx(expected)
+        found = [value for m in modes for value in (m.frequency, m.damping_ratio)]
+        assert found == pytest.approx([value for mode in expected for value in mode])
