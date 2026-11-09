@@ -449,7 +449,10 @@ The installation ships a blank workbook per standard, in the ``workbooks``
 directory next to ``examples``: ``Producer_IEC.xlsx`` for the IEC 61400-27-1
 models and ``Producer_WECC.xlsx`` for the WECC ones. Copy the one that matches
 your model and fill it in. The ``format_version`` cell of its ``Infos générales
-->`` sheet names the DyCoV release it was written for.
+->`` sheet names the DyCoV release whose template it follows, which changes
+whenever the template does. A workbook that names another one is still read,
+with a warning: rows that differ between the two templates would be dropped or
+missing, so copy its data into the template of the release.
 
 The workbook is the single source of truth: the model comes from its
 ``Model Map`` sheet, the electrical values from the ``Zone1a`` and ``Zone3``

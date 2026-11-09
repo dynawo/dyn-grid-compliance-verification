@@ -7,6 +7,15 @@ the issue each one points at holds the explanation.
 
 ## Unreleased
 
+### Workbooks name the version of their template
+
+`dycov excel2inputs`, and `validate` and `performance` with `--excel`, warn when a workbook names
+a template other than the one the release reads, in the `format_version` cell of its
+`Infos générales ->` sheet: rows that differ between the two would be dropped or missing. The
+templates of the previous releases all said 1.0.0, so every workbook made on them is warned
+about. One made on the templates of 1.3.0 only needs that cell set to 1.3.0; an older one has its
+data copied into `workbooks/Producer_IEC.xlsx` or `workbooks/Producer_WECC.xlsx` (#701).
+
 ## 1.3.0 — 2026-10-29
 
 ### Built on Dynawo 2.0.0
