@@ -12,8 +12,8 @@ tool runs.
 ``--user-config <file>`` reads another configuration file on top of
 ``config.ini`` for one execution: its options take precedence, and those it
 does not set keep the value ``config.ini`` gives them. A file that does not
-exist or cannot be read stops the run with an error, and a value of that file
-DyCoV cannot use is reported with its line in it.
+exist or cannot be read stops the run with an error, and a value definition of
+that file DyCoV cannot use is reported with its line in it.
 
 The generated ``config.ini`` contains the most common options commented out,
 each shown with its default value. To change a setting, uncomment the relevant
