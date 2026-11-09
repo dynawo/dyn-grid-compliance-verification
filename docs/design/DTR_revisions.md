@@ -51,8 +51,8 @@ carries do coincide, because their edition came out the same day as their articl
 So a user who holds a PTF reads the table of *Which revisions the tool needs*: it gives, for each
 revision, the dates of the PTF it answers for.
 
-`Summary_data_from_the_DTR.md` holds, for each revision, the version of each article the values
-come from.
+`Summary_data_from_the_DTR.md` holds the version of each article the values of the base revision
+come from; the deltas name in their headers the versions of the articles they change.
 
 ## How a run selects one
 

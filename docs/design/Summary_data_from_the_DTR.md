@@ -6,9 +6,11 @@ takes as its base revision. The articles it carries, for the chapters this docum
 | Article | Version |
 |---|---|
 | 5.1.1, the categories of a unit | 1.3 |
-| 5.1.4, the categories of a storage unit | 1.1 |
-| 8.3.1, 8.3.2 and 8.3.4, the cahiers des charges | 2.1 |
+| 5.1.4, the categories of a storage unit | 2, applicable from 09/11/2023 |
+| 8.3.1, the cahier des charges of a power park module | 2.3 |
+| 8.3.2, the cahier des charges of a synchronous unit | 2.4 |
 | 8.3.3, the fiches I and F | 3.3 |
+| 8.3.4, the cahier des charges of a storage unit | 1.6 |
 
 A later revision changes some of them. `DTR_revisions.md` says how the tool
 carries the difference, and which revisions it has to carry.
