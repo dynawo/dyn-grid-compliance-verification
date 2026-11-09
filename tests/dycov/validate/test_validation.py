@@ -349,6 +349,28 @@ def test_a_pcs_that_declares_no_test_is_not_validated(monkeypatch):
     assert result == ("Producer", "PCS_RTE-F16z3", [], {})
 
 
+def test_an_invalid_pcs_adds_nothing_to_the_summary(monkeypatch):
+    class InvalidPcs:
+        def __init__(self, producer_name, pcs_name, parameters):
+            self._producer_name = producer_name
+            self._name = pcs_name
+
+        def is_valid(self):
+            return False
+
+        def get_producer_name(self):
+            return self._producer_name
+
+        def get_name(self):
+            return self._name
+
+    monkeypatch.setattr("dycov.validate.validation.Pcs", InvalidPcs)
+
+    result = _validate_pcs((None, "PCS_RTE-I99", "Producer", Path("/tmp")))
+
+    assert result == ("Producer", "PCS_RTE-I99", [], {})
+
+
 def test_a_run_without_tests_generates_no_report(monkeypatch, tmp_path):
     validation = Validation.__new__(Validation)
     validation._parameters = DummyParameters(output_dir=tmp_path / "output")
@@ -369,6 +391,31 @@ def test_a_run_without_tests_generates_no_report(monkeypatch, tmp_path):
     validation._Validation__create_report([], {})
 
     assert moved == [(validation._parameters.get_working_dir(), tmp_path / "output")]
+
+
+def test_a_run_that_runs_no_test_does_not_look_for_its_report(monkeypatch, tmp_path):
+    """An invalid PCS, or one that declares no test, leaves no report to look for."""
+    validation = Validation.__new__(Validation)
+    validation._parameters = DummyParameters(output_dir=tmp_path / "output")
+    validation._parameters.get_output_dir().mkdir(parents=True)
+    validation._is_testing = True
+    monkeypatch.setattr(validation, "_validate", lambda use_parallel, num_processes: ([], {}))
+    monkeypatch.setattr(validation, "_Validation__create_report", lambda summary, results: None)
+    warnings = []
+
+    class _Recorder:
+        def warning(self, message):
+            warnings.append(message)
+
+        def __getattr__(self, name):
+            return lambda *args, **kwargs: None
+
+    monkeypatch.setattr(
+        "dycov.validate.validation.dycov_logging.get_logger", lambda name: _Recorder()
+    )
+
+    assert validation.validate(use_parallel=False, num_processes=1) == []
+    assert warnings == []
 
 
 def test_a_curves_only_run_logs_the_summary_without_the_report(monkeypatch, tmp_path):
