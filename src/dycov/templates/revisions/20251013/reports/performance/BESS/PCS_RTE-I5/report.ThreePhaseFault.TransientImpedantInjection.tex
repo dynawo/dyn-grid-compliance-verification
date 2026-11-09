@@ -37,9 +37,10 @@
         \end{itemize}
     \end{itemize}
 
-    In \Dynawo{} this fault has been modeled by splitting \code{Line4} into
-    \code{Line4a} and \code{Line4b}, and then inserting an intermediate bus between
-    them, to which a \code{NodeFault} object is attached.
+    In \Dynawo{} \code{Line4} is a \code{LineFault} model: two sections of the
+    line with the fault between them, at 1\% of its length from the PDR. The
+    fault is applied when the event starts and removed after $T_{clear}$, and the
+    line stays in service.
 
     Note that although the DTR PCS also requires simulating a one-phase
     fault, this tool will not implement it, as it would require the
