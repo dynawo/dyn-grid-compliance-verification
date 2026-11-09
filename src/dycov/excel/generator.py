@@ -35,6 +35,7 @@ from dycov.files.producer_dyd_file import (
     PPM_ID,
 )
 from dycov.files.producer_par_file import write_producer_par_file
+from dycov.logging import dycov_logging
 
 # Base name of the Dynawo input files and of the reference-curve directory: DyCoV derives both
 # from the same producer name, so a rename travels through this one constant.
@@ -175,9 +176,39 @@ def tests_without_metadata(outdir: Path, producer: str = PRODUCER_NAME) -> list:
     return incomplete
 
 
+def _check_template_version(excel: Path, workbook: dict) -> None:
+    """Warns when the workbook was written on a template other than the one this release reads:
+    rows the template has since renamed or split would be dropped or missing without a word."""
+    version, standard = wb.parse_template_format(workbook)
+    expected = wb.TEMPLATE_VERSIONS.get(standard or "")
+    logger = dycov_logging.get_logger("Excel")
+    if standard is None:
+        logger.warning(
+            f"{excel.name} names no standard in its sheet of general information, so the "
+            f"version of its template cannot be checked."
+        )
+    elif expected is None:
+        logger.warning(
+            f"{excel.name} names a standard this release does not know, {standard}, so the "
+            f"version of its template cannot be checked."
+        )
+    elif version != expected:
+        follows = (
+            f"follows the {standard} template of DyCoV {version}"
+            if version
+            else f"names no version of the {standard} template it follows"
+        )
+        logger.warning(
+            f"{excel.name} {follows}, and this release reads that of {expected}: copy its data "
+            f"into the template workbooks/Producer_{standard}.xlsx, as rows that differ between "
+            f"the two would be dropped or missing."
+        )
+
+
 def generate(excel: Path, outdir: Path) -> str:
     """Generate the ``Dynawo/Zone1`` + ``Dynawo/Zone3`` Producer input trees from *excel*."""
     workbook = wb.read_workbook(excel)
+    _check_template_version(excel, workbook)
     resolved = P.resolve_models(workbook)
     template = P.template_for(resolved["zone3_lib"])
     builder_gen_id = BESS_ID if template == "model_BESS" else PPM_ID
