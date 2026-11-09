@@ -84,7 +84,7 @@ def _validate_pcs(pcs_args) -> tuple:
     try:
         if not pcs.is_valid():
             dycov_logging.get_logger("Validation").error(f"{pcs.get_name()} is not a valid PCS")
-            return pcs.get_producer_name(), pcs.get_name(), False, {}
+            return pcs.get_producer_name(), pcs.get_name(), summary_list, {}
         if not pcs.declares_tests():
             dycov_logging.get_logger("Validation").info(
                 f"{pcs.get_name()}: no test declared, nothing to validate"
@@ -430,7 +430,11 @@ class Validation:
         self._summary = sorted_summary_list
         self.__create_report(sorted_summary_list, report_results)
 
-        if not self._parameters.is_curves_only() and self._parameters.get_output_dir().exists():
+        if (
+            sorted_summary_list
+            and not self._parameters.is_curves_only()
+            and self._parameters.get_output_dir().exists()
+        ):
             report_file = (
                 self._parameters.get_output_dir() / "Reports" / REPORT_NAME.replace("tex", "pdf")
             )
