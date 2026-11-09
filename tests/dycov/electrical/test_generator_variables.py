@@ -48,16 +48,35 @@ HTB_LISTS = {
 }
 
 
-@pytest.fixture
-def generator_variables(monkeypatch):
+def _read_grid_code_from(monkeypatch, table: dict) -> None:
+    """The configuration answers from the table, whatever its layers hold."""
     monkeypatch.setattr(
         "dycov.configuration.cfg.Config.get_float",
-        lambda self, section, key, default=0.0: GRID_CODE_FLOATS.get((section, key), default),
+        lambda self, section, key, default=0.0: float(table.get((section, key), default)),
+    )
+    monkeypatch.setattr(
+        "dycov.configuration.cfg.Config.get_value",
+        lambda self, section, key, default=None: (
+            str(table[(section, key)]) if (section, key) in table else default
+        ),
+    )
+    monkeypatch.setattr(
+        "dycov.configuration.cfg.Config.has_option",
+        lambda self, section, key: (section, key) in table,
     )
     monkeypatch.setattr(
         "dycov.configuration.cfg.Config.get_list",
-        lambda self, section, key: HTB_LISTS.get(key, []),
+        lambda self, section, key: (
+            str(table[(section, key)]).split(",")
+            if (section, key) in table
+            else HTB_LISTS.get(key, [])
+        ),
     )
+
+
+@pytest.fixture
+def generator_variables(monkeypatch):
+    _read_grid_code_from(monkeypatch, GRID_CODE_FLOATS)
     return GeneratorVariables()
 
 
@@ -186,30 +205,29 @@ def test_get_generator_category_of_a_storage_unit(generator_variables, u_nom, p_
 
 @pytest.fixture
 def reactances(monkeypatch, generator_variables):
-    """The [GridCode] of a revision that gives a technology reactances of its own."""
-    floats = dict(GRID_CODE_FLOATS)
-    floats[("GridCode", "HTB1_reactance_b_low_PPM")] = 0.3
-    floats[("GridCode", "HTB1_reactance_b_high_PPM")] = 0.54
-    floats[("GridCode", "HTB1_p_max_PPM")] = 250.0
-    monkeypatch.setattr(
-        "dycov.configuration.cfg.Config.get_float",
-        lambda self, section, key, default=0.0: floats.get((section, key), default),
-    )
-    monkeypatch.setattr(
-        "dycov.configuration.cfg.Config.has_option",
-        lambda self, section, key: (section, key) in floats,
-    )
-    return floats
+    """The [GridCode] of a revision that gives a technology reactances of its own: a PPM in
+    four steps, a storage unit in the two steps of _b_low and _b_high."""
+    table = dict(GRID_CODE_FLOATS)
+    table[("GridCode", "HTB1_reactance_b_PPM")] = "0.2, 0.3, 0.54, 0.6"
+    table[("GridCode", "HTB1_p_max_PPM")] = "50, 250, 800"
+    table[("GridCode", "HTB1_reactance_b_low_BESS")] = 0.3
+    table[("GridCode", "HTB1_reactance_b_high_BESS")] = 0.3
+    _read_grid_code_from(monkeypatch, table)
+    return table
 
 
 @pytest.mark.parametrize(
     "technology, p_max, b",
     [
-        ("PPM", 40.0, 0.3),
-        ("PPM", 300.0, 0.54),
+        ("PPM", 40.0, 0.2),
+        ("PPM", 60.0, 0.3),
         ("PPM", 250.0, 0.54),
+        ("PPM", 300.0, 0.54),
+        ("PPM", 800.0, 0.6),
         ("SM", 40.0, 0.2),
         ("SM", 50.0, 0.3),
+        ("SM", 900.0, 0.3),
+        ("BESS", 40.0, 0.3),
         ("BESS", 60.0, 0.3),
         (None, 40.0, 0.2),
     ],
@@ -228,18 +246,37 @@ def test_the_reactances_are_read_when_they_are_computed(
     generator_variables, reactances, monkeypatch
 ):
     """A revision of the DTR is selected after the tool has started."""
-    monkeypatch.setitem(reactances, ("GridCode", "HTB1_reactance_b_low_PPM"), 0.25)
+    monkeypatch.setitem(reactances, ("GridCode", "HTB1_reactance_b_PPM"), "0.25, 0.3, 0.54, 0.6")
 
     result = generator_variables.calculate_line_xpu("b", -0.4, 100.0, 90, 100.0, "PPM")
 
     assert result == pytest.approx(0.25)
 
 
-def test_the_fault_takes_the_reactance_b_of_the_technology(generator_variables, reactances):
-    ppm = generator_variables.calculate_fault_xpu(-0.4, 100.0, 90, 100.0, "PPM")
-    sm = generator_variables.calculate_fault_xpu(-0.4, 100.0, 90, 100.0, "SM")
+def test_steps_of_b_that_do_not_match_their_powers_are_rejected(
+    generator_variables, reactances, monkeypatch
+):
+    """The message names the keys of the technology it read, so the user finds them."""
+    monkeypatch.setitem(reactances, ("GridCode", "HTB1_reactance_b_PPM"), "0.2, 0.3, 0.54")
 
-    assert ppm > sm
+    with pytest.raises(ValueError, match="HTB1_reactance_b_PPM.*HTB1_p_max_PPM"):
+        generator_variables.calculate_line_xpu("b", -0.4, 100.0, 90, 100.0, "PPM")
+
+
+def test_a_power_of_b_that_is_no_number_names_its_key(
+    generator_variables, reactances, monkeypatch
+):
+    monkeypatch.setitem(reactances, ("GridCode", "HTB1_p_max_PPM"), "50, x, 800")
+
+    with pytest.raises(ValueError, match="HTB1_p_max_PPM"):
+        generator_variables.calculate_line_xpu("b", -0.4, 100.0, 90, 100.0, "PPM")
+
+
+def test_the_fault_takes_the_reactance_b_of_the_technology(generator_variables, reactances):
+    storage = generator_variables.calculate_fault_xpu(-0.4, 100.0, 90, 100.0, "BESS")
+    synchronous = generator_variables.calculate_fault_xpu(-0.4, 100.0, 90, 100.0, "SM")
+
+    assert storage > synchronous
 
 
 def test_the_short_circuit_power_is_that_of_the_configuration(generator_variables, monkeypatch):
