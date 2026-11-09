@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -451,14 +452,17 @@ def test_a_curves_only_run_opens_no_report(monkeypatch, tmp_path):
     validation._parameters = DummyParameters(output_dir=tmp_path, curves_only=True)
     validation._is_testing = False
     make_report_file(tmp_path)
-    monkeypatch.setattr(validation, "_validate", lambda use_parallel, num_processes: ([], {}))
+    simulated = SimpleNamespace(id=1, zone=3, producer_name="Producer", compliance="Simulated")
+    monkeypatch.setattr(
+        validation, "_validate", lambda use_parallel, num_processes: ([simulated], {})
+    )
     monkeypatch.setattr(validation, "_Validation__create_report", lambda summary, results: None)
     monkeypatch.setattr(
         "dycov.validate.validation._open_document",
         lambda *args: (_ for _ in ()).throw(AssertionError("no report to open")),
     )
 
-    assert validation.validate() == []
+    assert validation.validate() == ["Simulated"]
 
 
 def test_a_curves_only_pcs_prepares_no_report(monkeypatch):
