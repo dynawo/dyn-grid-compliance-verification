@@ -12,7 +12,6 @@ def _fake_args(command):
     args = MagicMock()
     args.command = command
     args.launcher = "dynawo"
-    args.dtr = None
     args.user_config = None
     return args
 
@@ -189,44 +188,50 @@ def _config(mocker, current, available):
 
 
 def test_the_run_keeps_the_revision_of_the_configuration(mocker):
-    _config(mocker, "20240215", ["20240215"])
+    config = _config(mocker, "20240215", ["20240215"])
     parser = MagicMock()
-    args = _fake_args("performance")
-    args.dtr = None
 
     from dycov.launchers import DycovCLI
 
-    DycovCLI()._select_dtr_revision(parser, args)
+    DycovCLI()._select_dtr_revision(parser, _fake_args("performance"))
 
     parser.error.assert_not_called()
+    config.load_dtr_delta_config.assert_called_once_with("20240215")
 
 
-def test_the_dtr_option_overrides_the_configuration(mocker):
-    config = _config(mocker, "20250801", ["20240215", "20250801"])
+@pytest.mark.parametrize("current", [None, ""])
+def test_a_configuration_without_a_revision_stops_the_run_naming_those_to_choose(mocker, current):
+    """#753: the revision follows the PTF of the installation, so the tool never picks one."""
+    config = _config(mocker, current, ["20240215", "20250801", "20251013", "20260723"])
     parser = MagicMock()
-    args = _fake_args("performance")
-    args.dtr = "20250801"
+    parser.error.side_effect = SystemExit(2)
 
     from dycov.launchers import DycovCLI
 
-    DycovCLI()._select_dtr_revision(parser, args)
+    with pytest.raises(SystemExit):
+        DycovCLI()._select_dtr_revision(parser, _fake_args("performance"))
 
-    config.set_value.assert_called_once_with("DTR", "current", "20250801")
-    parser.error.assert_not_called()
+    message = parser.error.call_args[0][0]
+    assert "No revision of the DTR" in message
+    assert "20240215, 20250801, 20251013, 20260723" in message
+    assert "--user-config" in message
+    config.load_dtr_delta_config.assert_not_called()
 
 
 def test_a_revision_the_tool_does_not_implement_stops_the_run(mocker):
-    _config(mocker, "19991231", ["20240215"])
+    config = _config(mocker, "19991231", ["20240215", "20260723"])
     parser = MagicMock()
-    args = _fake_args("performance")
-    args.dtr = "19991231"
+    parser.error.side_effect = SystemExit(2)
 
     from dycov.launchers import DycovCLI
 
-    DycovCLI()._select_dtr_revision(parser, args)
+    with pytest.raises(SystemExit):
+        DycovCLI()._select_dtr_revision(parser, _fake_args("performance"))
 
-    parser.error.assert_called_once()
-    assert "19991231" in parser.error.call_args[0][0]
+    message = parser.error.call_args[0][0]
+    assert "19991231" in message
+    assert "20240215, 20260723" in message
+    config.load_dtr_delta_config.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
