@@ -14,8 +14,9 @@ dycov validate --excel Producer_IEC.xlsx
 dycov performance --excel Producer_IEC.xlsx
 ```
 
-The `format_version` cell of the `Infos générales ->` sheet names the DyCoV release the
-workbook was written for.
+The `format_version` cell of the `Infos générales ->` sheet names the DyCoV release whose
+template the workbook follows, and it changes whenever the template does. DyCoV reads a
+workbook of another version with a warning: copy its data into the template of the release.
 
 The row labels of the `Signaux zone 1` and `Signaux zone 3` sheets are what the tool matches
 to know which curve each row describes: a label it does not recognise is dropped, and the
