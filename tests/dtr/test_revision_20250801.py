@@ -131,3 +131,9 @@ def test_a_unit_at_htb1_still_takes_the_reactance_b_of_the_base(revision, select
     line_xpu = generator_variables.calculate_line_xpu("b", -0.4, 100.0, 90.0, 100.0, technology)
 
     assert line_xpu == pytest.approx(b)
+
+
+def test_the_overvoltage_still_has_the_infinite_network_at_the_pdr(revision, swell_zcc):
+    revision(REVISION)
+
+    assert not any(swell_zcc().values())

@@ -262,3 +262,14 @@ def test_a_unit_at_htb1_takes_the_reactance_b_of_its_technology(
     )
 
     assert line_xpu == pytest.approx(b)
+
+
+@pytest.mark.parametrize("selected, zcc", [(BASE_REVISION, False), (REVISION, True)])
+def test_the_overvoltage_gains_the_short_circuit_impedance(revision, swell_zcc, selected, zcc):
+    """The fiche I7 had the infinite network at the PDR, and now has it behind Zcc, in every
+    case of its swell."""
+    revision(selected)
+
+    cases = swell_zcc()
+
+    assert cases == dict.fromkeys(cases, zcc)
