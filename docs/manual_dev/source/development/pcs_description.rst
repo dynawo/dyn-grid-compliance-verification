@@ -291,8 +291,9 @@ present the first of this list wins:
 ``Zcc``
   The short-circuit impedance of the voltage level, :math:`U^2 / S_{cc}`, with
   the ``HTB<n>_Scc`` of ``[GridCode]``, the voltage its ``zcc_voltage`` names
-  and ``X / R = Ztanphi``. Used by the dips and swells (I6, I7, I16 Zone 3);
-  only its presence counts (``Zcc = true``).
+  and ``X / R = Ztanphi``. Used by the dips (I6, I16 Zone 3), and by the swells
+  (I7, I16 Zone 3) from the revision ``20251013``: before it the fiche I7 puts the
+  infinite network at the PDR. Only its presence counts (``Zcc = true``).
 
 Whichever is chosen also becomes the ``line_XPu`` magnitude of the value
 definitions of the operating condition.
