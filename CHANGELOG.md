@@ -7,6 +7,13 @@ the issue each one points at holds the explanation.
 
 ## Unreleased
 
+### The revision of the DTR is set in the configuration
+
+The configuration the tool ships no longer names a revision of the DTR, and `--dtr` is gone from
+the command line. Set `current` in the `[DTR]` section of `config.ini`, or of the file given with
+`--user-config`, to the revision in force when the PTF of the installation was signed. A run that
+finds none, or one the tool does not implement, stops and lists the revisions it implements.
+
 ## 1.3.0 — 2026-10-29
 
 ### Built on Dynawo 2.0.0
