@@ -24,6 +24,52 @@ class GeneratorVariables:
         option = config.find_option("GridCode", key, *suffixes) or key
         return config.get_float("GridCode", option, default)
 
+    @staticmethod
+    def __grid_code_option(key: str, technology: str | None) -> str | None:
+        """The option of [GridCode] that gives a key, that of the technology first."""
+        suffixes = (technology,) if technology else ()
+        return config.find_option("GridCode", key, *suffixes)
+
+    @staticmethod
+    def __grid_code_floats(option: str | None) -> list[float]:
+        """The values of an option of [GridCode] that holds a list; empty when no layer gives
+        it."""
+        if option is None:
+            return []
+        try:
+            return [float(value) for value in config.get_list("GridCode", option) if value.strip()]
+        except ValueError:
+            raise ValueError(
+                f"{config.describe_option('GridCode', option)} is no list of numbers."
+            ) from None
+
+    @staticmethod
+    def __where(option: str | None, key: str) -> str:
+        return config.describe_option("GridCode", option) if option else f"'{key}'"
+
+    def __reactance_b(self, level: str, p_max: float, technology: str | None) -> float:
+        """The reactance b of the step the maximum power of the unit falls in. The DTR splits b
+        at one power or more: HTB<n>_reactance_b gives the b of every step, HTB<n>_p_max the
+        powers between them, and without the first HTB<n>_reactance_b_low and _b_high give the
+        two steps of one power."""
+        powers_option = self.__grid_code_option(f"{level}_p_max", technology)
+        steps_option = self.__grid_code_option(f"{level}_reactance_b", technology)
+        powers = self.__grid_code_floats(powers_option)
+        steps = self.__grid_code_floats(steps_option) or [
+            self.__grid_code(f"{level}_reactance_b_low", technology),
+            self.__grid_code(f"{level}_reactance_b_high", technology),
+        ]
+        if len(steps) != len(powers) + 1:
+            steps_given = self.__where(
+                steps_option, f"{level}_reactance_b_low' and '{level}_reactance_b_high"
+            )
+            raise ValueError(
+                f"b at {level} has {len(steps)} values, in {steps_given}, and {len(powers)} "
+                f"powers between them, in {self.__where(powers_option, f'{level}_p_max')}: "
+                "b needs one value more than the powers."
+            )
+        return steps[bisect.bisect_right(powers, p_max)]
+
     def __get_generator_type(self, u_nom: float) -> str:
         # The Unom are divided into 2 lists to differentiate land from offshore.
         unom = str(u_nom)
@@ -57,8 +103,7 @@ class GeneratorVariables:
         if line_xtype == "a":
             x_dtr = self.__grid_code(f"{level}_reactance_a", technology)
         elif line_xtype == "b":
-            side = "low" if p_max < self.__grid_code(f"{level}_p_max", technology) else "high"
-            x_dtr = self.__grid_code(f"{level}_reactance_b_{side}", technology)
+            x_dtr = self.__reactance_b(level, p_max, technology)
         else:
             raise KeyError(line_xtype)
 
@@ -166,6 +211,7 @@ class GeneratorVariables:
         """Calculate the reactance of the line.
         variables by generator's type, as the base revision gives them:
           HTB1:  a=0.05 b=Pmax<50MW?0.2:0.3, Udim=90kV, Unom=90kV, SnRef=100MVA
+                 (a PPM: b 0.2, 0.3, 0.54 and 0.6, split at 50, 250 and 800 MW)
           HTB2:  a=0.05 b=Pmax<250MW?0.3:0.54, Udim=235kV, Unom=225kV, SnRef=100MVA
           HTB3:  a=0.05 b=Pmax<800MW?0.54:0.6 Udim=405kV, Unom=400kV, SnRef=100MVA
           conversion: Xdwo = Xdtr * (Udim^2 / Unom^2) * (SnRef / Snom)
