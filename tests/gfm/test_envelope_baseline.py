@@ -29,16 +29,18 @@ RESOURCES = Path(__file__).resolve().parent / "resources" / "baseline"
 
 RUN_WITHOUT_FIGURES = textwrap.dedent(
     '''
-    """The command without the figures, which -t does not read. Without the pool, no worker
-    imports the module again and draws them anyway."""
+    """The command without the figures and the report, which -t does not read. Without the
+    pool, no worker imports the module again and draws them anyway."""
 
     import sys
 
     from dycov.configuration.cfg import config
+    from dycov.gfm import report
     from dycov.gfm.gfm import GridForming
     from dycov.launchers import dycov
 
     GridForming._plot = lambda *args, **kwargs: None
+    report.create_pdf = lambda *args, **kwargs: None
     config.set_value("Global", "parallel_pcs_validation", "false")
     sys.argv = ["dycov", *sys.argv[1:]]
     sys.exit(dycov())
