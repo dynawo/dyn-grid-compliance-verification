@@ -176,10 +176,12 @@ de tension de raccordement:
 |          HTB1           | 0.05 pu |  if Pmax < 50 MW: 0.2 pu; if Pmax ≥ 50 MW: 0.3 pu             |
 |          HTB2           | 0.05 pu |  if Pmax < 250 MW: 0.3 pu; if Pmax ≥ 250 MW: 0.54 pu          |
 |          HTB3           | 0.05 pu |  if Pmax < 800 MW: 0.54 pu; if Pmax ≥ 800 MW: 0.6 pu          |
-| non-synch offshore farm | 0.05 pu |  if Pmax < 50 MW: 0.2 pu; if 50 MW ≤ Pmax < 250 MW: 0.3 pu    |
-| non-synch offshore farm | 0.05 pu |  if 250 MW ≤ Pmax < 800 MW: 0.54 pu; if Pmax ≥ 800 MW: 0.6 pu |
+|      PPM at HTB1        | 0.05 pu |  if Pmax < 50 MW: 0.2 pu; if 50 MW ≤ Pmax < 250 MW: 0.3 pu    |
+|      PPM at HTB1        | 0.05 pu |  if 250 MW ≤ Pmax < 800 MW: 0.54 pu; if Pmax ≥ 800 MW: 0.6 pu |
 
 The pu base is Udim and the nominal apparent power of the generator/farm, Sn.
+The rows of a PPM at HTB1 come from article 8.3.1, which gives them to every power park module
+connected at that level: "Types B, C, D or offshore PPM connected in HTB1".
 
 
 
