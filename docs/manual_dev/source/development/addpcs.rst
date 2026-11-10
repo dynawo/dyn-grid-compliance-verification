@@ -270,7 +270,8 @@ After adding the new PCS, verify the full pipeline end to end:
 
 2. Add an example case under ``examples/`` that exercises the new PCS.
 
-3. Run DyCoV against it:
+3. Run DyCoV against it, with the revision of the DTR the PCS belongs to as
+   ``current`` in the ``[DTR]`` section of your configuration:
 
    .. code-block:: console
 
