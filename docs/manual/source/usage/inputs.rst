@@ -361,6 +361,11 @@ distinction. A single ``Producer.ini`` covers the entire case:
        │   └── PCS_RTE-I*.dict
        └── Producer.ini
 
+Each folder of the directory, other than ``Zone1`` and ``Zone3``, is a
+producer whose INI carries its name, next to the folder or in the zone folders.
+A folder that no INI describes, such as the ``Results`` an earlier run left
+there, is skipped with a warning, and the other producers are validated.
+
 
 .. _topologies:
 

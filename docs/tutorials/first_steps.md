@@ -29,6 +29,9 @@ The following assumptions are made:
 - DyCoV is installed and accessible from the command line.
 - The `dycov` command is available.
 - Dynawo may be available but is not mandatory for all workflows.
+- The configuration names the revision of the DTR to validate against, which
+  has no default: `current` in the `[DTR]` section of
+  `~/.config/dycov/config.ini`.
 
 ---
 

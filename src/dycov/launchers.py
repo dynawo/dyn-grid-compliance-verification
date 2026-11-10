@@ -133,23 +133,25 @@ class DycovCLI:
         config.set_value("Global", "parallel_num_processes", "1")
 
     def _select_dtr_revision(self, parser, args) -> None:
-        """Fixes the revision of the DTR the run validates against, and stops if it is unknown.
+        """Fixes the revision of the DTR the run validates against, which the configuration
+        declares, and stops when it declares none or one the tool does not implement.
 
-        A verdict only means something against the revision it was measured with, so the tool
-        never falls back to another one in silence.
+        A verdict only means something against the revision it was measured with, the one the
+        PTF of the installation names, so the tool never chooses one for the user.
         """
         from dycov.configuration.cfg import config
 
-        if getattr(args, "dtr", None):
-            config.set_value("DTR", "current", args.dtr)
-
         revision = config.get_value("DTR", "current")
         available = [value.strip() for value in config.get_list("DTR", "available")]
+        where = (
+            f"set current in the [DTR] section of {config.get_config_dir() / 'config.ini'} or of "
+            f"the file given with --user-config to one of the revisions the tool implements: "
+            f"{', '.join(available)}"
+        )
+        if not revision:
+            parser.error(f"No revision of the DTR to validate against: {where}.")
         if revision not in available:
-            parser.error(
-                f"The tool does not implement the DTR revision {revision}. "
-                f"It implements {', '.join(available)}."
-            )
+            parser.error(f"The tool does not implement the DTR revision {revision}: {where}.")
 
         config.load_dtr_delta_config(revision)
         self.logger.info(f"Validating against the DTR revision {revision}.")
