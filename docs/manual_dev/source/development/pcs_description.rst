@@ -173,7 +173,7 @@ kind of event it applies.
        - Bolted or high-impedance fault
      * - ``Fault_4Lines_InfBus``
        - Infinite bus and four parallel lines; a fault at 1 % of the fourth
-         one, which is tripped at the end of the fault.
+         one, removed at the end of the fault with the line left in service.
        - Three-phase fault (Zone 3, I4, I5)
      * - ``LineTrip_3Lines_InfBus``
        - Infinite bus and three parallel lines; the third one is tripped at
@@ -500,8 +500,8 @@ Three-phase fault
 
 **Zone 3 and performance verification** (``PCS_RTE-I16z3``
 ``ThreePhaseFault.TransientBolted``, ``PCS_RTE-I4``, ``PCS_RTE-I5``): a
-bolted fault on one of four parallel lines, tripped when the fault is
-cleared. The duration depends on the voltage level.
+bolted fault on one of four parallel lines, which stays in service once the
+fault is cleared. The duration depends on the voltage level.
 
 .. code-block:: ini
 

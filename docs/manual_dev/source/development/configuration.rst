@@ -102,7 +102,7 @@ each Benchmark or Operating Condition must pass. Available tests:
 * ``time_5P`` — time at which P stays within ±5% of its final value.
 * ``time_10P`` — time at which P stays within ±10% of its final value.
 * ``time_85U`` — time at which voltage at the PDR returns above 0.85 pu.
-* ``time_clear`` — time at which the faulted line is disconnected at both ends.
+* ``time_clear`` — time at which the event or fault is cleared.
 * ``time_cct`` — fault-clearing time threshold for rotor-angle stability onset.
 * ``stabilized`` — checks whether a steady state has been reached.
 * ``no_disconnection_gen`` — checks that no generator disconnection occurred.
