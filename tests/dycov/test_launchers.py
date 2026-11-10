@@ -1,7 +1,11 @@
+import configparser
 import os
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
+
+import dycov
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -27,6 +31,7 @@ def _patch_common(mocker):
     mocker.patch("dycov.launchers.DycovInitializer")
     mocker.patch("dycov.launchers.check_dynawo_launcher_availability")
     mocker.patch("dycov.launchers.check_report_tools_availability")
+    mocker.patch("dycov.launchers.DycovCLI._select_dtr_revision")
 
 
 # ---------------------------------------------------------------------------
@@ -185,6 +190,15 @@ def _config(mocker, current, available):
     config.get_value.return_value = current
     config.get_list.return_value = available
     return config
+
+
+@pytest.mark.parametrize("profile", ["config.ini", "defaultConfig.ini"])
+def test_the_shipped_configuration_names_no_revision_of_the_dtr(profile):
+    """#753: the revision follows the PTF of the installation, so only the user can name it."""
+    shipped = configparser.ConfigParser(inline_comment_prefixes=("#",))
+    shipped.read(Path(dycov.__file__).parent / "configuration" / profile, encoding="utf-8")
+
+    assert shipped.get("DTR", "current") == ""
 
 
 def test_the_run_keeps_the_revision_of_the_configuration(mocker):
