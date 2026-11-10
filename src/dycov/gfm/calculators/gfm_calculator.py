@@ -41,8 +41,6 @@ class GFMCalculator:
         self._margin_high = gfm_params.get_margin_high()
         self._final_allowed_tunnel_pn = gfm_params.get_final_allowed_tunnel_pn()
         self._final_allowed_tunnel_variation = gfm_params.get_final_allowed_tunnel_variation()
-        self._pmax_mois_tunnel = gfm_params.get_pmax_mois_tunnel()
-        self._pmin_mois_tunnel = gfm_params.get_pmin_mois_tunnel()
 
         self._d_vals = None
         self._h_vals = None
@@ -152,41 +150,6 @@ class GFMCalculator:
         """
         return np.clip(signal, value_min, value_max)
 
-    def _calculate_epsilon_initial_check(
-        self, D: np.ndarray, H: np.ndarray, x_total_initial: float
-    ) -> np.ndarray:
-        """
-        Computes the damping ratio (epsilon) to classify the dynamic response.
-
-        Parameters
-        ----------
-        D : np.ndarray
-            Array of damping constant variations.
-        H : np.ndarray
-            Array of inertia constant variations.
-        x_total_initial : float
-            The total initial reactance.
-
-        Returns
-        -------
-        np.ndarray
-            An array of calculated epsilon values.
-        """
-        return (
-            D
-            / 2
-            * np.sqrt(
-                x_total_initial
-                / (
-                    2
-                    * H
-                    * self._base_angular_frequency
-                    * self._initial_voltage
-                    * self._grid_voltage
-                )
-            )
-        )
-
     def _get_time_tunnel(
         self, p_peak: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
@@ -215,94 +178,3 @@ class GFMCalculator:
         )
         tunnel = t_val * tunnel_exp
         return np.where(time_array < event_time, 0, tunnel)
-
-    def _calculate_unlimited_power_envelopes(
-        self, list_of_arrays: list[np.ndarray], tunnel: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Synthesizes theoretical bounding envelopes before hardware constraints.
-
-        Parameters
-        ----------
-        list_of_arrays : list[np.ndarray]
-            A list of all signal variations calculated.
-        tunnel : np.ndarray
-            The computed dynamic tunnel array.
-
-        Returns
-        -------
-        tuple[np.ndarray, np.ndarray]
-            A tuple containing the unlimited lower and upper
-        envelopes.
-        """
-        lower_env = np.minimum.reduce(list_of_arrays) - tunnel
-        upper_env = np.maximum.reduce(list_of_arrays) + tunnel
-        return np.minimum(lower_env, upper_env), np.maximum(lower_env, upper_env)
-
-    def _limit_power_envelopes(
-        self,
-        lower_envelope_unlimited: np.ndarray,
-        upper_envelope_unlimited: np.ndarray,
-        tunnel_value: float,
-        initial_power: float,
-        max_power: float,
-        min_power: float,
-        sign: int,
-        use_opposite_signs: bool,
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Executes hardware and software saturation boundary logic using optimized clipping.
-
-        Parameters
-        ----------
-        lower_envelope_unlimited : np.ndarray
-            The theoretical lower envelope.
-        upper_envelope_unlimited : np.ndarray
-            The theoretical upper envelope.
-        tunnel_value : float
-            The static tolerance margin limit.
-        initial_power : float
-            The pre-event steady-state power.
-        max_power : float
-            The maximum hardware power capability.
-        min_power : float
-            The minimum hardware power capability.
-        sign : int
-            The directional sign of the expected transient.
-        use_opposite_signs : bool
-            Flag indicating if divergent boundary bounding applies.
-
-        Returns
-        -------
-        tuple[np.ndarray, np.ndarray]
-            The finalized, hardware-limited lower and upper
-        envelopes.
-        """
-        limit_max = self._pmax_mois_tunnel
-        limit_min = self._pmin_mois_tunnel
-
-        # Apply boundary constraints conditionally based on transient directionality
-        if use_opposite_signs:
-            if np.sign(initial_power) * sign == -1:
-                lower_envelope_limited = np.clip(
-                    initial_power - sign * lower_envelope_unlimited, limit_min, limit_max
-                )
-                upper_envelope_limited = np.clip(
-                    initial_power - sign * upper_envelope_unlimited, min_power, max_power
-                )
-            else:
-                lower_envelope_limited = np.clip(
-                    initial_power - sign * lower_envelope_unlimited, min_power, max_power
-                )
-                upper_envelope_limited = np.clip(
-                    initial_power - sign * upper_envelope_unlimited, limit_min, limit_max
-                )
-        else:
-            lower_envelope_limited = np.clip(
-                initial_power - sign * lower_envelope_unlimited, limit_min, limit_max
-            )
-            upper_envelope_limited = np.clip(
-                initial_power - sign * upper_envelope_unlimited, min_power, max_power
-            )
-
-        return lower_envelope_limited, upper_envelope_limited
