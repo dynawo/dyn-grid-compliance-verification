@@ -18,6 +18,7 @@ import json
 from pathlib import Path
 
 import pytest
+from workbooks import make_workbook
 
 from dycov.excel import generator
 from dycov.excel import workbook as W
@@ -86,8 +87,9 @@ def test_the_information_sheet_gives_the_version_and_the_standard():
         (W.TEMPLATE_VERSIONS["IEC"], "IEC", None),
         ("0.0.1", "IEC", "follows the IEC template of DyCoV 0.0.1"),
         (None, "WECC", "names no version of the WECC template"),
-        (W.TEMPLATE_VERSIONS["IEC"], None, "names no standard"),
-        (W.TEMPLATE_VERSIONS["IEC"], "IEEE", "does not know, IEEE"),
+        (W.TEMPLATE_VERSIONS["IEC"], None, "giving its standard and format_version"),
+        (W.TEMPLATE_VERSIONS["IEC"], "IEEE", "names IEEE as its standard"),
+        (W.TEMPLATE_VERSIONS["WECC"], "wecc", None),
     ],
 )
 def test_a_workbook_on_another_template_is_told(caplog, version, standard, warned):
@@ -97,3 +99,17 @@ def test_a_workbook_on_another_template_is_told(caplog, version, standard, warne
         assert "template" not in caplog.text
     else:
         assert warned in caplog.text
+
+
+@pytest.mark.parametrize("version, warned", [(W.TEMPLATE_VERSIONS["IEC"], False), ("0.0.1", True)])
+def test_the_inputs_of_a_workbook_on_another_template_are_written_with_a_warning(
+    tmp_path, monkeypatch, caplog, version, warned
+):
+    book = make_workbook()
+    book.update(_information(version, "IEC"))
+    monkeypatch.setattr(generator.wb, "read_workbook", lambda _path: book)
+
+    generator.generate(Path("Producer.xlsx"), tmp_path)
+
+    assert ("follows the IEC template of DyCoV 0.0.1" in caplog.text) is warned
+    assert (tmp_path / "Dynawo" / "Zone3" / "Producer.par").is_file()
