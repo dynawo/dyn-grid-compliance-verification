@@ -180,17 +180,22 @@ def _check_template_version(excel: Path, workbook: dict) -> None:
     """Warns when the workbook was written on a template other than the one this release reads:
     rows the template has since renamed or split would be dropped or missing without a word."""
     version, standard = wb.parse_template_format(workbook)
+    standard = standard.upper() if standard else None
     expected = wb.TEMPLATE_VERSIONS.get(standard or "")
     logger = dycov_logging.get_logger("Excel")
+    sheet = f"'{names.sheet('info')} ->'"
+    templates = " or ".join(f"workbooks/Producer_{known}.xlsx" for known in wb.TEMPLATE_VERSIONS)
     if standard is None:
         logger.warning(
-            f"{excel.name} names no standard in its sheet of general information, so the "
-            f"version of its template cannot be checked."
+            f"{excel.name} has no {sheet} sheet giving its standard and format_version, so the "
+            f"version of its template cannot be checked: if it was made on an older template, "
+            f"copy its data into {templates}."
         )
     elif expected is None:
         logger.warning(
-            f"{excel.name} names a standard this release does not know, {standard}, so the "
-            f"version of its template cannot be checked."
+            f"{excel.name} names {standard} as its standard in its {sheet} sheet, which this "
+            f"release does not know ({', '.join(wb.TEMPLATE_VERSIONS)}), so the version of its "
+            f"template cannot be checked."
         )
     elif version != expected:
         follows = (
