@@ -14,6 +14,15 @@ the command line. Set `current` in the `[DTR]` section of `config.ini`, or of th
 `--user-config`, to the revision in force when the PTF of the installation was signed. A run that
 finds none, or one the tool does not implement, stops and lists the revisions it implements.
 
+### Workbooks name the version of their template
+
+`dycov excel2inputs`, and `validate` and `performance` with `--excel`, warn when a workbook names
+a template other than the one the release reads, in the `format_version` cell of its
+`Infos générales ->` sheet: rows that differ between the two would be dropped or missing. The
+templates of 1.2.1 said 1.2.1 and those of 1.3.0 said 1.0.0, so every workbook made on them is
+warned about. One made on the templates of 1.3.0 only needs that cell set to 1.3.0; an older one
+has its data copied into `workbooks/Producer_IEC.xlsx` or `workbooks/Producer_WECC.xlsx` (#701).
+
 ### Fixed
 
 - A power park module of 250 MW or more connected at HTB1 takes the reactance b the DTR gives it,
