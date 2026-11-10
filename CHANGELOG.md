@@ -14,6 +14,15 @@ the command line. Set `current` in the `[DTR]` section of `config.ini`, or of th
 `--user-config`, to the revision in force when the PTF of the installation was signed. A run that
 finds none, or one the tool does not implement, stops and lists the revisions it implements.
 
+### Fixed
+
+- A power park module of 250 MW or more connected at HTB1 takes the reactance b the DTR gives it,
+  0.54 up to 800 MW and 0.6 above, where it took 0.3: its line reactances in the fiches I2, I5,
+  I10 and I16 zone 3, and the reactance of the impedant fault, change with it. Such a unit reads
+  its steps of b from `HTB1_reactance_b_PPM` and the powers between them from `HTB1_p_max_PPM`,
+  so a configuration that changed them through `HTB1_reactance_b_low`, `_b_high` or
+  `HTB1_p_max` now changes those two keys instead (#744).
+
 ## 1.3.0 — 2026-10-29
 
 ### Built on Dynawo 2.0.0

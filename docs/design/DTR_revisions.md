@@ -51,8 +51,8 @@ carries do coincide, because their edition came out the same day as their articl
 So a user who holds a PTF reads the table of *Which revisions the tool needs*: it gives, for each
 revision, the dates of the PTF it answers for.
 
-`Summary_data_from_the_DTR.md` holds, for each revision, the version of each article the values
-come from.
+`Summary_data_from_the_DTR.md` holds the version of each article the values of the base revision
+come from; the deltas name in their headers the versions of the articles they change.
 
 ## How a run selects one
 
@@ -120,9 +120,10 @@ Four mechanisms are in the tool so that a delta carries data alone:
   gives to the type D. The level suffix is left for the one value the DTR does give by level,
   the clearing time of the fault of the fiches I4, I5 and I16 zone 3.
 * **A reactance of the grid may name the technology.** The capability specifications give the
-  reactances `a` and `b` of the lines, and the power that splits `b`, by technology, so
-  `HTB<n>_reactance_*` and `HTB<n>_p_max` read `<key>_SM`, `<key>_PPM` or `<key>_BESS` before
-  `<key>`, when the reactance is computed and not when the tool starts.
+  reactances `a` and `b` of the lines, and the powers that split `b` in steps, by technology,
+  so `HTB<n>_reactance_*` and `HTB<n>_p_max` read `<key>_SM`, `<key>_PPM` or `<key>_BESS`
+  before `<key>`, when the reactance is computed and not when the tool starts.
+  `HTB<n>_reactance_b` gives every step of `b` when there are more than two.
 * **A limit may be withdrawn.** `get_threshold` reads `none` as "no limit", and the check then
   reports its value and gives no verdict. The report drops the comparison from the row of that
   check. A revision that keeps an indicator and withdraws its criterion writes one word.
@@ -345,7 +346,7 @@ The delta of `20251013` writes:
 | The fiche I5 adds the impedant fault | the list of operating conditions, one description, one report |
 | The reaction time carries no verdict | `thr_reaction_time = none` in `revision_art_8_3_3.ini` |
 | The short-circuit impedance of I6 and I7 is Un²/Scc, where I6 gave Uc²/Scc and I7 none | `zcc_voltage = Unom` in `revision_art_8_3_3.ini` |
-| The reactance b at HTB1 is 0.3 for a PPM below 250 MW, 0.54 from 250 MW, and 0.3 for any storage unit, where it was 0.2 below 50 MW | the `_PPM` and `_BESS` keys of `HTB1_reactance_b_*` and `HTB1_p_max` in `revision_art_8_3_1.ini` and `revision_art_8_3_4.ini` |
+| The reactance b at HTB1 is 0.3 for a PPM below 250 MW, 0.54 below 800 MW and 0.6 from it, and 0.3 for any storage unit, where it was 0.2 below 50 MW | `HTB1_reactance_b_PPM` and `HTB1_p_max_PPM` in `revision_art_8_3_1.ini`, the `_BESS` keys of `HTB1_reactance_b_low` and `_high` in `revision_art_8_3_4.ini` |
 
 The delta of `20260723` is not compared yet. It carries the seven points above, because its
 revision keeps them, and it writes them itself: a delta is measured against the base.
