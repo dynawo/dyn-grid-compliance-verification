@@ -25,7 +25,8 @@ The INI file of a Grid Forming unit declares what it is, `generator_type = BESS`
 module the four tests agreed with RTE before it, whose envelopes do not change unless the unit
 declares an `Imax`. The command now writes a PDF report of the envelopes, the INI dump of every
 test and a `results.json` describing its envelopes, which the performance verification reads back
-with `-g`, and stops when the file gives nothing to generate them from.
+with `-g`, and stops when the file gives nothing to generate them from. Since it builds a report, it
+checks for LaTeX before it starts, as the verification does.
 
 The `[GFM Parameters]` section describes the PGU, apart from the installation that `[DEFAULT]`
 describes in a performance verification: its `Snom` and, when they differ, its

@@ -110,6 +110,15 @@ def test_a_run_that_builds_the_report_checks_its_tools(mocker, command, model):
     launchers.check_report_tools_availability.assert_called_once()
 
 
+def test_the_envelope_generation_checks_the_report_tools(mocker):
+    _run(mocker, "generate_gfm_envelopes")
+
+    from dycov import launchers
+
+    launchers.check_report_tools_availability.assert_called_once()
+    launchers.check_dynawo_launcher_availability.assert_not_called()
+
+
 @pytest.mark.parametrize("command", ["validate", "performance"])
 def test_a_curves_only_run_does_not_ask_for_the_report_tools(mocker, command):
     _run(mocker, command, model="Dynawo", curves_only=True)
