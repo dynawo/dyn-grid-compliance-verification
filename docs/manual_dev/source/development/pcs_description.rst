@@ -277,9 +277,9 @@ present the first of this list wins:
 
 ``line_XPu``
   Reactance of the line to the PDR: ``a`` or ``b``, the two reactances the
-  DTR tabulates by voltage level (``HTB<n>_reactance_a``,
-  ``HTB<n>_reactance_b_low`` and ``_high`` of ``[GridCode]``, the ``b``
-  variant depending on the maximum power), a multiple of them (``3*b``), or
+  DTR tabulates by voltage level and technology (``HTB<n>_reactance_a`` and
+  the steps of ``b`` of ``[GridCode]``, the step depending on the maximum
+  power), a multiple of them (``3*b``), or
   a number in pu of the 100 MVA base. Used by the fiches that specify the
   line (I2, I3, I4, I5, I8, I16 Zone 3). In Zone 3 the resistance is
   ``X / XPu_r_factor``.
