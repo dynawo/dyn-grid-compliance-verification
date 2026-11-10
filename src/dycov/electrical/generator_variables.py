@@ -20,8 +20,7 @@ class GeneratorVariables:
         """The value [GridCode] gives a key, that of the technology when the key carries its
         suffix: the capability specifications of the DTR give the reactances of the grid by
         technology, and a revision may change them for one technology alone."""
-        suffixes = (technology,) if technology else ()
-        option = config.find_option("GridCode", key, *suffixes) or key
+        option = self.__grid_code_option(key, technology) or key
         return config.get_float("GridCode", option, default)
 
     @staticmethod
@@ -53,20 +52,30 @@ class GeneratorVariables:
         powers between them, and without the first HTB<n>_reactance_b_low and _b_high give the
         two steps of one power."""
         powers_option = self.__grid_code_option(f"{level}_p_max", technology)
-        steps_option = self.__grid_code_option(f"{level}_reactance_b", technology)
         powers = self.__grid_code_floats(powers_option)
-        steps = self.__grid_code_floats(steps_option) or [
-            self.__grid_code(f"{level}_reactance_b_low", technology),
-            self.__grid_code(f"{level}_reactance_b_high", technology),
-        ]
+        steps_option = self.__grid_code_option(f"{level}_reactance_b", technology)
+        steps = self.__grid_code_floats(steps_option)
+        steps_options = [(steps_option, f"{level}_reactance_b")]
+        if not steps:
+            keys = (f"{level}_reactance_b_low", f"{level}_reactance_b_high")
+            steps_options = [(self.__grid_code_option(key, technology), key) for key in keys]
+            steps = [
+                config.get_float("GridCode", option or key, 0.0) for option, key in steps_options
+            ]
+
         if len(steps) != len(powers) + 1:
-            steps_given = self.__where(
-                steps_option, f"{level}_reactance_b_low' and '{level}_reactance_b_high"
-            )
+            steps_given = " and ".join(self.__where(option, key) for option, key in steps_options)
             raise ValueError(
                 f"b at {level} has {len(steps)} values, in {steps_given}, and {len(powers)} "
-                f"powers between them, in {self.__where(powers_option, f'{level}_p_max')}: "
-                "b needs one value more than the powers."
+                f"power{'' if len(powers) == 1 else 's'} between them, in "
+                f"{self.__where(powers_option, f'{level}_p_max')}: b needs one value more than "
+                "the powers."
+            )
+        if any(lower >= upper for lower, upper in zip(powers, powers[1:])):
+            raise ValueError(
+                f"The powers between the steps of b at {level}, in "
+                f"{self.__where(powers_option, f'{level}_p_max')}, have to rise from one to the "
+                "next."
             )
         return steps[bisect.bisect_right(powers, p_max)]
 
