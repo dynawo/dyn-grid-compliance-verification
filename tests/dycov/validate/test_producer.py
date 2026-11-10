@@ -75,6 +75,7 @@ def _curves_tree(root: Path) -> Path:
     curves_path = root / "ProducerCurves"
     for folder in ("Producer", "Zone1", "Zone3"):
         (curves_path / folder).mkdir(parents=True)
+    (curves_path / "Zone3" / "Producer.ini").write_text("[DEFAULT]\n")
     return curves_path
 
 
@@ -339,3 +340,27 @@ def test_get_filenames_ignores_a_zone_name_above_the_curves_directory(tmp_path, 
     producer = _producer_with_curves(_curves_tree(tmp_path / enclosing_folder))
 
     assert producer.get_filenames() == ["Producer"]
+
+
+def test_get_filenames_skips_a_folder_of_the_curves_that_no_ini_describes(tmp_path, caplog):
+    """#687: the Results a run leaves next to the INI is no producer, and stops nothing."""
+    (tmp_path / "Producer").mkdir()
+    (tmp_path / "Producer.ini").write_text("[DEFAULT]\n")
+    (tmp_path / "Results").mkdir()
+    producer = _producer_with_curves(tmp_path)
+
+    assert producer.get_filenames() == ["Producer"]
+    assert producer.get_filenames() == ["Producer"]
+    assert caplog.text.count(f"{tmp_path / 'Results'} is skipped") == 1
+
+
+def test_get_filenames_of_the_curves_reads_the_ini_of_the_zone(tmp_path, caplog):
+    curves_path = tmp_path / "ProducerCurves"
+    for folder in ("Producer", "Zone3"):
+        (curves_path / folder).mkdir(parents=True)
+    (curves_path / "Zone3" / "Producer.INI").write_text("[DEFAULT]\n")
+    producer = _producer_with_curves(curves_path)
+
+    assert producer.get_filenames(zone=1) == []
+    assert producer.get_filenames(zone=3) == ["Producer"]
+    assert "is skipped" not in caplog.text
