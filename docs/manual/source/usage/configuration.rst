@@ -12,7 +12,8 @@ tool runs.
 ``--user-config <file>`` reads another configuration file on top of
 ``config.ini`` for one execution: its options take precedence, and those it
 does not set keep the value ``config.ini`` gives them. A file that does not
-exist or cannot be read stops the run with an error.
+exist or cannot be read stops the run with an error, and a value definition of
+that file DyCoV cannot use is reported with its line in it.
 
 The generated ``config.ini`` contains the most common options commented out,
 each shown with its default value. To change a setting, uncomment the relevant
@@ -50,16 +51,19 @@ force.
 
 The ``[DTR]`` section holds it:
 
-* ``current`` — the revision a run validates against.
-* ``available`` — the revisions the tool implements. A run that asks for
-  another one stops with an error; the tool never falls back to another norm
-  in silence.
+* ``current`` — the revision a run validates against. The tool gives it no
+  default: set it in ``config.ini`` or in the file given with
+  ``--user-config``. A run that finds none stops before doing anything, and
+  lists the revisions the tool implements.
+* ``available`` — the revisions the tool implements. A run whose ``current``
+  is another one stops with the same list; the tool never falls back to
+  another norm in silence.
 
-``--dtr <YYYYMMDD>`` overrides ``current`` for one execution, so the same
-producer runs against two revisions one after the other. The curves of a test
-both revisions share need no regeneration; a test one of them adds or changes,
-such as those of the Fiche I16.2 of a storage installation of type C or D under
-the revision 20260723, needs reference curves of its own.
+To run the same producer against two revisions, give each run a file with
+``--user-config`` that sets its ``current``. The curves of a test both
+revisions share need no regeneration; a test one of them adds or changes, such
+as those of the Fiche I16.2 of a storage installation of type C or D under the
+revision 20260723, needs reference curves of its own.
 
 The revision to use is the one in force at the date of the *Proposition
 Technique et Financière* of the installation, because the specifications of

@@ -72,6 +72,9 @@ The workbook is the single source of truth — the generator carries **no
 knowledge of the model family** (which blocks exist, which zones they belong to,
 or how the `Model Map` key is formed). It reads:
 
+- **`Infos générales ->`** — the `format_version` and `standard` of the
+  template the workbook follows; a version other than the one the release
+  reads is told with a warning, and the workbook is read all the same.
 - **`Général`** — the block variant selection (`Type de bloc | Choix | Zone`).
   `Zone` declares, per block, which zone(s) the block's parameters go to
   (`;`-separated, e.g. `Zone1;Zone3`; the plant controller declares `Zone3`

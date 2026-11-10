@@ -13,6 +13,12 @@ files from the workbook that describes the installation, and ``dycov
 anonymize`` to produce anonymized curve files. All commands are described
 below.
 
+Every command validates against a revision of the DTR, which the configuration
+names and which has no default: set ``current`` in the ``[DTR]`` section of
+``~/.config/dycov/config.ini`` (see :ref:`configuration`). The curves of the
+examples follow ``20260723``. A run that finds none stops and lists the
+revisions the tool implements.
+
 Run ``dycov --help`` (or ``-h``) at any time to get a quick overview:
 
 .. include:: helps/dycov.rst

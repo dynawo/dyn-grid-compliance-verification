@@ -37,6 +37,8 @@ This script orchestrates automated runs of **dycov** to **validate models**, **v
 *   **Dynawo** installed and accessible; pass the launcher with `-l` (default: `dynawo.sh`).
 *   Examples tree (default: `./examples`).
 *   Write permissions on the results directory (default: `../Results`).
+*   A revision of the DTR, which has no default: `[DTR] current` in your `config.ini`, or pass
+    `--user-config tools/scripts/release.ini`, which names the revision the example curves follow.
 
 > **Tip:**
 >

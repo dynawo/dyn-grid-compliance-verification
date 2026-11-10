@@ -246,6 +246,11 @@ generated outputs.
 > (e.g. `source dycov/activate_dycov`). In WSL and Docker environments,
 > it may already be active.
 
+> **Before the first run:** set the revision of the DTR to validate against. DyCoV gives it no
+> default: write `current = 20260723` in the `[DTR]` section of `~/.config/dycov/config.ini`, the
+> revision the curves of the examples follow. For an installation of your own, use the one in
+> force when its PTF was signed. A run that finds none stops and lists the revisions available.
+
 For a more detailed walkthrough of these steps and expected outputs, see: [Quick start](docs/tutorials/quick_start.md)
 
 ### RMS model validation

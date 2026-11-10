@@ -280,10 +280,10 @@ test type, the grid keys and the event keys; everything not shown stays as in
 step 2.
 
 **Three-phase fault.** The fault sits on one of four parallel lines, which
-opens at the end of the fault. `bolted_fault = true` makes DyCoV search the
-fault impedance that leaves the residual voltage under the bolted-fault
-threshold of the installation's size. `fault_duration` is the clearing time
-recorded.
+stays in service once the fault is removed. `bolted_fault = true` makes DyCoV
+search the fault impedance that leaves the residual voltage under the
+bolted-fault threshold of the installation's size. `fault_duration` is the
+clearing time recorded.
 
 ```ini
 [PCS_RTE-F16z3.ThreePhaseFault.Pmax]

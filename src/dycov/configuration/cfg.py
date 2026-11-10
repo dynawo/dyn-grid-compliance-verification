@@ -74,6 +74,10 @@ class Config:
     _dtr_delta_files: list[str]
         Path of the delta file in use, used to locate an option in its source file when
         reporting errors.
+    _user_config_sources: list[tuple[str, str]]
+        Name and text of each file given with --user-config, to locate an option in it when
+        reporting errors. The text is kept because such a file may be a pipe, which cannot be
+        read twice.
     """
 
     _config_dir: Path
@@ -87,6 +91,7 @@ class Config:
     _pcs_dtr_delta_files: list[str] = field(default_factory=list)
     _pcs_default_files: list[str] = field(default_factory=list)
     _dtr_delta_files: list[str] = field(default_factory=list)
+    _user_config_sources: list[tuple[str, str]] = field(default_factory=list)
 
     def _layers(self) -> tuple[configparser.ConfigParser, ...]:
         """Configuration parsers, from the highest precedence to the lowest."""
@@ -161,7 +166,9 @@ class Config:
         try:
             # read() skips a file it cannot open, and the run would go on with other values
             with open(user_config_path, encoding="utf-8") as user_config_file:
-                self._user_config.read_file(user_config_file, source=str(user_config_path))
+                text = user_config_file.read()
+            self._user_config.read_string(text, source=str(user_config_path))
+            self._user_config_sources.append((str(user_config_path), text))
             dycov_logging.get_logger("Cfg").info("Successfully loaded user configuration.")
         except Exception as e:
             dycov_logging.get_logger("Cfg").error(
@@ -185,6 +192,7 @@ class Config:
             "user": _layer_text(self._user_config),
             "dtr_delta": _layer_text(self._dtr_delta_config),
             "dtr_delta_files": list(self._dtr_delta_files),
+            "user_config_sources": list(self._user_config_sources),
         }
 
     def restore_run_layers(self, layers: dict) -> None:
@@ -201,6 +209,7 @@ class Config:
         _replace_layer(self._user_config, layers["user"])
         _replace_layer(self._dtr_delta_config, layers["dtr_delta"])
         self._dtr_delta_files[:] = layers["dtr_delta_files"]
+        self._user_config_sources[:] = layers["user_config_sources"]
 
     def load_dtr_delta_config(self, revision: str) -> None:
         """Loads the sections the selected revision of the DTR writes outside any PCS.
@@ -333,12 +342,24 @@ class Config:
             Human-readable location of the option, naming the source file and line
             number when they can be determined.
         """
-        for path in self._option_files():
-            line = _find_option_line(path, section, key)
+        for name, text in self._option_sources():
+            line = _option_line(text, section, key)
             if line is not None:
-                return f"'{key}' in section [{section}] of '{path}', line {line}"
+                return f"'{key}' in section [{section}] of '{name}', line {line}"
 
         return f"'{key}' in section [{section}]"
+
+    def _option_sources(self) -> list[tuple[str, str]]:
+        """Name and text of the configuration files that may define an option, in precedence
+        order. The files given with --user-config are read on top of config.ini, the last one
+        given winning, so they come right before it."""
+        files = self._option_files()
+        pcs_user, rest = files[: len(self._pcs_user_files)], files[len(self._pcs_user_files) :]
+        return [
+            *((str(path), _read_text(path)) for path in pcs_user),
+            *reversed(self._user_config_sources),
+            *((str(path), _read_text(path)) for path in rest),
+        ]
 
     def _option_files(self) -> list[Path]:
         """Configuration files that may define an option, in precedence order."""
@@ -652,13 +673,16 @@ class Config:
         return list(options)
 
 
-def is_base_revision(revision: str) -> bool:
-    """Whether a revision of the DTR is the one the shipped catalogue holds.
+def is_base_revision(revision: Optional[str]) -> bool:
+    """Whether a revision of the DTR reads no delta: the one the shipped catalogue holds, or
+    none at all.
 
     The base needs no delta, so nothing looks for one: a directory under
-    ``templates/revisions`` named after it would be read by nobody.
+    ``templates/revisions`` named after it would be read by nobody. A run always has a
+    revision, as it stops without one; code used apart from a run may have none, and then
+    reads the catalogue alone.
     """
-    return revision == config.get_value("DTR", "base", "")
+    return not revision or revision == config.get_value("DTR", "base", "")
 
 
 def _layer_text(parser: configparser.ConfigParser) -> str:
@@ -738,16 +762,19 @@ def _default_config_path() -> Path:
     return Path(__file__).resolve().parent / "defaultConfig.ini"
 
 
-def _find_option_line(path: Path, section: str, key: str) -> Optional[int]:
-    """Line number at which an option is defined in an INI file, None if absent."""
+def _read_text(path: Path) -> str:
+    """Text of a configuration file, empty when it cannot be read."""
     try:
-        lines = path.read_text(encoding="utf-8").splitlines()
+        return path.read_text(encoding="utf-8")
     except OSError:
-        return None
+        return ""
 
+
+def _option_line(text: str, section: str, key: str) -> Optional[int]:
+    """Line number at which an option is defined in the text of an INI file, None if absent."""
     option_pattern = re.compile(rf"^\s*{re.escape(key)}\s*[:=]")
     current_section = None
-    for number, line in enumerate(lines, start=1):
+    for number, line in enumerate(text.splitlines(), start=1):
         header = re.match(r"^\s*\[(?P<name>[^]]+)\]", line)
         if header:
             current_section = header.group("name").strip()

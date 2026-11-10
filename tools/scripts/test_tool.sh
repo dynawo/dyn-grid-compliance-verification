@@ -57,9 +57,9 @@ usage() {
     echo "  -p, --performance: execute only performance verification"
     echo "  -g, --generate: execute only envelope generation (GFM)"
     echo "  -j, --jobs: max parallel processes per phase (default: 4)"
-    echo "  --user-config: configuration file for every run (default: the one of the user)"
-    echo "  --dtr: revision of the DTR to validate against, as YYYYMMDD (default: the one"
-    echo "               of the configuration)"
+    echo "  --user-config: configuration file for every run (default: the one of the user), which"
+    echo "               names the revision of the DTR if the user's does not; release.ini names"
+    echo "               the one the example curves follow"
     echo "  -d, --debug: run with the log level at DEBUG, which also keeps in every test"
     echo "               directory the curves the criteria compare (signal.csv, reference.csv)"
     echo "      --without-curves: run although the examples have no reference curves, which is"
@@ -85,13 +85,13 @@ run_dycov_validate() {
     local model_name=$5
 
     # Full command to execute (for logging purposes)
-    local command_to_execute="dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config $DYCOV_USER_CONFIG} ${DYCOV_DTR:+--dtr $DYCOV_DTR} validate -l \"$launcher\" -m \"$model_path\" \"$reference_path\" -o \"$output_path\" --testing"
+    local command_to_execute="dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config $DYCOV_USER_CONFIG} validate -l \"$launcher\" -m \"$model_path\" \"$reference_path\" -o \"$output_path\" --testing"
     log_msg "Executing: $command_to_execute"
 
     start=$(date +%s)
     # Execute the command
     local status=0
-    dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} ${DYCOV_DTR:+--dtr "$DYCOV_DTR"} validate -l "$launcher" -m "$model_path" "$reference_path" -o "$output_path" --testing || status=$?
+    dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} validate -l "$launcher" -m "$model_path" "$reference_path" -o "$output_path" --testing || status=$?
     end=$(date +%s)
     log_msg "Validate: $model_name Elapsed Time: $((end - start)) seconds"
     report_status "$status" "$command_to_execute"
@@ -157,13 +157,13 @@ run_dycov_performance() {
     local model_name=$5
 
     # Full command to execute (for logging purposes)
-    local command_to_execute="dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config $DYCOV_USER_CONFIG} ${DYCOV_DTR:+--dtr $DYCOV_DTR} performance -l \"$launcher\" -m \"$model_path\" -o \"$output_path\" --testing"
+    local command_to_execute="dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config $DYCOV_USER_CONFIG} performance -l \"$launcher\" -m \"$model_path\" -o \"$output_path\" --testing"
     log_msg "Executing: $command_to_execute"
 
     start=$(date +%s)
     # Execute the command
     local status=0
-    dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} ${DYCOV_DTR:+--dtr "$DYCOV_DTR"} performance -l "$launcher" -m "$model_path" -o "$output_path" --testing || status=$?
+    dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} performance -l "$launcher" -m "$model_path" -o "$output_path" --testing || status=$?
     end=$(date +%s)
     log_msg "Verify: $topology - $model_name Elapsed Time: $((end - start)) seconds"
     report_status "$status" "$command_to_execute"
@@ -207,13 +207,13 @@ run_dycov_generate() {
     local model_name=$3
 
     # Full command to execute (for logging purposes)
-    local command_to_execute="dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config $DYCOV_USER_CONFIG} ${DYCOV_DTR:+--dtr $DYCOV_DTR} generate_gfm_envelopes -i \"$model_path\" -e -o \"$output_path\""
+    local command_to_execute="dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config $DYCOV_USER_CONFIG} generate_gfm_envelopes -i \"$model_path\" -e -o \"$output_path\""
     log_msg "Executing: $command_to_execute"
 
     start=$(date +%s)
     # Execute the command
     local status=0
-    dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} ${DYCOV_DTR:+--dtr "$DYCOV_DTR"} generate_gfm_envelopes -i "$model_path" -e -o "$output_path" || status=$?
+    dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} generate_gfm_envelopes -i "$model_path" -e -o "$output_path" || status=$?
     end=$(date +%s)
     log_msg "Generate: $model_name Elapsed Time: $((end - start)) seconds"
     report_status "$status" "$command_to_execute"
@@ -378,8 +378,7 @@ results_path="../Results"
 max_parallel=4  # default
 DYCOV_USER_CONFIG=""  # empty: every run reads the configuration of the user
 DYCOV_DEBUG=""  # empty: the tool logs at the level of its configuration
-DYCOV_DTR=""  # empty: every run validates against the revision of the configuration
-export DYCOV_USER_CONFIG DYCOV_DEBUG DYCOV_DTR
+export DYCOV_USER_CONFIG DYCOV_DEBUG
 
 while (($#)); do
     case "$1" in
@@ -439,10 +438,6 @@ while (($#)); do
             ;;
         --user-config)
             DYCOV_USER_CONFIG=$2
-            shift 2
-            ;;
-        --dtr)
-            DYCOV_DTR=$2
             shift 2
             ;;
         -d | --debug)

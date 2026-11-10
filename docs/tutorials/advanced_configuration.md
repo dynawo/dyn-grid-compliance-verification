@@ -32,6 +32,10 @@ together with their default values. Users are encouraged to:
 - uncomment only the parameters they want to change,
 - duplicate lines when modifying values to keep track of defaults.
 
+One option has no default and must be set before the first run: `current`, in
+the `[DTR]` section, the revision of the DTR a run validates against. A run that
+finds none stops and lists the revisions the tool implements.
+
 Two profiles are kept next to it, regenerated on every run:
 `config.ini_BASIC` (the same curated subset the initial `config.ini` is
 created from) and `config.ini_ADVANCED` (the full set of options, including

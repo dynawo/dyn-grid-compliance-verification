@@ -48,6 +48,15 @@ def _check_parameters_declared(producer_config, section, parameters):
             raise ValueError(f"The parameter file must specify the {parameter}")
 
 
+def _has_producer_ini(name: str, directories: list[Path]) -> bool:
+    """Whether one of the directories holds the INI of the producer of that name."""
+    pattern = re.compile(file_checks.model_file_regex("ini", name))
+    return any(
+        directory.is_dir() and any(pattern.match(str(file)) for file in directory.iterdir())
+        for directory in directories
+    )
+
+
 def _check_parameters_definition(producer_config, section, needs_consumption):
     _check_renamed_parameters(producer_config, section)
 
@@ -493,19 +502,36 @@ class ModelProducer(Producer):
             )
 
         elif self._producer_curves_path is not None:
-            path = self._producer_curves_path
-
+            path = self._producer_curves_path.resolve()
             zone_directories = {"Zone1", "Zone3"}
+            candidates = [
+                p for p in path.iterdir() if p.name not in zone_directories and p.is_dir()
+            ]
+            ini_directories = {
+                0: [path, path / "Zone1", path / "Zone3"],
+                1: [path / "Zone1"],
+                3: [path / "Zone3"],
+            }
             return sorted(
-                [
-                    p.stem
-                    for p in path.resolve().iterdir()
-                    if p.name not in zone_directories and p.is_dir()
-                ]
+                p.stem
+                for p in candidates
+                if self.__is_producer(p, ini_directories[0])
+                and _has_producer_ini(p.stem, ini_directories[zone])
             )
 
         dycov_logging.get_logger("Producer").error("No producer model has been defined")
         return list()
+
+    def __is_producer(self, directory: Path, ini_directories: list[Path]) -> bool:
+        """Whether a directory of the curves is the curves of a producer, which has an INI of
+        its name; one that is not, such as the results of an earlier run, is skipped."""
+        if _has_producer_ini(directory.stem, ini_directories):
+            return True
+        dycov_logging.warn_once(
+            "Producer",
+            f"{directory} is skipped: it is no producer, as no {directory.stem}.ini describes it",
+        )
+        return False
 
     def set_consumption(self, consumption: bool) -> None:
         """The values of p_max_pu and p_min_pu are defined depending on the
