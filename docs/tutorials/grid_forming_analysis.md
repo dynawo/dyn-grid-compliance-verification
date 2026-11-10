@@ -50,13 +50,14 @@ that may be:
 DyCoV currently supports GFM envelope generation for
 **four predefined disturbance families**.
 
-Each case corresponds to a well-defined analytical formulation
+Each case corresponds to a well-defined formulation
 and a specific class of grid disturbance:
 
 - **Amplitude Step** — reactive current and reactive power envelopes
   in response to a grid voltage amplitude step.
-- **Phase Jump** — active power response to a sudden change
-  in the grid voltage phase angle.
+- **Phase Jump** — active current response to a sudden change
+  in the grid voltage phase angle, simulated from the transfer function
+  of the converter whatever its damping.
 - **RoCoF** (Rate of Change of Frequency) — active power response to a
   frequency ramp; finite-duration events are modeled by superimposing
   step responses.
@@ -72,7 +73,7 @@ and exposed through the GFM workflow.
 ## 4. Inputs required
 
 GFM analysis requires **only analytical input parameters**.
-No network model and no time-domain simulation is involved.
+No network model and no Dynawo simulation is involved.
 
 Inputs describe:
 - nominal electrical quantities,
@@ -294,8 +295,8 @@ For **hybrid GFM cases only**, DyCoV also generates:
 
 - **INI dump file (`*_ini_dump.txt`)** containing the exact set of input
   parameters used for that calculation, including internally derived values
-  such as the damping ratio $\varepsilon$. Intended for full traceability
-  when hybrid configurations are used.
+  such as the damping ratio $\varepsilon$ of the SCR jump and the RoCoF.
+  Intended for full traceability when hybrid configurations are used.
 
 ---
 

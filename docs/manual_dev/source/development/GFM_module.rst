@@ -7,18 +7,19 @@ Overview
 
 The Grid-Forming (GFM) Envelope Generation Module computes and visualizes the
 theoretical dynamic response envelopes of a GFM asset under various simulated
-grid events. It works analytically — no time-domain simulation is involved.
+grid events. No network model nor Dynawo simulation is involved.
 
 Given a set of GFM unit parameters (damping, inertia, effective reactance),
-the module solves the second-order differential equations that govern the
-unit's dynamic behavior and generates a nominal response signal together with
-upper and lower tolerance envelopes. These envelopes account for the
+the module computes the dynamic response of the unit, from closed-form
+solutions or, for the phase jump, by simulating its transfer function, and
+generates a nominal response signal together with upper and lower tolerance
+envelopes. These envelopes account for the
 parametric variations in **Damping (D)** and **Inertia (H)** that characterize
 the uncertainty band of the GFM response.
 
 The module handles four disturbance families:
 
-* **Phase Jump** — active power response to a sudden grid voltage angle change.
+* **Phase Jump** — active current response to a sudden grid voltage angle change.
 * **Amplitude Step** — reactive current response to a grid voltage amplitude step.
 * **RoCoF** (Rate of Change of Frequency) — active power response to a
   frequency ramp.
@@ -75,7 +76,7 @@ This is where the mathematical modeling lives. The structure follows the
 
 * Concrete calculators, one per disturbance family:
 
-  * ``phase_jump.py`` (``PhaseJump``) — active power response to a phase jump.
+  * ``phase_jump.py`` (``PhaseJump``) — active current response to a phase jump.
 
     .. image:: ../../GFM_Flowchart/phase_jump.*
        :width: 70%
@@ -161,26 +162,15 @@ Every concrete calculator must implement two methods:
 Key helper methods
 ^^^^^^^^^^^^^^^^^^^
 
-``_calculate_epsilon_initial_check()``
-    Computes the **damping ratio** :math:`\varepsilon` to determine whether
-    the system response is overdamped (:math:`\varepsilon \ge 1`) or
-    underdamped (:math:`\varepsilon < 1`). This drives the branching between
-    the two analytical solution paths.
-
 ``_get_time_tunnel()``
     Calculates a time-dependent tolerance band that grows exponentially after
     the event, representing the uncertainty corridor around the nominal
     response.
 
-``_limit_power_envelopes()``
-    Applies final operational limits (``p_min_injection``, ``p_max_injection``)
-    to the computed envelopes, ensuring the result stays within the unit's
-    physical constraints.
-
 Concrete calculator pattern
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Each concrete calculator follows the same internal structure:
+The SCR jump and RoCoF calculators follow the same internal structure:
 
 1. **Initialization** — stores event-specific parameters.
 2. **Main calculation** (``calculate_envelopes``) — orchestrates the
@@ -189,6 +179,31 @@ Each concrete calculator follows the same internal structure:
    or ``_get_underdamped_delta_p`` depending on :math:`\varepsilon`.
 4. **Analytical solution** — the ``_get_*damped_delta_p_base`` methods
    implement the closed-form solutions to the second-order ODEs.
+
+The ``PhaseJump`` calculator does not tell the two regimes apart. It builds
+the transfer function of the converter, a virtual synchronous machine whose
+PLL is a washout filter (time constant ``Tpll``) and whose angle damping is a
+linear function of :math:`D`, and simulates its response to the phase step
+with ``scipy.signal.lsim``, for the nominal :math:`H, D` and for two
+variations that move them in opposite directions (:math:`H \cdot` ``RatioMin``
+with :math:`D \cdot` ``RatioMax``, and the reverse). The envelopes are the
+maximum and minimum of those responses, of the nominal one scaled by
+``1 + MarginHigh`` and by ``1 - MarginLow`` (the latter also delayed 10 ms),
+and of an exponential fitted to the decay of the peaks of the scaled-up one,
+widened by the tunnel. They stop at the limits of the unit, and the inner side
+at :math:`\pm(1 - tunnel)`. On a time vector like the notebook's, which starts
+1 s before the jump in steps of 5 ms, this reproduces the envelopes of RTE's
+reference notebook, except where the notebook takes the rounding noise of a
+response that has died out for one more peak: DyCoV ignores extrema below
+``PHASE_JUMP_NOISE_FLOOR`` of the largest one.
+
+The notebook measures the decay of the peaks by the time the line between two
+consecutive peaks crosses 5 % of the largest one, and fails when no peak falls
+that low. DyCoV then takes the time the deviation itself falls below 5 % for
+good, provided it stays there for three time constants of the slowest mode of
+the converter, and otherwise the time constant of that mode: the first case is
+a response that stops oscillating after one overshoot, the second one whose
+peaks outlast the time vector.
 
 As an example, the ``RoCoF`` calculator models a finite-duration frequency
 ramp using the **superposition principle**: it computes the response to a

@@ -23,6 +23,23 @@ templates of 1.2.1 said 1.2.1 and those of 1.3.0 said 1.0.0, so every workbook m
 warned about. One made on the templates of 1.3.0 only needs that cell set to 1.3.0; an older one
 has its data copied into `workbooks/Producer_IEC.xlsx` or `workbooks/Producer_WECC.xlsx` (#701).
 
+### The phase jump envelopes follow the transfer function of the converter
+
+The envelopes of the phase jumps of `PCS_RTE-IGFM1` are built as RTE now builds its own: from the
+simulated response of the transfer function of the converter, a virtual synchronous machine whose
+PLL is a washout filter, whatever its damping. They change for every unit, since that response
+oscillates for values of D the former formulas treated as overdamped (#760).
+
+A description of your own of a phase jump PCS, such as a copy of `PCS_RTE-IGFM1` in the
+configuration directory, needs the same update as the shipped one:
+
+- `RatioMin` and `RatioMax` now vary H and D in opposite directions, H × `RatioMin` with
+  D × `RatioMax` and the reverse; the shipped PCS sets them to 0.7 and 1.3.
+- `Tpll`, the time constant of the PLL filter, is read by the phase jump too; 0.01 s when absent
+  or 0.
+- `PmaxMOISTunnel` and `PminMOISTunnel` no longer apply to the phase jump, whose envelopes stop at
+  the limits of the unit and, on the inner side, at ±(1 − tunnel).
+
 ### Fixed
 
 - A power park module of 250 MW or more connected at HTB1 takes the reactance b the DTR gives it,

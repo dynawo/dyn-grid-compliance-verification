@@ -5,10 +5,10 @@ GFM Envelope Generation
 Overview
 --------
 
-Grid-Forming (GFM) analysis is a purely analytical workflow — no dynamic
-simulation is involved. Given the key parameters of a GFM unit, DyCoV solves
-the second-order differential equations that govern its dynamic behavior and
-computes a set of *admissible response envelopes*: upper and lower bounds on
+Grid-Forming (GFM) analysis needs no Dynawo model nor simulation. Given the
+key parameters of a GFM unit, DyCoV computes its dynamic response, from
+closed-form solutions or, for the phase jump, by simulating its transfer
+function, and derives a set of *admissible response envelopes*: upper and lower bounds on
 the dynamic response for specific grid disturbances.
 
 The result is not a pass/fail verdict but a quantitative envelope that can be:
@@ -17,8 +17,7 @@ The result is not a pass/fail verdict but a quantitative envelope that can be:
 * compared against external requirements or certification criteria,
 * reused across multiple engineering studies.
 
-Because the computation is analytical, it runs much faster than a time-domain
-simulation and requires no Dynawo model.
+It runs in seconds and requires no Dynawo model.
 
 
 Supported disturbance cases
@@ -29,9 +28,12 @@ DyCoV currently supports four predefined disturbance families:
 * **Amplitude Step** — computes reactive current (:math:`I_q`) and reactive
   power envelopes in response to a step change in the grid voltage amplitude.
 
-* **Phase Jump** — computes active power (:math:`P`) envelopes in response to
-  a sudden change in the grid voltage phase angle. This is typically the most
-  critical disturbance for GFM units.
+* **Phase Jump** — computes active current (:math:`I_p`) envelopes in response
+  to a sudden change in the grid voltage phase angle. This is typically the
+  most critical disturbance for GFM units. The responses are those of the
+  transfer function of the converter (a virtual synchronous machine whose PLL
+  is a washout filter), as in RTE's reference envelopes, whatever the damping:
+  overdamped and underdamped units are treated alike.
 
 * **RoCoF** (Rate of Change of Frequency) — computes active power envelopes
   in response to a frequency ramp. Finite-duration events are modeled by
@@ -144,7 +146,7 @@ For each combination of PCS, scenario, and operating condition:
 
 * **INI dump file** (Hybrid mode only) — the exact set of input parameters
   used for the calculation, including internally derived values such as the
-  damping ratio :math:`\varepsilon`. Intended for full traceability when hybrid
+  damping ratio :math:`\varepsilon` of the SCR jump and the RoCoF. Intended for full traceability when hybrid
   configurations are used.
 
 
