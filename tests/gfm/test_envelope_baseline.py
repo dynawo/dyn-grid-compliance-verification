@@ -66,6 +66,10 @@ def _baseline(tmp_path: Path) -> Path:
 def test_the_envelopes_are_those_of_the_release(tmp_path):
     home = _home_with_user_config(tmp_path)
     baseline = _baseline(tmp_path)
+    expected_files = _csv_files(baseline)
+    # The phase jumps follow the transfer function of the converter since the release, so their
+    # envelopes are no longer those it generated
+    shutil.rmtree(baseline / "PCS_RTE-IGFM1")
     output = tmp_path / "Results"
 
     run = subprocess.run(
@@ -95,4 +99,4 @@ def test_the_envelopes_are_those_of_the_release(tmp_path):
     )
 
     assert run.returncode == 0, run.stdout + run.stderr
-    assert _csv_files(output) == _csv_files(baseline)
+    assert _csv_files(output) == expected_files
