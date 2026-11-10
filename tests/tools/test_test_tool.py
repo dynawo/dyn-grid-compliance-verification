@@ -36,7 +36,7 @@ value=""
 for argument in "$@"; do
     if [ -n "$value" ]; then value=""; continue; fi
     case "$argument" in
-        --user-config | --dtr) value=yes ;;
+        --user-config) value=yes ;;
         -*) ;;
         validate | performance | generate_gfm_envelopes) break ;;
         *) echo "dycov: error: argument command: invalid choice: '$argument'" >&2; exit 2 ;;
@@ -104,12 +104,12 @@ def test_the_envelope_phase_gets_the_options_of_every_run(runner, tmp_path):
     config = tmp_path / "user.ini"
     config.touch()
 
-    run = runner("-g", "-d", "--user-config", str(config), "--dtr", "20240215")
+    run = runner("-g", "-d", "--user-config", str(config))
 
     assert run.returncode == 0, run.stderr
     generations = [call for call in runner.calls() if "generate_gfm_envelopes" in call]
     assert len(generations) == 3
-    prefix = f"-d --user-config {config} --dtr 20240215 generate_gfm_envelopes"
+    prefix = f"-d --user-config {config} generate_gfm_envelopes"
     assert all(call.startswith(prefix) for call in generations)
 
 

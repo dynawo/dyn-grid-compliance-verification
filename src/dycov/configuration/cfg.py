@@ -660,13 +660,16 @@ class Config:
         return list(options)
 
 
-def is_base_revision(revision: str) -> bool:
-    """Whether a revision of the DTR is the one the shipped catalogue holds.
+def is_base_revision(revision: Optional[str]) -> bool:
+    """Whether a revision of the DTR reads no delta: the one the shipped catalogue holds, or
+    none at all.
 
     The base needs no delta, so nothing looks for one: a directory under
-    ``templates/revisions`` named after it would be read by nobody.
+    ``templates/revisions`` named after it would be read by nobody. A run always has a
+    revision, as it stops without one; code used apart from a run may have none, and then
+    reads the catalogue alone.
     """
-    return revision == config.get_value("DTR", "base", "")
+    return not revision or revision == config.get_value("DTR", "base", "")
 
 
 def _layer_text(parser: configparser.ConfigParser) -> str:

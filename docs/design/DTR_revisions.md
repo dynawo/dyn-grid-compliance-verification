@@ -59,10 +59,12 @@ come from; the deltas name in their headers the versions of the articles they ch
 The issue #551 holds this part.
 
 * The `[DTR]` section declares `current`, the revision a run uses, and `available`, the
-  revisions the tool implements. The configuration the tool ships gives `current` the newest
-  revision, so a run that says nothing validates against the norm in force.
-* `--dtr <YYYYMMDD>` overrides `current` for one execution, so the same producer runs against two
-  revisions one after the other. The curves do not change; only the criteria do.
+  revisions the tool implements. The configuration the tool ships gives `current` no value: the
+  user sets it, in `config.ini` or in the file of `--user-config`, to the revision of the PTF of
+  the installation, and a run that finds none stops and lists the available ones (#753). The
+  command line has no say, so the files of a run keep the revision it followed.
+* Running the same producer against two revisions takes one file of `--user-config` per
+  revision. The curves do not change; only the criteria do.
 * A run that asks for a revision that is not in `available` stops with an error. The tool never
   falls back to another norm in silence.
 
@@ -133,8 +135,8 @@ Four mechanisms are in the tool so that a delta carries data alone:
 
 The run fixes its revision before anything else reads a value, and every layer then follows.
 
-1. The run reads `[DTR]` and `--dtr`, and stops when the revision is not among the available
-   ones (#551).
+1. The run reads `[DTR]`, and stops when it names no revision or one that is not among the
+   available ones (#551, #753).
 2. It reads the `revision_art_*.ini` of that revision into a layer of its own, below the
    shipped PCS description and above the default configuration. A PCS says more than a
    revision, and a revision says more than a default.

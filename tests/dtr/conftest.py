@@ -21,7 +21,7 @@ BASE_REVISION = "20240215"
 
 
 def _select_revision(name: str) -> None:
-    """Puts the tool on a revision of the DTR, as the option --dtr does."""
+    """Puts the tool on a revision of the DTR, as the configuration of a run does."""
     config.set_value("DTR", "current", name)
     config.load_dtr_delta_config(name)
 
@@ -49,10 +49,10 @@ def _delta_of(verification: str, technology: str, pcs: str) -> Optional[Path]:
 def base_revision():
     """Reads the base, until the test selects another revision.
 
-    The configuration names the newest revision, so a test that said nothing would answer
-    for a different DTR at every release.
+    A test that said nothing would answer for whichever revision the configuration of the
+    machine names, or for none.
     """
-    selected = config.get_value("DTR", "current")
+    selected = config.get_value("DTR", "current", "")
 
     _select_revision(BASE_REVISION)
     yield
