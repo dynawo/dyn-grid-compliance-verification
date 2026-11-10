@@ -141,6 +141,18 @@ class DummyParameters(ValidationParameters):
         return self._only_dtr
 
 
+@pytest.fixture(autouse=True)
+def _directories_under_tmp_path(monkeypatch, tmp_path):
+    """The stand-ins and the code they drive create their directories under the test's
+    tmp_path, which pytest removes, instead of the system temporary directory."""
+    mkdtemp = tempfile.mkdtemp
+
+    def under_tmp_path(suffix=None, prefix=None, dir=None):
+        return mkdtemp(suffix, prefix, tmp_path if dir is None else dir)
+
+    monkeypatch.setattr(tempfile, "mkdtemp", under_tmp_path)
+
+
 @pytest.fixture
 def temp_dirs():
     dirs = []
