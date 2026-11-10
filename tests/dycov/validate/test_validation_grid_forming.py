@@ -31,6 +31,12 @@ _GFM_PARAMETERS = (
 )
 
 
+@pytest.fixture(autouse=True)
+def _fiche_i18_revision(dtr_revision):
+    """The Fiche I18 is one the revision 20260723 of the DTR adds."""
+    dtr_revision("20260723")
+
+
 class _Producer:
     """A storage given by its curves: an INI file next to the directory of the curves."""
 

@@ -36,6 +36,11 @@ _REL_NS = "{http://schemas.openxmlformats.org/officeDocument/2006/relationships}
 
 # Sheet names are matched accent-insensitively, hence the unaccented spelling.
 _CONFIG_SHEET = names.normalize(names.sheet("config"))
+_INFO_SHEET = names.normalize(names.sheet("info"))
+
+# The template each standard's workbook follows, named after the DyCoV release that changed it
+# last: it changes whenever the template does, so a workbook written on an older one is told.
+TEMPLATE_VERSIONS = {"IEC": "1.3.0", "WECC": "1.3.0"}
 
 # Choices in the configuration sheet that mean "no block selected".
 _NO_BLOCK = names.markers("no_block")
@@ -478,6 +483,31 @@ def parse_config(workbook: dict[str, Grid]) -> Config:
             _parse_globals(grid, config)
             return config
     raise ValueError("Configuration sheet 'Général' not found in the workbook.")
+
+
+def parse_template_format(workbook: dict[str, Grid]) -> tuple[str | None, str | None]:
+    """The ``format_version`` and ``standard`` the information sheet gives, each None when the
+    workbook does not give it."""
+    for sheet_name, grid in workbook.items():
+        if not _strip_accents(sheet_name).startswith(_INFO_SHEET):
+            continue
+        for row_idx, row in enumerate(grid[:-1]):
+            version_col = _header_column(row, names.anchor("format_version"))
+            if version_col is None:
+                continue
+            standard_col = _header_column(row, names.anchor("standard"))
+            values = grid[row_idx + 1]
+            return (
+                _stripped(values, version_col),
+                _stripped(values, standard_col),
+            )
+    return None, None
+
+
+def _stripped(row: list, col: int | None) -> str | None:
+    if col is None or col >= len(row) or row[col] is None:
+        return None
+    return str(row[col]).strip() or None
 
 
 def _header_column(row: list, name: str) -> int | None:

@@ -674,7 +674,11 @@ class Validation:
         self._summary = sorted_summary_list
         self.__create_report(sorted_summary_list, report_results)
 
-        if not self._parameters.is_curves_only() and self._parameters.get_output_dir().exists():
+        if (
+            sorted_summary_list
+            and not self._parameters.is_curves_only()
+            and self._parameters.get_output_dir().exists()
+        ):
             report_file = (
                 self._parameters.get_output_dir() / "Reports" / REPORT_NAME.replace("tex", "pdf")
             )

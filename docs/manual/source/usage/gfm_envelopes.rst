@@ -45,7 +45,7 @@ Which tests a unit is given follows from what it is, declared with
   the fiche. The fiche is one the revision 20260723 of the DTR adds, so its PCS
   lives in the delta of that revision
   (``templates/revisions/20260723/PCS/gfm/BESS``), and a run on an earlier
-  revision (``--dtr``) gives a storage unit no Grid Forming test:
+  revision (``current`` of ``[DTR]``) gives a storage unit no Grid Forming test:
 
   .. list-table::
      :header-rows: 1

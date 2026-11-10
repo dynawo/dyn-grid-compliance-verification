@@ -601,3 +601,54 @@ def test_load_user_config_stops_on_a_file_it_may_not_read(tmp_path, empty_parser
 
     assert "Successfully loaded user configuration" not in caplog.text
     assert cfg.get_value("DTR", "current") is None
+
+
+def test_describe_option_names_the_file_given_with_user_config(tmp_path, empty_parsers):
+    """#739: an option the --user-config file sets is not looked for in the shipped files."""
+    user_file = tmp_path / "bad.ini"
+    user_file.write_text("[Global]\nfoo = 1\n\n[PCS.Model]\npdr_P = Pmaxx\n")
+    pcs_file = tmp_path / "PCSDescription.ini"
+    pcs_file.write_text("[PCS.Model]\npdr_P = Pmax\n")
+    cfg = Config(tmp_path, *empty_parsers)
+    cfg.load_user_config(user_file)
+    cfg.load_pcs_config(pcs_file)
+
+    description = cfg.describe_option("PCS.Model", "pdr_P")
+
+    assert description == f"'pdr_P' in section [PCS.Model] of '{user_file}', line 5"
+
+
+def test_describe_option_names_a_user_config_that_cannot_be_read_again(tmp_path, empty_parsers):
+    """A pipe given with --user-config is read once, so its text is what names the line."""
+    user_file = tmp_path / "piped.ini"
+    user_file.write_text("[PCS.Model]\npdr_P = Pmaxx\n")
+    cfg = Config(tmp_path, *empty_parsers)
+    cfg.load_user_config(user_file)
+    user_file.unlink()
+
+    assert cfg.describe_option("PCS.Model", "pdr_P") == (
+        f"'pdr_P' in section [PCS.Model] of '{user_file}', line 2"
+    )
+
+
+def test_describe_option_prefers_the_user_config_file_over_config_ini(tmp_path, empty_parsers):
+    (tmp_path / "config.ini").write_text("[GridCode]\nzcc_voltage = Udim\n")
+    empty_parsers[1].read(tmp_path / "config.ini")
+    user_file = tmp_path / "run.ini"
+    user_file.write_text("[GridCode]\nzcc_voltage = Unomm\n")
+    cfg = Config(tmp_path, *empty_parsers)
+    cfg.load_user_config(user_file)
+
+    assert str(user_file) in cfg.describe_option("GridCode", "zcc_voltage")
+
+
+def test_the_layers_of_a_run_name_its_user_config_file_to_a_worker(tmp_path, empty_parsers):
+    user_file = tmp_path / "run.ini"
+    user_file.write_text("[PCS.Model]\npdr_P = Pmaxx\n")
+    run = Config(tmp_path, *empty_parsers)
+    run.load_user_config(user_file)
+    worker = Config(tmp_path, *(_new_parser() for _ in range(6)))
+
+    worker.restore_run_layers(run.run_layers())
+
+    assert str(user_file) in worker.describe_option("PCS.Model", "pdr_P")

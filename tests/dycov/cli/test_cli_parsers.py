@@ -92,9 +92,10 @@ def test_print_completion_writes_the_script_and_exits(parser, capsys):
     assert re.search(r"^complete (-o \S+ )*-F _shtab_dycov dycov$", script, re.MULTILINE)
 
 
-def test_the_dtr_option_is_global_and_empty_by_default(parser):
-    assert parser.parse_args(["performance"]).dtr is None
-    assert parser.parse_args(["--dtr", "20240215", "performance"]).dtr == "20240215"
+def test_the_revision_of_the_dtr_is_no_option_of_the_command_line(parser):
+    """#753: the configuration declares it, where the files of a run keep it."""
+    with pytest.raises(SystemExit):
+        parser.parse_args(["--dtr", "20240215", "performance"])
 
 
 def test_envelope_generation_no_longer_takes_producer_curves(parser):

@@ -19,6 +19,12 @@ from dycov.model.compliance import Compliance
 from dycov.report import report
 
 
+@pytest.fixture(autouse=True)
+def _fiche_i18_revision(dtr_revision):
+    """The Fiche I18 is one the revision 20260723 of the DTR adds."""
+    dtr_revision("20260723")
+
+
 def _test(compliance=None, envelope=None, modes=(), benchmark="S_VolAngStep1", oc="OC2"):
     return GFMTestReport(
         producer_name="Producer",
