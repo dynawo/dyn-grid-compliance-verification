@@ -263,6 +263,24 @@ def test_steps_of_b_that_do_not_match_their_powers_are_rejected(
         generator_variables.calculate_line_xpu("b", -0.4, 100.0, 90, 100.0, "PPM")
 
 
+def test_two_steps_of_b_that_do_not_match_their_powers_name_the_keys_read(
+    generator_variables, reactances, monkeypatch
+):
+    monkeypatch.setitem(reactances, ("GridCode", "HTB1_p_max_BESS"), "50, 250")
+
+    with pytest.raises(
+        ValueError, match="HTB1_reactance_b_low_BESS.*HTB1_reactance_b_high_BESS.*HTB1_p_max_BESS"
+    ):
+        generator_variables.calculate_line_xpu("b", -0.4, 100.0, 90, 100.0, "BESS")
+
+
+def test_powers_of_b_that_do_not_rise_are_rejected(generator_variables, reactances, monkeypatch):
+    monkeypatch.setitem(reactances, ("GridCode", "HTB1_p_max_PPM"), "800, 250, 50")
+
+    with pytest.raises(ValueError, match="HTB1_p_max_PPM.*rise"):
+        generator_variables.calculate_line_xpu("b", -0.4, 100.0, 90, 100.0, "PPM")
+
+
 def test_a_power_of_b_that_is_no_number_names_its_key(
     generator_variables, reactances, monkeypatch
 ):
