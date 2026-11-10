@@ -170,8 +170,8 @@ being the one used:
 
 ``Zcc``
   The short-circuit impedance the DTR fixes for the voltage level of the
-  installation; its presence is enough (``Zcc = true``). It is what the
-  voltage dip and swell use.
+  installation; its presence is enough (``Zcc = true``). The fiches give it
+  to the voltage dip, and to the swell from the revision ``20251013``.
 
 ``pdr_P``, ``pdr_Q``, ``pdr_U``
   The operating point before the event, in generator convention (positive =
