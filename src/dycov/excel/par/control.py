@@ -11,6 +11,7 @@
 
 from __future__ import annotations
 
+from dycov.excel import names
 from dycov.excel import parse as P
 from dycov.excel import workbook as wb
 
@@ -34,11 +35,12 @@ def control_params(workbook: dict, lv_control: bool) -> list:
     return P.parse_control_params(workbook, "Un2" if lv_control else "Un1")
 
 
-def for_zone(params: list, zones: dict, zone: str) -> list:
-    """Select the parameters a zone's PAR carries.
+def for_zone(params: list, zones: dict, zone: str, prefix: str) -> list:
+    """Select the parameters a zone's PAR carries, under the name Dynawo gives them.
 
     A control block enters a zone only if it declares that zone in ``Général``, so a block with
-    no declared zone enters neither.
+    no declared zone enters neither. Every name takes the model prefix, except those of a block
+    the names file gives a prefix of its own because Dynawo keeps it in a separate submodel.
 
     Parameters
     ----------
@@ -48,17 +50,29 @@ def for_zone(params: list, zones: dict, zone: str) -> list:
         Zones each block declares, e.g. ``{"REEC": ["Zone1", "Zone3"]}``.
     zone: str
         Zone being emitted, ``Zone1`` or ``Zone3``.
+    prefix: str
+        Prefix the model gives its own parameters, e.g. ``photovoltaics_``.
 
     Returns
     -------
     list
-        The parameters of that zone, without the provenance label the PAR does not carry.
+        The parameters of that zone, named as the PAR will carry them and without the
+        provenance label the PAR does not carry.
     """
+    own_prefixes = names.block_prefixes()
     return [
-        {k: v for k, v in p.items() if k != "block"}
+        {
+            **{k: v for k, v in p.items() if k != "block"},
+            "name": _qualified(p, prefix, own_prefixes),
+        }
         for p in params
         if zone in zones.get(p["block"], [])
     ]
+
+
+def _qualified(param: dict, prefix: str, own_prefixes: dict) -> str:
+    own = own_prefixes.get(names.normalize(param["block"]))
+    return f"{own if own is not None else prefix}{param['name']}"
 
 
 def empty_zone1_reason(config) -> str:

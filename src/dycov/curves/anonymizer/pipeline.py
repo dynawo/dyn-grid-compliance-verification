@@ -15,6 +15,7 @@ from typing import Dict, Optional
 
 import pandas as pd
 
+from dycov.curves import naming
 from dycov.curves.anonymizer.deripple import deripple_curves
 from dycov.curves.anonymizer.noise import apply_noise_to_curves
 from dycov.curves.anonymizer.reduce import cap_rate, ensure_min_points, simplify_curves
@@ -219,6 +220,12 @@ def _save_dictionary(dict_file: Path, importer: CurvesImporter, output_path: Pat
         # at every word boundary; it stays declared with nothing on its right.
         if not dict_name:
             continue
+        # The importer has read the curve under its current name, and the file just written
+        # carries that name: a curve declared under a previous one is declared again under it.
+        curve_name = naming.from_legacy_name(original_id)
         # Use word boundaries to avoid replacing parts of other names
-        filedata = re.sub(r"\b{}\b".format(re.escape(dict_name)), original_id, filedata)
+        filedata = re.sub(r"\b{}\b".format(re.escape(dict_name)), curve_name, filedata)
+        filedata = re.sub(
+            r"^{}\b".format(re.escape(original_id)), curve_name, filedata, flags=re.MULTILINE
+        )
     output_path.write_text(filedata)

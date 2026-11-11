@@ -83,13 +83,20 @@ def _time_error(
         apply_formatter=True,
         default_value="",
     )
-    check = printable.format_compound_check(results[variable + "_check"])
+    verdict = results[variable + "_check"]
+    if verdict is None:
+        # A revision may keep an indicator and withdraw its criterion: the report then
+        # states the time and its deviation, and gives no verdict.
+        errors_map.append([name, simulated_time, reference_time, abs_error, "", ""])
+        return footnote_defined
+
+    check = printable.format_compound_check(verdict)
     errors_map.append(
         [
             name,
             simulated_time,
             reference_time,
-            abs_error if results[variable + "_check"] else f"\\textcolor{{red}}{{ {abs_error} }}",
+            abs_error if verdict else f"\\textcolor{{red}}{{ {abs_error} }}",
             threshold,
             check,
         ]

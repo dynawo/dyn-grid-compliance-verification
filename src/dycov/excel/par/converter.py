@@ -78,7 +78,8 @@ def par_set(
     prefix: str
         Model prefix every parameter name takes (e.g. ``photovoltaics_``).
     control_params: list
-        Control parameters of the blocks that declare this zone, in workbook order.
+        Control parameters of the blocks that declare this zone, in workbook order, already
+        named as the PAR carries them.
     zone1: dict
         Rows of the ``Zone1a`` sheet, which describe the unit whichever zone is emitted.
     s_nom: str or float
@@ -93,7 +94,7 @@ def par_set(
     tuple
         ``(set id, parameters)``, the parameters as dicts of name/type/value/comments.
     """
-    params = [{**p, "name": f"{prefix}{p['name']}"} for p in control_params]
+    params = list(control_params)
     if plant_model:
         params.append(
             {

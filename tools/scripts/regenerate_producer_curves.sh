@@ -77,7 +77,7 @@ for source in "${PERFORMANCE_CURVES_SOURCE[@]}"; do
         log_msg "Running $model in performance mode, for the $family producer curves..."
         rm -rf "${results_path:?}/Performance/$family"
         dycov --user-config "$user_config" performance -l "$launcher" \
-            -m "$model" -o "$results_path/Performance/$family" --testing
+            -m "$model" -o "$results_path/Performance/$family" --curves-only
     fi
 
     log_msg "Anonymizing the $family performance curves..."

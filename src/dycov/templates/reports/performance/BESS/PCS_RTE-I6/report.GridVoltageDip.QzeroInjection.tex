@@ -1,4 +1,4 @@
-    \subsection{Overview of DTR PCS \DTRPcs in injection}
+    \subsection{Overview of DTR PCS \DTRPcs{} in injection}
 
     Checks for compliant behavior of the BESS under a grid scenario where there is a
     severe drop of voltage at the PDR bus (which simulates the effect of a fault
@@ -42,7 +42,7 @@
     \begin{center}
         \begin{tabular}{lc}
             \toprule
-            \textbf{variable} & \textbf{all Volt Levels} \\
+            \textbf{variable} & \textbf{value} \\
             \midrule
             $U_{initial}$     & 1.0 pu                   \\
             $T_{0}$           & (free)                   \\
@@ -58,7 +58,7 @@
     \begin{center}
         \begin{tabular}{lc}
             \toprule
-            \textbf{variable} & \textbf{all Volt levels} \\
+            \textbf{variable} & \textbf{value} \\
             \midrule
             $U_{initial}$     & 1.0 pu                   \\
             $T_{0}$           & (free)                   \\
@@ -69,6 +69,9 @@
             \bottomrule
         \end{tabular}
     \end{center}
+
+    \noindent The unit under test is of category {{ category }}, so the simulation
+    applies the gabarit of \BLOCK{if category == 'D'}the class D\BLOCK{else}the classes B and C\BLOCK{endif}.
 
     \begin{description}
         \item Initial conditions used at the PDR bus:

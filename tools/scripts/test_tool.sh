@@ -30,6 +30,18 @@ parallel_run() {
         xargs -P "$max_parallel" -I {} bash -c "{}"
 }
 
+# A failed run ends its job with 1, whatever dycov returned: xargs launches no further job once
+# one ends with 255, and a failed run must not stop the rest of its phase.
+report_status() {
+    local status=$1
+    local command=$2
+
+    [ "$status" -eq 0 ] && return 0
+    log_msg "ERROR: exit code $status: $command"
+    return 1
+}
+export -f report_status
+
 usage() {
     echo "This script is used to test the dycov tool."
     echo "Usage: $0 [options]"
@@ -44,7 +56,9 @@ usage() {
     echo "  -p, --performance: execute only performance verification"
     echo "  -g, --generate: execute only envelope generation (GFM)"
     echo "  -j, --jobs: max parallel processes per phase (default: 4)"
-    echo "  --user-config: configuration file for every run (default: the one of the user)"
+    echo "  --user-config: configuration file for every run (default: the one of the user), which"
+    echo "               names the revision of the DTR if the user's does not; release.ini names"
+    echo "               the one the example curves follow"
     echo "  -d, --debug: run with the log level at DEBUG, which also keeps in every test"
     echo "               directory the curves the criteria compare (signal.csv, reference.csv)"
     echo "      --without-curves: run although the examples have no reference curves, which is"
@@ -57,6 +71,8 @@ usage() {
     echo "    CSV at:   <output>/test_tool.log.overall_result_counts.csv"
     echo "    PNG at:   <output>/overall_result_counts.png   (if Matplotlib available)"
     echo "    HTML at:  <output>/overall_result_counts.html  (if Plotly available)"
+    echo "  • A dycov run that fails is logged with its exit code, and the script then exits with 1"
+    echo "    once every phase and the summary have run."
 }
 
 # Function to execute a validation command and record time
@@ -73,9 +89,11 @@ run_dycov_validate() {
 
     start=$(date +%s)
     # Execute the command
-    dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} validate -l "$launcher" -m "$model_path" "$reference_path" -o "$output_path" --testing
+    local status=0
+    dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} validate -l "$launcher" -m "$model_path" "$reference_path" -o "$output_path" --testing || status=$?
     end=$(date +%s)
     log_msg "Validate: $model_name Elapsed Time: $((end - start)) seconds"
+    report_status "$status" "$command_to_execute"
 }
 # Export the function for xargs to use in subshells
 export -f run_dycov_validate
@@ -103,8 +121,10 @@ launch_validate() {
 
     # Execute commands in parallel with xargs, limiting to 4 processes
     log_msg "INFO: Starting parallel Model validation with max $max_parallel processes..."
-    parallel_run validation_commands
+    local status=0
+    parallel_run validation_commands || status=$?
     log_msg "INFO: All model validation processes completed."
+    return "$status"
 }
 
 launch_model_as_performance() {
@@ -118,8 +138,10 @@ launch_model_as_performance() {
 
     # Execute commands in parallel with xargs, limiting to 4 processes
     log_msg "INFO: Starting parallel performance verification with Model examples with max $max_parallel processes..."
-    parallel_run validation_commands
+    local status=0
+    parallel_run validation_commands || status=$?
     log_msg "INFO: All performance verification processes completed."
+    return "$status"
 }
 
 # Function to execute a performance command and record time
@@ -136,9 +158,11 @@ run_dycov_performance() {
 
     start=$(date +%s)
     # Execute the command
-    dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} performance -l "$launcher" -m "$model_path" -o "$output_path" --testing
+    local status=0
+    dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} performance -l "$launcher" -m "$model_path" -o "$output_path" --testing || status=$?
     end=$(date +%s)
     log_msg "Verify: $topology - $model_name Elapsed Time: $((end - start)) seconds"
+    report_status "$status" "$command_to_execute"
 }
 # Export the function for xargs to use in subshells
 export -f run_dycov_performance
@@ -166,8 +190,10 @@ launch_performance() {
     done
 
     log_msg "INFO: Starting parallel performance verification with max $max_parallel processes..."
-    parallel_run performance_commands
+    local status=0
+    parallel_run performance_commands || status=$?
     log_msg "INFO: All performance verification processes completed."
+    return "$status"
 }
 
 # Function to execute a performance command and record time
@@ -177,14 +203,16 @@ run_dycov_generate() {
     local model_name=$3
 
     # Full command to execute (for logging purposes)
-    local command_to_execute="dycov generateEnvelopes -i \"$model_path\" -e -o \"$output_path\""
+    local command_to_execute="dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config $DYCOV_USER_CONFIG} generate_gfm_envelopes -i \"$model_path\" -e -o \"$output_path\""
     log_msg "Executing: $command_to_execute"
 
     start=$(date +%s)
     # Execute the command
-    dycov generateEnvelopes -i "$model_path" -e -o "$output_path"
+    local status=0
+    dycov ${DYCOV_DEBUG:+-d} ${DYCOV_USER_CONFIG:+--user-config "$DYCOV_USER_CONFIG"} generate_gfm_envelopes -i "$model_path" -e -o "$output_path" || status=$?
     end=$(date +%s)
     log_msg "Generate: $model_name Elapsed Time: $((end - start)) seconds"
+    report_status "$status" "$command_to_execute"
 }
 # Export the function for xargs to use in subshells
 export -f run_dycov_generate
@@ -200,8 +228,10 @@ launch_generate() {
     done
 
     log_msg "INFO: Starting parallel envelope generation with max $max_parallel processes..."
-    parallel_run generate_commands
+    local status=0
+    parallel_run generate_commands || status=$?
     log_msg "INFO: All envelope generation processes completed."
+    return "$status"
 }
 
 summarize_overall_results() {
@@ -460,26 +490,27 @@ exec > "$LOG" # stdout redirected to the log file
 exec 7>&2     # Link file descriptor #7 with stderr. Saves stderr.
 exec 2>&1     # stderr redirected to stdout
 
+failed_phases=()
 launch_start=$(date +%s)
 if [ "$validate" = true ]; then
     log_msg "Starting model validation phase..."
     phase_start=$(date +%s)
-    launch_validate
+    launch_validate || failed_phases+=("model validation")
     phase_end=$(date +%s)
     log_msg "Validation time: $((phase_end - phase_start)) seconds"
 fi
 if [ "$performance" = true ]; then
     log_msg "Starting performance verification phase..."
     phase_start=$(date +%s)
-    launch_performance
-    launch_model_as_performance
+    launch_performance || failed_phases+=("performance verification")
+    launch_model_as_performance || failed_phases+=("performance verification of the Model examples")
     phase_end=$(date +%s)
     log_msg "Performance time: $((phase_end - phase_start)) seconds"
 fi
 if [ "$generate" = true ]; then
     log_msg "Starting envelope generation phase..."
     phase_start=$(date +%s)
-    launch_generate
+    launch_generate || failed_phases+=("envelope generation")
     phase_end=$(date +%s)
     log_msg "Generation time: $((phase_end - phase_start)) seconds"
 fi
@@ -488,3 +519,9 @@ log_msg "Total Elapsed Time: $((launch_end - launch_start)) seconds"
 
 # Build and print Overall Result metrics
 summarize_overall_results "$LOG" "$results_path"
+
+if [ ${#failed_phases[@]} -gt 0 ]; then
+    phases=$(printf ', %s' "${failed_phases[@]}")
+    log_msg "ERROR: some dycov runs failed, in: ${phases:2}. The log says which: $LOG"
+    exit 1
+fi

@@ -40,6 +40,7 @@ class ParFile(FileVariables):
         tool_variables = [
             "line_XPu",
             "line_RPu",
+            "line_XFaultPu",
             "infiniteBus_U0Pu",
             "bus_UNom",
             "gen_P0Pu",
@@ -64,6 +65,7 @@ class ParFile(FileVariables):
         working_oc_dir: Path,
         line_rpu: float,
         line_xpu: float,
+        fault_xpu: float,
         tso_gen: GenInit,
         event_params: dict,
         unom: float,
@@ -80,6 +82,8 @@ class ParFile(FileVariables):
             The per unit resistance value for the line.
         line_xpu: float
             The per unit reactance value for the line.
+        fault_xpu: float
+            The per unit reactance value for the fault of the line.
         tso_gen: GenInit
             Parameters for the initialization of the TSO's bus side (P, Q, U, angle).
         event_params: dict
@@ -95,6 +99,7 @@ class ParFile(FileVariables):
 
         variables_dict["line_XPu"] = line_xpu
         variables_dict["line_RPu"] = line_rpu
+        variables_dict["line_XFaultPu"] = fault_xpu
 
         # 'infiniteBus_U0Pu' and 'gen_U0Pu' intentionally share 'tso_gen.u0'.
         variables_dict["infiniteBus_U0Pu"] = tso_gen.u0

@@ -20,7 +20,7 @@ from __future__ import annotations
 import configparser
 from pathlib import Path
 
-from dycov.excel import names, par
+from dycov.excel import names, par, protection
 from dycov.excel import parse as P
 from dycov.excel import producer_dyd as dyd
 from dycov.excel import producer_ini as ini
@@ -31,6 +31,7 @@ from dycov.excel import workbook as wb
 from dycov.excel.reference_curves import dicts
 from dycov.files.producer_dyd_file import GROUP_XFMR_ID, MAIN_XFMR_ID
 from dycov.files.producer_par_file import write_producer_par_file
+from dycov.logging import dycov_logging
 
 # Base name of the Dynawo input files and of the reference-curve directory: DyCoV derives both
 # from the same producer name, so a rename travels through this one constant.
@@ -146,7 +147,7 @@ def _zone3_par_sets(units: list, controls: list, zone3: dict, topology: str) -> 
 def _unit_control(workbook: dict, config, unit: U.GeneratingUnit) -> list:
     """The control parameters of a unit, refusing a selection that leaves its Zone1 without any."""
     control = par.control_params(workbook, unit.lv_control)
-    if not par.control_params_for_zone(control, config.zones, "Zone1"):
+    if not par.control_params_for_zone(control, config.zones, "Zone1", unit.model["zone1_prefix"]):
         raise ValueError(par.empty_zone1_reason(config))
     return control
 
@@ -187,8 +188,51 @@ def tests_without_metadata(outdir: Path, producer: str = PRODUCER_NAME) -> list:
     return incomplete
 
 
+def _check_template_version(excel: Path, workbook: dict) -> None:
+    """Warns when the workbook was written on a template other than the one this release reads:
+    rows the template has since renamed or split would be dropped or missing without a word."""
+    version, standard = wb.parse_template_format(workbook)
+    standard = standard.upper() if standard else None
+    expected = wb.TEMPLATE_VERSIONS.get(standard or "")
+    logger = dycov_logging.get_logger("Excel")
+    sheet = f"'{names.sheet('info')} ->'"
+    templates = " or ".join(f"workbooks/Producer_{known}.xlsx" for known in wb.TEMPLATE_VERSIONS)
+    if standard is None:
+        logger.warning(
+            f"{excel.name} has no {sheet} sheet giving its standard and format_version, so the "
+            f"version of its template cannot be checked: if it was made on an older template, "
+            f"copy its data into {templates}."
+        )
+    elif expected is None:
+        logger.warning(
+            f"{excel.name} names {standard} as its standard in its {sheet} sheet, which this "
+            f"release does not know ({', '.join(wb.TEMPLATE_VERSIONS)}), so the version of its "
+            f"template cannot be checked."
+        )
+    elif version != expected:
+        follows = (
+            f"follows the {standard} template of DyCoV {version}"
+            if version
+            else f"names no version of the {standard} template it follows"
+        )
+        logger.warning(
+            f"{excel.name} {follows}, and this release reads that of {expected}: copy its data "
+            f"into the template workbooks/Producer_{standard}.xlsx, as rows that differ between "
+            f"the two would be dropped or missing."
+        )
+
+
+def _write_par(target: Path, filename: str, sets: list, unit_sets: list, workbook: dict) -> None:
+    """Write a PAR whose units carry the protection the workbook describes, and its table file."""
+    for _, params in unit_sets:
+        params.extend(protection.written_parameters(workbook))
+    write_producer_par_file(target, filename, sets)
+    protection.write_table_file(workbook, unit_sets[0][1], target)
+
+
 def _write_dynawo(
     root: Path,
+    workbook: dict,
     zones: dict,
     zone3: dict,
     topology: str,
@@ -203,21 +247,17 @@ def _write_dynawo(
     dyd.write_dyd(root, PRODUCER_NAME, topology, template, units)
 
     for unit, control in zip(units, controls):
-        write_producer_par_file(
-            root / "Zone1",
-            f"{unit.zone1_file}.par",
-            _zone1_par_sets(root, unit, par.control_params_for_zone(control, zones, "Zone1")),
+        zone1_control = par.control_params_for_zone(
+            control, zones, "Zone1", unit.model["zone1_prefix"]
         )
-    write_producer_par_file(
-        root / "Zone3",
-        f"{PRODUCER_NAME}.par",
-        _zone3_par_sets(
-            units,
-            [par.control_params_for_zone(control, zones, "Zone3") for control in controls],
-            zone3,
-            topology,
-        ),
-    )
+        sets = _zone1_par_sets(root, unit, zone1_control)
+        _write_par(root / "Zone1", f"{unit.zone1_file}.par", sets, sets[:1], workbook)
+    zone3_controls = [
+        par.control_params_for_zone(control, zones, "Zone3", unit.model["zone3_prefix"])
+        for unit, control in zip(units, controls)
+    ]
+    sets = _zone3_par_sets(units, zone3_controls, zone3, topology)
+    _write_par(root / "Zone3", f"{PRODUCER_NAME}.par", sets, sets[: len(units)], workbook)
 
     ini.write_ini(
         root,
@@ -232,6 +272,7 @@ def _write_dynawo(
 def generate(excel: Path, outdir: Path) -> str:
     """Generate the ``Dynawo/Zone1`` + ``Dynawo/Zone3`` Producer input trees from *excel*."""
     workbook = wb.read_workbook(excel)
+    _check_template_version(excel, workbook)
     zone3 = P.parse_zone(workbook, names.sheet("zone3"))
     topology = dyd.checked_topology(zone3)
     units = U.generating_units(workbook, topology, PRODUCER_NAME)
@@ -240,7 +281,9 @@ def generate(excel: Path, outdir: Path) -> str:
     config = wb.parse_config(workbook)
     controls = [_unit_control(workbook, config, unit) for unit in units]
 
-    _write_dynawo(outdir / "Dynawo", config.zones, zone3, topology, units, controls, template)
+    _write_dynawo(
+        outdir / "Dynawo", workbook, config.zones, zone3, topology, units, controls, template
+    )
 
     # The signal sheets describe the curves of a single unit.
     (unit,) = units

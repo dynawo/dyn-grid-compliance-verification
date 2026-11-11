@@ -105,7 +105,7 @@ checks:
 `dycov_examples.zip` as in §4 and computes its SHA-256. It has to precede Step 2, which writes
 that sum into the installer, and Step 4, which builds the image from the same working tree.
 
-**Step 2 — one more substitution.** Beside `TARGET_BRANCH` and `DYNAWO_SHA256SUM`, the generated
+**Step 2 — one more substitution.** Beside `TARGET_RELEASE` and `DYNAWO_SHA256SUM`, the generated
 `linux_install.sh` gets `EXAMPLES_SHA256SUM`.
 
 **Step 6 and the summary.** `dycov_examples.zip` is one more file to upload; the release goes from
@@ -138,7 +138,7 @@ line for line:
 ```bash
 EXAMPLES_ZIP_FILE="dycov_examples.zip"
 EXAMPLES_SHA256SUM="<written by prepare_release.sh>"
-EXAMPLES_ZIP_URL="https://github.com/.../releases/download/$TARGET_BRANCH/$EXAMPLES_ZIP_FILE"
+EXAMPLES_ZIP_URL="https://github.com/.../releases/download/$TARGET_RELEASE/$EXAMPLES_ZIP_FILE"
 ```
 
 `curl -O -L --fail`, `sha256sum` against `EXAMPLES_SHA256SUM`, `unzip` into `$INSTALL_DIR`,

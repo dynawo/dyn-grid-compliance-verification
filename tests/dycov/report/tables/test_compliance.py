@@ -51,7 +51,7 @@ def test_create_map_all_keys_present():
     assert table[0][2] in ("True", "\\textcolor{red}{ False }")
     assert table[3][0] == "Frequency remains within [49, 51] Hz"
     assert table[3][1].startswith("\\footnote")
-    assert table[4][0] == "Stator voltage within $\pm 5\%$ of setpoint"
+    assert table[4][0] == r"Stator voltage within $\pm 5\%$ of setpoint"
     assert table[10][0] == "$T_{10P}  - T_{clear} < 5 s$"
     assert table[-1][0] == "$T_{10P_{floor}} - T_{85U} < 2 s$"
 
@@ -139,3 +139,38 @@ def test_create_map_missing_keys():
     assert "Frequency remains within [49, 51] Hz" in labels
     assert "Unit remains stable (rotor stability)" not in labels
     assert "Aux not disconnected by protections" not in labels
+
+
+def test_create_map_stability_row_names_the_rotor_angle():
+    results = {"stabilized": True, "stabilized_rotor_angle": True}
+    table = create_map(results)
+    labels = [row[0] for row in table]
+    assert "Unit remains stable (rotor stability)" in labels
+
+
+def test_create_map_stability_row_names_the_settled_magnitudes():
+    results = {"stabilized": True, "stabilized_rotor_angle": False}
+    table = create_map(results)
+    labels = [row[0] for row in table]
+    assert "Unit remains stable (P, Q and V settle)" in labels
+
+
+def test_create_map_reports_the_checks_that_cannot_be_computed():
+    """#676: a check whose curves are missing is reported as N/A, with no value."""
+    results = {
+        "stabilized": "N/A",
+        "stabilized_rotor_angle": True,
+        "freq1": -1,
+        "freq1_check": "N/A",
+        "AVR_5": -1,
+        "AVR_5_check": "N/A",
+        "static_diff": -1,
+        "static_diff_check": "N/A",
+        "imax_reac": -1,
+        "imax_reac_check": "N/A",
+    }
+
+    table = create_map(results)
+
+    assert [row[2] for row in table] == ["N/A", "{ N/A }", "{ N/A }", "{ N/A }", "{ N/A }"]
+    assert all(row[1].endswith("\\textemdash") for row in table)

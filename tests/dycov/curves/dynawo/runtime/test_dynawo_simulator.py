@@ -7,7 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-"""Tests for what a simulation reports back about a failure."""
+"""Tests for what a run of Dynawo reports back."""
 
 from pathlib import Path
 
@@ -60,6 +60,29 @@ def test_a_failure_names_what_dynawo_reported_and_where_to_read_it(simulated):
     )
 
 
+def test_a_failure_of_a_run_whose_outputs_do_not_last_names_no_log(monkeypatch):
+    """#707: the step of a fault search runs in a copy removed once it ends."""
+    monkeypatch.setattr(
+        DynawoSimulator,
+        "run_base_dynawo",
+        lambda self, *args, **kwargs: DynawoResult(
+            False, "stderr", "parameter WT4A_VDipPu not found", None, 1.0
+        ),
+    )
+
+    result = DynawoSimulator.run_base(
+        run=RUN,
+        output_dir=None,
+        working_oc_dir=Path("/work/fault_time_execution_1"),
+        jobs_output_dir=Path("outputs"),
+        bm_name="BM",
+        oc_name="OC",
+        max_sim_time=MAX_SIM_TIME,
+    )
+
+    assert result.log == "Simulation Fails: parameter WT4A_VDipPu not found"
+
+
 def test_a_failure_dynawo_did_not_log_keeps_what_it_printed(simulated):
     result = simulated(DynawoResult(False, "job failed", None, None, 1.0))
 
@@ -70,3 +93,51 @@ def test_a_simulation_over_the_limit_does_not_succeed(simulated):
     result = simulated(DynawoResult(True, None, None, None, MAX_SIM_TIME + 1.0))
 
     assert not result.succeeded
+
+
+def _run_writing(monkeypatch, tmp_path, completed=True, writes_curves=True):
+    """A run of Dynawo that ends as given and writes, or not, its curves file."""
+    from dycov.curves.dynawo.runtime import dynawo_simulator
+    from dycov.curves.dynawo.runtime._process import ProcessOutcome
+
+    def run_dynawo_process(*args):
+        if writes_curves:
+            (tmp_path / "outputs" / "curves").mkdir(parents=True)
+            (tmp_path / "outputs" / "curves" / "curves.csv").write_text("time;\n0;\n")
+        return ProcessOutcome(completed, "job succeeded" if completed else "job failed", 1.0)
+
+    monkeypatch.setattr(dynawo_simulator, "run_dynawo_process", run_dynawo_process)
+    return DynawoSimulator().run_base_dynawo(
+        "PCS", "BM", "OC", Path("dynawo.sh"), "TSOModel", tmp_path, Path("outputs")
+    )
+
+
+def test_a_run_reports_the_curves_file_dynawo_wrote(monkeypatch, tmp_path):
+    result = _run_writing(monkeypatch, tmp_path)
+
+    assert result.succeeded is True
+    assert result.curves_file == tmp_path / "outputs" / "curves" / "curves.csv"
+
+
+def test_a_run_that_wrote_no_curves_reports_none(monkeypatch, tmp_path):
+    result = _run_writing(monkeypatch, tmp_path, writes_curves=False)
+
+    assert result.succeeded is True
+    assert result.curves_file is None
+
+
+def test_a_failed_run_still_says_where_dynawo_left_its_curves(monkeypatch, tmp_path):
+    """What the curves mean is for whoever reads them; the simulator only reports the run."""
+    result = _run_writing(monkeypatch, tmp_path, completed=False)
+
+    assert result.succeeded is False
+    assert result.curves_file == tmp_path / "outputs" / "curves" / "curves.csv"
+
+
+def test_the_baseline_run_passes_on_the_curves_file(simulated):
+    curves_file = Path("/work/outputs/curves/curves.csv")
+
+    result = simulated(DynawoResult(True, None, None, curves_file, 1.0))
+
+    assert result.succeeded is True
+    assert result.curves_file == curves_file

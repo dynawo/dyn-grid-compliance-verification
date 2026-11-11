@@ -85,20 +85,27 @@ def test_connect_generator_to_ramp():
     assert len(root) == 1
 
 
-def test_connect_generator_to_dynmodelomegaref():
+def test_connect_generator_to_dynmodelomegaref(monkeypatch):
     root, ns = _make_root()
     g = _make_generator()
+    variables = {
+        "RotorSpeedPu": "v1",
+        "NetworkFrequencyReference": "v2",
+        "Running": "v3",
+    }
+    monkeypatch.setattr(
+        type(dynawo_translator),
+        "get_dynawo_variable",
+        lambda _self, _lib, name: (None, variables[name]),
+    )
 
-    with patch.object(type(dynawo_translator), "get_dynawo_variable") as mock:
-        mock.side_effect = [
-            (None, "v1"),
-            (None, "v2"),
-            (None, "v3"),
-        ]
+    _connect_generator_to_dynmodelomegaref(root, ns, g, grp=1)
 
-        _connect_generator_to_dynmodelomegaref(root, ns, g, grp=1)
-
-    assert len(root) == 3
+    assert [(el.get("var1"), el.get("var2")) for el in root] == [
+        ("v1", "omega_grp_1_"),
+        ("v2", "omegaRef_grp_1_"),
+        ("v3", "running_grp_1_"),
+    ]
 
 
 # ---------------------------------------------------------------------------

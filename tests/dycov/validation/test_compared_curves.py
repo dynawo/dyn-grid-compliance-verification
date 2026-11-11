@@ -18,11 +18,11 @@ _ZONE_1_COLUMNS = [
     "BusPDR_BUS_Voltage",
     "BusPDR_BUS_ActivePower",
     "BusPDR_BUS_ReactivePower",
-    "PV_Array_GEN_VoltageInjTerminal",
-    "PV_Array_GEN_ActivePowerControlledPu",
-    "PV_Array_GEN_ReactivePowerControlledPu",
-    "PV_Array_GEN_ActiveCurrentInjTerminal",
-    "PV_Array_GEN_ReactiveCurrentInjTerminal",
+    "PV_Array_GEN_VoltageNode2",
+    "PV_Array_GEN_ActivePowerControlledNode",
+    "PV_Array_GEN_ReactivePowerControlledNode",
+    "PV_Array_GEN_ActiveCurrentNode2",
+    "PV_Array_GEN_ReactiveCurrentNode2",
 ]
 _INTERNAL_NODE1_POWER = ("BusPDR_BUS_ActivePower", "BusPDR_BUS_ReactivePower")
 
@@ -159,7 +159,7 @@ def test_the_setpoints_zone_1_draws_play_no_part_in_the_verdict():
 def test_plot_variables_names_a_curve_of_the_generating_unit_by_its_suffix():
     variables = compared_curves.plot_variables(1, "active_power")
 
-    assert variables == [{"type": "generator", "variable": "ActivePowerControlledPu"}]
+    assert variables == [{"type": "generator", "variable": "ActivePowerControlledNode"}]
 
 
 def test_plot_variables_names_a_curve_of_the_bus_in_full():
@@ -179,11 +179,11 @@ def test_resolve_pairs_each_compared_curve_with_its_column():
 
     assert [(curve.label, column) for curve, column in resolved] == [
         ("voltage", "BusPDR_BUS_Voltage"),
-        ("injector_voltage", "PV_Array_GEN_VoltageInjTerminal"),
-        ("active_power", "PV_Array_GEN_ActivePowerControlledPu"),
-        ("reactive_power", "PV_Array_GEN_ReactivePowerControlledPu"),
-        ("active_current", "PV_Array_GEN_ActiveCurrentInjTerminal"),
-        ("reactive_current", "PV_Array_GEN_ReactiveCurrentInjTerminal"),
+        ("injector_voltage", "PV_Array_GEN_VoltageNode2"),
+        ("active_power", "PV_Array_GEN_ActivePowerControlledNode"),
+        ("reactive_power", "PV_Array_GEN_ReactivePowerControlledNode"),
+        ("active_current", "PV_Array_GEN_ActiveCurrentNode2"),
+        ("reactive_current", "PV_Array_GEN_ReactiveCurrentNode2"),
     ]
 
 
@@ -203,8 +203,8 @@ def test_resolve_all_pairs_a_curve_no_column_carries_with_its_selector():
 @pytest.mark.parametrize(
     "zone, column, label",
     [
-        (1, "PV_Array_GEN_ActivePowerControlledPu", "active_power"),
-        (1, "PV_Array_GEN_VoltageInjTerminal", "injector_voltage"),
+        (1, "PV_Array_GEN_ActivePowerControlledNode", "active_power"),
+        (1, "PV_Array_GEN_VoltageNode2", "injector_voltage"),
         (1, "BusPDR_BUS_ActivePower", None),
         (3, "BusPDR_BUS_ActivePower", "active_power"),
     ],
@@ -238,10 +238,10 @@ def test_column_of_a_curve_no_column_carries_is_none():
 @pytest.mark.parametrize(
     "setpoint, expected",
     [
-        ("ActivePowerSetpointPu", "PV_Array_GEN_ActivePowerControlledPu"),
-        ("ReactivePowerSetpointPu", "PV_Array_GEN_ReactivePowerControlledPu"),
+        ("ActivePowerSetpointPu", "PV_Array_GEN_ActivePowerControlledNode"),
+        ("ReactivePowerSetpointPu", "PV_Array_GEN_ReactivePowerControlledNode"),
         ("VoltageSetpointPu", "BusPDR_BUS_Voltage"),
-        ("UnknownSetpointPu", "PV_Array_GEN_ReactivePowerControlledPu"),
+        ("UnknownSetpointPu", "PV_Array_GEN_ReactivePowerControlledNode"),
     ],
 )
 def test_for_setpoint_tracks_the_magnitude_the_setpoint_drives(setpoint, expected):
@@ -257,14 +257,14 @@ def test_for_setpoint_of_a_magnitude_the_zone_does_not_compare_is_the_setpoint_i
 def test_for_setpoint_without_the_column_is_the_selector_so_it_is_reported_missing():
     tracked = compared_curves.for_setpoint(1, "ActivePowerSetpointPu", ["time"])
 
-    assert tracked == "_GEN_ActivePowerControlledPu"
+    assert tracked == "_GEN_ActivePowerControlledNode"
 
 
 @pytest.mark.parametrize(
     "selector, column, expected",
     [
-        ("_GEN_ActivePowerControlledPu", "PV_Array_GEN_ActivePowerControlledPu", True),
-        ("_GEN_ActivePowerControlledPu", "PV_Array_GEN_ReactivePowerControlledPu", False),
+        ("_GEN_ActivePowerControlledNode", "PV_Array_GEN_ActivePowerControlledNode", True),
+        ("_GEN_ActivePowerControlledNode", "PV_Array_GEN_ReactivePowerControlledNode", False),
         ("BusPDR_BUS_Voltage", "BusPDR_BUS_Voltage", True),
         ("BusPDR_BUS_Voltage", "InternalNode1_BUS_Voltage", False),
     ],
@@ -278,15 +278,15 @@ def test_curve_names_names_the_curves_of_every_generating_unit():
 
     assert names[:3] == [
         "BusPDR_BUS_Voltage",
-        "WT1_GEN_VoltageInjTerminal",
-        "WT2_GEN_VoltageInjTerminal",
+        "WT1_GEN_VoltageNode2",
+        "WT2_GEN_VoltageNode2",
     ]
 
 
 @pytest.mark.parametrize(
     "column, expected",
     [
-        ("PV_Array_GEN_ActiveCurrentInjTerminal", "Ip"),
+        ("PV_Array_GEN_ActiveCurrentNode2", "Ip"),
         ("BusPDR_BUS_ReactivePower", "Q"),
         ("BusPDR_BUS_Voltage", None),
         ("PV_Array_GEN_InternalAngle", None),

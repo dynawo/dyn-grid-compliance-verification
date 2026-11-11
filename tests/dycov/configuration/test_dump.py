@@ -26,11 +26,12 @@ class DummyCfg:
     Each layer is given as a ``{(section, key): value}`` mapping.
     """
 
-    def __init__(self, pcs_user=None, user=None, dtr=None, pcs=None, default=None):
+    def __init__(self, pcs_user=None, user=None, dtr=None, pcs=None, dtr_delta=None, default=None):
         self._pcs_user_config = self._build_parser(pcs_user)
         self._user_config = self._build_parser(user)
-        self._pcs_dtr_config = self._build_parser(dtr)
+        self._pcs_dtr_delta_config = self._build_parser(dtr)
         self._pcs_default_config = self._build_parser(pcs)
+        self._dtr_delta_config = self._build_parser(dtr_delta)
         self._default_config = self._build_parser(default)
 
     @staticmethod
@@ -90,7 +91,7 @@ def test_get_effective_value_prefers_the_dtr_revision_over_the_shipped_pcs():
     val, src = _get_effective_value_with_source(cfg, "A", "k")
 
     assert val == "dtr_val"
-    assert src == "dtr"
+    assert src == "pcs-dtr-delta"
 
 
 def test_get_effective_value_prefers_the_user_pcs_over_the_user_config():

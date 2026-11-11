@@ -76,7 +76,7 @@ def _report_unknown(shipped: configparser.ConfigParser, path: Path) -> None:
 
 def _is_data_section(section: str) -> bool:
     """Sections whose keys are the user's own data, not a fixed set of concepts."""
-    return section.endswith(("-Curves", "-Tests"))
+    return section.endswith(("-Curves", "-Tests", "-Prefixes"))
 
 
 @lru_cache(maxsize=1)
@@ -126,6 +126,15 @@ def marker(key: str) -> str:
 def markers(key: str) -> set:
     """A comma-separated marker list (``no_block``), normalized, with the empty value included."""
     return {normalize(value) for value in _option("Markers", key).split(",")} | {""}
+
+
+def block_prefixes() -> dict:
+    """``{normalized block label -> prefix}`` for the blocks Dynawo keeps in their own submodel."""
+    parser = _parsed()
+    section = "Block-Prefixes"
+    if not parser.has_section(section):
+        return {}
+    return {normalize(label): prefix.strip() for label, prefix in parser.items(section)}
 
 
 def row(zone: str, key: str) -> str:

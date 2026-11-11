@@ -105,6 +105,7 @@ class Parameters:
         self._output_dir = output_dir
         self._only_dtr = only_dtr
         self._producer_workbook = None
+        self._curves_only = False
 
         tmp_path = config.get_value("Global", "temporal_path")
         username = getpass.getuser()
@@ -211,6 +212,16 @@ class Parameters:
             Workbook the inputs come from, or None when they were given as files.
         """
         return self._producer_workbook
+
+    def is_curves_only(self) -> bool:
+        """Whether the run keeps the curves of the simulations and stops there.
+
+        Returns
+        -------
+        bool
+            True if the checks, the figures and the report are left out.
+        """
+        return self._curves_only
 
     def is_valid(self) -> bool:
         """Checks if the execution of the tool is valid.

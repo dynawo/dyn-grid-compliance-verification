@@ -40,6 +40,10 @@ class ValidationParameters(Parameters):
     verification_type: int
         0 if it is an electrical performance verification.
         10 if it is a model validation.
+    producer_workbook: Path
+        Workbook the producer inputs were generated from, when there is one.
+    curves_only: bool
+        Run the simulations and keep their curves, without the checks or the report.
     """
 
     def __init__(
@@ -53,6 +57,7 @@ class ValidationParameters(Parameters):
         only_dtr: bool,
         verification_type: int,
         producer_workbook: Path = None,
+        curves_only: bool = False,
     ):
         # Inputs parameters
         super().__init__(launcher_dwo, selected_pcs, output_dir, only_dtr)
@@ -66,6 +71,7 @@ class ValidationParameters(Parameters):
             zone1_required=_requires_zone1(selected_pcs),
         )
         self._producer_workbook = producer_workbook
+        self._curves_only = curves_only
 
     def get_sim_type(self) -> int:
         """Get the executed validation type.

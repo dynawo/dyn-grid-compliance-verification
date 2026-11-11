@@ -15,9 +15,11 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pandas as pd
+import pytest
 
 from dycov.files.manage_files import (
     _copy_curve_files_by_name,
+    _copy_producer_tables,
     check_output_dir,
     clone_as_subdirectory,
     copy_base_curves_files,
@@ -191,6 +193,33 @@ def test_clone_as_subdirectory(tmp_path):
 
     assert res.exists()
     assert (res / "a.txt").exists()
+
+
+def test_copy_producer_tables(tmp_path):
+    producer = tmp_path / "Zone1"
+    producer.mkdir()
+    (producer / "Producer.par").write_text("the par")
+    (producer / "LHVRT.txt").write_text("the curves")
+    (producer / "notes.md").write_text("not an input")
+    target = tmp_path / "working"
+    target.mkdir()
+
+    _copy_producer_tables(producer, target)
+
+    assert (target / "LHVRT.txt").read_text() == "the curves"
+    assert sorted(p.name for p in target.iterdir()) == ["LHVRT.txt"]
+
+
+def test_copy_producer_tables_lowercases_the_extension(tmp_path):
+    producer = tmp_path / "Zone1"
+    producer.mkdir()
+    (producer / "LHVRT.TXT").write_text("the curves")
+    target = tmp_path / "working"
+    target.mkdir()
+
+    _copy_producer_tables(producer, target)
+
+    assert (target / "LHVRT.txt").read_text() == "the curves"
 
 
 # ---------------------------------------------------------------------------
@@ -482,6 +511,89 @@ def test_create_config_file(tmp_path):
 # ---------------------------------------------------------------------------
 
 
+def _results_dir(tmp_path):
+    results = tmp_path / "out"
+    results.mkdir()
+    (results / "MARKER.txt").write_text("x")
+    return results
+
+
+@pytest.mark.parametrize("answer", ["y", "yes", "Y", "YES", "Yes", " y", "yes "])
+def test_check_output_dir_deletes_on_a_yes(tmp_path, answer):
+    results = _results_dir(tmp_path)
+
+    with patch("builtins.input", return_value=answer):
+        keep = check_output_dir(results)
+
+    assert keep is False
+    assert not results.exists()
+
+
+@pytest.mark.parametrize("answer", ["n", "no", "", "N", "NO", " n", "n "])
+def test_check_output_dir_keeps_on_a_no(tmp_path, answer):
+    results = _results_dir(tmp_path)
+
+    with patch("builtins.input", return_value=answer) as prompt:
+        keep = check_output_dir(results)
+
+    assert keep is True
+    assert (results / "MARKER.txt").is_file()
+    assert prompt.call_count == 1
+
+
+@pytest.mark.parametrize("unexpected", ["non", "q", "nope", "abort", "yy", "si", "1"])
+def test_check_output_dir_asks_again_on_an_unexpected_answer(tmp_path, unexpected):
+    results = _results_dir(tmp_path)
+
+    with patch("builtins.input", side_effect=[unexpected, "n"]) as prompt:
+        keep = check_output_dir(results)
+
+    assert keep is True
+    assert (results / "MARKER.txt").is_file()
+    assert prompt.call_count == 2
+
+
+def test_check_output_dir_deletes_on_a_yes_given_after_an_unexpected_answer(tmp_path):
+    results = _results_dir(tmp_path)
+
+    with patch("builtins.input", side_effect=["nope", "abort", "y"]) as prompt:
+        keep = check_output_dir(results)
+
+    assert keep is False
+    assert not results.exists()
+    assert prompt.call_count == 3
+
+
+def test_check_output_dir_keeps_the_directory_when_no_answer_can_be_read(tmp_path):
+    results = _results_dir(tmp_path)
+
+    with patch("builtins.input", side_effect=EOFError):
+        keep = check_output_dir(results)
+
+    assert keep is True
+    assert (results / "MARKER.txt").is_file()
+
+
+def test_check_output_dir_asks_nothing_for_an_empty_or_missing_directory(tmp_path):
+    (tmp_path / "empty").mkdir()
+
+    with patch("builtins.input", side_effect=AssertionError("asked")):
+        assert check_output_dir(tmp_path / "empty") is False
+        assert check_output_dir(tmp_path / "missing") is False
+
+    assert (tmp_path / "empty").is_dir()
+
+
+def test_check_output_dir_forced_deletes_without_asking(tmp_path):
+    results = _results_dir(tmp_path)
+
+    with patch("builtins.input", side_effect=AssertionError("asked")):
+        keep = check_output_dir(results, force_overwrite=True)
+
+    assert keep is False
+    assert not results.exists()
+
+
 def test_check_output_dir_overwrite(tmp_path):
     d = tmp_path / "out"
     d.mkdir()
@@ -502,3 +614,59 @@ def test_check_output_dir_no_overwrite(tmp_path):
         res = check_output_dir(d)
 
     assert res is True
+
+
+def _given_revision(monkeypatch, revision, base="20240215"):
+    """Config is frozen, so the double replaces the method on the class."""
+    from dycov.configuration.cfg import Config
+
+    values = {
+        ("Global", "templates_path"): "templates/PCS",
+        ("DTR", "current"): revision,
+        ("DTR", "base"): base,
+    }
+    monkeypatch.setattr(
+        Config, "get_value", lambda self, section, key, default=None: values[(section, key)]
+    )
+
+
+def test_the_delta_of_a_revision_mirrors_the_templates(monkeypatch, tmp_path):
+    from dycov.files import manage_files
+
+    _given_revision(monkeypatch, "20250801")
+    shipped = tmp_path / "templates" / "reports" / "PPM" / "PCS_RTE-I6"
+    delta = tmp_path / "templates" / "revisions" / "20250801" / "reports" / "PPM" / "PCS_RTE-I6"
+    delta.mkdir(parents=True)
+
+    assert manage_files.dtr_delta_path(shipped) == delta
+
+
+def test_a_revision_that_writes_no_delta_of_a_directory_has_none(monkeypatch, tmp_path):
+    from dycov.files import manage_files
+
+    _given_revision(monkeypatch, "20250801")
+
+    assert (
+        manage_files.dtr_delta_path(tmp_path / "templates" / "PCS" / "SM" / "PCS_RTE-I6") is None
+    )
+
+
+def test_a_path_outside_the_templates_has_no_delta(monkeypatch, tmp_path):
+    from dycov.files import manage_files
+
+    _given_revision(monkeypatch, "20250801")
+
+    assert manage_files.dtr_delta_path(tmp_path / "model_lib" / "Omega") is None
+
+
+def test_the_base_revision_has_no_delta_directory(monkeypatch, tmp_path):
+    """The base is the catalogue itself, so nothing looks for a delta of it."""
+    from dycov.files import manage_files
+
+    _given_revision(monkeypatch, "20240215")
+    delta = tmp_path / "templates" / "revisions" / "20240215" / "PCS" / "SM" / "PCS_RTE-I6"
+    delta.mkdir(parents=True)
+
+    assert (
+        manage_files.dtr_delta_path(tmp_path / "templates" / "PCS" / "SM" / "PCS_RTE-I6") is None
+    )

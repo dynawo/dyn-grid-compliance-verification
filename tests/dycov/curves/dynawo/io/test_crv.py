@@ -198,7 +198,7 @@ def _terminal_voltage_requests(
     ]
     voltage_curves = {
         variable: [
-            curve for curve in curves_dict[f"Gen_{variable}"] if "_GEN_VoltageInjTerminal" in curve
+            curve for curve in curves_dict[f"Gen_{variable}"] if "_GEN_VoltageNode2" in curve
         ]
         for variable in requested
     }
@@ -220,7 +220,7 @@ def test_a_unit_that_publishes_its_terminal_voltage_amplitude_is_asked_for_it(
     """#555: Dynawo already computes the amplitude, so there is nothing to rebuild."""
     requests = _terminal_voltage_requests(tmp_path, generator_lib, sim_type, zone)
 
-    assert requests == {amplitude: ["Gen_GEN_VoltageInjTerminal"]}
+    assert requests == {amplitude: ["Gen_GEN_VoltageNode2"]}
 
 
 @pytest.mark.parametrize("sim_type, zone", _ALL_GENERATOR_CURVE_LISTS)
@@ -228,7 +228,7 @@ def test_a_unit_that_publishes_its_terminal_voltage_amplitude_is_asked_for_it(
     "generator_lib, terminal",
     [
         ("PhotovoltaicsWeccVoltageSource1", "photovoltaics_injector_terminal"),
-        ("IECWT4BCurrentSource2020", "WT_wT4Injector_terminal"),
+        ("IECWT4BCurrentSource2020", "WT_wT4Injector_genSystem_terminal"),
     ],
 )
 def test_a_unit_declaring_its_terminal_voltage_by_components_is_asked_for_them(
@@ -237,6 +237,6 @@ def test_a_unit_declaring_its_terminal_voltage_by_components_is_asked_for_them(
     requests = _terminal_voltage_requests(tmp_path, generator_lib, sim_type, zone)
 
     assert requests == {
-        f"{terminal}_V_re": ["Gen_GEN_VoltageInjTerminalRe"],
-        f"{terminal}_V_im": ["Gen_GEN_VoltageInjTerminalIm"],
+        f"{terminal}_V_re": ["Gen_GEN_VoltageNode2Re"],
+        f"{terminal}_V_im": ["Gen_GEN_VoltageNode2Im"],
     }

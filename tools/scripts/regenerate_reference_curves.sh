@@ -31,9 +31,9 @@ usage() {
     echo "  • Each example is a cycle of its own — run, check, anonymize, write — so its curves"
     echo "    are in place while the others are still running, and regenerate_one_example.sh"
     echo "    redoes just one of them."
-    echo "  • A reference curve should not carry the oscillation of the simulation that produced"
-    echo "    it, so it is removed with a $DERIPPLE_CUTOFF Hz filter, and the curves are reduced"
-    echo "    to the samples that carry their shape."
+    echo "  • A reference curve is the simulation as it ran, reduced to the samples that carry"
+    echo "    its shape: nothing is filtered out of it, because what the de-ripple caught on the"
+    echo "    examples was the response of a model, not an oscillation of the solver."
     echo "  • An example writes nothing unless its run covered every test the PCS of the tool"
     echo "    declare and every one it declares for itself. Fiche F16 is among the second kind,"
     echo "    so regenerate_f16.sh has to have declared and announced its tests first."
@@ -124,14 +124,13 @@ if [ -t 1 ]; then
     printf '\033[%dA' "${#examples[@]}"
     draw_states
 else
-    run_examples
+    run_examples 2>&1 | tee "$working_path/regeneration.log"
 fi
 
-incomplete=$(grep -l 'not simulated' "$DYCOV_STATE_DIR"/* 2> /dev/null | wc -l)
-if [ "$incomplete" -gt 0 ]; then
+if grep -qs 'not simulated' "$DYCOV_STATE_DIR"/*; then
     echo
     echo "Curves that no simulation produced, and so are not in the examples:"
-    grep -h 'no curve for' "$working_path/regeneration.log" 2> /dev/null | sort -u | sed 's/^ *//'
+    grep -h 'no curve for' "$working_path/regeneration.log" | sort -u | sed 's/^ *//'
 fi
 
 if [ -s "$failures" ]; then

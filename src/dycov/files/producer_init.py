@@ -87,7 +87,6 @@ def adjust_producer_init(
                 xfmr.terminals[0].q0,
                 xfmr.terminals[0].u0,
                 xfmr.terminals[0].u_phase0,
-                xfmr.terminals[1].u0,
             )
         is_control_mode_valid = _adjust_generator(
             producer_par_root,
@@ -121,7 +120,7 @@ def adjust_producer_init(
 def _adjust_series_transformer(producer_par_root, xfmr: XfmrParams) -> None:
     """Writes the init values of a transformer in series with the PDR, if there is one.
 
-    A ratio tap changer needs the flow and both terminal voltages it starts from, and
+    A ratio tap changer needs the flow and the terminal-1 voltage it starts from, and
     init_calcs has already recorded them on the transformer's terminals.
     """
     if xfmr is None:
@@ -134,7 +133,6 @@ def _adjust_series_transformer(producer_par_root, xfmr: XfmrParams) -> None:
         xfmr.terminals[0].q0,
         xfmr.terminals[0].u0,
         xfmr.terminals[0].u_phase0,
-        xfmr.terminals[1].u0,
     )
 
 
@@ -145,7 +143,6 @@ def _adjust_transformer(
     transformer_q10pu,
     transformer_u10pu,
     transformer_uphase10,
-    transformer_u20pu,
 ):
     nsmap = {"ns": etree.QName(producer_par_root).namespace}
     parset = par_access.get_parset(producer_par_root, transformer.par_id, nsmap)
@@ -154,7 +151,6 @@ def _adjust_transformer(
     _set_transformer_voltage_phase(
         parset, nsmap, transformer.lib, transformer_u10pu, transformer_uphase10
     )
-    _set_transformer_voltage(parset, nsmap, transformer.lib, transformer_u20pu)
 
 
 def _set_transformer_power(parset, nsmap, lib, p0pu, q0pu):
@@ -170,12 +166,6 @@ def _set_transformer_voltage_phase(parset, nsmap, lib, u0pu, uphase0):
     _set_parameter(parset, nsmap, voltage0, sign, u0pu, create_if_missing=True)
     _, phase0 = dynawo_translator.get_dynawo_variable(lib, "Phase10")
     _set_parameter(parset, nsmap, phase0, sign, uphase0, create_if_missing=True)
-
-
-def _set_transformer_voltage(parset, nsmap, lib, u0pu):
-    sign = 1
-    _, voltage_setpoint = dynawo_translator.get_dynawo_variable(lib, "Voltage20")
-    _set_parameter(parset, nsmap, voltage_setpoint, sign, u0pu, create_if_missing=True)
 
 
 def _adjust_generator(

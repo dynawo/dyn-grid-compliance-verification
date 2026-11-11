@@ -9,6 +9,26 @@ Developed by Grupo AIA
 ===========================
 
 
+# Which revision this document comes from
+
+This document comes from a DTR older than the base revision of the tool. It was written in
+2022, and the chapter *DTR Sheets: our implementation* keeps the values of the article 8.3.3
+of that time.
+
+The base revision of the tool is `20240215`, the DTR of 15/02/2024.
+`Summary_data_from_the_DTR.md` gives its values, and `DTR_revisions.md` says how the tool
+carries a later revision. Where this document and those two disagree, those two are right.
+Two differences are known:
+
+  - **The gabarit of the voltage dip.** This document puts a column for each voltage level in
+    the table of each class. The gabarit of `20240215` gives one set of values for each
+    category. Only the fault elimination time T of the fiches I4 and I5 depends on the voltage
+    level: 85 ms in HTB3 and HTB2, 150 ms in HTB1.
+
+  - **The gabarit of the overvoltage.** This document gives four voltage levels and three
+    times. The figure 13 of `20240215` gives three voltage levels and two times.
+
+
 # Architecture
 
 ## Organization of the code
@@ -270,15 +290,13 @@ Checks for compliant behavior of the generator under a scenario where there is a
 symmetric three-phase fault at one of the four transmission lines (at a 1%
 distance from the PDR).
 
-In Dynawo this has been modeled by splitting Line4 into Line4a and Line4b, and
-then inserting an intermediate bus between them, in which a `NodeFault` model is
-attached.
+In Dynawo Line4 is a `LineFault` model: two sections of the line with the fault
+between them, at 1% of its length from the PDR.
 
 There are two relevant events at play here:
   * `T_{fault}`, time at which the short-circuit takes place. This becomes the
     default reference when checking for compliance times.
-  * `T_{clear}`, time at which the line (actually, both Line4a and Line4b) is
-    disconnected at both ends.
+  * `T_{clear}`, time at which the fault is removed; the line stays in service.
 
 `T_{clear}` is a parameter that is specified in the DTR and depends on the
 voltage level in question.
@@ -716,9 +734,8 @@ symmetric three-phase fault at one of the four transmission lines (at a 1%
 distance from the PDR). The PPM should remain connected and be able to supply
 the necessary reactive injection.
 
-In Dynawo this fault has been modeled by splitting Line4 into Line4a and Line4b,
-and then inserting an intermediate bus between them, to which a `NodeFault`
-model is attached.
+In Dynawo Line4 is a `LineFault` model: two sections of the line with the fault
+between them, at 1% of its length from the PDR.
 
 Note that although the DTR Sheet also requires simulating a one-phase fault,
 this tool will not implement it, as it would require the simulation of a
@@ -727,8 +744,7 @@ three-phase model. All simulations are only positive-sequence.
 There are two relevant events at play here:
   * `T_{fault}`, time at which the short-circuit takes place. This becomes the
     default reference when checking for compliance times.
-  * `T_{clear}`, time at which the line (actually, both Line4a and Line4b) is
-    disconnected at both ends.
+  * `T_{clear}`, time at which the fault is removed; the line stays in service.
 
 `T_{clear}` is a parameter that is specified in the DTR and depends on the
 voltage level in question.

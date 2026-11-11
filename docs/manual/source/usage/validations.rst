@@ -182,14 +182,14 @@ plant model, named **InternalNode1** in DyCoV outputs (the node called *Node1*
 in the DTR). The name *PDR* is reserved for the real connection point of the
 complete installation to RTE's grid, which is the point used in Zone 3.
 
-The injector-terminal curves of the Zone 1 reports (currents Ip and Iq and the
+The Node2 curves of the Zone 1 reports (currents Ip and Iq and the
 voltage magnitude at the converter output) are measured at **InternalNode2**,
 the node between the unit and its transformer (the node called *Node2* in the
 DTR). Both nodes are labeled in the network schema of each report. These
-curves are read from the unit model itself at the injector terminal — the LV
-side of its internal transformer — where the voltage never reaches zero during
-a fault; samples where it is not available are discarded rather than turned
-into a current.
+curves are read from the unit model itself at the converter terminal — the LV
+side of the unit's transformer, whether the model holds that transformer or not
+— where the voltage never reaches zero during a fault; samples where it is not
+available are discarded rather than turned into a current.
 
 Zone 1 compares six curves, in every one of its benchmarks: the voltage at
 InternalNode1, the voltage at InternalNode2, the active and reactive power at

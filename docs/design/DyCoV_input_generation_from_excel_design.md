@@ -132,9 +132,9 @@ Three files per zone, plus the reference-curve tree (§8). The resolved model cl
   `topology`, `P_sharing_*`, `Q_sharing_*`, and `p_max_consumption` for storage, which DyCoV
   requires in both zones. A unit is alone in its Zone1 test, so it declares the whole of the
   power there (`1.0`); `P_share` and `Q_share` say how the plant spreads its own among the units,
-  and reach the Zone3 INI only, keyed by each unit's block. Zone3 also declares `p_min_injection` (and `p_min_consumption` for
-  storage) when its row is filled: they are the starting points of the Fiche F16 tests, which only
-  Zone3 runs. The keys name no node, because each zone declares the node it connects at: `u_nom` is
+  and reach the Zone3 INI only, keyed by each unit's block. Zone3 also declares `p_min_injection`
+  (and `p_min_consumption` for storage) when its row is filled: they are the starting points of
+  the Fiche F16 tests, which only Zone3 runs. The keys name no node, because each zone declares the node it connects at: `u_nom` is
   `Un1` in Zone1 and `Un_PDR` in Zone3, and Zone1's `topology` is always `S`: one unit connected to
   its internal node, whatever the plant's.
 - **Producer.dyd** — a `blackBoxModel` for the converter (resolved `lib`), the topology network
@@ -162,7 +162,9 @@ per unit the way DyCoV lays an `M` plant out (`examples/Model/Wind/WECC4`): its 
 `Producer_G<i>.{dyd,par,ini}`, with the technology's block id and its own step-up transformer,
 and a block of its own in Zone3, numbered (`Wind_Turbine1`, `Wind_Turbine2`…), on the plant's
 `SnZone3` as `SNom`, its share of the plant's power coming from the INI. The units connect at the
-same internal node, so their `Un1` must agree. An `S` plant is the single-unit case: one sheet,
+same internal node, so their `Un1` must agree. The `Protection de tension` sheet is a single one,
+so every unit carries the same ride-through protection, and its table file is written once in
+each zone, beside the PARs that name it. An `S` plant is the single-unit case: one sheet,
 `Producer.*` files, the block id unnumbered.
 
 ---
@@ -295,8 +297,8 @@ Zone1 and `Un_PDR` in Zone3.
 
 **Which parameters carry that branch is the Dynawo dictionary's answer**, not the code's: the
 converter set asks `dynawo_translator` for the model's `TransformerResistance` / `Reactance` /
-`Conductance` / `Susceptance`, so a family that spells them differently (WECC `R/XLvTrPu` in both
-levels, IEC `R/XLvTrPu` in the plant and `R/X/G/BesPu` in the turbine) is an entry in
+`Conductance` / `Susceptance`, so a family that spells them differently (WECC `R/XLvTrPu`, IEC
+`R/X/G/BLvTrPu`, both in the plant and in the turbine) is an entry in
 `curves/dynawo/dictionary/{Power_Park,Storage}.ini`. A model whose entry is missing is refused by
 name. None of these parameters has a `defaultValue` in the descriptors, so they are written
 whatever the flag says — zeroed where the flag moves the transformer out of the model.

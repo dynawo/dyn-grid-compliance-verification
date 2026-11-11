@@ -1,4 +1,4 @@
-    \subsection{Overview of DTR PCS \DTRPcs in injection}
+    \subsection{Overview of DTR PCS \DTRPcs{} in injection}
 
     Checks for compliant behavior of the BESS under an \emph{islanding} event grid
     scenario, i.e., the network has been split in such a way that the BESS is left as
@@ -60,6 +60,7 @@
         \item Reactive power supplied at the connection point.
         \item Active power supplied at the connection point.
         \item Network frequency, as the plant-level control measures it.
+        \item Frequency of the separated network, at the synchronous condenser.
         \item Magnitude controlled by the Plant-level voltage regulation: modulus of the voltage at the REPC.
         All BESS units are plotted on the same graph.
     \end{itemize}
@@ -113,8 +114,19 @@
         \centering
         \includegraphics[width=\textwidth]{\Producer_fig_WRef_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4Injection}
         \begin{minipage}[t]{0.8\textwidth}
-            \small Network frequency. The red dashed horizontal lines mark
-            the compliance limits, [49, 51] Hz.
+            \small Network frequency the units measure. The red dashed
+            horizontal lines mark the compliance limits, [49, 51] Hz, when
+            the curves give no frequency of the synchronous condenser.
+        \end{minipage}
+    \end{minipage}
+    \hfill
+    \begin{minipage}[t]{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{\Producer_fig_SyncCondFreq_PCS_RTE-I10.Islanding.DeltaP10DeltaQ4Injection}
+        \begin{minipage}[t]{0.8\textwidth}
+            \small Frequency of the synchronous condenser, which is that of
+            the separated network. The red dashed horizontal lines mark the
+            compliance limits, [49, 51] Hz.
         \end{minipage}
     \end{minipage}
     \\[2\baselineskip]

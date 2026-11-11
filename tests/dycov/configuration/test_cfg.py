@@ -9,6 +9,7 @@
 #
 
 import configparser
+import os
 from pathlib import Path
 
 import pytest
@@ -32,8 +33,8 @@ _ZONE_3_DESCRIPTION = (
 
 @pytest.fixture
 def empty_parsers():
-    """The five configuration layers, in the order the Config constructor takes them."""
-    return (_new_parser(), _new_parser(), _new_parser(), _new_parser(), _new_parser())
+    """The six configuration layers, in the order the Config constructor takes them."""
+    return tuple(_new_parser() for _ in range(6))
 
 
 @pytest.fixture
@@ -41,8 +42,9 @@ def config_with_priority(tmp_path):
     default_config = configparser.ConfigParser()
     user_config = configparser.ConfigParser()
     pcs_user_config = configparser.ConfigParser()
-    pcs_dtr_config = configparser.ConfigParser()
+    pcs_dtr_delta_config = configparser.ConfigParser()
     pcs_config = configparser.ConfigParser()
+    dtr_delta_config = configparser.ConfigParser()
 
     default_config.add_section("section")
     default_config.set("section", "key", "default_value")
@@ -55,7 +57,13 @@ def config_with_priority(tmp_path):
     default_config.set("section", "default_only", "default_only_value")
 
     return Config(
-        tmp_path, default_config, user_config, pcs_user_config, pcs_dtr_config, pcs_config
+        tmp_path,
+        default_config,
+        user_config,
+        pcs_user_config,
+        pcs_dtr_delta_config,
+        pcs_config,
+        dtr_delta_config,
     )
 
 
@@ -69,15 +77,20 @@ def test_get_value_priority_order(config_with_priority):
 
 
 def test_load_pcs_config_updates_parser(tmp_path, empty_parsers):
-    default_config, user_config, pcs_user_config, pcs_dtr_config, pcs_config = empty_parsers
+    (
+        default_config,
+        user_config,
+        pcs_user_config,
+        pcs_dtr_delta_config,
+        pcs_config,
+        dtr_delta_config,
+    ) = empty_parsers
 
     pcs_file = tmp_path / "pcs.ini"
     with pcs_file.open("w") as f:
         f.write("[pcs_section]\nfoo=bar\n")
 
-    cfg = Config(
-        tmp_path, default_config, user_config, pcs_user_config, pcs_dtr_config, pcs_config
-    )
+    cfg = Config(tmp_path, *empty_parsers)
     assert not pcs_config.has_section("pcs_section")
     cfg.load_pcs_config(pcs_file)
     assert pcs_config.has_section("pcs_section")
@@ -114,8 +127,34 @@ def test_get_int_float_with_invalid_value(tmp_path, empty_parsers):
     assert cfg.get_float("bad_section", "not_a_float", 0.0) == 0.0
 
 
+def test_get_threshold_reads_the_limit_of_a_check(tmp_path, empty_parsers):
+    user_config = empty_parsers[1]
+    user_config.add_section("GridCode")
+    user_config.set("GridCode", "thr_given", "2.5")
+    user_config.set("GridCode", "thr_informative", "none")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.get_threshold("GridCode", "thr_given", 5.0) == 2.5
+    assert cfg.get_threshold("GridCode", "thr_informative", 5.0) is None
+    assert cfg.get_threshold("GridCode", "thr_absent", 5.0) == 5.0
+
+
+def test_find_option_prefers_the_first_suffix_the_section_defines(tmp_path, empty_parsers):
+    user_config = empty_parsers[1]
+    user_config.add_section("test_section")
+    user_config.set("test_section", "u_fault", "0.05")
+    user_config.set("test_section", "u_fault_D", "1e-3")
+    user_config.set("test_section", "fault_duration_HTB1", "0.150")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.find_option("test_section", "u_fault", "D", "HTB1") == "u_fault_D"
+    assert cfg.find_option("test_section", "u_fault", "B", "HTB1") == "u_fault"
+    assert cfg.find_option("test_section", "fault_duration", "D", "HTB1") == "fault_duration_HTB1"
+    assert cfg.find_option("test_section", "u_clear", "D", "HTB3") is None
+
+
 def test_get_options_gathers_the_keys_of_every_layer(tmp_path, empty_parsers):
-    default_config, user_config, _, _, pcs_config = empty_parsers
+    default_config, user_config, _, _, pcs_config, _ = empty_parsers
     user_config.add_section("opt_section")
     user_config.set("opt_section", "foo", "1")
     user_config.set("opt_section", "bar", "2")
@@ -321,45 +360,90 @@ def test_the_dtr_revision_overrides_the_shipped_pcs_description(tmp_path, empty_
     tool_file = tmp_path / "tool" / "PCSDescription.ini"
     tool_file.parent.mkdir()
     tool_file.write_text("[PCS.Model]\npdr_U = Udim\npdr_Q = 0.0\n")
-    revision_file = tmp_path / "revision" / "PCSDescription.ini"
-    revision_file.parent.mkdir()
-    revision_file.write_text("[PCS.Model]\npdr_Q = 0.1\n")
+    dtr_delta_file = tmp_path / "revision" / "PCSDescription.ini"
+    dtr_delta_file.parent.mkdir()
+    dtr_delta_file.write_text("[PCS.Model]\npdr_Q = 0.1\n")
     cfg = Config(tmp_path, *empty_parsers)
 
-    cfg.load_pcs_config(tool_file, None, revision_file)
+    cfg.load_pcs_config(tool_file, None, dtr_delta_file)
 
     assert cfg.get_value("PCS.Model", "pdr_Q") == "0.1"
     assert cfg.get_value("PCS.Model", "pdr_U") == "Udim"
-    assert str(revision_file) in cfg.describe_option("PCS.Model", "pdr_Q")
+    assert str(dtr_delta_file) in cfg.describe_option("PCS.Model", "pdr_Q")
 
 
 def test_the_user_config_overrides_the_dtr_revision(tmp_path, empty_parsers):
     user_config = empty_parsers[1]
     user_config.read_string("[PCS.Model]\npdr_Q = 0.3\n")
-    revision_file = tmp_path / "revision" / "PCSDescription.ini"
-    revision_file.parent.mkdir()
-    revision_file.write_text("[PCS.Model]\npdr_Q = 0.1\n")
+    dtr_delta_file = tmp_path / "revision" / "PCSDescription.ini"
+    dtr_delta_file.parent.mkdir()
+    dtr_delta_file.write_text("[PCS.Model]\npdr_Q = 0.1\n")
     cfg = Config(tmp_path, *empty_parsers)
 
-    cfg.load_pcs_config(None, None, revision_file)
+    cfg.load_pcs_config(None, None, dtr_delta_file)
 
     assert cfg.get_value("PCS.Model", "pdr_Q") == "0.3"
 
 
+def test_the_layers_of_a_run_reach_a_configuration_read_again_from_the_files(
+    tmp_path, empty_parsers
+):
+    """#678: a worker started with forkserver or spawn builds its configuration from the files;
+    what the run set up in memory reaches it through these layers."""
+    user_file = tmp_path / "user.ini"
+    user_file.write_text("[Global]\nconsole_formatter = %(levelname)s|%(message)s\n")
+    run = Config(tmp_path, *empty_parsers)
+    run.load_user_config(user_file)
+    run._default_config.read_string("[DTR]\ncurrent = 20260723\n")
+    run.set_value("DTR", "current", "20240215")
+    run._dtr_delta_config.read_string("[GridCode]\nthr_reaction_time = none\n")
+    run._dtr_delta_files.append("revision_art_8_3_3.ini")
+    worker = Config(tmp_path, *(_new_parser() for _ in range(6)))
+    worker._user_config.read_string("[DTR]\ncurrent = 20260723\n[Stale]\nkey = 1\n")
+
+    worker.restore_run_layers(run.run_layers())
+
+    assert worker.get_value("DTR", "current") == "20240215"
+    assert worker._user_config.get("Global", "console_formatter", raw=True) == (
+        "%(levelname)s|%(message)s"
+    )
+    assert worker.get_threshold("GridCode", "thr_reaction_time", -1.0) is None
+    assert worker._dtr_delta_files == ["revision_art_8_3_3.ini"]
+    assert not worker._user_config.has_section("Stale")
+
+
+def test_the_layers_of_a_run_keep_what_its_files_say_as_they_say_it(tmp_path, empty_parsers):
+    """A section that overrides [DEFAULT] keeps its value, and a value interpolation would
+    reject reaches the worker as the main process read it, without stopping its pool."""
+    user_file = tmp_path / "user.ini"
+    user_file.write_text(
+        "[DEFAULT]\nsimulation_limit = 30\n\n[Dynawo]\nsimulation_limit = 600\n\n"
+        "[Global]\nnote = 50%\n"
+    )
+    run = Config(tmp_path, *empty_parsers)
+    run.load_user_config(user_file)
+    worker = Config(tmp_path, *(_new_parser() for _ in range(6)))
+
+    worker.restore_run_layers(run.run_layers())
+
+    assert worker.get_value("Dynawo", "simulation_limit") == "600"
+    assert worker._user_config.get("Global", "note", raw=True) == "50%"
+
+
 def test_set_value_overrides_a_dtr_revision_value_in_the_user_config(tmp_path, empty_parsers):
     user_config = empty_parsers[1]
-    pcs_dtr_config = empty_parsers[3]
-    revision_file = tmp_path / "revision" / "PCSDescription.ini"
-    revision_file.parent.mkdir()
-    revision_file.write_text("[PCS.Model]\npdr_Q = 0.1\n")
+    pcs_dtr_delta_config = empty_parsers[3]
+    dtr_delta_file = tmp_path / "revision" / "PCSDescription.ini"
+    dtr_delta_file.parent.mkdir()
+    dtr_delta_file.write_text("[PCS.Model]\npdr_Q = 0.1\n")
     cfg = Config(tmp_path, *empty_parsers)
-    cfg.load_pcs_config(None, None, revision_file)
+    cfg.load_pcs_config(None, None, dtr_delta_file)
 
     cfg.set_value("PCS.Model", "pdr_Q", "0.2")
 
     assert cfg.get_value("PCS.Model", "pdr_Q") == "0.2"
     assert user_config.get("PCS.Model", "pdr_Q") == "0.2"
-    assert pcs_dtr_config.get("PCS.Model", "pdr_Q") == "0.1"
+    assert pcs_dtr_delta_config.get("PCS.Model", "pdr_Q") == "0.1"
 
 
 def test_set_value_overrides_a_shipped_pcs_value_in_its_own_layer(tmp_path, empty_parsers):
@@ -389,3 +473,182 @@ def test_set_value_overrides_a_user_pcs_value_in_its_own_layer(tmp_path, empty_p
 
     assert pcs_user_config.get("PCS.Model", "pdr_Q") == "0.2"
     assert not user_config.has_option("PCS.Model", "pdr_Q")
+
+
+def test_the_word_none_withdraws_a_list(tmp_path, empty_parsers):
+    """An empty value lets the layer below answer; a revision writes "none" instead."""
+    pcs_dtr_delta_config = empty_parsers[3]
+    pcs_default_config = empty_parsers[4]
+    pcs_default_config.add_section("PCS-Benchmarks")
+    pcs_default_config.set("PCS-Benchmarks", "PCS_RTE-I5", "ThreePhaseFault")
+    pcs_dtr_delta_config.add_section("PCS-Benchmarks")
+    pcs_dtr_delta_config.set("PCS-Benchmarks", "PCS_RTE-I5", "none")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.get_list("PCS-Benchmarks", "PCS_RTE-I5") == []
+
+
+def test_an_empty_list_in_a_delta_leaves_the_shipped_one_answering(tmp_path, empty_parsers):
+    pcs_dtr_delta_config = empty_parsers[3]
+    pcs_default_config = empty_parsers[4]
+    pcs_default_config.add_section("PCS-Benchmarks")
+    pcs_default_config.set("PCS-Benchmarks", "PCS_RTE-I5", "ThreePhaseFault")
+    pcs_dtr_delta_config.add_section("PCS-Benchmarks")
+    pcs_dtr_delta_config.set("PCS-Benchmarks", "PCS_RTE-I5", "")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.get_list("PCS-Benchmarks", "PCS_RTE-I5") == ["ThreePhaseFault"]
+
+
+def test_a_threshold_of_the_norm_the_user_changed_is_named(tmp_path, empty_parsers):
+    user_config = empty_parsers[1]
+    default_config = empty_parsers[0]
+    default_config.add_section("GridCode")
+    default_config.set("GridCode", "thr_P_mxe_before", "0.05")
+    user_config.add_section("GridCode")
+    user_config.set("GridCode", "thr_P_mxe_before", "0.5")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.overridden_norm_options() == [("GridCode", "thr_P_mxe_before")]
+
+
+def test_a_value_of_a_pcs_the_user_changed_is_named(tmp_path, empty_parsers):
+    pcs_user_config = empty_parsers[2]
+    pcs_default_config = empty_parsers[4]
+    pcs_default_config.add_section("PCS_RTE-I6.GridVoltageDip.Qzero.Model")
+    pcs_default_config.set("PCS_RTE-I6.GridVoltageDip.Qzero.Model", "u_fault", "0.05")
+    pcs_user_config.add_section("PCS_RTE-I6.GridVoltageDip.Qzero.Model")
+    pcs_user_config.set("PCS_RTE-I6.GridVoltageDip.Qzero.Model", "u_fault", "0.2")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.overridden_norm_options() == [("PCS_RTE-I6.GridVoltageDip.Qzero.Model", "u_fault")]
+
+
+def test_how_the_tool_runs_is_not_a_criterion_of_the_norm(tmp_path, empty_parsers):
+    """A log level or a solver setting is the user's business, and marks no verdict."""
+    default_config = empty_parsers[0]
+    user_config = empty_parsers[1]
+    for section, key, value in (
+        ("Global", "console_log_level", "20"),
+        ("Dynawo", "simulation_limit", "30"),
+    ):
+        default_config.add_section(section)
+        default_config.set(section, key, value)
+        user_config.add_section(section)
+        user_config.set(section, key, "99")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.overridden_norm_options() == []
+
+
+def test_an_option_only_the_user_defines_overrides_nothing(tmp_path, empty_parsers):
+    user_config = empty_parsers[1]
+    user_config.add_section("GridCode")
+    user_config.set("GridCode", "thr_of_its_own", "1.0")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.overridden_norm_options() == []
+
+
+def test_an_option_the_delta_of_the_revision_fixes_is_of_the_norm(tmp_path, empty_parsers):
+    user_config = empty_parsers[1]
+    dtr_delta_config = empty_parsers[5]
+    dtr_delta_config.add_section("GridCode")
+    dtr_delta_config.set("GridCode", "category_thresholds_high_voltage", "1,18,30")
+    user_config.add_section("GridCode")
+    user_config.set("GridCode", "category_thresholds_high_voltage", "1,18,99")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.overridden_norm_options() == [("GridCode", "category_thresholds_high_voltage")]
+
+
+def test_load_user_config_reads_the_file_it_is_given(tmp_path, empty_parsers):
+    user_file = tmp_path / "user_2024.ini"
+    user_file.write_text("[DTR]\ncurrent = 20240215\n")
+    cfg = Config(tmp_path, *empty_parsers)
+
+    cfg.load_user_config(user_file)
+
+    assert cfg.get_value("DTR", "current") == "20240215"
+
+
+@pytest.mark.parametrize("kind", ["missing", "directory"])
+def test_load_user_config_stops_on_a_file_it_cannot_read(tmp_path, empty_parsers, caplog, kind):
+    user_file = tmp_path / "user_2042.ini"
+    if kind == "directory":
+        user_file.mkdir()
+    cfg = Config(tmp_path, *empty_parsers)
+
+    with pytest.raises(OSError):
+        cfg.load_user_config(user_file)
+
+    assert "Successfully loaded user configuration" not in caplog.text
+    assert str(user_file) in caplog.text
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root reads any file")
+def test_load_user_config_stops_on_a_file_it_may_not_read(tmp_path, empty_parsers, caplog):
+    user_file = tmp_path / "user.ini"
+    user_file.write_text("[DTR]\ncurrent = 20240215\n")
+    user_file.chmod(0)
+    cfg = Config(tmp_path, *empty_parsers)
+
+    try:
+        with pytest.raises(PermissionError):
+            cfg.load_user_config(user_file)
+    finally:
+        user_file.chmod(0o644)
+
+    assert "Successfully loaded user configuration" not in caplog.text
+    assert cfg.get_value("DTR", "current") is None
+
+
+def test_describe_option_names_the_file_given_with_user_config(tmp_path, empty_parsers):
+    """#739: an option the --user-config file sets is not looked for in the shipped files."""
+    user_file = tmp_path / "bad.ini"
+    user_file.write_text("[Global]\nfoo = 1\n\n[PCS.Model]\npdr_P = Pmaxx\n")
+    pcs_file = tmp_path / "PCSDescription.ini"
+    pcs_file.write_text("[PCS.Model]\npdr_P = Pmax\n")
+    cfg = Config(tmp_path, *empty_parsers)
+    cfg.load_user_config(user_file)
+    cfg.load_pcs_config(pcs_file)
+
+    description = cfg.describe_option("PCS.Model", "pdr_P")
+
+    assert description == f"'pdr_P' in section [PCS.Model] of '{user_file}', line 5"
+
+
+def test_describe_option_names_a_user_config_that_cannot_be_read_again(tmp_path, empty_parsers):
+    """A pipe given with --user-config is read once, so its text is what names the line."""
+    user_file = tmp_path / "piped.ini"
+    user_file.write_text("[PCS.Model]\npdr_P = Pmaxx\n")
+    cfg = Config(tmp_path, *empty_parsers)
+    cfg.load_user_config(user_file)
+    user_file.unlink()
+
+    assert cfg.describe_option("PCS.Model", "pdr_P") == (
+        f"'pdr_P' in section [PCS.Model] of '{user_file}', line 2"
+    )
+
+
+def test_describe_option_prefers_the_user_config_file_over_config_ini(tmp_path, empty_parsers):
+    (tmp_path / "config.ini").write_text("[GridCode]\nzcc_voltage = Udim\n")
+    empty_parsers[1].read(tmp_path / "config.ini")
+    user_file = tmp_path / "run.ini"
+    user_file.write_text("[GridCode]\nzcc_voltage = Unomm\n")
+    cfg = Config(tmp_path, *empty_parsers)
+    cfg.load_user_config(user_file)
+
+    assert str(user_file) in cfg.describe_option("GridCode", "zcc_voltage")
+
+
+def test_the_layers_of_a_run_name_its_user_config_file_to_a_worker(tmp_path, empty_parsers):
+    user_file = tmp_path / "run.ini"
+    user_file.write_text("[PCS.Model]\npdr_P = Pmaxx\n")
+    run = Config(tmp_path, *empty_parsers)
+    run.load_user_config(user_file)
+    worker = Config(tmp_path, *(_new_parser() for _ in range(6)))
+
+    worker.restore_run_layers(run.run_layers())
+
+    assert str(user_file) in worker.describe_option("PCS.Model", "pdr_P")

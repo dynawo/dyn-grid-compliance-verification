@@ -1,4 +1,4 @@
-    \subsection{Overview of DTR PCS \DTRPcs in consumption}
+    \subsection{Overview of DTR PCS \DTRPcs{} in consumption}
 
     Checks for compliant behavior of the BESS under a grid scenario where there
     is a symmetric three-phase fault at one of the four transmission lines
@@ -26,9 +26,10 @@
         \end{itemize}
     \end{itemize}
 
-    In \Dynawo{} this fault has been modeled by splitting \code{Line4} into
-    \code{Line4a} and \code{Line4b}, and then inserting an intermediate bus between
-    them, to which a \code{NodeFault} object is attached.
+    In \Dynawo{}, \code{Line4} is a \code{LineFault} model: two sections of the
+    line with the fault between them, at 1\% of its length from the PDR. The
+    fault is applied when the event starts and removed after $T_{clear}$, and the
+    line stays in service.
 
     Note that although the DTR PCS also requires simulating a one-phase
     fault, this tool will not implement it, as it would require the
@@ -109,7 +110,7 @@
         \includegraphics[width=\textwidth]{\Producer_fig_P_PCS_RTE-I5.ThreePhaseFault.TransientBoltedConsumption}
         \begin{minipage}[t]{0.8\textwidth}
             \small Real power output P, measured at the PDR bus. Green-dashed
-            line: $-10\%$ ``floor'' below the final value of P.
+            line: ``floor'' at 90\% of the final value of P, on the side of zero.
         \end{minipage}
     \end{minipage}
     \hfill
@@ -173,8 +174,8 @@
 
     \noindent Key:
     \begin{description}
-        \item[Recovery time $T_{10P_{floor}}$:] time at which the suplied power
-        P recovers and stays above -10\% of the final value of P (note
+        \item[Recovery time $T_{10P_{floor}}$:] time at which the consumed power
+        P recovers and stays, in magnitude, above 90\% of its final value (note
         how this is not a "tube", but a "floor").
         \item[Rise time $T_{85U}$:] time at which the voltage at the PDR
         bus returns back above 0.85 pu, regardless of any possible

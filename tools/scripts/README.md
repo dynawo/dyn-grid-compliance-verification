@@ -28,7 +28,7 @@ This script orchestrates automated runs of **dycov** to **validate models**, **v
 >
 > *   **Validation** — `dycov validate` for Wind / Photovoltaics / BESS
 > *   **Performance** — `dycov performance` for selected topologies and models
-> *   **Envelope Generation** — `dycov generate_gfm_envelopes` for GFM (Overdamped / Underdamped)
+> *   **Envelope Generation** — `dycov generate_gfm_envelopes` for GFM (Overdamped / Underdamped / Fusion)
 
 ***
 
@@ -37,6 +37,8 @@ This script orchestrates automated runs of **dycov** to **validate models**, **v
 *   **Dynawo** installed and accessible; pass the launcher with `-l` (default: `dynawo.sh`).
 *   Examples tree (default: `./examples`).
 *   Write permissions on the results directory (default: `../Results`).
+*   A revision of the DTR, which has no default: `[DTR] current` in your `config.ini`, or pass
+    `--user-config tools/scripts/release.ini`, which names the revision the example curves follow.
 
 > **Tip:**
 >
@@ -139,6 +141,9 @@ Running with **no options** will:
         *   **PNG**: `../Results/overall_result_counts.png` (if Matplotlib available)
         *   **HTML**: `../Results/overall_result_counts.html` (if Plotly available)
     *   Prints totals and percentages to the log and announces file paths on the console.
+*   **Exit status**: a dycov run that fails is logged as `ERROR: exit code <n>: <command>`, and
+    the script exits with 1 once every phase and the summary have run, naming the phases that
+    failed. A verdict is not a failure: a non-compliant test still ends its run with 0.
 
 ***
 
@@ -170,7 +175,7 @@ tools/scripts/test_tool.sh --examples /home/marcos/project/examples
 
 ## 7) Troubleshooting & best practices
 
-*   The script uses `set -o errexit -o pipefail`; any failure causes a non-zero exit. Check `../Results/test_tool.log`.
+*   A failed run does not stop the others: the script exits with 1 at the end, as section 5 describes. Check `../Results/test_tool.log`.
 *   Provide a full path to `dynawo.sh` via `--launcher` if not on PATH.
 *   Keep Validation and Performance runs separate for clean logs; use `--remove` for reproducibility and version outputs via `--output`.
 
@@ -215,13 +220,19 @@ matter of taste:
     model: the Model ones from the run of stage 3, the Performance ones from a run of their own,
     in performance mode.
 
-Run `--help` on any of them for what it does. Four things are worth knowing before using it:
+Run `--help` on any of them for what it does. Five things are worth knowing before using it:
 
-*   **The oscillation goes.** A reference curve should not carry the oscillation of the
-    simulation that produced it, so the script de-ripples with a 5 Hz cut-off, and says so in
-    its own `--help`. Only a sustained oscillation is filtered; the response to the event, which
-    dies out, stays as simulated. The conditions whose model oscillates then report
-    Non-compliant, which is what the criterion says about them.
+*   **The run stops at the curves.** The anonymizer reads only the curves of each test and
+    the record of what its simulation ran with, so the runs of stages 3 and 4 pass
+    `--curves-only`: no check, no figure, no report. The summary of each run still lists
+    every test, with the outcome of its simulation, and that is what the coverage check
+    reads.
+*   **The simulation stays.** A reference curve is the simulation that produced it, reduced to
+    the samples that carry its shape and given the noise of a measurement, with nothing filtered
+    out. On the examples the de-ripple of the anonymizer only ever caught the response of a
+    model — the three steps in which an IEC turbine answers a fault, the current a storage unit
+    swings at the bottom of a dip — never an oscillation of the solver, so the script turns it
+    off and says so in its own `--help`.
 *   **Nothing is deduced.** The producer of a curve directory is the producer of the example its
     curves come from, named in `models.sh`; what no model states — the apparent power, the power
     levels of the F16 tests — is in `example_inputs.ini`. Both are data, not logic.

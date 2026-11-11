@@ -21,6 +21,7 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_BESS,
     MODEL_VALIDATION_PPM,
 )
+from dycov.electrical.generator_variables import generator_variables
 from dycov.files import model_parameters
 from dycov.files.producer_ini_file import MAGNITUDE_KEYS, RETIRED_SUFFIX
 from dycov.logging import dycov_logging
@@ -41,15 +42,28 @@ def _check_renamed_parameters(producer_config, section):
             )
 
 
+def _check_parameters_declared(producer_config, section, parameters):
+    for parameter in parameters:
+        if not producer_config.has_option(section, parameter):
+            raise ValueError(f"The parameter file must specify the {parameter}")
+
+
+def _has_producer_ini(name: str, directories: list[Path]) -> bool:
+    """Whether one of the directories holds the INI of the producer of that name."""
+    pattern = re.compile(file_checks.model_file_regex("ini", name))
+    return any(
+        directory.is_dir() and any(pattern.match(str(file)) for file in directory.iterdir())
+        for directory in directories
+    )
+
+
 def _check_parameters_definition(producer_config, section, needs_consumption):
     _check_renamed_parameters(producer_config, section)
 
     required = _REQUIRED_PARAMETERS
     if needs_consumption:
         required += (_CONSUMPTION_PARAMETER,)
-    for parameter in required + ("topology",):
-        if not producer_config.has_option(section, parameter):
-            raise ValueError(f"The parameter file must specify the {parameter}")
+    _check_parameters_declared(producer_config, section, required + ("topology",))
 
 
 class ModelProducer(Producer):
@@ -181,6 +195,10 @@ class ModelProducer(Producer):
             self._sim_type = ELECTRIC_PERFORMANCE_PPM
         elif bess_models > 0:
             self._sim_type = ELECTRIC_PERFORMANCE_BESS
+            # Its consumption tests run at the maximum power it consumes
+            producer_config = self.__read_producer_ini()
+            _check_renamed_parameters(producer_config, "DEFAULT")
+            _check_parameters_declared(producer_config, "DEFAULT", (_CONSUMPTION_PARAMETER,))
         else:
             raise ValueError(
                 "Electric performance verification does not support the modeled generator type"
@@ -333,10 +351,11 @@ class ModelProducer(Producer):
         return self.__read_producer_ini().get("DEFAULT", "generator_type")
 
     def __read_producer_ini(self):
-        if self._filename is None:
-            pattern_ini = re.compile(r".*.Producer.[iI][nN][iI]")
-        else:
-            pattern_ini = re.compile(rf".*.{self._filename}.[iI][nN][iI]")
+        pattern_ini = re.compile(
+            file_checks.model_file_regex(
+                "ini", "Producer" if self._filename is None else self._filename
+            )
+        )
         producer_ini = self.__get_file_by_pattern(pattern_ini)
 
         producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
@@ -452,25 +471,42 @@ class ModelProducer(Producer):
             if not path.is_dir():
                 return []
 
-            pattern = re.compile(r".*.[dD][yY][dD]")
+            pattern = re.compile(file_checks.model_file_regex("dyd"))
             return sorted(
                 [file.stem for file in path.resolve().iterdir() if pattern.match(str(file))]
             )
 
         elif self._producer_curves_path is not None:
-            path = self._producer_curves_path
-
+            path = self._producer_curves_path.resolve()
             zone_directories = {"Zone1", "Zone3"}
+            candidates = [
+                p for p in path.iterdir() if p.name not in zone_directories and p.is_dir()
+            ]
+            ini_directories = {
+                0: [path, path / "Zone1", path / "Zone3"],
+                1: [path / "Zone1"],
+                3: [path / "Zone3"],
+            }
             return sorted(
-                [
-                    p.stem
-                    for p in path.resolve().iterdir()
-                    if p.name not in zone_directories and p.is_dir()
-                ]
+                p.stem
+                for p in candidates
+                if self.__is_producer(p, ini_directories[0])
+                and _has_producer_ini(p.stem, ini_directories[zone])
             )
 
         dycov_logging.get_logger("Producer").error("No producer model has been defined")
         return list()
+
+    def __is_producer(self, directory: Path, ini_directories: list[Path]) -> bool:
+        """Whether a directory of the curves is the curves of a producer, which has an INI of
+        its name; one that is not, such as the results of an earlier run, is skipped."""
+        if _has_producer_ini(directory.stem, ini_directories):
+            return True
+        dycov_logging.warn_once(
+            "Producer",
+            f"{directory} is skipped: it is no producer, as no {directory.stem}.ini describes it",
+        )
+        return False
 
     def set_consumption(self, consumption: bool) -> None:
         """The values of p_max_pu and p_min_pu are defined depending on the
@@ -633,6 +669,20 @@ class ModelProducer(Producer):
         """
         return self._has_reference_curves_path
 
+    def get_category(self) -> str:
+        """Gets the category of the unit, as the DTR defines it.
+
+        Returns
+        -------
+        str
+            Category of the unit: A, B, C or D
+        """
+        return generator_variables.get_generator_category(
+            self.u_nom,
+            self.p_max_injection_pu * self._s_nref,
+            self._sim_type in (ELECTRIC_PERFORMANCE_BESS, MODEL_VALIDATION_BESS),
+        )
+
     def get_sim_type_str(self) -> str:
         """Gets a string according to the type of validation executed.
 
@@ -684,10 +734,7 @@ class ModelProducer(Producer):
         Path
             Path to the Producer DYD file
         """
-        if self._filename is None:
-            pattern_dyd = re.compile(r".*.[dD][yY][dD]")
-        else:
-            pattern_dyd = re.compile(rf".*.{self._filename}.[dD][yY][dD]")
+        pattern_dyd = re.compile(file_checks.model_file_regex("dyd", self._filename))
         return self.__get_file_by_pattern(pattern_dyd)
 
     def get_producer_par(self) -> Path:
@@ -698,10 +745,7 @@ class ModelProducer(Producer):
         Path
             Path to the Producer PAR file
         """
-        if self._filename is None:
-            pattern_par = re.compile(r".*.[pP][aA][rR]")
-        else:
-            pattern_par = re.compile(rf".*.{self._filename}.[pP][aA][rR]")
+        pattern_par = re.compile(file_checks.model_file_regex("par", self._filename))
         return self.__get_file_by_pattern(pattern_par)
 
     def get_producer_curves_path(self) -> Path:

@@ -13,6 +13,7 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -108,6 +109,7 @@ class DummyParameters(ValidationParameters):
         only_dtr=False,
         verification_type=0,
         sim_type=ELECTRIC_PERFORMANCE_SM,
+        curves_only=False,
     ):
         self._launcher_dwo = launcher_dwo
         self._selected_pcs = selected_pcs
@@ -116,6 +118,7 @@ class DummyParameters(ValidationParameters):
         self._producer = DummyProducer(sim_type)
         self._working_dir = Path(tempfile.mkdtemp())
         self._verification_type = verification_type
+        self._curves_only = curves_only
 
     def get_launcher_dwo(self):
         return self._launcher_dwo
@@ -137,6 +140,18 @@ class DummyParameters(ValidationParameters):
 
     def get_only_dtr(self):
         return self._only_dtr
+
+
+@pytest.fixture(autouse=True)
+def _directories_under_tmp_path(monkeypatch, tmp_path):
+    """The stand-ins and the code they drive create their directories under the test's
+    tmp_path, which pytest removes, instead of the system temporary directory."""
+    mkdtemp = tempfile.mkdtemp
+
+    def under_tmp_path(suffix=None, prefix=None, dir=None):
+        return mkdtemp(suffix, prefix, tmp_path if dir is None else dir)
+
+    monkeypatch.setattr(tempfile, "mkdtemp", under_tmp_path)
 
 
 @pytest.fixture
@@ -347,6 +362,28 @@ def test_a_pcs_that_declares_no_test_is_not_validated(monkeypatch):
     assert result == ("Producer", "PCS_RTE-F16z3", [], {})
 
 
+def test_an_invalid_pcs_adds_nothing_to_the_summary(monkeypatch):
+    class InvalidPcs:
+        def __init__(self, producer_name, pcs_name, parameters):
+            self._producer_name = producer_name
+            self._name = pcs_name
+
+        def is_valid(self):
+            return False
+
+        def get_producer_name(self):
+            return self._producer_name
+
+        def get_name(self):
+            return self._name
+
+    monkeypatch.setattr("dycov.validate.validation.Pcs", InvalidPcs)
+
+    result = _validate_pcs((None, "PCS_RTE-I99", "Producer", Path("/tmp")))
+
+    assert result == ("Producer", "PCS_RTE-I99", [], {})
+
+
 def test_a_run_without_tests_generates_no_report(monkeypatch, tmp_path):
     validation = Validation.__new__(Validation)
     validation._parameters = DummyParameters(output_dir=tmp_path / "output")
@@ -367,3 +404,109 @@ def test_a_run_without_tests_generates_no_report(monkeypatch, tmp_path):
     validation._Validation__create_report([], {})
 
     assert moved == [(validation._parameters.get_working_dir(), tmp_path / "output")]
+
+
+def test_a_run_that_runs_no_test_does_not_look_for_its_report(monkeypatch, tmp_path):
+    """An invalid PCS, or one that declares no test, leaves no report to look for."""
+    validation = Validation.__new__(Validation)
+    validation._parameters = DummyParameters(output_dir=tmp_path / "output")
+    validation._parameters.get_output_dir().mkdir(parents=True)
+    validation._is_testing = True
+    monkeypatch.setattr(validation, "_validate", lambda use_parallel, num_processes: ([], {}))
+    monkeypatch.setattr(validation, "_Validation__create_report", lambda summary, results: None)
+    warnings = []
+
+    class _Recorder:
+        def warning(self, message):
+            warnings.append(message)
+
+        def __getattr__(self, name):
+            return lambda *args, **kwargs: None
+
+    monkeypatch.setattr(
+        "dycov.validate.validation.dycov_logging.get_logger", lambda name: _Recorder()
+    )
+
+    assert validation.validate(use_parallel=False, num_processes=1) == []
+    assert warnings == []
+
+
+def test_a_curves_only_run_logs_the_summary_without_the_report(monkeypatch, tmp_path):
+    validation = Validation.__new__(Validation)
+    validation._parameters = DummyParameters(output_dir=tmp_path / "output", curves_only=True)
+    validation._path_latex_files = tmp_path / "latex"
+    validation._dry_run = False
+    logged = []
+    moved = []
+    monkeypatch.setattr(
+        "dycov.validate.validation.report.create_pdf",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("no report expected")),
+    )
+    monkeypatch.setattr(
+        "dycov.validate.validation.report.log_summary",
+        lambda summary, parameters: logged.append(summary),
+    )
+    monkeypatch.setattr("dycov.validate.validation.manage_files.remove_dir", lambda path: None)
+    monkeypatch.setattr(
+        "dycov.validate.validation.manage_files.rename_path",
+        lambda source, target: moved.append((source, target)),
+    )
+    monkeypatch.setattr("dycov.validate.validation.dycov_logging.close_run_handler", lambda: None)
+
+    validation._Validation__create_report(["summary"], {})
+
+    assert logged == [["summary"]]
+    assert moved == [(validation._parameters.get_working_dir(), tmp_path / "output")]
+
+
+def test_a_curves_only_run_opens_no_report(monkeypatch, tmp_path):
+    validation = Validation.__new__(Validation)
+    validation._parameters = DummyParameters(output_dir=tmp_path, curves_only=True)
+    validation._is_testing = False
+    make_report_file(tmp_path)
+    simulated = SimpleNamespace(id=1, zone=3, producer_name="Producer", compliance="Simulated")
+    monkeypatch.setattr(
+        validation, "_validate", lambda use_parallel, num_processes: ([simulated], {})
+    )
+    monkeypatch.setattr(validation, "_Validation__create_report", lambda summary, results: None)
+    monkeypatch.setattr(
+        "dycov.validate.validation._open_document",
+        lambda *args: (_ for _ in ()).throw(AssertionError("no report to open")),
+    )
+
+    assert validation.validate() == ["Simulated"]
+
+
+def test_a_curves_only_pcs_prepares_no_report(monkeypatch):
+    class SimulatedPcs:
+        def __init__(self, producer_name, pcs_name, parameters):
+            self._producer_name = producer_name
+            self._name = pcs_name
+
+        def is_valid(self):
+            return True
+
+        def declares_tests(self):
+            return True
+
+        def get_producer_name(self):
+            return self._producer_name
+
+        def get_name(self):
+            return self._name
+
+        def validate(self, summary_list):
+            return "report.tex", True, {}
+
+    monkeypatch.setattr("dycov.validate.validation.Pcs", SimulatedPcs)
+    monkeypatch.setattr(
+        "dycov.validate.validation._prepare_report_pcs",
+        lambda *args: (_ for _ in ()).throw(AssertionError("no report expected")),
+    )
+
+    producer_name, pcs_name, summary_list, pcs_results = _validate_pcs(
+        (DummyParameters(curves_only=True), "PCS_RTE-I16z3", "Producer", Path("/tmp"))
+    )
+
+    assert (producer_name, pcs_name, summary_list) == ("Producer", "PCS_RTE-I16z3", [])
+    assert pcs_results["success"]

@@ -149,7 +149,7 @@ $PWD/dycov
 ```
 
 The Dynawo version is pinned: the installer downloads
-`Dynawo_omc_v1.8.0.zip` — a Dynawo Nightly distribution validated by the
+`Dynawo_omc_v2.0.0.zip` — a Dynawo Nightly distribution validated by the
 DyCoV team and published as an asset of the DyCoV release itself — verifies
 its checksum, and unpacks it under `$PWD/dycov/dynawo`.
 

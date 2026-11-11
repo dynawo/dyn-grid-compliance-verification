@@ -14,6 +14,7 @@ from typing import Optional
 import pandas as pd
 
 from dycov.configuration.cfg import config
+from dycov.curves import naming
 from dycov.curves.curves import ProducerCurves, get_cfg_oc_name
 from dycov.curves.importer.importer import CurvesImporter
 from dycov.curves.voltage_dip import measure_voltage_dip
@@ -72,6 +73,7 @@ class ImportedCurves(ProducerCurves):
         self._generators = []
         self._gens = []
         self._generators_imax = {}
+        self._declared_units = set()
         self._voltage_dip = None
 
     def _get_common_curve_data(
@@ -117,6 +119,7 @@ class ImportedCurves(ProducerCurves):
             return has_imported_curves, sim_t_event_start, fault_duration, df_imported_curves
 
         has_imported_curves = True
+        naming.get_network_frequency_curve(df_imported_curves)
         if not is_reference:
             self._generators = self.__get_generators(df_imported_curves)
             self._gens = _get_generators_ini(self._generators, df_imported_curves)
@@ -130,6 +133,7 @@ class ImportedCurves(ProducerCurves):
         self.get_producer().set_is_field_measurements(self._is_field_measurements)
 
         self._generators_imax = importer.metadata.get_generators_imax()
+        self._declared_units = importer.get_declared_units()
 
         return has_imported_curves, sim_t_event_start, fault_duration, df_imported_curves
 
@@ -183,15 +187,14 @@ class ImportedCurves(ProducerCurves):
         connect_event_to = config.get_value(config_section, "connect_event_to")
         step_value = 0.0
         if config.has_option(config_section, "setpoint_step_value"):
-            step_value = (
+            step_value = self.step_in_unit_base(
                 float(
                     self.obtain_value(
                         str(config.get_value(config_section, "setpoint_step_value")),
                         origin=(config_section, "setpoint_step_value"),
                     )
-                )
-                * self.get_snref()
-                / self.get_producer().s_nom
+                ),
+                connect_event_to,
             )
 
         return {
@@ -333,6 +336,9 @@ class ImportedCurves(ProducerCurves):
 
     def get_generators_imax(self) -> dict:
         return self._generators_imax
+
+    def get_declared_units(self) -> set:
+        return self._declared_units
 
     def get_voltage_dip(self) -> float | None:
         return self._voltage_dip

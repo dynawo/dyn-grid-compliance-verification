@@ -4,6 +4,7 @@
 
 - Repository: <https://github.com/dynawo/dyn-grid-compliance-verification>
 - Documentation: in this repository, under [docs/](docs/README.md)
+- Changes between releases: [CHANGELOG.md](CHANGELOG.md)
 
 DyCoV is an engineering-oriented framework designed to support grid connection
 studies through automated dynamic simulations and compliance checks.  
@@ -22,6 +23,10 @@ DyCoV is developed by [Grupo AIA](https://www.aia.es) for
 compliance criteria it checks. Its purpose is to make those checks reproducible: the
 same tests, run the same way, by the producer preparing a connection request and by
 the TSO reviewing it.
+
+DyCoV implements the DTR of 15/02/2024, which carries revision 3.3 of article 8.3.3.
+A later revision enters the tool as a delta over that one, as `docs/design/DTR_revisions.md`
+says.
 
 ---
 
@@ -240,6 +245,11 @@ generated outputs.
 > **Note:** On native installations, ensure the DyCoV environment is activated
 > (e.g. `source dycov/activate_dycov`). In WSL and Docker environments,
 > it may already be active.
+
+> **Before the first run:** set the revision of the DTR to validate against. DyCoV gives it no
+> default: write `current = 20260723` in the `[DTR]` section of `~/.config/dycov/config.ini`, the
+> revision the curves of the examples follow. For an installation of your own, use the one in
+> force when its PTF was signed. A run that finds none stops and lists the revisions available.
 
 For a more detailed walkthrough of these steps and expected outputs, see: [Quick start](docs/tutorials/quick_start.md)
 

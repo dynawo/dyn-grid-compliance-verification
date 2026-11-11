@@ -72,7 +72,7 @@
     <par type="BOOL" name="WTG4A_FreqFlag" value="true"/>
     <par type="BOOL" name="WTG4A_RefFlag" value="true"/>
     <par type="BOOL" name="WTG4A_VCompFlag" value="false"/>
-    <par type="DOUBLE" name="WTG4A_DbdPu" value="0.0001"/>
+    <par type="DOUBLE" name="WTG4A_DbdPu" value="0"/>
     <par type="DOUBLE" name="WTG4A_DDn" value="20"/>
     <par type="DOUBLE" name="WTG4A_DUp" value="20"/>
     <par type="DOUBLE" name="WTG4A_EMaxPu" value="0.5"/>
@@ -188,7 +188,7 @@
     <par type="BOOL" name="WTG4B_VCompFlag" value="false"/>
     <par type="DOUBLE" name="WTG4B_DDn" value="20"/>
     <par type="DOUBLE" name="WTG4B_DUp" value="20"/>
-    <par type="DOUBLE" name="WTG4B_DbdPu" value="0.0001"/>
+    <par type="DOUBLE" name="WTG4B_DbdPu" value="0"/>
     <par type="DOUBLE" name="WTG4B_EMaxPu" value="0.5"/>
     <par type="DOUBLE" name="WTG4B_EMinPu" value="-0.5"/>
     <par type="DOUBLE" name="WTG4B_FDbd1Pu" value="0.001"/>
@@ -240,12 +240,10 @@
     <par type="DOUBLE" name="load_beta" value="1.0"/>
   </set>
   <set id="Main_Xfmr">
-    <par type="DOUBLE" name="transformer_SNom" value="90"/>
     <par type="DOUBLE" name="transformer_RPu" value="0.00001"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.0001"/>
     <par type="DOUBLE" name="transformer_BPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0.0"/>
-    <par type="DOUBLE" name="transformer_RatioTfo0Pu" value="1.0"/>
     <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
     <par type="DOUBLE" name="transformer_RatioTfoMaxPu" value="1.1"/>
     <par type="DOUBLE" name="transformer_RatioTfoMinPu" value="0.9"/>

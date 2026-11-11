@@ -1,4 +1,4 @@
-    \subsection{Overview of DTR PCS \DTRPcs in consumption}
+    \subsection{Overview of DTR PCS \DTRPcs{} in consumption}
 
     Checks for compliant behavior of the BESS under a grid scenario where there is a
     severe drop of voltage at the PDR bus (which simulates the effect of a fault
@@ -42,7 +42,7 @@
     \begin{center}
         \begin{tabular}{lc}
             \toprule
-            \textbf{variable} & \textbf{all Volt Levels} \\
+            \textbf{variable} & \textbf{value} \\
             \midrule
             $U_{initial}$     & 1.0 pu                   \\
             $T_{0}$           & (free)                   \\
@@ -58,7 +58,7 @@
     \begin{center}
         \begin{tabular}{lc}
             \toprule
-            \textbf{variable} & \textbf{all Volt levels} \\
+            \textbf{variable} & \textbf{value} \\
             \midrule
             $U_{initial}$     & 1.0 pu                   \\
             $T_{0}$           & (free)                   \\
@@ -69,6 +69,9 @@
             \bottomrule
         \end{tabular}
     \end{center}
+
+    \noindent The unit under test is of category {{ category }}, so the simulation
+    applies the gabarit of \BLOCK{if category == 'D'}the class D\BLOCK{else}the classes B and C\BLOCK{endif}.
 
     \begin{description}
         \item Initial conditions used at the PDR bus:
@@ -144,7 +147,7 @@
         \includegraphics[width=\textwidth]{\Producer_fig_P_PCS_RTE-I6.GridVoltageDip.QzeroConsumption}
         \begin{minipage}[t]{0.8\textwidth}
             \small Real power output P, measured at the PDR bus. Green-dashed
-            line: $-10\%$ ``floor'' below the final value of P.
+            line: ``floor'' at 90\% of the final value of P, on the side of zero.
         \end{minipage}
     \end{minipage}
     \hfill
@@ -198,8 +201,8 @@
 
     \noindent Key:
     \begin{description}
-        \item[Recovery time $T_{10P_{floor}}$:] time at which the suplied power
-        P recovers and stays above -10\% of the final value of P (note
+        \item[Recovery time $T_{10P_{floor}}$:] time at which the consumed power
+        P recovers and stays, in magnitude, above 90\% of its final value (note
         how this is not a "tube", but a "floor").
         \item[Rise time $T_{85U}$:] time at which the voltage at the
         PDR bus returns back above 0.85pu, regardless of any possible

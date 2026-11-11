@@ -135,6 +135,16 @@ def _overwrite_dict(curves_dir: Path, content: str) -> None:
     (curves_dir / "Producer" / _DICT_NAME).write_text(content)
 
 
+def _write_frequency_curves(curves_dir: Path, frequencies: dict) -> None:
+    _write_curves(curves_dir)
+    names = "".join(f"{name} = {name}\n" for name in frequencies)
+    _overwrite_dict(curves_dir, f"{_FILLED_METADATA}\n[Curves-Dictionary]\ntime = time\n{names}")
+    values = ";".join(str(value) for value in frequencies.values())
+    (curves_dir / "Producer" / f"{_CFG_OC_NAME}.csv").write_text(
+        f"time;{';'.join(frequencies)}\n0.0;{values}\n20.0;{values}\n"
+    )
+
+
 def _make_working_dir(tmp_path: Path) -> Path:
     working_oc_dir = tmp_path / "working"
     working_oc_dir.mkdir()
@@ -200,6 +210,104 @@ def test_obtain_reference_curve_without_event_start_uses_the_default(tmp_path, t
     assert start_time == pytest.approx(0.0)
     assert not curves_df.empty
     assert producer.is_field_measurements is False
+
+
+# ---------------------------------------------------------------------------
+# Network frequency
+# ---------------------------------------------------------------------------
+
+
+def test_reference_curves_name_the_network_frequency_after_the_unit_frequency(
+    tmp_path, tool_config
+):
+    """#489: a dictionary that only declares the frequency each unit measures, as the one the
+    tool scaffolds for a synchronous machine does, still carries the curve fig_WRef reads."""
+    ref_dir = tmp_path / "ReferenceCurves"
+    _write_frequency_curves(ref_dir, {"SM_GEN_NetworkFrequencyPu": 0.99})
+    imported_curves = ImportedCurves(DummyProducer())
+
+    _, curves_df = imported_curves.obtain_reference_curve(
+        _make_working_dir(tmp_path), "Producer", _PCS, _BM, _OC, ref_dir
+    )
+
+    assert list(curves_df["NetworkFrequencyPu"]) == pytest.approx([0.99, 0.99])
+
+
+def test_producer_curves_name_the_network_frequency_after_the_unit_frequency(
+    tmp_path, tool_config
+):
+    curves_dir = tmp_path / "ProducerCurves"
+    _write_frequency_curves(curves_dir, {"SM_GEN_NetworkFrequencyPu": 0.99})
+    imported_curves = ImportedCurves(DummyProducer(curves_path=curves_dir))
+
+    _, _, _, curves_df = imported_curves.obtain_simulated_curve(
+        _make_working_dir(tmp_path), "Producer", _PCS, _BM, _OC, None
+    )
+
+    assert list(curves_df["NetworkFrequencyPu"]) == pytest.approx([0.99, 0.99])
+
+
+@pytest.mark.parametrize("zone", [1, 3])
+def test_reference_curves_read_the_names_the_generator_curves_had_before_the_nodes(
+    tmp_path, tool_config, zone
+):
+    ref_dir = tmp_path / "ReferenceCurves"
+    _write_curves(ref_dir)
+    _overwrite_dict(
+        ref_dir,
+        f"{_FILLED_METADATA}\n[Curves-Dictionary]\ntime = time\n"
+        "WT_GEN_VoltageInjTerminal = U2\nWT_GEN_ActiveCurrentInjTerminal = Ip2\n",
+    )
+    (ref_dir / "Producer" / f"{_CFG_OC_NAME}.csv").write_text(
+        "time;U2;Ip2\n0.0;1.0;0.8\n20.0;0.9;0.7\n"
+    )
+    imported_curves = ImportedCurves(DummyProducer(zone=zone))
+
+    _, curves_df = imported_curves.obtain_reference_curve(
+        _make_working_dir(tmp_path), "Producer", _PCS, _BM, _OC, ref_dir
+    )
+
+    assert list(curves_df["WT_GEN_VoltageNode2"]) == pytest.approx([1.0, 0.9])
+    assert list(curves_df["WT_GEN_ActiveCurrentNode2"]) == pytest.approx([0.8, 0.7])
+
+
+def test_a_file_whose_columns_carry_the_names_before_the_nodes_serves_the_current_ones(
+    tmp_path, tool_config
+):
+    ref_dir = tmp_path / "ReferenceCurves"
+    _write_curves(ref_dir)
+    _overwrite_dict(
+        ref_dir,
+        f"{_FILLED_METADATA}\n[Curves-Dictionary]\ntime = time\n"
+        "WT_GEN_VoltageNode2 = WT_GEN_VoltageNode2\n"
+        "WT_GEN_ActiveCurrentNode2 = WT_GEN_ActiveCurrentNode2\n",
+    )
+    (ref_dir / "Producer" / f"{_CFG_OC_NAME}.csv").write_text(
+        "time;WT_GEN_VoltageInjTerminal;WT_GEN_ActiveCurrentInjTerminal;WT_GEN_ActiveCurrentNode2\n"
+        "0.0;1.0;0.8;0.6\n20.0;0.9;0.7;0.5\n"
+    )
+    imported_curves = ImportedCurves(DummyProducer(zone=1))
+
+    _, curves_df = imported_curves.obtain_reference_curve(
+        _make_working_dir(tmp_path), "Producer", _PCS, _BM, _OC, ref_dir
+    )
+
+    assert list(curves_df["WT_GEN_VoltageNode2"]) == pytest.approx([1.0, 0.9])
+    assert list(curves_df["WT_GEN_ActiveCurrentNode2"]) == pytest.approx([0.6, 0.5])
+
+
+def test_imported_curves_keep_the_network_frequency_they_declare(tmp_path, tool_config):
+    ref_dir = tmp_path / "ReferenceCurves"
+    _write_frequency_curves(
+        ref_dir, {"NetworkFrequencyPu": 1.0, "SM_GEN_NetworkFrequencyPu": 0.99}
+    )
+    imported_curves = ImportedCurves(DummyProducer())
+
+    _, curves_df = imported_curves.obtain_reference_curve(
+        _make_working_dir(tmp_path), "Producer", _PCS, _BM, _OC, ref_dir
+    )
+
+    assert list(curves_df["NetworkFrequencyPu"]) == pytest.approx([1.0, 1.0])
 
 
 # ---------------------------------------------------------------------------
@@ -312,3 +420,44 @@ def test_obtain_simulated_curve_with_unfilled_event_start_names_the_dictionary(
 
     assert "sim_t_event_start" in str(unfilled_error.value)
     assert _DICT_NAME in str(unfilled_error.value)
+
+
+class _EventConfig(DummyConfig):
+    """The options of the event of one test, as the configuration serves them."""
+
+    def __init__(self, connect_event_to: str):
+        self._connect_event_to = connect_event_to
+
+    def get_value(self, section: str, key: str):
+        if key == "connect_event_to":
+            return self._connect_event_to
+        if key == "setpoint_step_value":
+            return "step"
+        return super().get_value(section, key)
+
+    def has_option(self, section: str, key: str) -> bool:
+        return key == "setpoint_step_value"
+
+
+@pytest.mark.parametrize(
+    "connect_event_to, scaled",
+    [
+        ("VoltageSetpointPu", False),
+        ("NetworkFrequencyPu", False),
+        ("ActivePowerSetpointPu", True),
+        ("ReactivePowerSetpointPu", True),
+    ],
+)
+def test_the_step_of_imported_curves_is_in_the_base_the_curves_are_compared_in(
+    monkeypatch, connect_event_to, scaled
+):
+    monkeypatch.setattr(f"{_IC}.config", _EventConfig(connect_event_to))
+    producer = DummyProducer()
+    producer.s_nom = 4.0
+    imported_curves = ImportedCurves(producer)
+    monkeypatch.setattr(imported_curves, "obtain_value", lambda definition, origin=None: 0.01)
+
+    event = imported_curves._ImportedCurves__process_event_parameters(_PCS, _BM, _OC, 20.0, 0.0)
+
+    assert event["connect_to"] == connect_event_to
+    assert event["step_value"] == pytest.approx(0.01 * 100.0 / 4.0 if scaled else 0.01)

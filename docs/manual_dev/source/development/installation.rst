@@ -237,7 +237,9 @@ Once the environment is set up, a typical development loop looks like this:
 2. Make your changes under ``src/dycov/``.
 3. Make sure Dynawo is reachable (either in ``PATH`` or via ``-l``).
 4. Run DyCoV against one of the bundled examples to see the effect of your
-   changes, which needs their curves (see *Getting the code*):
+   changes, which needs their curves (see *Getting the code*) and a revision of
+   the DTR in your configuration: ``current = 20260723`` in the ``[DTR]``
+   section of ``~/.config/dycov/config.ini``, the revision the curves follow:
 
    .. code-block:: console
 

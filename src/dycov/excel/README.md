@@ -72,6 +72,9 @@ The workbook is the single source of truth — the generator carries **no
 knowledge of the model family** (which blocks exist, which zones they belong to,
 or how the `Model Map` key is formed). It reads:
 
+- **`Infos générales ->`** — the `format_version` and `standard` of the
+  template the workbook follows; a version other than the one the release
+  reads is told with a warning, and the workbook is read all the same.
 - **`Général`** — the block variant selection (`Type de bloc | Choix | Zone`).
   `Zone` declares, per block, which zone(s) the block's parameters go to
   (`;`-separated, e.g. `Zone1;Zone3`; the plant controller declares `Zone3`
@@ -97,10 +100,12 @@ or how the `Model Map` key is formed). It reads:
 - **`Signaux zone 1` / `Signaux zone 3`** — per zone: the quantities to provide
   with the `.csv` column holding each, the DTR cases to run with the `.csv` file
   of each and its curve metadata, and the folder those files live in.
-- **Control sheets** — one per family (`REPC`, `REEC`, `REGC`, … in WECC;
-  `Contrôle de parc`, `Contrôle Q`, `Limiteurs`, … in IEC) — holding the
-  selected variant's parameters (bare names; the model prefix is prepended on
-  output).
+- **Control sheets** — one per family (`REPC`, `REEC`, `REGC`, `Protection de
+  tension`, … in WECC; `Contrôle de parc`, `Contrôle Q`, `Limiteurs`, … in IEC) —
+  holding the selected variant's parameters (bare names; the model prefix is
+  prepended on output, unless `[Block-Prefixes]` of `excel_names.ini` gives the
+  block one of its own because Dynawo keeps it in a separate submodel, as it does
+  the WECC voltage ride-through protection with `lhvrt_`).
 
 ## What it produces
 
@@ -129,6 +134,14 @@ or how the `Model Map` key is formed). It reads:
   `boolean → BOOL`).
 - **INI** — the filled `Producer.ini` (PDR limits, per-generator P/Q sharing,
   topology).
+- **Protection table file** — the WECC voltage ride-through protection reads its
+  two capability curves from a file, so the `Protection de tension` sheet carries
+  their points next to the protection's parameters and the file is written beside
+  the PAR, under the name `lhvrt_TablesFile` gives it and with each table named as
+  `lhvrt_TabletUunderUfilt` / `lhvrt_TabletUoverUfilt` say. What the sheet says
+  about the curves, in the cell beside its `Commentaire` label, heads the file as a
+  comment, so the capability they describe is named where they are read. A sheet
+  that describes no curve writes no file.
 - **Reference curves** — `CurvesFiles.ini`, one `.dict` per test with the
   metadata of its own row, and the `.csv` files copied from the folder the sheet
   names. A storage plant runs every DTR case twice, so one results-file cell

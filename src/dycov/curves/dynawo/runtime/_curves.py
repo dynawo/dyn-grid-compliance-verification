@@ -10,14 +10,19 @@
 
 from __future__ import annotations
 
-import re
+from collections import namedtuple
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
+from dycov.configuration.cfg import config
 from dycov.core.global_variables import ABS_TOLERANCE_FACTOR, VOLTAGE_DIP_THRESHOLD
+from dycov.curves import naming
+from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs
 from dycov.logging import dycov_logging
+
+SimulatedCurves = namedtuple("SimulatedCurves", "curves divergence")
 
 
 def _get_modulus(complex_list: list) -> list:
@@ -98,23 +103,6 @@ def report_unserved_requests(
     dycov_logging.get_logger("DynawoSimulator").warning(
         f"Dynawo did not provide the requested curves: {requests}"
     )
-
-
-def get_network_frequency_curve(curves_translation: dict) -> None:
-    """Identify the network frequency curve in the curves translation and add it with a
-    standardized name if found.
-
-    Parameters
-    ----------
-    curves_translation : dict
-        A dictionary mapping translated column names to their corresponding curve data. This
-        function will search for any column that matches the frequency patterns and add it to the
-        dictionary with the key "NetworkFrequencyPu" if found.
-    """
-    frequency_column_pattern = re.compile(r".*_NetworkFrequencyPu$")
-    frequency_columns = list(filter(frequency_column_pattern.match, curves_translation.keys()))
-    if frequency_columns:
-        curves_translation["NetworkFrequencyPu"] = curves_translation[frequency_columns[0]]
 
 
 def prepare_complex_column(
@@ -265,7 +253,7 @@ def translate_curves(
                 variable_translations, df_curves_imported, curves_translation, column
             )
 
-    get_network_frequency_curve(curves_translation)
+    naming.get_network_frequency_curve(curves_translation)
     return pd.DataFrame(curves_translation)
 
 
@@ -291,23 +279,50 @@ def convert_columns(df_curves: pd.DataFrame, curves_dict: dict) -> None:
             curves_dict[col] = df_curves[col].tolist()
 
 
-def _get_injector_terminal_curves(
+def _get_node2_powers(generators: list, df_curves: pd.DataFrame) -> None:
+    """Derive the powers at Node2 of a unit whose model gives the voltage and the current there,
+    but not the powers, as the IEC turbines do.
+
+    Parameters
+    ----------
+    generators : list
+        A list of generator objects, which contain information about the generator IDs.
+    df_curves : pd.DataFrame
+        The DataFrame containing the translated curves, where the voltage and the injected current
+        at Node2 are complex; it gains the active and reactive power at Node2 in s_nref pu, and
+        loses the current.
+    """
+    for generator in generators:
+        voltage_col = f"{generator.id}_GEN_VoltageNode2"
+        current_col = f"{generator.id}_GEN_CurrentNode2"
+        if voltage_col not in df_curves.columns or current_col not in df_curves.columns:
+            continue
+
+        power = np.asarray(df_curves[voltage_col].tolist(), dtype=np.complex128) * np.conj(
+            np.asarray(df_curves[current_col].tolist(), dtype=np.complex128)
+        )
+        df_curves[f"{generator.id}_GEN_ActivePowerNode2"] = power.real
+        df_curves[f"{generator.id}_GEN_ReactivePowerNode2"] = power.imag
+        _drop_columns(df_curves, [current_col])
+
+
+def _get_node2_curves(
     snref: float,
     snom: float,
     generators: list,
     df_curves: pd.DataFrame,
     curves_dict: dict,
 ) -> None:
-    """Derive the active and reactive current curves of the generator injectors from the power
-    and voltage curves Dynawo provides, applying the appropriate base conversion.
+    """Derive the active and reactive current curves at Node2 from the power and voltage curves
+    Dynawo provides, applying the appropriate base conversion.
 
-    Dynawo gives a power at the injector terminal, so the current is a curve the tool computes,
-    and it carries its own name: the dictionary declares what Dynawo provides, this function
-    emits what the criteria compare.
+    Dynawo gives a power at Node2, the converter terminal, so the current is a curve the tool
+    computes, and it carries its own name: the dictionary declares what Dynawo provides, this
+    function emits what the criteria compare.
 
-    The injector terminal sits behind the unit's own impedance, so its voltage is never
-    exactly zero and the division always has an answer, however small the voltage gets: the
-    power vanishes with it and the quotient is the current all the same. Zero is guarded
+    Node2 sits behind the unit's own impedance, so its voltage is never exactly zero and the
+    division always has an answer, however small the voltage gets: the power vanishes with it
+    and the quotient is the current all the same. Zero is guarded
     against because nothing forbids it, not because it is expected — unlike the connection
     point, which a bolted fault does take to zero.
 
@@ -330,9 +345,9 @@ def _get_injector_terminal_curves(
     columns_to_remove = []
 
     for generator in generators:
-        voltage_col = f"{generator.id}_GEN_VoltageInjTerminal"
-        active_power_col = f"{generator.id}_GEN_ActivePowerInjTerminal"
-        reactive_power_col = f"{generator.id}_GEN_ReactivePowerInjTerminal"
+        voltage_col = f"{generator.id}_GEN_VoltageNode2"
+        active_power_col = f"{generator.id}_GEN_ActivePowerNode2"
+        reactive_power_col = f"{generator.id}_GEN_ReactivePowerNode2"
 
         has_all_columns = (
             voltage_col in df_curves.columns
@@ -351,10 +366,10 @@ def _get_injector_terminal_curves(
 
         curves_dict[voltage_col] = voltage
         valid_mask = np.isfinite(voltage_array) & (voltage_array != 0.0)
-        curves_dict[f"{generator.id}_GEN_ActiveCurrentInjTerminal"] = np.divide(
+        curves_dict[f"{generator.id}_GEN_ActiveCurrentNode2"] = np.divide(
             active_power, voltage_array, out=np.zeros_like(active_power), where=valid_mask
         ).tolist()
-        curves_dict[f"{generator.id}_GEN_ReactiveCurrentInjTerminal"] = np.divide(
+        curves_dict[f"{generator.id}_GEN_ReactiveCurrentNode2"] = np.divide(
             reactive_power, voltage_array, out=np.zeros_like(reactive_power), where=valid_mask
         ).tolist()
 
@@ -401,8 +416,8 @@ def _get_controlled_point_curves(
         A dictionary to store the converted power curves.
     """
     for generator in generators:
-        active_power_col = f"{generator.id}_GEN_ActivePowerControlledPu"
-        reactive_power_col = f"{generator.id}_GEN_ReactivePowerControlledPu"
+        active_power_col = f"{generator.id}_GEN_ActivePowerControlledNode"
+        reactive_power_col = f"{generator.id}_GEN_ReactivePowerControlledNode"
 
         if not all(col in df_curves.columns for col in (active_power_col, reactive_power_col)):
             continue
@@ -585,7 +600,8 @@ def build_output_curves(
     ).tolist()
 
     _get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
-    _get_injector_terminal_curves(s_nref, s_nom, generators, df_curves, curves_dict)
+    _get_node2_powers(generators, df_curves)
+    _get_node2_curves(s_nref, s_nom, generators, df_curves, curves_dict)
     _get_controlled_point_curves(s_nref, s_nom, generators, df_curves, curves_dict)
     _get_tso_synchronous_condenser_curves(s_nref, s_nom, df_curves, curves_dict)
     _get_tso_load_curves(s_nref, s_nom, df_curves, curves_dict)
@@ -633,3 +649,101 @@ def create_curves(
     report_unserved_requests(variable_translations, df_curves_imported)
     df_curves = translate_curves(variable_translations, df_curves_imported)
     return build_output_curves(df_curves, df_curves_imported, generators, s_nom, s_nref)
+
+
+def _producer_variable(column: str, generators: list) -> str | None:
+    """The variable a curve of the producer gives, after its PDR bus or its unit, whose id the
+    producer chooses; None for a curve of the network."""
+    if column.startswith("BusPDR_"):
+        return column[len("BusPDR_") :]
+    units = [f"{generator.id}_GEN_" for generator in generators]
+    prefixes = [unit for unit in units if column.startswith(unit)]
+    return column[len(max(prefixes, key=len)) :] if prefixes else None
+
+
+def _divergence_limit(
+    column: str, generators: list, voltage_limit: float, power_limit: float
+) -> float | None:
+    """The magnitude beyond which a curve of the producer has diverged, None for a curve of the
+    network, whose loads and machines may reach any magnitude in the base of the producer, for the
+    measurements at the PDR, in the base of the network, which the PDR curves repeat in that of
+    the producer, or for one that may legitimately reach any: a setpoint, a frequency, a tap or an
+    angle."""
+    variable = _producer_variable(column, generators)
+    if variable is None or "Setpoint" in variable:
+        return None
+    if "Voltage" in variable or "MagnitudeControlledByAVR" in variable:
+        return voltage_limit
+    if "Power" in variable or "Current" in variable:
+        return power_limit
+    return None
+
+
+def find_divergence(
+    curves: pd.DataFrame,
+    generators: list,
+    voltage_limit: float,
+    power_limit: float,
+    zone: int = 0,
+) -> str | None:
+    """Looks for a curve of the producer that has diverged: a voltage beyond voltage_limit, a
+    power or a current beyond power_limit, in absolute value, or a value that is not finite.
+
+    Parameters
+    ----------
+    curves : pd.DataFrame
+        The curves of a simulation, as create_curves gives them.
+    generators : list
+        The units of the producer, whose curves are named after their ids.
+    voltage_limit : float
+        Largest voltage, in pu, a simulation that has not diverged reaches.
+    power_limit : float
+        Largest power or current, in pu, a simulation that has not diverged reaches.
+    zone : int
+        The zone a model validation runs in, whose outputs name its connection bus.
+
+    Returns
+    -------
+    str | None
+        What the first diverged curve reached, None when none has diverged.
+    """
+    for column in curves.columns:
+        limit = _divergence_limit(column, generators, voltage_limit, power_limit)
+        if limit is None:
+            continue
+        values = curves[column].to_numpy(dtype=float)
+        name = naming.to_output_name(column, zone)
+        if not np.all(np.isfinite(values)):
+            return f"{name} is not finite"
+        peak = float(np.max(np.abs(values))) if len(values) else 0.0
+        if peak > limit:
+            return f"{name} reached {peak:.3g} pu, beyond {limit:g} pu"
+    return None
+
+
+def read_simulated_curves(run: DynawoRunInputs, curves_file: Path) -> SimulatedCurves:
+    """Reads the curves of a simulation and tells whether those of the producer have diverged,
+    beyond the limits of the Dynawo section of the configuration.
+
+    Parameters
+    ----------
+    run : DynawoRunInputs
+        The inputs of the run, which give the translations, units and bases of its curves.
+    curves_file : Path
+        The curves file Dynawo wrote.
+
+    Returns
+    -------
+    SimulatedCurves
+        The curves, as create_curves gives them, and what the first diverged curve reached,
+        None when none has diverged.
+    """
+    curves = create_curves(run.curves_dict, curves_file, run.generators, run.s_nom, run.s_nref)
+    divergence = find_divergence(
+        curves,
+        run.generators,
+        config.get_float("Dynawo", "divergence_voltage_limit", 10.0),
+        config.get_float("Dynawo", "divergence_power_limit", 100.0),
+        run.zone,
+    )
+    return SimulatedCurves(curves, divergence)

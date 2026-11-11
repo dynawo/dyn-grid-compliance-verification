@@ -9,7 +9,7 @@
 #
 import pytest
 
-from dycov.report.tables import thresholds
+from dycov.report.tables import signal_error, thresholds
 
 
 class DummyThresholdVariables:
@@ -40,12 +40,14 @@ def test_create_map_all_checks_present():
     results = {
         "setpoint_tracking_controlled_magnitude_check": True,
         "setpoint_tracking_controlled_magnitude_name": "CM",
-        "during_mxe_controlled_magnitude_value": 1,
+        "during_mxe_tc_controlled_magnitude_value": 1,
         "setpoint_tracking_active_power_check": True,
         "setpoint_tracking_active_power_name": "P",
+        "during_mxe_tc_active_power_value": 1,
         "during_mxe_active_power_value": 1,
         "setpoint_tracking_reactive_power_check": True,
         "setpoint_tracking_reactive_power_name": "Q",
+        "during_mxe_tc_reactive_power_value": 1,
         "during_mxe_reactive_power_value": 1,
         "voltage_dips_voltage_check": True,
         "during_mxe_voltage_value": 1,
@@ -70,12 +72,14 @@ def test_create_map_all_keys_present():
     results = {
         "setpoint_tracking_controlled_magnitude_check": True,
         "setpoint_tracking_controlled_magnitude_name": "CM",
-        "during_mxe_controlled_magnitude_value": 0.0,
+        "during_mxe_tc_controlled_magnitude_value": 0.0,
         "setpoint_tracking_active_power_check": True,
         "setpoint_tracking_active_power_name": "P",
+        "during_mxe_tc_active_power_value": 0.0,
         "during_mxe_active_power_value": 0.0,
         "setpoint_tracking_reactive_power_check": True,
         "setpoint_tracking_reactive_power_name": "Q",
+        "during_mxe_tc_reactive_power_value": 0.0,
         "during_mxe_reactive_power_value": 0.0,
         "voltage_dips_voltage_check": True,
         "during_mxe_voltage_value": 0.0,
@@ -98,7 +102,7 @@ def test_setpoint_tracking_thresholds_with_during_window():
     results = {
         "setpoint_tracking_active_power_check": True,
         "setpoint_tracking_active_power_name": "P",
-        "during_mxe_active_power_value": 0.0,
+        "during_mxe_tc_active_power_value": 0.0,
     }
     thresholds_map = []
     thresholds._setpoint_tracking_thresholds(results, "active_power", "", thresholds_map)
@@ -142,3 +146,27 @@ def test_setpoint_tracking_thresholds_missing_check_key():
     thresholds_map = []
     thresholds._setpoint_tracking_thresholds(results, "active_power", "", thresholds_map)
     assert thresholds_map == []
+
+
+def _tracking_results(windows: tuple) -> dict:
+    """The results the checks write for a setpoint tracking test with these windows."""
+    results = {
+        "setpoint_tracking_controlled_magnitude_check": True,
+        "setpoint_tracking_controlled_magnitude_name": "Ip",
+    }
+    for window in windows:
+        for error in ("mxe", "me", "mae"):
+            results[f"{window}_{error}_tc_controlled_magnitude_value"] = 0.01
+            results[f"{window}_{error}_tc_controlled_magnitude_check"] = True
+    return results
+
+
+@pytest.mark.parametrize("windows", [("before", "after"), ("before", "during", "after")])
+def test_the_thresholds_of_a_tracking_test_have_the_windows_of_its_errors(windows):
+    """#657: a tracking test whose event lasts has an event window, in both tables."""
+    results = _tracking_results(windows)
+
+    errors = signal_error.create_map(results)
+    limits = thresholds.create_map(results, False)
+
+    assert len(limits[0]) == len(errors[0]) - 1 == 1 + 3 * len(windows)

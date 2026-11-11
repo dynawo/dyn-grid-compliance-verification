@@ -127,3 +127,20 @@ def test_create_map_with_missing_keys():
     # Only one time error row should be present
     assert len(table) == 1
     assert table[0][0] == "Overshoot"
+
+
+def test_create_map_states_an_indicator_whose_criterion_was_withdrawn():
+    """A revision may keep the indicator and take its criterion away: no threshold, no verdict."""
+    results = {
+        "calc_reaction_time": 2.0,
+        "ref_reaction_time": 1.0,
+        "reaction_time_error": 100.0,
+        "reaction_time_check": None,
+    }
+
+    row = next(
+        row for row in characteristics_response.create_map(results) if row[0] == "Reaction time"
+    )
+
+    assert row[4] == ""
+    assert row[5] == ""

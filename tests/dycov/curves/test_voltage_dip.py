@@ -176,6 +176,15 @@ def test_residual_voltage_above_threshold_is_too_small():
     assert result == VoltDipResult.DIP_TOO_SMALL
 
 
+def test_a_residual_voltage_that_is_not_a_number_is_no_bolted_fault():
+    """#675: a comparison with NaN is false, so it used to pass as under the threshold."""
+    result = classify_residual_voltage(
+        "PCS", "BM", "OC", _residual_curves(float("nan")), 0.15, 0.3, max_residual=0.005
+    )
+
+    assert result == VoltDipResult.DIP_TOO_SMALL
+
+
 def test_residual_voltage_column_missing():
     curves = pd.DataFrame({"time": [0.0, 0.1, 0.2]})
 

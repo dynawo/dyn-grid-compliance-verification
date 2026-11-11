@@ -20,8 +20,7 @@ SM_TESTS = [
     "PCS_RTE-I3.LineTrip.2BReactance",
     "PCS_RTE-I4.ThreePhaseFault.TransientBolted",
     "PCS_RTE-I6.GridVoltageDip.Qzero",
-    "PCS_RTE-I7.GridVoltageSwell.QMax",
-    "PCS_RTE-I7.GridVoltageSwell.QMin",
+    "PCS_RTE-I7.GridVoltageSwell.Qzero",
     "PCS_RTE-I8.LoadShedDisturbance.PmaxQzero",
     "PCS_RTE-I10.Islanding.DeltaP10DeltaQ4",
 ]
@@ -30,9 +29,9 @@ PPM_TESTS = [
     "PCS_RTE-I2.USetPointStep.AReactance",
     "PCS_RTE-I2.USetPointStep.BReactance",
     "PCS_RTE-I5.ThreePhaseFault.TransientBolted",
+    "PCS_RTE-I5.ThreePhaseFault.TransientImpedant",
     "PCS_RTE-I6.GridVoltageDip.Qzero",
-    "PCS_RTE-I7.GridVoltageSwell.QMax",
-    "PCS_RTE-I7.GridVoltageSwell.QMin",
+    "PCS_RTE-I7.GridVoltageSwell.Qzero",
     "PCS_RTE-I10.Islanding.DeltaP10DeltaQ4",
 ]
 
@@ -43,12 +42,12 @@ BESS_TESTS = [
     "PCS_RTE-I2.USetPointStep.BReactanceConsumption",
     "PCS_RTE-I5.ThreePhaseFault.TransientBoltedInjection",
     "PCS_RTE-I5.ThreePhaseFault.TransientBoltedConsumption",
+    "PCS_RTE-I5.ThreePhaseFault.TransientImpedantInjection",
+    "PCS_RTE-I5.ThreePhaseFault.TransientImpedantConsumption",
     "PCS_RTE-I6.GridVoltageDip.QzeroInjection",
     "PCS_RTE-I6.GridVoltageDip.QzeroConsumption",
-    "PCS_RTE-I7.GridVoltageSwell.QMaxInjection",
-    "PCS_RTE-I7.GridVoltageSwell.QMinInjection",
-    "PCS_RTE-I7.GridVoltageSwell.QMaxConsumption",
-    "PCS_RTE-I7.GridVoltageSwell.QMinConsumption",
+    "PCS_RTE-I7.GridVoltageSwell.QzeroInjection",
+    "PCS_RTE-I7.GridVoltageSwell.QzeroConsumption",
     "PCS_RTE-I10.Islanding.DeltaP10DeltaQ4Injection",
     "PCS_RTE-I10.Islanding.DeltaP10DeltaQ4Consumption",
 ]

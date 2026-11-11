@@ -28,11 +28,11 @@ def test_zone_1_asks_for_the_curves_it_compares_and_the_setpoints_it_draws():
 
     assert requested == [
         "InternalNode1_BUS_Voltage",
-        "Wind_Turbine_GEN_VoltageInjTerminal",
-        "Wind_Turbine_GEN_ActivePowerControlledPu",
-        "Wind_Turbine_GEN_ReactivePowerControlledPu",
-        "Wind_Turbine_GEN_ActiveCurrentInjTerminal",
-        "Wind_Turbine_GEN_ReactiveCurrentInjTerminal",
+        "Wind_Turbine_GEN_VoltageNode2",
+        "Wind_Turbine_GEN_ActivePowerControlledNode",
+        "Wind_Turbine_GEN_ReactivePowerControlledNode",
+        "Wind_Turbine_GEN_ActiveCurrentNode2",
+        "Wind_Turbine_GEN_ReactiveCurrentNode2",
         "Wind_Turbine_GEN_ActivePowerSetpointPu",
         "Wind_Turbine_GEN_ReactivePowerSetpointPu",
     ]
@@ -57,7 +57,7 @@ def test_zone_1_asks_for_no_voltage_setpoint():
 def test_a_unit_that_only_carries_setpoints_is_asked_for_every_curve():
     requested = requested_curves.for_columns(1, ["time", "WT_GEN_ActivePowerSetpointPu"])
 
-    assert "WT_GEN_ActivePowerControlledPu" in requested
+    assert "WT_GEN_ActivePowerControlledNode" in requested
 
 
 def test_zone_3_asks_for_the_bus_the_taps_and_the_injector_terminal():
@@ -70,19 +70,19 @@ def test_zone_3_asks_for_the_bus_the_taps_and_the_injector_terminal():
         "BusPDR_BUS_ActiveCurrent",
         "BusPDR_BUS_ReactiveCurrent",
         "StepUp_Xfmr_XFMR_Tap",
-        "Wind_Turbine_GEN_VoltageInjTerminal",
-        "Wind_Turbine_GEN_ActiveCurrentInjTerminal",
-        "Wind_Turbine_GEN_ReactiveCurrentInjTerminal",
+        "Wind_Turbine_GEN_VoltageNode2",
+        "Wind_Turbine_GEN_ActiveCurrentNode2",
+        "Wind_Turbine_GEN_ReactiveCurrentNode2",
         "Wind_Turbine_GEN_MagnitudeControlledByAVRPu",
         "Wind_Turbine_GEN_VoltageSetpointPu",
     ]
 
 
 def test_every_zone_asks_for_the_voltage_the_terminal_figure_draws():
-    """fig_UIt draws the generator VoltageInjTerminal, in Zone 1 and in three Zone 3
+    """fig_UIt draws the generator VoltageNode2, in Zone 1 and in three Zone 3
     benchmarks."""
     for zone in (1, 3):
-        assert "VoltageInjTerminal" in _generator_curves(zone)
+        assert "VoltageNode2" in _generator_curves(zone)
 
 
 def test_the_common_curves_precede_the_ones_of_the_zone():

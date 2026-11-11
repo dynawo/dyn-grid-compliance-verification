@@ -51,8 +51,8 @@ def test_create_plot_saves_expected_plot(tmp_path):
     results = {"AVR_5_crvs": [[1, 1, 1, 1, 1]], "time_85U": 2, "sim_t_event_start": 0}
     output_file = tmp_path / "plot.png"
     figure_description = FigureDescription(
-        name="ActiveCurrentInjTerminal",
-        variables="ActiveCurrentInjTerminal",
+        name="ActiveCurrentNode2",
+        variables="ActiveCurrentNode2",
         ylabel="MW",
     )
 
@@ -109,14 +109,14 @@ def test_create_plot_marks_no_mxe_on_a_figure_of_several_magnitudes(monkeypatch,
     figure_description = FigureDescription(
         name="fig_I",
         variables=[
-            {"type": "generator", "variable": "ActiveCurrentInjTerminal"},
-            {"type": "generator", "variable": "ReactiveCurrentInjTerminal"},
+            {"type": "generator", "variable": "ActiveCurrentNode2"},
+            {"type": "generator", "variable": "ReactiveCurrentNode2"},
         ],
         ylabel="I",
     )
     curves = [
-        _make_plot_curve("WT_GEN_ActiveCurrentInjTerminal"),
-        _make_plot_curve("WT_GEN_ReactiveCurrentInjTerminal"),
+        _make_plot_curve("WT_GEN_ActiveCurrentNode2"),
+        _make_plot_curve("WT_GEN_ReactiveCurrentNode2"),
     ]
 
     create_plot(
@@ -197,8 +197,8 @@ def test_get_xrange_for_curve_honors_figures_overrides(set_user_option):
 @pytest.mark.parametrize(
     "variable, color",
     [
-        ("ActiveCurrentInjTerminal", "#64b5cd"),
-        ("ReactiveCurrentInjTerminal", "#8172b3"),
+        ("ActiveCurrentNode2", "#64b5cd"),
+        ("ReactiveCurrentNode2", "#8172b3"),
         ("VoltageSetpointPu", "#8c8c8c"),
         ("ActivePowerSetpointPu", "#8c8c8c"),
         ("ReactivePowerSetpointPu", "#8c8c8c"),
@@ -215,7 +215,7 @@ def test_add_curve2plot_applies_color_and_style(variable, color):
 
 
 _POWER_WITH_ITS_SETPOINT = [
-    {"type": "generator", "variable": "ActivePowerControlledPu"},
+    {"type": "generator", "variable": "ActivePowerControlledNode"},
     {"type": "generator", "variable": "ActivePowerSetpointPu"},
 ]
 
@@ -225,7 +225,7 @@ def test_get_curves2plot_draws_the_setpoint_of_the_reference_in_a_style_of_its_o
     stepped the setpoint the test applies."""
     reference = pd.DataFrame(
         {
-            "WT_GEN_ActivePowerControlledPu": [0.85, 0.80],
+            "WT_GEN_ActivePowerControlledNode": [0.85, 0.80],
             "WT_GEN_ActivePowerSetpointPu": [0.85, 0.80],
         }
     )
@@ -233,17 +233,17 @@ def test_get_curves2plot_draws_the_setpoint_of_the_reference_in_a_style_of_its_o
     plot_curves = get_curves2plot(_POWER_WITH_ITS_SETPOINT, reference, is_reference=True)
 
     assert [(curve["name"], curve["color"], curve["style"]) for curve in plot_curves] == [
-        ("WT_GEN_ActivePowerControlledPu", "#dd8452", "-"),
+        ("WT_GEN_ActivePowerControlledNode", "#dd8452", "-"),
         ("WT_GEN_ActivePowerSetpointPu", "#dd8452", "--"),
     ]
 
 
 def test_get_curves2plot_draws_the_magnitude_of_a_reference_without_its_setpoint_alone():
-    reference = pd.DataFrame({"WT_GEN_ActivePowerControlledPu": [0.85, 0.80]})
+    reference = pd.DataFrame({"WT_GEN_ActivePowerControlledNode": [0.85, 0.80]})
 
     plot_curves = get_curves2plot(_POWER_WITH_ITS_SETPOINT, reference, is_reference=True)
 
-    assert [curve["name"] for curve in plot_curves] == ["WT_GEN_ActivePowerControlledPu"]
+    assert [curve["name"] for curve in plot_curves] == ["WT_GEN_ActivePowerControlledNode"]
 
 
 def test_get_curves2plot_skips_a_bus_curve_the_curves_do_not_carry():
@@ -289,7 +289,7 @@ def test_create_plot_marks_the_mxe_of_a_magnitude_drawn_with_its_setpoint(monkey
         name="fig_P", variables=_POWER_WITH_ITS_SETPOINT, ylabel="P"
     )
     curves = [
-        _make_plot_curve("WT_GEN_ActivePowerControlledPu"),
+        _make_plot_curve("WT_GEN_ActivePowerControlledNode"),
         _make_plot_curve("WT_GEN_ActivePowerSetpointPu"),
     ]
 
@@ -305,7 +305,7 @@ def test_create_plot_marks_the_mxe_of_a_magnitude_drawn_with_its_setpoint(monkey
         zone=1,
     )
 
-    assert marked == ["WT_GEN_ActivePowerControlledPu"]
+    assert marked == ["WT_GEN_ActivePowerControlledNode"]
 
 
 def test_get_yrange_applies_explicit_range_for_low_variation(set_user_option):
@@ -425,7 +425,7 @@ def test_draw_response_characteristics_marks_reaction_rise_and_settling(renderer
 def _frequency_figure(*deviations: float) -> FigureDescription:
     return FigureDescription(
         name="fig_WRef",
-        variables=[{"type": "generator", "variable": "NetworkFrequencyPu"}],
+        variables="NetworkFrequencyPu",
         ylabel=r"$\omega$ (Hz)",
         frequency_bands=[FrequencyBand(upper=d, lower=d) for d in deviations or (1.0,)],
         in_hz=True,
@@ -433,7 +433,7 @@ def _frequency_figure(*deviations: float) -> FigureDescription:
 
 
 def _frequency_curve(values: list) -> dict:
-    return {"name": "WT_GEN_NetworkFrequencyPu", "curve": values, "color": "#4c72b0", "style": "-"}
+    return {"name": "NetworkFrequencyPu", "curve": values, "color": "#4c72b0", "style": "-"}
 
 
 def test_create_plot_draws_the_frequency_and_its_reference_in_hz(monkeypatch, tmp_path):
@@ -480,13 +480,13 @@ def test_draw_additional_curves_draws_every_frequency_band_of_a_figure(renderer)
 
 def test_draw_response_characteristics_marks_the_settling_of_a_figure_in_hz_in_hz(renderer):
     results = {
-        "calc_settling_tube": {"WT_GEN_NetworkFrequencyPu": (1.0099, 1.0101)},
+        "calc_settling_tube": {"NetworkFrequencyPu": (1.0099, 1.0101)},
         "calc_settling_time": 0.37,
         "sim_t_event_start": 20.0,
         "calc_ss_value": 1.01,
     }
 
-    draw_response_characteristics(renderer, "WT_GEN_NetworkFrequencyPu", results, 50.0)
+    draw_response_characteristics(renderer, "NetworkFrequencyPu", results, 50.0)
 
     assert renderer.marks == [
         ("hrect", pytest.approx((50.495, 50.505))),

@@ -261,12 +261,10 @@
     <par name="load_UPhase0" type="DOUBLE" value="0.02089820153507974"/>
   </set>
   <set id="Main_Xfmr">
-    <par type="DOUBLE" name="transformer_SNom" value="90"/>
     <par type="DOUBLE" name="transformer_RPu" value="0.00001"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.0001"/>
     <par type="DOUBLE" name="transformer_BPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0.0"/>
-    <par type="DOUBLE" name="transformer_RatioTfo0Pu" value="1.0"/>
     <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
     <par type="DOUBLE" name="transformer_RatioTfoMaxPu" value="1.1"/>
     <par type="DOUBLE" name="transformer_RatioTfoMinPu" value="0.9"/>
@@ -276,6 +274,5 @@
     <par name="transformer_Q10Pu" type="DOUBLE" value="5.1564621449839976e-05"/>
     <par name="transformer_U10Pu" type="DOUBLE" value="1.0444516277640106"/>
     <par name="transformer_U1Phase0" type="DOUBLE" value="0.020899072392751388"/>
-    <par name="transformer_U20Pu" type="DOUBLE" value="1.0444444444444445"/>
   </set>
 </parametersSet>

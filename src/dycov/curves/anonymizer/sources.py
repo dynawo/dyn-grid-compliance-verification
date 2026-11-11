@@ -12,7 +12,7 @@ import configparser
 from pathlib import Path
 from typing import Dict, List
 
-from dycov.curves import requested_curves
+from dycov.curves import naming, requested_curves
 from dycov.files import manage_files
 from dycov.files.simulation_files import SIMULATION_INPUTS_FILE
 from dycov.logging import dycov_logging
@@ -131,15 +131,16 @@ def _curve_lines(csv_file: Path) -> List[str]:
     The curves the zone asks for are always declared, so a set that lacks one says so instead
     of hiding it; their right side names the column of the file just written, and is empty when
     nothing in it carries that curve. Every other column follows, because the importer reads a
-    curve file through its dictionary and would drop what the dictionary leaves out.
+    curve file through its dictionary and would drop what the dictionary leaves out. A column of
+    results written under a name the curves no longer have is declared under the one they have.
     """
-    columns = _columns_of(csv_file)
-    requested = requested_curves.for_columns(_zone_of(csv_file), columns)
+    columns = {naming.from_legacy_name(column): column for column in _columns_of(csv_file)}
+    requested = requested_curves.for_columns(_zone_of(csv_file), list(columns))
 
-    lines = [f"{name} = {name if name in columns else ''}\n" for name in requested]
-    lines += [f"{column} = {column}\n" for column in columns if column not in requested]
+    lines = [f"{name} = {columns.get(name, '')}\n" for name in requested]
+    lines += [f"{name} = {column}\n" for name, column in columns.items() if name not in requested]
 
-    compared = requested_curves.compared_for_columns(_zone_of(csv_file), columns)
+    compared = requested_curves.compared_for_columns(_zone_of(csv_file), list(columns))
     unserved = [name for name in compared if name not in columns]
     if unserved:
         dycov_logging.get_logger("Anonymizer").warning(

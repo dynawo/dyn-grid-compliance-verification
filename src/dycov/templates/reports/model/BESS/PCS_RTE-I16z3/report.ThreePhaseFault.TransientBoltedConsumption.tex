@@ -26,9 +26,10 @@
         \end{itemize}
     \end{itemize}
 
-    In \Dynawo this fault has been modeled by splitting Line4 into Line4a
-    and Line4b, and then inserting an intermediate bus between them, to
-    which a NodeFault model is attached.
+    In \Dynawo{}, \code{Line4} is a \code{LineFault} model: two sections of the
+    line with the fault between them, at 1\% of its length from the PDR. The
+    fault is applied when the event starts and removed after $T_{clear}$, and the
+    line stays in service.
 
     Note that although the DTR PCS also requires simulating a one-phase
     fault, this tool will not implement it, as it would require the
@@ -81,7 +82,7 @@
         \scriptsize
         \begin{tabular}{@{}lccccccccc@{}}
             \toprule
-            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} \\
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Post-event} \\
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
@@ -101,7 +102,7 @@
         \scriptsize
         \begin{tabular}{@{}lccccccccc@{}}
             \toprule
-            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} \\
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Post-event} \\
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
@@ -117,7 +118,7 @@
         \scriptsize
         \begin{tabular}{@{}lcccccccccc@{}}
             \toprule
-            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} & \\
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Post-event} & \\
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.      \\
             \midrule

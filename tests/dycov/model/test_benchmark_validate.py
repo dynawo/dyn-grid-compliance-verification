@@ -29,6 +29,11 @@ class DummyProducer:
 
 
 class DummyParams:
+    curves_only = False
+
+    def is_curves_only(self):
+        return self.curves_only
+
     def get_working_dir(self):
         return Path("/tmp")
 
@@ -265,3 +270,51 @@ def test_a_test_without_reference_curves_keeps_saying_so(benchmark, monkeypatch)
     # discard the reason the tool already worked out.
     assert compliance == Compliance.WithoutReferenceCurves
     assert results["summary"] == Compliance.WithoutReferenceCurves
+
+
+@pytest.mark.parametrize(
+    "success, has_simulated_curves, expected",
+    [
+        (True, True, "Simulated"),
+        (False, True, "FailedSimulation"),
+        (True, False, "FailedSimulation"),
+    ],
+)
+def test_a_curves_only_run_reports_the_simulation_without_checking_it(
+    benchmark, monkeypatch, success, has_simulated_curves, expected
+):
+    from dycov.model.compliance import Compliance
+    from dycov.model.parameters import CurvesAvailability, CurvesCheckResult, SimulationResult
+
+    benchmark._parameters.curves_only = True
+    monkeypatch.setattr(
+        benchmark,
+        "_Benchmark__get_curves_check_result",
+        lambda names, bm_name, oc_name: CurvesCheckResult(
+            working_oc_dir=Path("/tmp"),
+            jobs_output_dir=Path("/tmp"),
+            event_params={},
+            simulation_result=SimulationResult(
+                appicable=True,
+                success=success,
+                time_exceeds=False,
+                has_simulated_curves=has_simulated_curves,
+            ),
+            availability=CurvesAvailability.ALL,
+        ),
+        raising=False,
+    )
+    monkeypatch.setattr(
+        benchmark,
+        "_Benchmark__validate",
+        lambda *args, **kwargs: (_ for _ in ()).throw(AssertionError("no check expected")),
+        raising=False,
+    )
+
+    op_cond_success, compliance, results = benchmark._Benchmark__validate_operating_condition(
+        DummyOperatingCondition("First")
+    )
+
+    assert compliance == Compliance[expected]
+    assert results["summary"] == Compliance[expected]
+    assert op_cond_success == (compliance == Compliance.Simulated)

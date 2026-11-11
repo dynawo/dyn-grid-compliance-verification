@@ -33,9 +33,7 @@ def test_get_equipment_label_bus_zone1():
 
 
 def test_get_equipment_label_generator_ignores_zone():
-    assert (
-        get_equipment_label("Wind_Turbine_GEN_ActiveCurrentInjTerminal", zone=1) == "Wind_Turbine"
-    )
+    assert get_equipment_label("Wind_Turbine_GEN_ActiveCurrentNode2", zone=1) == "Wind_Turbine"
 
 
 def test_get_equipment_label_unknown():
@@ -90,23 +88,23 @@ def test_build_figure_title_generator_variables_ignores_zone():
 
 def test_build_figure_title_injector_terminal_currents_zone1():
     variables = [
-        {"variable": "ActiveCurrentInjTerminal", "type": "generator"},
-        {"variable": "ReactiveCurrentInjTerminal", "type": "generator"},
+        {"variable": "ActiveCurrentNode2", "type": "generator"},
+        {"variable": "ReactiveCurrentNode2", "type": "generator"},
     ]
 
     assert build_figure_title(variables, zone=1) == "Ip / Iq — InternalNode2"
 
 
 def test_build_figure_title_injector_terminal_voltage_zone1():
-    variables = [{"variable": "VoltageInjTerminal", "type": "generator"}]
+    variables = [{"variable": "VoltageNode2", "type": "generator"}]
 
     assert build_figure_title(variables, zone=1) == "Voltage — InternalNode2"
 
 
 def test_build_figure_title_injector_terminal_currents_zone3_keeps_generator():
     variables = [
-        {"variable": "ActiveCurrentInjTerminal", "type": "generator"},
-        {"variable": "ReactiveCurrentInjTerminal", "type": "generator"},
+        {"variable": "ActiveCurrentNode2", "type": "generator"},
+        {"variable": "ReactiveCurrentNode2", "type": "generator"},
     ]
 
     assert build_figure_title(variables, zone=3) == "Ip / Iq — Generator"
@@ -147,7 +145,7 @@ def test_every_setpoint_is_one(curve_name):
 
 
 @pytest.mark.parametrize(
-    "curve_name", ["WT_GEN_ActivePowerControlledPu", "NetworkFrequencyPu", "BusPDR_BUS_Voltage"]
+    "curve_name", ["WT_GEN_ActivePowerControlledNode", "NetworkFrequencyPu", "BusPDR_BUS_Voltage"]
 )
 def test_a_magnitude_is_not_a_setpoint(curve_name):
     assert not is_setpoint(curve_name)
@@ -158,7 +156,7 @@ def test_the_reference_setpoint_is_told_apart_from_the_simulated_one_and_from_it
     matters is the one that does not."""
     simulated = get_curve_style("WT_GEN_ActivePowerSetpointPu")
     reference = get_curve_style("WT_GEN_ActivePowerSetpointPu", is_reference=True)
-    reference_magnitude = get_curve_style("WT_GEN_ActivePowerControlledPu", is_reference=True)
+    reference_magnitude = get_curve_style("WT_GEN_ActivePowerControlledNode", is_reference=True)
 
     assert (simulated.color, simulated.style) == ("#8c8c8c", ":")
     assert (reference.color, reference.style) == ("#dd8452", "--")
@@ -193,7 +191,7 @@ def test_build_curve_label_names_a_setpoint_apart_from_the_power_it_drives(
 
 def test_build_figure_title_leaves_the_setpoint_out():
     variables = [
-        {"variable": "ActivePowerControlledPu", "type": "generator"},
+        {"variable": "ActivePowerControlledNode", "type": "generator"},
         {"variable": "ActivePowerSetpointPu", "type": "generator"},
     ]
 
@@ -202,7 +200,7 @@ def test_build_figure_title_leaves_the_setpoint_out():
 
 def test_build_figure_title_keeps_internal_node2_for_the_voltage_drawn_with_its_setpoint():
     variables = [
-        {"variable": "VoltageInjTerminal", "type": "generator"},
+        {"variable": "VoltageNode2", "type": "generator"},
         {"variable": "VoltageSetpointPu", "type": "generator"},
     ]
 

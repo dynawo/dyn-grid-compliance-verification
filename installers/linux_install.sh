@@ -39,7 +39,7 @@ TARGET_BRANCH=""
 REPO_URL="https://github.com/dynawo/dyn-grid-compliance-verification.git"
 DYNAWO_SHA256SUM="fbba80aa7ac6a990928b601e339a43ec49d538b956c97a51d038d1dcdea48768"
 
-DYNAWO_ZIP_FILE="Dynawo_omc_v1.8.0.zip"
+DYNAWO_ZIP_FILE="Dynawo_omc_v2.0.0.zip"
 
 # The examples are an asset of the release too: their curves are not in the repository, so a
 # clone of the sources carries the examples without them. The checksum below is written by

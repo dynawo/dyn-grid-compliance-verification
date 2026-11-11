@@ -8,6 +8,7 @@
 #     demiguelm@aia.es
 #
 
+import os
 import shutil
 from pathlib import Path
 from typing import Optional
@@ -22,7 +23,11 @@ from dycov.cli.command_handlers import (
     handle_performance_command,
     handle_validate_command,
 )
-from dycov.cli.utils import check_dynawo_launcher_availability, get_dynawo_launcher_name
+from dycov.cli.utils import (
+    check_dynawo_launcher_availability,
+    check_report_tools_availability,
+    get_dynawo_launcher_name,
+)
 from dycov.core.initialization import DycovInitializer
 from dycov.logging import dycov_logging
 
@@ -73,6 +78,8 @@ class DycovCLI:
         args : argparse.Namespace
             Parsed command-line arguments.
         """
+        self._check_user_config(parser, args)
+
         # Determine Dynawo launcher availability and initialize components.
         dynawo_launcher_path: Optional[Path] = None
         # A workbook is a model that does not exist yet: simulating it needs the launcher too.
@@ -86,6 +93,8 @@ class DycovCLI:
             self.logger.info(f"Dynawo launcher path resolved to: {dynawo_launcher_path}")
         else:
             dynawo_launcher_path = None
+        if args.command in {"performance", "validate"} and not getattr(args, "curves_only", False):
+            check_report_tools_availability()
 
         # Apply diagnostic mode BEFORE initialization
         self._apply_diagnostic_mode(args)
@@ -94,8 +103,19 @@ class DycovCLI:
         self.initializer.init(args.user_config, dynawo_launcher_path, args.debug)
         self.logger.debug("DycovInitializer completed initialization.")
 
+        self._select_dtr_revision(parser, args)
+
         # Dispatch the command to the appropriate handler function.
         return self._dispatch_command(parser, args, dynawo_launcher_path)
+
+    def _check_user_config(self, parser, args) -> None:
+        """Stops when the file given with --user-config cannot be read, rather than run without
+        the settings the user gave in it."""
+        user_config = getattr(args, "user_config", None)
+        if user_config is None:
+            return
+        if not os.access(user_config, os.R_OK) or user_config.is_dir():
+            parser.error(f"Cannot read the user configuration file {user_config}")
 
     def _apply_diagnostic_mode(self, args):
         if not getattr(args, "diagnostic", False):
@@ -111,6 +131,30 @@ class DycovCLI:
 
         config.set_value("Global", "parallel_pcs_validation", "false")
         config.set_value("Global", "parallel_num_processes", "1")
+
+    def _select_dtr_revision(self, parser, args) -> None:
+        """Fixes the revision of the DTR the run validates against, which the configuration
+        declares, and stops when it declares none or one the tool does not implement.
+
+        A verdict only means something against the revision it was measured with, the one the
+        PTF of the installation names, so the tool never chooses one for the user.
+        """
+        from dycov.configuration.cfg import config
+
+        revision = config.get_value("DTR", "current")
+        available = [value.strip() for value in config.get_list("DTR", "available")]
+        where = (
+            f"set current in the [DTR] section of {config.get_config_dir() / 'config.ini'} or of "
+            f"the file given with --user-config to one of the revisions the tool implements: "
+            f"{', '.join(available)}"
+        )
+        if not revision:
+            parser.error(f"No revision of the DTR to validate against: {where}.")
+        if revision not in available:
+            parser.error(f"The tool does not implement the DTR revision {revision}: {where}.")
+
+        config.load_dtr_delta_config(revision)
+        self.logger.info(f"Validating against the DTR revision {revision}.")
 
     def _dispatch_command(self, parser, args, dynawo_launcher_path: Optional[Path]) -> int:
         """Dispatches the parsed command to its respective handler function.

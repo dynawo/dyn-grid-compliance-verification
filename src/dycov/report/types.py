@@ -29,17 +29,32 @@ class ToleranceBand:
 
 @dataclass
 class FinalValueBand(ToleranceBand):
-    """Band relative to the last value of the curve (10P, 5P, imax_reac...)"""
+    """Band relative to the last value of the curve (imax_reac)"""
 
     unit: BandUnit = BandUnit.PERCENT
     color: str = "#55a868"
 
 
 @dataclass
+class CheckBand:
+    """Band a check of the curve measures it against, as the check recorded it in the results
+    (time_5U, time_10P, time_10Pfloor...): ``source_key`` names its [lower, upper] limits, either
+    of them None when the check bounds one side only, as time_10Pfloor does."""
+
+    source_key: str
+    color: str = "#55a868"
+
+
+@dataclass
 class FrequencyBand(ToleranceBand):
-    """Band relative to f_nom, deviation expressed in Hz."""
+    """Band relative to f_nom, deviation expressed in Hz. The band of a check that may bound one
+    frequency or another goes on the figure of each, and is drawn on the one the check bounded:
+    ``bounds`` names the frequency of the figure, and ``source_key`` the result where the check
+    named the one it bounded."""
 
     color: str = "#55a868"
+    source_key: str | None = None
+    bounds: str | None = None
 
 
 @dataclass
@@ -63,19 +78,21 @@ class FigureDescription:
     Every figure goes to the HTML report; ``in_pdf`` says whether it also goes to the PDF.
     ``setpoint`` is the setpoint that drives the magnitude the figure draws, which a test that
     steps it draws over that magnitude. ``in_hz`` says the figure draws a frequency, which the
-    tool keeps in pu of f_nom, in Hz.
+    tool keeps in pu of f_nom, in Hz. ``curves_in_hz`` says the curves of the figure are already
+    in Hz, as the frequency of a synchronous condenser is.
     """
 
     name: str
     variables: str | list[dict]
     ylabel: str
-    tolerance_band: ToleranceBand | None = None
+    tolerance_band: ToleranceBand | CheckBand | None = None
     frequency_bands: list[FrequencyBand] = field(default_factory=list)
     dynamic_band: DynamicBand | None = None
     event_markers: list[EventMarker] = field(default_factory=list)
     in_pdf: bool = True
     setpoint: str | None = None
     in_hz: bool = False
+    curves_in_hz: bool = False
 
     def draws_one_magnitude(self) -> bool:
         """Whether the figure draws a single magnitude, the setpoint that drives it aside. Only

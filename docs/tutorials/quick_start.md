@@ -29,6 +29,9 @@ Before starting, the following is assumed:
 - DyCoV is installed and accessible from the command line.
 - The `dycov` command is available.
 - You are working in a terminal with access to the DyCoV examples (see section 3).
+- The configuration names the revision of the DTR to validate against, which has no default:
+  `current = 20260723` in the `[DTR]` section of `~/.config/dycov/config.ini`, the revision the
+  curves of the examples follow. A run that finds none stops and lists the revisions available.
 
 This tutorial does **not** explain installation steps
 or input preparation details.
@@ -52,9 +55,11 @@ directory in the distribution image, `<install_dir>` in a native installation.
 > **Note**
 >
 > When `Results/` already exists and is not empty, DyCoV asks whether to
-> overwrite it. Answering no (the default) stops the run without producing
-> results, so re-running any of the walkthroughs below means either accepting
-> the overwrite or moving the previous `Results/` aside.
+> overwrite it. Only `y` or `yes` overwrites it, and an answer that is neither a
+> yes nor a no is asked again. Answering no (the default) stops the run without
+> producing results,
+> so re-running any of the walkthroughs below means either accepting the
+> overwrite or moving the previous `Results/` aside.
 
 Typical structure:
 

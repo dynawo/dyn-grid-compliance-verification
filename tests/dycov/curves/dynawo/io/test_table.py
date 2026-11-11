@@ -21,6 +21,9 @@ class DummyProducer:
         self.p_max_pu = 1.0
         self.q_max_pu = 1.0
 
+    def get_category(self):
+        return "D"
+
 
 class DummyParameters:
     def get_producer(self):

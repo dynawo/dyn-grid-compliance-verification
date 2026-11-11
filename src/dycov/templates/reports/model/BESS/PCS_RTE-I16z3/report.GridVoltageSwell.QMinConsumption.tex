@@ -22,7 +22,8 @@
         \item At $t = T_{0}$, the voltage swells to $U_{swell}$
         \item At $t = T_{rec1}$, the voltage drops to $U_{rec2}$
         \item At $t = T_{rec2}$, the voltage drops to $U_{rec3}$
-        \item At $t = T_{rec3}$, the voltage drops to $U_{rec4}$
+        \item At $t = T_{rec3}$, the gabarit ends, and the tool restores the
+        voltage the test started from.
     \end{itemize}
     These values of time and voltage are specified by the DTR as follows. (Remember
     that the classification of generators into class A, B, C, D, is in the DTR under
@@ -32,7 +33,7 @@
     \begin{center}
         \begin{tabular}{lc}
             \toprule
-            \textbf{variable} & \textbf{all Volt Levels} \\
+            \textbf{variable} & \textbf{value} \\
             \midrule
             $U_{initial}$     & 1.0 pu                   \\
             $T_{0}$           & (free)                   \\
@@ -42,7 +43,6 @@
             $T_{rec2}$        & $T_{0}$ + 2.5 s          \\
             $U_{rec3}$        & 1.15 pu                  \\
             $T_{rec3}$        & $T_{0}$ + 30 s           \\
-            $U_{rec4}$        & 1.10 pu                  \\
             \bottomrule
         \end{tabular}
     \end{center}
@@ -91,7 +91,7 @@
         \scriptsize
         \begin{tabular}{@{}lccccccccc@{}}
             \toprule
-            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} \\
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Post-event} \\
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
@@ -111,7 +111,7 @@
         \scriptsize
         \begin{tabular}{@{}lccccccccc@{}}
             \toprule
-            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} \\
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Post-event} \\
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
@@ -127,7 +127,7 @@
         \scriptsize
         \begin{tabular}{@{}lcccccccccc@{}}
             \toprule
-            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} & \\
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Post-event} & \\
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.      \\
             \midrule

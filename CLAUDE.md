@@ -26,6 +26,10 @@ codebase. Keep it dense but short; update it when the subsystem structure change
   once the development is finished — the run and comparison trees under the home directory or in
   `/tmp`, the `Results` trees produced to try something out, and any copy of the repository made to
   audit it. Reference material and the repository itself stay.
+- The curves of the examples — the `ReferenceCurves` and `ProducerCurves` directories — are not
+  versioned: `tools/scripts/regenerate_curves.sh` regenerates them once per release, they ship as
+  the `dycov_examples.zip` asset, and `tools/scripts/fetch_example_curves.sh` brings them to a
+  checkout. A change to an example carries no curves and leaves nothing about them pending.
 - The virtual environment of the project is `dycov_venv`, at the root of the repository, and it is
   the only one: it is the one `build_and_install.sh` and `installers/linux_install.sh` create, the
   one `.gitignore` knows, and the one that holds the development tools (`dycov_venv/bin/ruff`).

@@ -14,7 +14,10 @@ Reference examples of the target style:
 ## Layout
 
 `tests/dycov/` mirrors the `src/dycov/` package layout one-to-one; tests for the standalone
-utilities under `tools/` live in `tests/tools/`. Run everything with:
+utilities under `tools/` live in `tests/tools/`. `tests/dtr/` holds the acceptance tests
+of the DTR, which read the catalogue the tool ships and not the code; its own README
+states how they are written. `tests/gfm/` runs `generate_gfm_envelopes` on a real case and
+compares what it writes with the envelopes a stable release generated. Run everything with:
 
 ```bash
 ./dycov_venv/bin/pytest tests -q

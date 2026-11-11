@@ -124,6 +124,8 @@ def handle_validate_command(
     if args.model and args.curves:
         parser.error("A model validation runs on a model or on curves, not on both.")
         return 1
+    if _curves_only_without_model(parser, args):
+        return 1
 
     producer_model: Optional[Path] = None
     producer_curves: Optional[Path] = None
@@ -160,6 +162,7 @@ def handle_validate_command(
         only_dtr=args.only_dtr,
         testing=args.testing,
         verification_type=MODEL_VALIDATION,
+        curves_only=args.curves_only,
     )
 
     if result_code == -1:
@@ -170,6 +173,14 @@ def handle_validate_command(
             "It is not possible to find the producer model or the producer curves. Exiting."
         )
     return result_code
+
+
+def _curves_only_without_model(parser: argparse.ArgumentParser, args: argparse.Namespace) -> bool:
+    """Whether --curves-only was asked for without a model, which leaves nothing to simulate."""
+    if args.curves_only and not args.model:
+        parser.error("--curves-only keeps the curves of the simulations, so it needs a model.")
+        return True
+    return False
 
 
 def _convert_workbook(
@@ -264,6 +275,7 @@ def _verify_from_workbook(
             testing=args.testing,
             verification_type=verification_type,
             producer_workbook=workbook,
+            curves_only=args.curves_only,
         )
 
     if result_code == -1:
@@ -291,6 +303,8 @@ def handle_performance_command(
     dycov_logging.get_logger("CommandHandlers").info("Handling 'performance' command.")
     if args.excel:
         return _verify_from_workbook(parser, args, dwo_launcher, ELECTRIC_PERFORMANCE)
+    if _curves_only_without_model(parser, args):
+        return 1
 
     producer_model: Optional[Path] = None
     producer_curves: Optional[Path] = None
@@ -330,6 +344,7 @@ def handle_performance_command(
         only_dtr=args.only_dtr,
         testing=args.testing,
         verification_type=ELECTRIC_PERFORMANCE,
+        curves_only=args.curves_only,
     )
 
     if result_code == -1:
@@ -475,6 +490,7 @@ def _run_verification(
     testing: bool,
     verification_type: int,
     producer_workbook: Optional[Path] = None,
+    curves_only: bool = False,
 ) -> int:
     """Initializes and runs a model validation or performance verification.
 
@@ -501,6 +517,10 @@ def _run_verification(
         If True, run in testing mode.
     verification_type: int
         Type of verification (MODEL_VALIDATION or ELECTRIC_PERFORMANCE).
+    producer_workbook: Optional[Path]
+        Workbook the producer inputs were generated from, if applicable.
+    curves_only: bool
+        If True, run the simulations and keep their curves, without the checks or the report.
 
     Returns
     -------
@@ -522,6 +542,7 @@ def _run_verification(
             only_dtr=only_dtr,
             verification_type=verification_type,
             producer_workbook=producer_workbook,
+            curves_only=curves_only,
         )
     except ValueError as e:
         dycov_logging.get_logger("CommandHandlers").error(f"{e}")

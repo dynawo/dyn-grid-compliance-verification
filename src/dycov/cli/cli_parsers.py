@@ -133,12 +133,13 @@ def _add_argument(
 
 
 def _add_user_config_argument(parser: argparse.ArgumentParser) -> None:
-    """Adds the '--user-config' argument to override the default user configuration file."""
+    """Adds the '--user-config' argument, a configuration file read on top of the user's own."""
     _add_argument(
         parser,
         "--user-config",
         help_msg=(
-            "Path to a custom user configuration file. Overrides the default user config location."
+            "Path to a configuration file read on top of the user's config.ini for this run;"
+            " its options take precedence. A file that cannot be read stops the run."
         ),
         arg_type=Path,
         default=None,
@@ -449,6 +450,23 @@ def _add_only_dtr_argument(parser: argparse.ArgumentParser) -> None:
     )
 
 
+def _add_curves_only_argument(parser: argparse.ArgumentParser) -> None:
+    """Adds the '--curves-only' argument to the given parser.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    """
+    _add_argument(
+        parser,
+        "--curves-only",
+        action="store_true",
+        help_msg="Run the simulations and keep their curves, without the checks, the figures"
+        " or the report. The summary gives the outcome of each simulation. Needs a model.",
+    )
+
+
 def _add_testing_argument(parser: argparse.ArgumentParser) -> None:
     """Adds the '--testing' argument to the given parser.
 
@@ -617,8 +635,7 @@ def _add_deripple_argument(parser: argparse.ArgumentParser) -> None:
         arg_type=float,
         default=5.0,
         help_msg="Cut-off frequency, in Hz, of the filter that removes the oscillation the"
-        " simulation adds to the curves. It must sit well below that oscillation, which the"
-        " examples show between 12 and 17 Hz."
+        " simulation adds to the curves. It must sit well below that oscillation."
         " Default: 5.0, 0 to keep the oscillation.",
     )
 
@@ -680,9 +697,10 @@ def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:
         # One line per way of calling it: the inputs exclude each other, which argparse cannot
         # express on its own.
         usage=(
-            "dycov validate -e EXCEL            [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]\n"
+            "dycov validate -e EXCEL            [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]"
+            " [--curves-only]\n"
             "       dycov validate -m MODEL  reference [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS]"
-            " [-od]\n"
+            " [-od] [--curves-only]\n"
             "       dycov validate -c CURVES reference [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS]"
             " [-od]"
         ),
@@ -703,6 +721,7 @@ def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:
     _add_output_argument(validate)
     _add_pcs_argument(validate)
     _add_only_dtr_argument(validate)
+    _add_curves_only_argument(validate)
     _add_testing_argument(validate)
     dycov_logging.get_logger("CliParsers").debug("Added 'validate' subparser.")
 
@@ -721,9 +740,10 @@ def _add_performance_subparser(subparsers: argparse._SubParsersAction) -> None:
         # One line per way of calling it: a model may be drawn against the producer curves, but a
         # workbook replaces both.
         usage=(
-            "dycov performance -e EXCEL  [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]\n"
+            "dycov performance -e EXCEL  [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]"
+            " [--curves-only]\n"
             "       dycov performance -m MODEL  [-c CURVES] [-h] [-l LAUNCHER] [-o OUTPUT]"
-            " [-p PCS] [-od]\n"
+            " [-p PCS] [-od] [--curves-only]\n"
             "       dycov performance -c CURVES [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS] [-od]"
         ),
     )
@@ -742,6 +762,7 @@ def _add_performance_subparser(subparsers: argparse._SubParsersAction) -> None:
     _add_output_argument(performance)
     _add_pcs_argument(performance)
     _add_only_dtr_argument(performance)
+    _add_curves_only_argument(performance)
     _add_testing_argument(performance)
     dycov_logging.get_logger("CliParsers").debug("Added 'performance' subparser.")
 

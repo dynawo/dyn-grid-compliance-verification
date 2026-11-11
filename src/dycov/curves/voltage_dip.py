@@ -184,7 +184,8 @@ def classify_residual_voltage(
         f"Residual voltage during fault: {residual_voltage:.4f}, "
         f"maximum allowed: {max_residual:.4f}"
     )
-    if residual_voltage > max_residual:
+    # A residual that is not a number is not under the threshold either
+    if not residual_voltage <= max_residual:
         return VoltDipResult.DIP_TOO_SMALL
     return VoltDipResult.DIP_CORRECT
 

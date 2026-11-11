@@ -19,7 +19,7 @@
     <!-- Base unit: Un_PDR ou SnZone3 -->
     <par type="DOUBLE" name="photovoltaics_EMinPu" value="-0.5"/>
     <!-- Base unit: Un_PDR ou SnZone3 -->
-    <par type="DOUBLE" name="photovoltaics_DbdPu" value="0.0001"/>
+    <par type="DOUBLE" name="photovoltaics_DbdPu" value="0"/>
     <!-- Base unit: SnZone3 -->
     <par type="DOUBLE" name="photovoltaics_QMaxREPCPu" value="0.8"/>
     <!-- Base unit: SnZone3 -->
@@ -110,6 +110,15 @@
     <par type="DOUBLE" name="photovoltaics_tE" value="0.005"/>
     <par type="DOUBLE" name="photovoltaics_RSourcePu" value="0"/>
     <par type="DOUBLE" name="photovoltaics_XSourcePu" value="0.1"/>
+    <!-- LHVRT -->
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="lhvrt_UOverPu" value="1.1"/>
+    <!-- Base unit: Un2 -->
+    <par type="DOUBLE" name="lhvrt_UUnderPu" value="0.9"/>
+    <par type="DOUBLE" name="lhvrt_tLagAction" value="0"/>
+    <par type="DOUBLE" name="lhvrt_tUFilt" value="0.001"/>
+    <par type="STRING" name="lhvrt_TabletUoverUfilt" value="hvrt"/>
+    <par type="STRING" name="lhvrt_TabletUunderUfilt" value="lvrt"/>
     <!-- Plant control -->
     <par type="BOOL" name="photovoltaics_PPCLocal" value="false"/>
     <!-- LV Transformer -->
@@ -118,17 +127,17 @@
     <par type="DOUBLE" name="photovoltaics_XLvTrPu" value="0.06"/>
     <!-- General -->
     <par type="DOUBLE" name="photovoltaics_SNom" value="90.0"/>
+    <par type="STRING" name="lhvrt_TablesFile" value="LHVRT.txt"/>
+    <par type="BOOL" name="lhvrt_TablesOnFile" value="true"/>
   </set>
 
   <set id="Main_Xfmr">
     <!-- impedances in pu, base SnRef = 100 MVA -->
-    <par type="DOUBLE" name="transformer_SNom" value="90.0"/>
     <par type="DOUBLE" name="transformer_RPu" value="9.999999999999999e-06"/>
     <par type="DOUBLE" name="transformer_XPu" value="0.00010000000000000002"/>
     <par type="DOUBLE" name="transformer_BPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_GPu" value="0.0"/>
     <par type="DOUBLE" name="transformer_AlphaTfo0" value="0.0"/>
-    <par type="DOUBLE" name="transformer_RatioTfo0Pu" value="1.0"/>
     <par type="DOUBLE" name="transformer_RatioTfoMaxPu" value="1.1"/>
     <par type="DOUBLE" name="transformer_RatioTfoMinPu" value="0.9"/>
     <par type="INT" name="transformer_NbTap" value="21"/>

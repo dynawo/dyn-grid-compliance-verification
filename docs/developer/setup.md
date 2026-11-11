@@ -263,6 +263,10 @@ pytest --cov=src                # with coverage
 `tests/README.md` states the style every new test must follow. Coverage is
 informational: there is no coverage gate.
 
+`tests/dtr/` holds the acceptance tests of the DTR. They are not unit tests:
+they read the catalogue the tool ships and state what the norm says, with one
+file per revision of the DTR. `tests/dtr/README.md` explains them.
+
 The end-to-end tests under `tests_integration/` are not part of that run. They
 execute real Dynawo simulations, so they need a working Dynawo installation
 and take far longer. Run them explicitly:
@@ -319,7 +323,9 @@ A common development loop is:
 2.  Modify source files under `src/dycov/`.
 3.  Ensure Dynawo is correctly configured and reachable.
 4.  Run DyCoV commands against one of the bundled examples, which needs their
-    curves (section 4).
+    curves (section 4) and a revision of the DTR in your configuration:
+    `current = 20260723` in the `[DTR]` section of `~/.config/dycov/config.ini`,
+    the revision the curves follow.
 5.  Inspect logs, generated results, and reports.
 6.  Run the checks of section 8 before committing: `pytest` and `ruff`.
 7.  Iterate.

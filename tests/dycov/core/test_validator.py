@@ -42,6 +42,7 @@ class DummyCurvesManager:
         generator_u_dim=123.4,
         time_cct=0.5,
         generators_imax=None,
+        declared_units=None,
         disconnection_model=None,
         setpoint_variation=0.0,
         calculated_curves=None,
@@ -58,6 +59,8 @@ class DummyCurvesManager:
             Dummy time_cct value. Defaults to 0.5.
         generators_imax : dict, optional
             Dummy generators_imax value. Defaults to {"gen1": 100.0}.
+        declared_units : set, optional
+            Dummy declared_units value. Defaults to an empty set.
         disconnection_model : DisconnectionModel, optional
             Dummy disconnection_model. Defaults to a new DisconnectionModel instance.
         setpoint_variation : float, optional
@@ -72,6 +75,7 @@ class DummyCurvesManager:
         self._generator_u_dim = generator_u_dim
         self._time_cct = time_cct
         self._generators_imax = generators_imax if generators_imax is not None else {"gen1": 100.0}
+        self._declared_units = declared_units or set()
         self._disconnection_model = (
             disconnection_model
             if disconnection_model is not None
@@ -107,6 +111,10 @@ class DummyCurvesManager:
     def get_generators_imax(self):
         """Returns dummy generators_imax."""
         return self._generators_imax
+
+    def get_declared_units(self):
+        """Returns dummy declared_units."""
+        return self._declared_units
 
     def get_disconnection_model(self):
         """Returns dummy disconnection_model."""
@@ -273,6 +281,7 @@ def test_complete_producer_sets_all_attributes():
             generator_u_dim=111.1,
             time_cct=2.5,
             generators_imax={"g1": 10.0},
+            declared_units={"g1", "g2"},
             disconnection_model=DisconnectionModel(
                 auxload=[1], auxload_xfmr=[2], connection_xfmrs=[3], gen_intline=[4]
             ),
@@ -296,6 +305,7 @@ def test_complete_producer_sets_all_attributes():
         )
         assert validator._time_cct == 2.5
         assert validator._generators_imax == {"g1": 10.0}
+        assert validator._declared_units == {"g1", "g2"}
         assert validator._disconnection_model == DisconnectionModel(
             auxload=[1], auxload_xfmr=[2], connection_xfmrs=[3], gen_intline=[4]
         )

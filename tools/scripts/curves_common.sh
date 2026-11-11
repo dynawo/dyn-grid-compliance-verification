@@ -9,10 +9,10 @@ GREEN="\\033[1;32m"
 RED="\\033[1;31m"
 NC="\\033[0m"
 
-# The release ships curves that look like measurements, without the oscillation of the
-# simulation that produced them, and no larger than they need to be. These are the values that
-# shape them, each measured on the examples rather than chosen:
-#   - the oscillation sits between 12 and 17 Hz, and only a cut-off this low removes it;
+# The release ships curves that look like measurements and are no larger than they need to be.
+# These are the values that shape them, each measured on the examples rather than chosen:
+#   - nothing is de-rippled, against the anonymizer's default: on the examples the de-ripple
+#     only caught responses of the models, never an oscillation of the solver;
 #   - this epsilon keeps a fiftieth of the samples, and 343 of the 386 curves under a tenth,
 #     while no compared magnitude moves by more than 0.004 pu where the test looks and 0.001
 #     away from it, against tolerances of 0.08 and 0.002. What resists it is not the epsilon's
@@ -20,7 +20,6 @@ NC="\\033[0m"
 #     still keeps seven tenths.
 NOISE_STD=0.01
 NOISE_FREQUENCY=15.0
-DERIPPLE_CUTOFF=5.0
 COMPRESSION=0.00005
 
 log_msg() {
@@ -78,7 +77,7 @@ anonymize_run() {
     rm -rf "${output:?}"
     dycov --user-config "$user_config" anonymize \
         --noisestd "$NOISE_STD" --frequency "$NOISE_FREQUENCY" \
-        --deripple "$DERIPPLE_CUTOFF" --compression "$COMPRESSION" \
+        --deripple 0 --compression "$COMPRESSION" \
         --results "$results" --output "$output"
 }
 

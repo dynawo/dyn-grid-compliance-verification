@@ -71,7 +71,8 @@ isolate_home "$working_path"
 trap 'status=$?; [ "$status" -eq 0 ] || set_state "$example" failed' EXIT
 
 # 1. Run it. Nothing the anonymizer does changes a simulation, so a run already made can be
-#    reused when only the anonymizer's settings have changed.
+#    reused when only the anonymizer's settings have changed. The curves are all the
+#    anonymizer reads, so the run stops at them: no check, no figure, no report.
 if [ "$reuse" = true ]; then
     [ -d "$results_path" ] || fail "There is no run of $example to reuse in $results_path."
     log_msg "$example: reusing the run in $results_path"
@@ -81,7 +82,7 @@ else
     rm -rf "${results_path:?}"
     start=$(date +%s)
     dycov --user-config "$user_config" validate -l "$launcher" \
-        -m "$model_path" "$reference_path" -o "$results_path" --testing >| "$run_log" 2>&1 ||
+        -m "$model_path" "$reference_path" -o "$results_path" --curves-only >| "$run_log" 2>&1 ||
         fail "$example: the run failed. See $run_log"
     log_msg "$example: ran in $(($(date +%s) - start))s"
 fi

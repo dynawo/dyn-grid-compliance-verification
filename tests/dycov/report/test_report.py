@@ -8,9 +8,14 @@
 #     demiguelm@aia.es
 #
 
+import logging
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
+from dycov.model.benchmark import Summary
+from dycov.model.compliance import Compliance
 from dycov.report import report
 from dycov.report.curve_classification import is_setpoint
 from dycov.report.types import FigureDescription
@@ -164,19 +169,19 @@ def _zone1_figures() -> list:
         ),
         FigureDescription(
             name="fig_UIt",
-            variables=[{"type": "generator", "variable": "VoltageInjTerminal"}],
+            variables=[{"type": "generator", "variable": "VoltageNode2"}],
             ylabel="V",
             setpoint="VoltageSetpointPu",
         ),
         FigureDescription(
             name="fig_P",
-            variables=[{"type": "generator", "variable": "ActivePowerControlledPu"}],
+            variables=[{"type": "generator", "variable": "ActivePowerControlledNode"}],
             ylabel="P",
             setpoint="ActivePowerSetpointPu",
         ),
         FigureDescription(
             name="fig_Q",
-            variables=[{"type": "generator", "variable": "ReactivePowerControlledPu"}],
+            variables=[{"type": "generator", "variable": "ReactivePowerControlledNode"}],
             ylabel="Q",
             setpoint="ReactivePowerSetpointPu",
         ),
@@ -255,7 +260,7 @@ def test_generate_figures_draws_the_setpoint_of_the_step_in_the_pdf_and_in_the_h
         "Producer",
         {"PCS.Benchmark": [_zone1_figures()[2]]},
         "PCS.Benchmark",
-        _step_results("WT_GEN_ActivePowerControlledPu", "WT_GEN_ActivePowerSetpointPu", True),
+        _step_results("WT_GEN_ActivePowerControlledNode", "WT_GEN_ActivePowerSetpointPu", True),
         _OC,
         0.0,
         2.0,
@@ -263,7 +268,7 @@ def test_generate_figures_draws_the_setpoint_of_the_step_in_the_pdf_and_in_the_h
     )
 
     expected = [
-        {"type": "generator", "variable": "ActivePowerControlledPu"},
+        {"type": "generator", "variable": "ActivePowerControlledNode"},
         {"type": "generator", "variable": "ActivePowerSetpointPu"},
     ]
     assert pdf_variables == [expected]
@@ -277,13 +282,13 @@ def test_generate_figures_draws_the_setpoint_of_the_step_in_the_pdf_and_in_the_h
         (
             "PSetpoint",
             _zone1_figures()[2],
-            "WT_GEN_ActivePowerControlledPu",
+            "WT_GEN_ActivePowerControlledNode",
             "WT_GEN_ActivePowerSetpointPu",
         ),
         (
             "USetpoint",
             _zone1_figures()[1],
-            "WT_GEN_VoltageInjTerminal",
+            "WT_GEN_VoltageNode2",
             "WT_GEN_VoltageSetpointPu",
         ),
         (
@@ -337,11 +342,11 @@ def test_build_oc_notices_without_missing_or_warnings():
 
 def test_build_oc_notices_with_missed_columns():
     notices, watermark = report._build_oc_notices(
-        {"missed_columns": ["Wind_Turbine_GEN_ActiveCurrentInjTerminal"]}
+        {"missed_columns": ["Wind_Turbine_GEN_ActiveCurrentNode2"]}
     )
 
     assert "\\noindent\\textcolor{red}{Missing curves:}" in notices
-    assert "\\item \\textcolor{red}{Wind\\_Turbine\\_GEN\\_ActiveCurrentInjTerminal}" in notices
+    assert "\\item \\textcolor{red}{Wind\\_Turbine\\_GEN\\_ActiveCurrentNode2}" in notices
     assert watermark == "\\SetWatermarkText{INVALID}"
 
 
@@ -374,3 +379,75 @@ def test_an_unstable_test_is_labelled_with_a_latex_command_in_red():
 
     assert label == r"\textcolor{red}{unstable}"
     assert "\t" not in label
+
+
+class _SummaryProducer:
+    def is_dynawo_model(self):
+        return True
+
+    def get_producer_path(self):
+        return Path("examples/Model/Wind/IECA2015/Dynawo")
+
+    def has_reference_curves_path(self):
+        return True
+
+    def get_reference_path(self):
+        return Path("examples/Model/Wind/IECA2015/ReferenceCurves")
+
+
+class _SummaryParameters:
+    def __init__(self, workbook=None):
+        self._workbook = workbook
+
+    def get_producer(self):
+        return _SummaryProducer()
+
+    def get_launcher_dwo(self):
+        return Path("dynawo.sh")
+
+    def get_producer_workbook(self):
+        return self._workbook
+
+
+def _logged_summary(caplog) -> str:
+    [summary] = [record.getMessage() for record in caplog.records if record.name == "DyCoV.Report"]
+    return summary
+
+
+def test_the_summary_names_the_model_and_the_outcome_of_every_test(monkeypatch, caplog):
+    monkeypatch.setattr(report.manage_files, "get_dynawo_version", lambda launcher: "2.0.0")
+    tests = [
+        Summary(
+            producer_name="Producer",
+            id=1,
+            zone=3,
+            pcs="PCS_RTE-I16z3",
+            benchmark="USetPointStep",
+            operating_condition="AReactance",
+            compliance=Compliance.Simulated,
+            report_name="report",
+        )
+    ]
+
+    with caplog.at_level(logging.INFO, logger="DyCoV"):
+        report.log_summary(tests, _SummaryParameters())
+
+    summary = _logged_summary(caplog)
+    assert "***Dynawo version: 2.0.0***" in summary
+    assert "***Model dir: examples/Model/Wind/IECA2015/Dynawo***" in summary
+    assert "***Reference curves dir: examples/Model/Wind/IECA2015/ReferenceCurves***" in summary
+    [row] = [line for line in summary.splitlines() if "PCS_RTE-" in line]
+    assert row.split()[1:4] == ["PCS_RTE-I16z3", "USetPointStep", "AReactance"]
+    assert row[20 + 15 + 25 + 40 :].strip() == "Simulated"
+
+
+def test_the_summary_of_a_workbook_names_the_workbook_alone(monkeypatch, caplog):
+    monkeypatch.setattr(report.manage_files, "get_dynawo_version", lambda launcher: "2.0.0")
+
+    with caplog.at_level(logging.INFO, logger="DyCoV"):
+        report.log_summary([], _SummaryParameters(workbook=Path("Producer.xlsx")))
+
+    summary = _logged_summary(caplog)
+    assert "***Workbook: Producer.xlsx***" in summary
+    assert "Model dir" not in summary
+    assert "Reference curves dir" not in summary

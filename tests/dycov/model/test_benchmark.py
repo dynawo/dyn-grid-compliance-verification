@@ -22,7 +22,7 @@ from dycov.model.benchmark import (
 )
 from dycov.model.compliance import Compliance
 from dycov.model.parameters import CurvesAvailability, SimulationError
-from dycov.report.types import FrequencyBand
+from dycov.report.types import CheckBand, FrequencyBand
 
 _PCS_BENCHMARK = "PCS.Bench"
 _INTERNAL_NODE1_FIGURES = {
@@ -184,6 +184,68 @@ def test_frequency_figure_draws_every_declared_band(monkeypatch):
             FrequencyBand(upper=0.25, lower=0.25, color="#c44e52"),
         ]
     }
+
+
+def _bands_of(bm: Benchmark) -> dict:
+    return {
+        figure.name: [(band.upper, band.lower, band.bounds) for band in figure.frequency_bands]
+        for figure in bm.get_figures_description()
+    }
+
+
+def test_freq_1_has_a_band_on_the_figure_of_each_frequency_it_may_bound(monkeypatch):
+    """#625: the network frequency the units measure, and that of the synchronous condenser."""
+    report_curves = {"fig_WRef": [_PCS_BENCHMARK], "fig_SyncCondFreq": [_PCS_BENCHMARK]}
+    validations = {"freq_1": [_PCS_BENCHMARK], "freq_200": [_PCS_BENCHMARK]}
+    bm = _make_benchmark(monkeypatch, DummyProducer(), report_curves, validations)
+
+    assert _bands_of(bm) == {
+        "fig_WRef": [(1.0, 1.0, "units"), (0.2, 0.2, None)],
+        "fig_SyncCondFreq": [(1.0, 1.0, "sync_condenser")],
+    }
+
+
+def test_the_condenser_frequency_is_drawn_in_hz_as_its_curves_are(monkeypatch):
+    bm = _make_benchmark(monkeypatch, DummyProducer(), {"fig_SyncCondFreq": [_PCS_BENCHMARK]})
+
+    (figure,) = bm.get_figures_description()
+
+    assert (figure.in_hz, figure.curves_in_hz, figure.frequency_bands) == (False, True, [])
+
+
+@pytest.mark.parametrize(
+    "figure, check, band",
+    [
+        ("fig_V", "time_5U", "time_5U_band"),
+        ("fig_V", "time_10U", "time_10U_band"),
+        ("fig_P", "time_5P", "time_5P_band"),
+        ("fig_P", "time_10P", "time_10P_band"),
+        ("fig_P", "time_10P_85U", "time_10P_band"),
+        ("fig_P", "time_85U", "time_5P_band"),
+        ("fig_P", "time_clear", "time_5P_band"),
+        ("fig_P", "time_10Pfloor_85U", "time_10Pfloor_band"),
+        ("fig_P", "time_10Pfloor_clear", "time_10Pfloor_band"),
+    ],
+)
+def test_a_figure_draws_the_band_of_the_check_it_illustrates(monkeypatch, figure, check, band):
+    """#694: the band the check measures against, which the check leaves in the results."""
+    validations = {check: [_PCS_BENCHMARK]}
+    bm = _make_benchmark(monkeypatch, DummyProducer(), {figure: [_PCS_BENCHMARK]}, validations)
+
+    (described,) = bm.get_figures_description()
+
+    assert isinstance(described.tolerance_band, CheckBand)
+    assert described.tolerance_band.source_key == band
+
+
+def test_wref_figure_reads_the_network_frequency_curve(monkeypatch):
+    """#489: NetworkFrequencyPu is the name the simulated and the reference curves share, so the
+    reference is drawn beside the simulated frequency."""
+    bm = _make_benchmark(monkeypatch, DummyProducer(zone=3), {"fig_WRef": [_PCS_BENCHMARK]})
+
+    figures = bm.get_figures_description()
+
+    assert [figure.variables for figure in figures] == ["NetworkFrequencyPu"]
 
 
 def test_figures_read_the_voltages_then_the_powers_then_the_currents(monkeypatch):

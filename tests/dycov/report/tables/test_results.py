@@ -93,7 +93,7 @@ class TestResultsTable:
             ["$T_{5P}$", "5.68 s"],
             ["$T_{85U}$", "6.79 s"],
             ["$T_{cct}$", "7.89 s"],
-            ["$\epsilon$", "0.123"],
+            [r"$\epsilon$", "0.123"],
         ]
         expected_var_rows = [
             ["V", "1", "1", "1", "1", "1", "1"],
@@ -145,7 +145,7 @@ class TestResultsTable:
         assert result == [
             ["$T_{10U}$", "1 s"],
             ["$T_{5U}$", "2 s"],
-            ["$\epsilon$", "0.5"],
+            [r"$\epsilon$", "0.5"],
         ]
 
     def test_create_map_missing_time_keys(self):
@@ -160,7 +160,7 @@ class TestResultsTable:
         }
         result = create_map(results)
         # Only static_diff and voltage variable row
-        assert result[0] == ["$\epsilon$", "0.42"]
+        assert result[0] == [r"$\epsilon$", "0.42"]
         assert result[1][0] == "V"
         assert result[1][1:] == ["0.1", "0.2", "0.3", "0.4", "0.5", "0.6"]
         assert len(result) == 2

@@ -9,6 +9,12 @@ format (`Python flavor <https://docs.python.org/3/library/configparser.html>`_).
 The file lives in ``$HOME/.config/dycov/``, and is created the first time the
 tool runs.
 
+``--user-config <file>`` reads another configuration file on top of
+``config.ini`` for one execution: its options take precedence, and those it
+does not set keep the value ``config.ini`` gives them. A file that does not
+exist or cannot be read stops the run with an error, and a value definition of
+that file DyCoV cannot use is reported with its line in it.
+
 The generated ``config.ini`` contains the most common options commented out,
 each shown with its default value. To change a setting, uncomment the relevant
 line and edit the value. We recommend duplicating the line first so you always
@@ -25,6 +31,41 @@ Two profiles are kept next to it, regenerated on every run:
 To switch profiles, copy the desired file over ``config.ini``. Individual
 options from the advanced profile may also be copied into ``config.ini``
 directly — any option is honored there, whichever profile it comes from.
+
+When a release carries a newer version of the configuration, the first run
+rewrites ``config.ini`` from the profile it declares and keeps every setting
+the file holds, including the options and sections the profile does not show.
+The previous file is left beside it as ``config.ini.OLD.<n>``, and the log says
+so. The log also lists, as deprecated, the options the profiles do not carry:
+an option the tool no longer reads, but also those it reads all the same and
+the profiles leave out, such as a selection of benchmarks or a PCS override.
+
+
+The revision of the DTR
+-----------------------
+
+A verdict only means something against the revision of the DTR it was measured
+with, so a run names one. The revision takes the date of the edition of the DTR
+that carries it, as ``YYYYMMDD``, and not the date the article inside takes
+force.
+
+The ``[DTR]`` section holds it:
+
+* ``current`` — the revision a run validates against. The tool gives it no
+  default: set it in ``config.ini`` or in the file given with
+  ``--user-config``. A run that finds none stops before doing anything, and
+  lists the revisions the tool implements.
+* ``available`` — the revisions the tool implements. A run whose ``current``
+  is another one stops with the same list; the tool never falls back to
+  another norm in silence.
+
+To run the same producer against two revisions, give each run a file with
+``--user-config`` that sets its ``current``. Only the criteria change, so the
+curves need no regeneration.
+
+The revision to use is the one in force at the date of the *Proposition
+Technique et Financière* of the installation, because the specifications of
+the installation were written with it.
 
 
 PCS Structure
@@ -136,6 +177,17 @@ Basic configuration
 
   Simulation timeout for Dynawo, in seconds.
 
+* ``divergence_voltage_limit``, ``divergence_power_limit``
+
+  Dynawo may end a simulation successfully after its variables have diverged.
+  A simulation whose curves of the producer reach, in absolute value, a
+  voltage beyond ``divergence_voltage_limit`` (pu of Unom, default 10) or a
+  power or a current beyond ``divergence_power_limit`` (pu of the nominal
+  power of the installation, default 100), or a value that is not finite, is
+  taken as a failed one: it is retried, and the fault searches treat it as a
+  failed step. The search of the critical clearing time keeps its own test on
+  the internal angles.
+
 * ``f_nom``
 
   Grid nominal frequency (fNom), in Hz (default: 50.0). This must match the
@@ -179,7 +231,10 @@ switches meant for diagnosing the tool itself:
 * ``disable_LP_filtering`` — disable the low-pass frequency filtering of the
   signals.
 * ``max_simulation_retries`` — maximum number of retries for a failed
-  simulation (default: 4).
+  simulation (default: 4). A simulation whose model Dynawo rejects, because its
+  PAR lacks a parameter, a PAR or DYD cannot be read or the DYD names a model, a
+  connection, a variable or a file Dynawo does not find, is not retried, and the
+  search of a fault impedance stops at it.
 
 
 User templates

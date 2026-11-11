@@ -103,6 +103,30 @@ def test_zero_compression_keeps_every_sample(tmp_dirs):
     assert len(pd.read_csv(out / "nf.csv", sep=";")) == len(original)
 
 
+def test_curves_named_before_the_dtr_nodes_come_out_under_their_current_names(tmp_dirs):
+    curves, out = tmp_dirs
+    stem = "PCS_RTE-I16z1.SetPointStep.Active"
+    previous = ("Wind_Turbine_GEN_VoltageInjTerminal", "Wind_Turbine_GEN_ActivePowerControlledPu")
+    (curves / f"{stem}.csv").write_text(
+        "time;" + ";".join(previous) + "\n" + "".join(f"{t / 10};1.0;0.5\n" for t in range(40)),
+        encoding="utf-8",
+    )
+    (curves / f"{stem}.log").write_text(
+        "sim_t_event_start=3.0\nfault_duration=0.0\nfrequency_sampling=15.0\n",
+        encoding="utf-8",
+    )
+
+    anonymize(out, noisestd=0.0, frequency=10.0, curves_folder=curves)
+
+    columns = (out / f"{stem}.csv").read_text().splitlines()[0].split(";")
+    written = (out / f"{stem}.dict").read_text()
+    for name in ("Wind_Turbine_GEN_VoltageNode2", "Wind_Turbine_GEN_ActivePowerControlledNode"):
+        assert name in columns
+        assert f"{name} = {name}" in written
+    assert "InjTerminal" not in written
+    assert "ControlledPu" not in written
+
+
 def test_a_curve_the_set_does_not_carry_stays_declared_and_empty(tmp_dirs):
     curves, out = tmp_dirs
     stem = "PCS_RTE-I16z1.GridVoltageStep.Drop"

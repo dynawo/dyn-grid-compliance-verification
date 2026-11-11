@@ -45,7 +45,7 @@
     \begin{center}
         \begin{tabular}{lc}
             \toprule
-            \textbf{variable} & \textbf{all Volt Levels} \\
+            \textbf{variable} & \textbf{value} \\
             \midrule
             $U_{initial}$     & 1.0 pu                   \\
             $T_{0}$           & (free)                   \\
@@ -61,7 +61,7 @@
     \begin{center}
         \begin{tabular}{lc}
             \toprule
-            \textbf{variable} & \textbf{all Volt levels} \\
+            \textbf{variable} & \textbf{value} \\
             \midrule
             $U_{initial}$     & 1.0 pu                   \\
             $T_{0}$           & (free)                   \\
@@ -72,6 +72,9 @@
             \bottomrule
         \end{tabular}
     \end{center}
+
+    \noindent The unit under test is of category {{ category }}, so the simulation
+    applies the gabarit of \BLOCK{if category == 'D'}the class D\BLOCK{else}the classes B and C\BLOCK{endif}.
 
     \begin{description}
         \item Initial conditions used at the PDR bus:
@@ -117,7 +120,7 @@
         \scriptsize
         \begin{tabular}{@{}lccccccccc@{}}
             \toprule
-            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} \\
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Post-event} \\
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
@@ -137,7 +140,7 @@
         \scriptsize
         \begin{tabular}{@{}lccccccccc@{}}
             \toprule
-            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} \\
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Post-event} \\
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      \\
             \midrule
@@ -153,7 +156,7 @@
         \scriptsize
         \begin{tabular}{@{}lcccccccccc@{}}
             \toprule
-            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Pos-Event} & \\
+            & \multicolumn{3}{c}{Pre-event} & \multicolumn{3}{c}{Event} & \multicolumn{3}{c}{Post-event} & \\
             \cmidrule(lr){2-4}\cmidrule(lr){5-7}\cmidrule(lr){8-10}
             & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & {MXE}      & {ME}       & {MAE}      & Compl.      \\
             \midrule

@@ -54,7 +54,9 @@ reactive power limits, topology identifier, and so on.
 
 For **Electric Performance Verification**, the three model files should all
 live in the same directory, which is then passed to ``dycov performance``
-via the ``-m`` option.
+via the ``-m`` option. The three files share their name, and the INI is read
+under the name ``Producer.ini``, so they are ``Producer.dyd``, ``Producer.par``
+and ``Producer.ini``.
 
 For **RMS Model Validation**, the directory must contain two subdirectories
 named ``Zone1/`` and ``Zone3/``, each with its own set of three files.
@@ -76,14 +78,17 @@ directory with ``Zone3/`` alone.
    ``BusPDR`` for both zones, and reference-curve dictionaries for Zone 1
    accept both namings. The converter-output node of the Zone 1 unit model,
    between the unit and its transformer, is named **InternalNode2** (the node
-   called *Node2* in the DTR); the injector-terminal signals
-   (``*_GEN_ActiveCurrentInjTerminal``, ``*_GEN_ReactiveCurrentInjTerminal``,
-   ``*_GEN_VoltageInjTerminal``)
+   called *Node2* in the DTR); the signals named after it
+   (``*_GEN_ActiveCurrentNode2``, ``*_GEN_ReactiveCurrentNode2``,
+   ``*_GEN_VoltageNode2``)
    are measured there. A Zone 1 reference-curve dictionary declares six
    signals: those three, ``InternalNode1_BUS_Voltage`` (or its
    ``BusPDR_BUS_Voltage`` alias), and the active and reactive power at the
-   point controlled by the converter,
-   ``*_GEN_ActivePowerControlledPu`` and ``*_GEN_ReactivePowerControlledPu``.
+   node the converter controls,
+   ``*_GEN_ActivePowerControlledNode`` and ``*_GEN_ReactivePowerControlledNode``.
+   Dictionaries written before these signals were named after the nodes —
+   ``InjTerminal`` for ``Node2``, ``ControlledPu`` for ``ControlledNode`` — are
+   still accepted.
    It may also declare the setpoints sent to the converter,
    ``*_GEN_ActivePowerSetpointPu``, ``*_GEN_ReactivePowerSetpointPu`` and
    ``*_GEN_VoltageSetpointPu``, which are not compared: in a setpoint step,
@@ -270,6 +275,13 @@ Each test case (Operating Condition) requires a curve file and an associated
 DICT file. The example above shows a PCS with two Benchmarks: Benchmark1 has
 two Operating Conditions and Benchmark2 has one.
 
+Each unit directory holds an index, ``CurvesFiles.ini``, that names the curve
+file of each test. When a unit has none, DyCoV writes one from the model in
+every unit directory that lacks it, listing the tests with no file, and stops
+so that you name the file of each test you deliver. An index left as it was
+generated stops every run until it names at least one file. The indexes and
+the records already in the directory are left as they are.
+
 Accepted curve file formats:
 
 * **COMTRADE** — all versions up to C37.111-2013 are accepted, either as a
@@ -348,6 +360,11 @@ distinction. A single ``Producer.ini`` covers the entire case:
        │   ├── PCS_RTE-I*.csv
        │   └── PCS_RTE-I*.dict
        └── Producer.ini
+
+Each folder of the directory, other than ``Zone1`` and ``Zone3``, is a
+producer whose INI carries its name, next to the folder or in the zone folders.
+A folder that no INI describes, such as the ``Results`` an earlier run left
+there, is skipped with a warning, and the other producers are validated.
 
 
 .. _topologies:
@@ -437,7 +454,11 @@ The installation ships a blank workbook per standard, in the ``workbooks``
 directory next to ``examples``: ``Producer_IEC.xlsx`` for the IEC 61400-27-1
 models and ``Producer_WECC.xlsx`` for the WECC ones. Copy the one that matches
 your model and fill it in. The ``format_version`` cell of its ``Infos générales
-->`` sheet names the DyCoV release it was written for.
+->`` sheet names the DyCoV release that changed its template last, and the
+``standard`` cell next to it says whether it is IEC or WECC. A workbook that
+names another version, none, or a standard DyCoV does not know is still read,
+with a warning: rows that differ between the two templates would be dropped or
+missing, so copy its data into the template of the release.
 
 The workbook is the single source of truth: the model comes from its
 ``Model Map`` sheet, the electrical values from the ``Zone1a`` and ``Zone3``

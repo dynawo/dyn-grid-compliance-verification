@@ -50,21 +50,17 @@ def _connect_generator_to_dynmodelomegaref(
 ) -> None:
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "RotorSpeedPu")
     if variable:
-        _connect_generator(
-            dyd_root, ns, generator.id, variable, "OmegaRef", f"omega_grp_{grp}_value"
-        )
+        _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", f"omega_grp_{grp}_")
 
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
     if variable:
         _connect_generator(
-            dyd_root, ns, generator.id, variable, "OmegaRef", f"omegaRef_grp_{grp}_value"
+            dyd_root, ns, generator.id, variable, "OmegaRef", f"omegaRef_grp_{grp}_"
         )
 
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "Running")
     if variable:
-        _connect_generator(
-            dyd_root, ns, generator.id, variable, "OmegaRef", f"running_grp_{grp}_value"
-        )
+        _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", f"running_grp_{grp}_")
 
 
 def _connect_generator_to_setpoint(dyd_root: etree.Element, ns: str, generator: GenParams) -> None:
