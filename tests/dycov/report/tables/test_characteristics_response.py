@@ -111,7 +111,7 @@ def test_create_map_repeated_not_calculated_reuses_footnote():
         "\\footnote{Not Calculated because the reference value "
         "is exactly zero or very close to zero.}"
     )
-    assert table[1][3].startswith("\\footnotemark[\\value{footnote}]")
+    assert table[1][3].startswith(r"\csname @makefnmark\endcsname")
 
 
 def test_create_map_with_missing_keys():

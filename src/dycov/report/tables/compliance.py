@@ -12,15 +12,10 @@ from dycov.report import printable
 
 
 def _non_compliant_time_note(footnote_defined: bool) -> tuple:
-    """Returns the LaTeX markup for the "non-compliant time" footnote.
-
-    The first call defines the footnote text; later calls reuse the same note via
-    \\footnotemark[\\value{footnote}] (resolves in a single compilation pass, unlike
-    \\ref) to avoid repeating an identical footnote for every row in the same table.
-    """
-    if not footnote_defined:
-        return "\\footnote{If non-compliant, time at which this happens.}", True
-    return "\\footnotemark[\\value{footnote}]", True
+    """Returns the LaTeX markup for the "non-compliant time" note, and that it is defined."""
+    return printable.table_note(
+        "If non-compliant, time at which this happens.", footnote_defined
+    ), True
 
 
 def _limit(check: str, default: float) -> str:
