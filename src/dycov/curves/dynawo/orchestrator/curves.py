@@ -115,6 +115,7 @@ class DynawoCurves(ProducerCurves):
         self._sim_time = config.get_float("Dynawo", "simulation_limit", 30.0)
 
         self.__reset_solver()
+        parameter_checks.check_fault_search()
 
         self._voltage_dip = None
 

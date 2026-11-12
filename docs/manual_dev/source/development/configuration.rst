@@ -377,7 +377,8 @@ Solver selection:
 * ``fault_search_time_after_clearing`` — seconds those simulations run after the fault is
   cleared, or after it starts when it is permanent (default 2), within ``simulation_stop``.
 
-IDA solver parameters (used when ``solver_lib = dynawo_SolverIDA``):
+IDA solver parameters (used when ``solver_lib`` or ``fault_search_solver_lib`` is
+``dynawo_SolverIDA``):
 
 * ``ida_order`` — integration order.
 * ``ida_initStep`` — initial step size.
@@ -387,7 +388,8 @@ IDA solver parameters (used when ``solver_lib = dynawo_SolverIDA``):
 * ``ida_relAccuracy`` — relative accuracy.
 * ``ida_minimalAcceptableStep`` — minimum acceptable step.
 
-SIM solver parameters (used when ``solver_lib = dynawo_SolverSIM``):
+SIM solver parameters (used when ``solver_lib`` or ``fault_search_solver_lib`` is
+``dynawo_SolverSIM``):
 
 * ``sim_hMin``, ``sim_hMax`` — minimum and maximum step sizes.
 * ``sim_kReduceStep`` — step reduction factor on convergence failure.

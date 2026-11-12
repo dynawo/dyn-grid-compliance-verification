@@ -26,11 +26,11 @@ has its data copied into `workbooks/Producer_IEC.xlsx` or `workbooks/Producer_WE
 ### The fault searches run on the simplified solver
 
 The searches for the impedance of the high-impedance and bolted faults run each of their
-simulations on the SIM solver, stopped 2 s after the fault is cleared, and retry a failed one as
-any simulation; a permanent fault stops 2 s after it starts. The test is then simulated as
-before. The impedance they settle on may differ
-slightly from the one they found on IDA. `fault_search_solver_lib` and
-`fault_search_time_after_clearing`, in `[Dynawo]`, change both (#644).
+simulations on the SIM solver and stop it 2 s after the fault is cleared, or 2 s after a permanent
+fault starts; a simulation that fails is retried as any other. The test is then simulated as
+before. The impedance they settle on may differ slightly from the one they found on IDA.
+`fault_search_solver_lib` and `fault_search_time_after_clearing`, in `[Dynawo]`, change both
+(#644).
 
 ### Fixed
 
