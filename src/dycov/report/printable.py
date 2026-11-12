@@ -17,12 +17,13 @@ NOT_CALCULATED_NOTE = (
 def table_note(text: str, defined: bool) -> str:
     """The note of a table row: its text where the table first needs it, its mark afterwards.
 
-    The tables sit in a minipage, which numbers its notes on a counter of its own (a, b…).
-    \\footnotemark[\\value{footnote}] would print the document's footnote number, a note
-    that does not exist; repeating the mark of the last note keeps the one the text carries.
+    A table that carries a note sits in a minipage, which numbers its notes on a counter of its
+    own (a, b…): \\footnotemark[\\value{footnote}] would print the document's footnote number,
+    a note that does not exist. Printing the mark of the last note keeps the one its text
+    carries, and makes no link of its own, which would point to no note either.
     """
     if defined:
-        return r"\csname @footnotemark\endcsname"
+        return r"\csname @makefnmark\endcsname"
     return f"\\footnote{{{text}}}"
 
 

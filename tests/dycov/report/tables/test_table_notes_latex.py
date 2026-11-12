@@ -1,3 +1,12 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# (c) 2026 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
 import re
 import shutil
 import subprocess
@@ -39,6 +48,7 @@ def _marks_in_table(tmp_path, rows: list) -> list:
     )
     assert run.returncode == 0, run.stdout[-2000:]
     log = (tmp_path / "table.log").read_text(errors="replace")
+    assert "has been referenced but does not exist" not in log
     table_log = log[log.index("TABLE BEGINS") : log.index("TABLE ENDS")]
     return re.findall(r"MARK:(.*)", table_log)
 

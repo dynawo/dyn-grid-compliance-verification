@@ -24,7 +24,7 @@ def test_format_time_error_not_calculated_defines_footnote_once():
     value, footnote_defined = printable.format_time_error(
         results, "test1", footnote_defined=footnote_defined
     )
-    assert value.startswith(r"\csname @footnotemark\endcsname")
+    assert value.startswith(r"\csname @makefnmark\endcsname")
     assert footnote_defined is True
 
 
@@ -38,4 +38,4 @@ def test_format_compound_check():
 
 def test_table_note_gives_the_text_once_and_then_its_mark():
     assert printable.table_note("Some note.", False) == r"\footnote{Some note.}"
-    assert printable.table_note("Some note.", True) == r"\csname @footnotemark\endcsname"
+    assert printable.table_note("Some note.", True) == r"\csname @makefnmark\endcsname"
