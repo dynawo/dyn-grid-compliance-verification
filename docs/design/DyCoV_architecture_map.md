@@ -143,7 +143,7 @@ names.
   Each step of the HiZ and bolted searches is the `simulate_fn` `DynawoCurves` hands them,
   `__simulate_fault_search_step`: in its copy it switches the JOBS to `[Dynawo]
   fault_search_solver_lib` (SIM) and stops it `fault_search_time_after_clearing` after the fault
-  ends, then runs the retry strategy as any simulation; `reset_solver_fn` puts the configured
+  ends (after it starts, for a permanent one), then runs the retry strategy as any simulation; `reset_solver_fn` puts the configured
   solver back after each step, so the test's own simulation runs on `solver_lib` to its full length.
   Bolted: searches by bisection for a "sufficient" fault impedance X — one that both converges and
   leaves the residual PDR voltage under an SNom-interpolated threshold (`bolted_fault_*` config keys).

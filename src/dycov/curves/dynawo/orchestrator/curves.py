@@ -27,7 +27,7 @@ from dycov.curves.dynawo.runtime.retry_strategy import (
 )
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 from dycov.curves.naming import to_output_name
-from dycov.curves.voltage_dip import measure_voltage_dip
+from dycov.curves.voltage_dip import NO_FAULT_SENTINEL, measure_voltage_dip
 from dycov.files import manage_files, replace_placeholders, simulation_files
 from dycov.files.manage_files import ModelFiles, ProducerFiles
 from dycov.files.simulation_files import SIMULATION_INPUTS_FILE
@@ -169,10 +169,13 @@ class DynawoCurves(ProducerCurves):
             working_oc_dir, _TSO_JOBS, self._solver.solver_id, self._solver.solver_lib
         )
 
-    def __fault_search_stop_time(self, fault_end: float) -> float:
-        """A step of a fault search only reads the voltage during the fault."""
+    def __fault_search_stop_time(self, fault_start: float, fault_duration: float) -> float:
+        """A step of a fault search only reads the voltage during the fault, which a permanent
+        fault holds from its start on."""
         time_after_clearing = config.get_float("Dynawo", "fault_search_time_after_clearing", 2.0)
-        return min(self._simulation_stop, fault_end + time_after_clearing)
+        if fault_duration == NO_FAULT_SENTINEL:
+            return min(self._simulation_stop, fault_start + time_after_clearing)
+        return min(self._simulation_stop, fault_start + fault_duration + time_after_clearing)
 
     def __simulate_fault_search_step(
         self,
@@ -183,7 +186,7 @@ class DynawoCurves(ProducerCurves):
         oc_name: str,
         disable_retry_logs: bool = False,
         *,
-        fault_end: float,
+        stop_time: float,
     ) -> SimulateOutcome:
         """
         Simulates a step of a fault search: on the solver the configuration gives those
@@ -202,13 +205,11 @@ class DynawoCurves(ProducerCurves):
             Benchmark name.
         oc_name : str
             Operating Condition name.
-        fault_end : float
-            Instant the fault is cleared, in seconds.
+        stop_time : float
+            Instant the step stops, in seconds.
         """
         self.__use_fault_search_solver(working_oc_dir)
-        replace_placeholders.modify_stop_time(
-            working_oc_dir, _TSO_JOBS, self.__fault_search_stop_time(fault_end)
-        )
+        replace_placeholders.modify_stop_time(working_oc_dir, _TSO_JOBS, stop_time)
         return self.__simulate(
             output_dir,
             working_oc_dir,
@@ -496,7 +497,9 @@ class DynawoCurves(ProducerCurves):
             self._bisection.sim_time = self._sim_time
             simulate_fault_search_step = partial(
                 self.__simulate_fault_search_step,
-                fault_end=event_params["start_time"] + event_params["duration_time"],
+                stop_time=self.__fault_search_stop_time(
+                    event_params["start_time"], event_params["duration_time"]
+                ),
             )
 
             pcs_bm_oc_name = get_cfg_oc_name(pcs_name, bm_name, oc_name)

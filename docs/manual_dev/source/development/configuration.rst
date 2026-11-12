@@ -375,7 +375,7 @@ Solver selection:
   bolted fault searches (default ``dynawo_SolverSIM``). A step that fails is still retried, and
   the simulation of the test runs on ``solver_lib``.
 * ``fault_search_time_after_clearing`` — seconds those simulations run after the fault is
-  cleared (default 2), within ``simulation_stop``.
+  cleared, or after it starts when it is permanent (default 2), within ``simulation_stop``.
 
 IDA solver parameters (used when ``solver_lib = dynawo_SolverIDA``):
 
