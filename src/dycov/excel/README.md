@@ -185,8 +185,7 @@ The performance examples carry no reference curves, so their workbooks keep the
 template's placeholder in the results-folder cell.
 
 Every example under `examples/` is the output of its own workbook, so
-regenerating one reproduces it file for file — which is also how the golden test
-keeps the two in step. The two `IEC*2020WithProtections` cases carry their
+regenerating one reproduces it file for file. The two `IEC*2020WithProtections` cases carry their
 decoupling protection curves in the protection tables of their workbook.
 
 ## Tests

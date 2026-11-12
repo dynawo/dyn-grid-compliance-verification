@@ -527,7 +527,7 @@ def _extra_for_column(
 
 
 def _parse_parameters(
-    grid: Grid, header_row: int, columns: Columns, tables: list[Table] = ()
+    grid: Grid, header_row: int, columns: Columns, tables: tuple[Table, ...] | list[Table] = ()
 ) -> list[Parameter]:
     """Parse the data rows of a single variant column group.
 
