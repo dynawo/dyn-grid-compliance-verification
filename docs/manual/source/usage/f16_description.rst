@@ -319,12 +319,12 @@ Figures: ``fig_P``, ``fig_Q``, ``fig_Ip``, ``fig_Iq``, ``fig_Ustator``,
 Three-phase fault
 ^^^^^^^^^^^^^^^^^
 
-A three-phase fault on the grid near the PDR, cleared by tripping the
-faulted line: the grid is an infinite bus and four parallel lines, the
-fault sits on the fourth one, which opens at the end of the fault. DyCoV
-searches the fault impedance: with ``bolted_fault = true`` the one that
-leaves the residual voltage at the PDR under the threshold of a bolted
-fault for the installation's size.
+A three-phase fault on the grid near the PDR: the grid is an infinite bus
+and four parallel lines, and the fault sits on the fourth one, at 1 % of its
+length from the PDR. It is removed after the fault duration, and the line
+stays in service. DyCoV searches the fault impedance: with
+``bolted_fault = true`` the one that leaves the residual voltage at the PDR
+under the threshold of a bolted fault for the installation's size.
 
 .. code-block:: ini
 

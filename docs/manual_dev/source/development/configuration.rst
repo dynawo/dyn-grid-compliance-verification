@@ -102,7 +102,7 @@ each Benchmark or Operating Condition must pass. Available tests:
 * ``time_5P`` — time at which P stays within ±5% of its final value.
 * ``time_10P`` — time at which P stays within ±10% of its final value.
 * ``time_85U`` — time at which voltage at the PDR returns above 0.85 pu.
-* ``time_clear`` — time at which the faulted line is disconnected at both ends.
+* ``time_clear`` — time at which the event or fault is cleared.
 * ``time_cct`` — fault-clearing time threshold for rotor-angle stability onset.
 * ``stabilized`` — checks whether a steady state has been reached.
 * ``no_disconnection_gen`` — checks that no generator disconnection occurred.
@@ -493,11 +493,15 @@ Grid connection parameters by generator type (HTB1, HTB2, HTB3):
 
 * ``HTB1_p_max``, ``HTB2_p_max``, ``HTB3_p_max`` — active power limit for
   reactance calculation.
+* ``HTBx_reactance_b`` — ``b`` in more than two steps, one value more than
+  the powers ``HTBx_p_max`` then lists between them; it wins over
+  ``_b_low`` and ``_b_high``. A PPM at HTB1 takes four in the base revision,
+  0.2, 0.3, 0.54 and 0.6, split at 50, 250 and 800 MW.
 * The reactances and their power limits may be given for one technology: a
   key with the suffix ``_SM``, ``_PPM`` or ``_BESS`` wins over the plain one.
   The revisions ``20251013`` and ``20260723`` write them for a PPM and a
-  storage unit at HTB1, whose ``b`` is 0.3 below 250 MW and for any power
-  respectively.
+  storage unit at HTB1: a PPM takes 0.3, 0.54 and 0.6, split at 250 and
+  800 MW, and a storage unit 0.3 for any power.
 * ``HTB1_Scc``, ``HTB2_Scc``, ``HTB3_Scc`` — reference short-circuit power
   (MVA) by generator type (400, 1500, 7000 MVA respectively).
 * ``Udim_63kV``, ``Udim_66kV``, ``Udim_90kV``, ``Udim_132kV``,

@@ -244,6 +244,11 @@ def test_20260723_writes_what_20251013_writes(path):
         (REVISION, "PPM", 240.0, 0.3),
         (REVISION, "PPM", 250.0, 0.54),
         (REVISION, "PPM", 260.0, 0.54),
+        (BASE_REVISION, "PPM", 260.0, 0.54),
+        (REVISION, "PPM", 799.999, 0.54),
+        (REVISION, "PPM", 800.0, 0.6),
+        (REVISION, "PPM", 900.0, 0.6),
+        (BASE_REVISION, "PPM", 900.0, 0.6),
         (BASE_REVISION, "BESS", 40.0, 0.2),
         (REVISION, "BESS", 40.0, 0.3),
         (REVISION, "BESS", 60.0, 0.3),
@@ -254,7 +259,8 @@ def test_20260723_writes_what_20251013_writes(path):
 def test_a_unit_at_htb1_takes_the_reactance_b_of_its_technology(
     revision, selected, technology, p_max, b
 ):
-    """The capability specifications of PPM and storage give HTB1 a b of 0.3 below 250 MW."""
+    """The capability specifications give HTB1 a b of 0.3 below 250 MW for PPM and storage,
+    and a PPM 0.54 from 250 MW and 0.6 from 800 MW."""
     revision(selected)
 
     line_xpu = generator_variables.calculate_line_xpu(

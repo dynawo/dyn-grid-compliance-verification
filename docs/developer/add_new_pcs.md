@@ -268,7 +268,8 @@ After adding the new PCS:
 
 2. Add an example case under `examples/` that exercises the new PCS.
 
-3. Run DyCoV against the example to verify end-to-end behavior:
+3. Run DyCoV against the example to verify end-to-end behavior, with the revision of the DTR
+   the PCS belongs to as `current` in the `[DTR]` section of your configuration:
    ```bash
    dycov validate examples/<your_new_case>/ReferenceCurves/ \
                   -m examples/<your_new_case>/Dynawo/ \

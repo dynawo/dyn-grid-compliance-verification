@@ -323,7 +323,9 @@ A common development loop is:
 2.  Modify source files under `src/dycov/`.
 3.  Ensure Dynawo is correctly configured and reachable.
 4.  Run DyCoV commands against one of the bundled examples, which needs their
-    curves (section 4).
+    curves (section 4) and a revision of the DTR in your configuration:
+    `current = 20260723` in the `[DTR]` section of `~/.config/dycov/config.ini`,
+    the revision the curves follow.
 5.  Inspect logs, generated results, and reports.
 6.  Run the checks of section 8 before committing: `pytest` and `ruff`.
 7.  Iterate.

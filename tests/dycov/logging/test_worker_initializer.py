@@ -216,7 +216,8 @@ WORKER_CONFIGURATION_RUN = textwrap.dedent(
         user_file = Path(sys.argv[2])
         user_file.write_text("[Global]\\nfrom_the_user_file = yes\\n")
         config.load_user_config(user_file)
-        # What --dtr does, and an option set at run time where the default configuration has it
+        # The revision the run follows, and an option set at run time where the default
+        # configuration has it
         config.set_value("DTR", "current", sys.argv[4])
         config.load_dtr_delta_config(sys.argv[4])
         config.set_value("Dynawo", "simulation_limit", "77")
@@ -251,7 +252,8 @@ def _run_reading_the_configuration(tmp_path, start_method, layers, revision):
 def test_a_worker_started_apart_runs_with_the_configuration_of_the_run(
     tmp_path, start_method, revision, reaction_time_limit
 ):
-    """#678: the revision of --dtr, its delta, the file of --user-config and what the run set."""
+    """#678: the revision of the run, its delta, the file of --user-config and what the run
+    set."""
     main, worker = _run_reading_the_configuration(tmp_path, start_method, "with", revision)
 
     assert main == (revision, reaction_time_limit, "yes", "77")
@@ -260,11 +262,11 @@ def test_a_worker_started_apart_runs_with_the_configuration_of_the_run(
 
 @pytest.mark.parametrize("revision", ["20240215", "20260723"])
 def test_a_worker_started_apart_without_the_layers_reads_the_files_alone(tmp_path, revision):
-    """What #678 saw: the worker reads the revision of the files and no delta, and neither the
-    file of --user-config nor what the run set."""
+    """What #678 saw: the worker reads the files alone, which give no revision, so it reads no
+    delta, and neither the file of --user-config nor what the run set."""
     main, worker = _run_reading_the_configuration(tmp_path, "forkserver", "without", revision)
 
-    assert worker == ("20260723", pytest.approx(0.10), None, "30")
+    assert worker == (None, pytest.approx(0.10), None, "30")
     assert worker != main
 
 

@@ -1,3 +1,4 @@
+import configparser
 import re
 import subprocess
 import warnings
@@ -5,8 +6,11 @@ from pathlib import Path
 
 import pytest
 
+from dycov.configuration.cfg import config
+
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 CURVES_RELEASE = EXAMPLES / ".curves-release"
+RELEASE_CONFIG = EXAMPLES.parent / "tools" / "scripts" / "release.ini"
 HOW_TO_GET_THEM = (
     "    tools/scripts/fetch_example_curves.sh   (from the asset of a release)\n"
     "    tools/scripts/regenerate_curves.sh      (from the tool itself, with Dynawo)"
@@ -53,6 +57,24 @@ def dynawo_latest(monkeypatch):
     if latest_path:
         monkeypatch.setenv("DYNAWOPATH", str(latest_path))
     return latest_path
+
+
+@pytest.fixture(autouse=True)
+def revision_of_the_example_curves():
+    """Validates against the revision of the DTR the curves of the examples are regenerated
+    with, which a run takes from its configuration: the verdicts asserted here are those of
+    that revision."""
+    release = configparser.ConfigParser()
+    release.read(RELEASE_CONFIG, encoding="utf-8")
+    revision = release.get("DTR", "current")
+    selected = config.get_value("DTR", "current", "")
+
+    config.set_value("DTR", "current", revision)
+    config.load_dtr_delta_config(revision)
+    yield revision
+
+    config.set_value("DTR", "current", selected)
+    config.load_dtr_delta_config(selected)
 
 
 def _directories_without_curves() -> list[Path]:

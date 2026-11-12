@@ -173,7 +173,7 @@ kind of event it applies.
        - Bolted or high-impedance fault
      * - ``Fault_4Lines_InfBus``
        - Infinite bus and four parallel lines; a fault at 1 % of the fourth
-         one, which is tripped at the end of the fault.
+         one, removed at the end of the fault with the line left in service.
        - Three-phase fault (Zone 3, I4, I5)
      * - ``LineTrip_3Lines_InfBus``
        - Infinite bus and three parallel lines; the third one is tripped at
@@ -277,9 +277,9 @@ present the first of this list wins:
 
 ``line_XPu``
   Reactance of the line to the PDR: ``a`` or ``b``, the two reactances the
-  DTR tabulates by voltage level (``HTB<n>_reactance_a``,
-  ``HTB<n>_reactance_b_low`` and ``_high`` of ``[GridCode]``, the ``b``
-  variant depending on the maximum power), a multiple of them (``3*b``), or
+  DTR tabulates by voltage level and technology (``HTB<n>_reactance_a`` and
+  the steps of ``b`` of ``[GridCode]``, the step depending on the maximum
+  power), a multiple of them (``3*b``), or
   a number in pu of the 100 MVA base. Used by the fiches that specify the
   line (I2, I3, I4, I5, I8, I16 Zone 3). In Zone 3 the resistance is
   ``X / XPu_r_factor``.
@@ -501,8 +501,8 @@ Three-phase fault
 
 **Zone 3 and performance verification** (``PCS_RTE-I16z3``
 ``ThreePhaseFault.TransientBolted``, ``PCS_RTE-I4``, ``PCS_RTE-I5``): a
-bolted fault on one of four parallel lines, tripped when the fault is
-cleared. The duration depends on the voltage level.
+bolted fault on one of four parallel lines, which stays in service once the
+fault is cleared. The duration depends on the voltage level.
 
 .. code-block:: ini
 

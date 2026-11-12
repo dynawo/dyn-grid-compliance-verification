@@ -137,3 +137,24 @@ def test_the_overvoltage_still_has_the_infinite_network_at_the_pdr(revision, swe
     revision(REVISION)
 
     assert not any(swell_zcc().values())
+
+
+@pytest.mark.parametrize(
+    "p_max, b",
+    [
+        (40.0, 0.2),
+        (49.999, 0.2),
+        (50.0, 0.3),
+        (249.999, 0.3),
+        (250.0, 0.54),
+        (799.999, 0.54),
+        (800.0, 0.6),
+        (900.0, 0.6),
+    ],
+)
+def test_a_ppm_at_htb1_still_takes_the_four_steps_of_b_of_the_base(revision, p_max, b):
+    revision(REVISION)
+
+    line_xpu = generator_variables.calculate_line_xpu("b", -p_max / 100, 100.0, 90.0, 100.0, "PPM")
+
+    assert line_xpu == pytest.approx(b)

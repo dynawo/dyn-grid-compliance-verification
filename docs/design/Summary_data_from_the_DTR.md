@@ -1,14 +1,16 @@
 # Which revision these values come from
 
 The values below are those of the DTR of 15/02/2024, which the tool names `20240215` and
-takes as its base revision. The articles it carries, for the chapters this document quotes:
+takes as its base revision. The articles it carries that set the values the tool reads:
 
 | Article | Version |
 |---|---|
 | 5.1.1, the categories of a unit | 1.3 |
-| 5.1.4, the categories of a storage unit | 1.1 |
-| 8.3.1, 8.3.2 and 8.3.4, the cahiers des charges | 2.1 |
+| 5.1.4, the categories of a storage unit | 2, applicable from 09/11/2023 |
+| 8.3.1, the cahier des charges of a power park module | 2.3 |
+| 8.3.2, the cahier des charges of a synchronous unit | 2.4 |
 | 8.3.3, the fiches I and F | 3.3 |
+| 8.3.4, the cahier des charges of a storage unit | 1.6 |
 
 A later revision changes some of them. `DTR_revisions.md` says how the tool
 carries the difference, and which revisions it has to carry.
@@ -176,10 +178,12 @@ de tension de raccordement:
 |          HTB1           | 0.05 pu |  if Pmax < 50 MW: 0.2 pu; if Pmax ≥ 50 MW: 0.3 pu             |
 |          HTB2           | 0.05 pu |  if Pmax < 250 MW: 0.3 pu; if Pmax ≥ 250 MW: 0.54 pu          |
 |          HTB3           | 0.05 pu |  if Pmax < 800 MW: 0.54 pu; if Pmax ≥ 800 MW: 0.6 pu          |
-| non-synch offshore farm | 0.05 pu |  if Pmax < 50 MW: 0.2 pu; if 50 MW ≤ Pmax < 250 MW: 0.3 pu    |
-| non-synch offshore farm | 0.05 pu |  if 250 MW ≤ Pmax < 800 MW: 0.54 pu; if Pmax ≥ 800 MW: 0.6 pu |
+|      PPM at HTB1        | 0.05 pu |  if Pmax < 50 MW: 0.2 pu; if 50 MW ≤ Pmax < 250 MW: 0.3 pu    |
+|      PPM at HTB1        | 0.05 pu |  if 250 MW ≤ Pmax < 800 MW: 0.54 pu; if Pmax ≥ 800 MW: 0.6 pu |
 
 The pu base is Udim and the nominal apparent power of the generator/farm, Sn.
+The rows of a PPM at HTB1 come from article 8.3.1, which gives them to every power park module
+connected at that level: "Types B, C, D or offshore PPM connected in HTB1".
 
 
 

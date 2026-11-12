@@ -290,15 +290,13 @@ Checks for compliant behavior of the generator under a scenario where there is a
 symmetric three-phase fault at one of the four transmission lines (at a 1%
 distance from the PDR).
 
-In Dynawo this has been modeled by splitting Line4 into Line4a and Line4b, and
-then inserting an intermediate bus between them, in which a `NodeFault` model is
-attached.
+In Dynawo Line4 is a `LineFault` model: two sections of the line with the fault
+between them, at 1% of its length from the PDR.
 
 There are two relevant events at play here:
   * `T_{fault}`, time at which the short-circuit takes place. This becomes the
     default reference when checking for compliance times.
-  * `T_{clear}`, time at which the line (actually, both Line4a and Line4b) is
-    disconnected at both ends.
+  * `T_{clear}`, time at which the fault is removed; the line stays in service.
 
 `T_{clear}` is a parameter that is specified in the DTR and depends on the
 voltage level in question.
@@ -736,9 +734,8 @@ symmetric three-phase fault at one of the four transmission lines (at a 1%
 distance from the PDR). The PPM should remain connected and be able to supply
 the necessary reactive injection.
 
-In Dynawo this fault has been modeled by splitting Line4 into Line4a and Line4b,
-and then inserting an intermediate bus between them, to which a `NodeFault`
-model is attached.
+In Dynawo Line4 is a `LineFault` model: two sections of the line with the fault
+between them, at 1% of its length from the PDR.
 
 Note that although the DTR Sheet also requires simulating a one-phase fault,
 this tool will not implement it, as it would require the simulation of a
@@ -747,8 +744,7 @@ three-phase model. All simulations are only positive-sequence.
 There are two relevant events at play here:
   * `T_{fault}`, time at which the short-circuit takes place. This becomes the
     default reference when checking for compliance times.
-  * `T_{clear}`, time at which the line (actually, both Line4a and Line4b) is
-    disconnected at both ends.
+  * `T_{clear}`, time at which the fault is removed; the line stays in service.
 
 `T_{clear}` is a parameter that is specified in the DTR and depends on the
 voltage level in question.
