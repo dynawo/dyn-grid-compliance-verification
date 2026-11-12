@@ -371,6 +371,11 @@ Solver selection:
 
 * ``solver_lib`` — solver library to use: ``dynawo_SolverIDA`` (default) or
   ``dynawo_SolverSIM``.
+* ``fault_search_solver_lib`` — solver of the simulations of the high-impedance and
+  bolted fault searches (default ``dynawo_SolverSIM``). A step that fails is still retried, and
+  the simulation of the test runs on ``solver_lib``.
+* ``fault_search_time_after_clearing`` — seconds those simulations run after the fault is
+  cleared (default 2), within ``simulation_stop``.
 
 IDA solver parameters (used when ``solver_lib = dynawo_SolverIDA``):
 

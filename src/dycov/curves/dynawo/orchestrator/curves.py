@@ -9,6 +9,7 @@
 #
 import configparser
 from collections import namedtuple
+from functools import partial
 from pathlib import Path
 
 import pandas as pd
@@ -27,7 +28,7 @@ from dycov.curves.dynawo.runtime.retry_strategy import (
 from dycov.curves.dynawo.runtime.run_types import DynawoRunInputs, SolverParams
 from dycov.curves.naming import to_output_name
 from dycov.curves.voltage_dip import measure_voltage_dip
-from dycov.files import manage_files, simulation_files
+from dycov.files import manage_files, replace_placeholders, simulation_files
 from dycov.files.manage_files import ModelFiles, ProducerFiles
 from dycov.files.simulation_files import SIMULATION_INPUTS_FILE
 from dycov.logging import dycov_logging
@@ -36,6 +37,7 @@ from dycov.model.producer import Producer
 from dycov.sanity_checks import parameter_checks
 
 _CURVES_CSV = "curves/curves.csv"
+_TSO_JOBS = "TSOModel.jobs"
 _SIMULATION_SECTION = "Simulation"
 _NOT_CONFIGURED = "not set"
 
@@ -126,7 +128,11 @@ class DynawoCurves(ProducerCurves):
 
     def __configured_solver(self) -> SolverParams:
         """Builds the solver parameters as the configuration declares them."""
-        solver_lib = config.get_value("Dynawo", "solver_lib", "dynawo_SolverIDA")
+        return self.__solver_params(config.get_value("Dynawo", "solver_lib", "dynawo_SolverIDA"))
+
+    @staticmethod
+    def __solver_params(solver_lib: str) -> SolverParams:
+        """Builds the parameters the configuration declares for the solver of solver_lib."""
         solver_id = solver_lib.replace("dynawo_Solver", "")
         if solver_id == "IDA":
             return SolverParams(
@@ -152,6 +158,65 @@ class DynawoCurves(ProducerCurves):
         """Resets all solver parameters to their configured defaults."""
         self._solver = self.__configured_solver()
         parameter_checks.check_solver(self._solver.solver_id, self._solver.solver_lib)
+
+    def __use_fault_search_solver(self, working_oc_dir: Path) -> None:
+        """Runs the simulation of working_oc_dir on the solver of the fault searches."""
+        self._solver = self.__solver_params(
+            config.get_value("Dynawo", "fault_search_solver_lib", "dynawo_SolverSIM")
+        )
+        parameter_checks.check_solver(self._solver.solver_id, self._solver.solver_lib)
+        replace_placeholders.modify_jobs_file(
+            working_oc_dir, _TSO_JOBS, self._solver.solver_id, self._solver.solver_lib
+        )
+
+    def __fault_search_stop_time(self, fault_end: float) -> float:
+        """A step of a fault search only reads the voltage during the fault."""
+        time_after_clearing = config.get_float("Dynawo", "fault_search_time_after_clearing", 2.0)
+        return min(self._simulation_stop, fault_end + time_after_clearing)
+
+    def __simulate_fault_search_step(
+        self,
+        output_dir: Path | None,
+        working_oc_dir: Path,
+        jobs_output_dir: Path,
+        bm_name: str,
+        oc_name: str,
+        disable_retry_logs: bool = False,
+        *,
+        fault_end: float,
+    ) -> SimulateOutcome:
+        """
+        Simulates a step of a fault search: on the solver the configuration gives those
+        searches, retried as any simulation, and stopped shortly after the fault is cleared.
+
+        Parameters
+        ----------
+        output_dir : Path | None
+            Final output directory for saved results; None for a step, whose copy does not
+            outlive it.
+        working_oc_dir : Path
+            Copy of the working directory the step runs in, whose JOBS file it changes.
+        jobs_output_dir : Path
+            Output sub-directory declared in the job file.
+        bm_name : str
+            Benchmark name.
+        oc_name : str
+            Operating Condition name.
+        fault_end : float
+            Instant the fault is cleared, in seconds.
+        """
+        self.__use_fault_search_solver(working_oc_dir)
+        replace_placeholders.modify_stop_time(
+            working_oc_dir, _TSO_JOBS, self.__fault_search_stop_time(fault_end)
+        )
+        return self.__simulate(
+            output_dir,
+            working_oc_dir,
+            jobs_output_dir,
+            bm_name,
+            oc_name,
+            disable_retry_logs=disable_retry_logs,
+        )
 
     def _build_bisection_engine(self) -> BisectionEngine:
         return BisectionEngine(
@@ -429,6 +494,10 @@ class DynawoCurves(ProducerCurves):
                     pd.DataFrame(),
                 )
             self._bisection.sim_time = self._sim_time
+            simulate_fault_search_step = partial(
+                self.__simulate_fault_search_step,
+                fault_end=event_params["start_time"] + event_params["duration_time"],
+            )
 
             pcs_bm_oc_name = get_cfg_oc_name(pcs_name, bm_name, oc_name)
             if config.get_boolean(pcs_bm_oc_name, "hiz_fault"):
@@ -440,7 +509,7 @@ class DynawoCurves(ProducerCurves):
                     event_params["step_value"],
                     bm_name,
                     oc_name,
-                    simulate_fn=self.__simulate,
+                    simulate_fn=simulate_fault_search_step,
                     reset_solver_fn=self.__reset_solver,
                 )
             elif config.get_boolean(pcs_bm_oc_name, "bolted_fault"):
@@ -451,7 +520,7 @@ class DynawoCurves(ProducerCurves):
                     event_params["duration_time"],
                     bm_name,
                     oc_name,
-                    simulate_fn=self.__simulate,
+                    simulate_fn=simulate_fault_search_step,
                     reset_solver_fn=self.__reset_solver,
                 )
             outcome = self.__simulate(
