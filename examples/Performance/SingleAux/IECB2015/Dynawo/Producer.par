@@ -110,6 +110,7 @@
     <par type="DOUBLE" name="WPP_UpquMaxPu" value="1.1"/>
     <par type="DOUBLE" name="WPP_tUFiltcl" value="0.01"/>
     <!-- QLimiter_2015 -->
+    <!-- Si QlConst = False, remplir les tables de limitations ci-dessous. -->
     <par type="BOOL" name="WPP_QlConst" value="true"/>
     <!-- Base unit: SnZone1, convention g&#233;n&#233;rateur -->
     <par type="DOUBLE" name="WPP_QMaxPu" value="0.8"/>
