@@ -31,6 +31,8 @@ has its data copied into `workbooks/Producer_IEC.xlsx` or `workbooks/Producer_WE
   its steps of b from `HTB1_reactance_b_PPM` and the powers between them from `HTB1_p_max_PPM`,
   so a configuration that changed them through `HTB1_reactance_b_low`, `_b_high` or
   `HTB1_p_max` now changes those two keys instead (#744).
+- `generate_gfm_envelopes` reads the producer file `-i` names and no other INI of its folder, and
+  stops when that file does not exist (#766).
 
 ## 1.3.0 — 2026-10-29
 
