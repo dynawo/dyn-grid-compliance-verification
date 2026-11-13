@@ -229,6 +229,9 @@ class SCRJump(GFMCalculator):
         """
         Anchors an envelope to 50% of the expected power change during the initial window.
 
+        Within that window, a value below Pmin becomes Pmin + 0.2 and one above Pmax becomes
+        Pmax - 0.2. The envelope outside the window is left as it is.
+
         Parameters
         ----------
         envelope_signal : np.ndarray
@@ -251,12 +254,12 @@ class SCRJump(GFMCalculator):
         modified_signal = np.where(modification_mask, power_at_50_percent, envelope_signal)
 
         modified_signal = np.where(
-            modified_signal * modification_mask < self._min_active_power,
+            modification_mask & (modified_signal < self._min_active_power),
             self._min_active_power + 0.2,
             modified_signal,
         )
         modified_signal = np.where(
-            modified_signal * modification_mask > self._max_active_power,
+            modification_mask & (modified_signal > self._max_active_power),
             self._max_active_power - 0.2,
             modified_signal,
         )
