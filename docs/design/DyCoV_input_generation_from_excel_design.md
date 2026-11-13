@@ -210,6 +210,19 @@ The map's rows are the combinations Dynawo has a model for, and the template let
 others — `REGC_B|REEC_C`, say, a BESS behind a voltage source. Choosing a valid combination is the
 user's job: a key the map does not hold is refused, naming the key and listing the known ones.
 
+**Tables of the model are points of their block.** Dynawo spells a table of an IEC model as
+scalar parameters, an abscissa and an ordinate per point (`TableIqMaxUwt11`, `TableIqMaxUwt12`,
+`TableIqMaxUwt21`…). The IEC template lays each one out below its block's parameters: its Dynawo
+name alone in a cell, the axis titles below it, then a point per row — the abscissa's label and
+value, the ordinate's label and value, in four adjacent columns — down to the first row without an
+abscissa. The reader finds them by that name (a single word starting with `Table`, the
+`[Anchors] table` of `excel_names.ini`, with nothing beside it where a parameter would have its
+value and type), keeps their rows out of the block's parameters, and gives their valued points to
+every variant of the block, the table title as the comment of the first. A table serves whichever
+variant is selected; one only the 2020 edition has, filled for a 2015 model, binds nothing, and
+Dynawo only logs it as unused. An older workbook that lists the points one per row, as parameters,
+is still read as such.
+
 **Parameter names carry the model prefix.** The Excel holds bare names (`Kqp`); each WECC model is a
 compiled composite whose descriptor flattens every parameter to `<prefix>_<Param>`
 (`photovoltaics_Kqp`) and the AC port to `<prefix>_terminal`. Dynawo binds by the exact flattened
@@ -394,19 +407,8 @@ nothing and raises no error.
 
 ### 11. Pending, roughly
 
-- **IEC decoupling-protection curves.** The template's `GridProtection` block offers the four
-  thresholds (`UOverPu`, `UUnderPu`, `fOverPu`, `fUnderPu`) but not the LVRT/HVRT curves behind
-  them. Dynawo spells each curve as ordinary scalar parameters, a magnitude and a time per point
-  (`Tablet<curve>wtfilt<point><1|2>`): 8 points over-voltage, 7 under-voltage, 4 over-frequency
-  and 6 under-frequency, so 50 rows per model in both editions. Nothing in the tool has to change
-  to write them — they are rows of a block like any other — and they all carry a `defaultValue`,
-  so a workbook that omits them still runs, on Dynawo's placeholder curves rather than the user's.
-  What is open is the template's layout: how many points of each curve to expose, and what an
-  unused point holds. Until then the two `IEC*2020WithProtections` examples keep their curves by
-  hand, under a `Parameters not available in the Excel template` heading at the end of the
-  generator set, and are the only examples their workbook does not reproduce in full: the
-  placeholder curves allow 0.33 s where theirs allow 2 s, which disconnects the turbine in the
-  500 ms and 800 ms voltage dips and in Zone 3's `GridVoltageDip`.
+- **The 2015 plant controller's `TableQwpUErr`.** The template gives it three points, the number
+  the 2020 plant controller has; the 2015 one has six, and its last three keep Dynawo's default.
 - **`M` topologies.** `Général` holds one block selection, so it resolves one plant/turbine pair,
   while an `M` plant needs a model per generator in both zones — `examples/Model/Wind/WECC4` has
   two different ones. Duplicating a `Zone1<x>` sheet copies electrical data only, so nothing in the

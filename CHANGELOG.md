@@ -32,6 +32,14 @@ before. The impedance they settle on may differ slightly from the one they found
 `fault_search_solver_lib` and `fault_search_time_after_clearing`, in `[Dynawo]`, change both
 (#644).
 
+### The IEC workbook carries the tables of the models
+
+The IEC template, now version 1.4.0, lays out the tables its models read point by point: the
+current and reactive power limits of the turbine, the tables of the plant controller and the
+decoupling protection curves, which the previous template listed one parameter per row. Copy the
+data of a workbook made on the template of 1.3.0 into `workbooks/Producer_IEC.xlsx`: it is still
+read, with a warning, and its protection curves written as before (#394).
+
 ### Fixed
 
 - A power park module of 250 MW or more connected at HTB1 takes the reactance b the DTR gives it,
