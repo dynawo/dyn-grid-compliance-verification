@@ -6,6 +6,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 
+import math
 from pathlib import Path
 from typing import Callable, Optional, TypeVar
 
@@ -19,6 +20,8 @@ from dycov.gfm.producer import GFMProducer
 
 _GFM_SECTION = "GFM Parameters"
 _DEFAULT_SECTION = "DEFAULT"
+_POSITIVE_PRODUCER_VALUES = ("H", "H_Overdamped", "H_Underdamped", "Xeff")
+_NON_NEGATIVE_PRODUCER_VALUES = ("D", "D_Overdamped", "D_Underdamped")
 
 _T = TypeVar("_T")
 
@@ -76,6 +79,35 @@ class GFMParameters(Parameters):
         self._bm_section = f"{pcs_name}.{bm_name}"
         self._oc_section = f"{pcs_name}.{bm_name}.{oc_name}"
         self._eval_sections = (self._oc_section, self._bm_section, self._pcs_section)
+
+    def check_producer_values(self) -> None:
+        """
+        Rejects the D, H and Xeff of the producer that the envelopes cannot be calculated with.
+
+        Raises
+        ------
+        ValueError
+            If any of them is not a finite number, if an H or Xeff is not above zero, or if a D
+            is below zero; the message names every such value and the producer file.
+        """
+        producer_config = self._producer.get_config()
+        problems = []
+        for option in _POSITIVE_PRODUCER_VALUES + _NON_NEGATIVE_PRODUCER_VALUES:
+            if not producer_config.has_option(_GFM_SECTION, option):
+                continue
+            raw_value = producer_config.get(_GFM_SECTION, option)
+            positive = option in _POSITIVE_PRODUCER_VALUES
+            if not _is_valid_producer_value(raw_value, positive):
+                requirement = "above zero" if positive else "not below zero"
+                problems.append(
+                    f"{option} = {raw_value or '(empty)'} must be a finite number {requirement}"
+                )
+        if problems:
+            raise ValueError(
+                f"Invalid values in [{_GFM_SECTION}] of {self._producer.get_producer_ini()}: "
+                + "; ".join(problems)
+                + "."
+            )
 
     def is_valid(self) -> bool:
         """
@@ -674,3 +706,11 @@ class GFMParameters(Parameters):
 
     def __get_float_value(self, option: str, default_value: float) -> float:
         return config.get_float(self.__section_setting(option), option, default_value)
+
+
+def _is_valid_producer_value(raw_value: str, positive: bool) -> bool:
+    try:
+        value = float(raw_value)
+    except ValueError:
+        return False
+    return math.isfinite(value) and (value > 0 if positive else value >= 0)

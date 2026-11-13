@@ -648,6 +648,7 @@ def _generate_gfm_envelopes(
         )
         if not params.is_valid():
             return -1
+        params.check_producer_values()
 
         use_parallel = config.get_boolean("Global", "parallel_pcs_validation", True)
         num_processes = config.get_int("Global", "parallel_num_processes", 4)
