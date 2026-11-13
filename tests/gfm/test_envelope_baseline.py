@@ -15,39 +15,11 @@ that directory keeps PPM/ and BESS/ under templates/PCS/gfm, which the command t
 more PCS and aborts on.
 """
 
-import os
 import shutil
-import subprocess
-import sys
 import tarfile
-import textwrap
 from pathlib import Path
 
-import dycov
-
 RESOURCES = Path(__file__).resolve().parent / "resources" / "baseline"
-
-RUN_WITHOUT_FIGURES = textwrap.dedent(
-    '''
-    """The command without the figures and the report, nor the check for the tools that build
-    it, which -t does not read. Without the pool, no worker imports the module again and draws
-    them anyway."""
-
-    import sys
-
-    import dycov.launchers as launchers
-    from dycov.configuration.cfg import config
-    from dycov.gfm import report
-    from dycov.gfm.gfm import GridForming
-
-    GridForming._plot = lambda *args, **kwargs: None
-    report.create_pdf = lambda *args, **kwargs: None
-    launchers.check_report_tools_availability = lambda: None
-    config.set_value("Global", "parallel_pcs_validation", "false")
-    sys.argv = ["dycov", *sys.argv[1:]]
-    sys.exit(launchers.dycov())
-    '''
-)
 
 
 def _csv_files(directory: Path) -> list[Path]:
@@ -75,35 +47,21 @@ def _baseline(tmp_path: Path) -> Path:
     return baseline
 
 
-def test_the_envelopes_are_those_of_the_release(tmp_path):
+def test_the_envelopes_are_those_of_the_release(tmp_path, run_dycov):
     home = _home_with_user_config(tmp_path)
     baseline = _baseline(tmp_path)
     output = tmp_path / "Results"
 
-    run = subprocess.run(
-        [
-            sys.executable,
-            "-c",
-            RUN_WITHOUT_FIGURES,
-            "generate_gfm_envelopes",
-            "-od",
-            "-i",
-            str(RESOURCES / "Producer.ini"),
-            "-o",
-            str(output),
-            "-t",
-            str(baseline),
-        ],
-        env={
-            **os.environ,
-            "HOME": str(home),
-            "USERPROFILE": str(home),
-            "PYTHONPATH": str(Path(dycov.__file__).resolve().parents[1]),
-        },
-        cwd=tmp_path,
-        capture_output=True,
-        text=True,
-        timeout=300,
+    run = run_dycov(
+        "generate_gfm_envelopes",
+        "-od",
+        "-i",
+        str(RESOURCES / "Producer.ini"),
+        "-o",
+        str(output),
+        "-t",
+        str(baseline),
+        home=home,
     )
 
     assert run.returncode == 0, run.stdout + run.stderr

@@ -106,6 +106,33 @@ def modify_jobs_file(
     )
 
 
+def modify_stop_time(path: Path, filename: str, stop_time: float) -> None:
+    """Set the time at which the simulation of a JOBS XML file stops.
+
+    Parameters
+    ----------
+    path: Path
+        Path where the JOBS file is stored
+    filename: str
+        JOBS filename
+    stop_time: float
+        Stop time of the simulation, in seconds
+    """
+    jobs_tree = etree.parse(path / filename, etree.XMLParser(remove_blank_text=True))
+    jobs_root = jobs_tree.getroot()
+    ns = etree.QName(jobs_root).namespace
+    simulation = jobs_root.find(f".//{{{ns}}}simulation")
+    if simulation is not None:
+        simulation.set("stopTime", str(stop_time))
+
+    jobs_tree.write(
+        path / filename,
+        pretty_print=True,
+        xml_declaration='<?xml version="1.0" encoding="UTF-8"?>',
+        encoding="UTF-8",
+    )
+
+
 def modify_par_file(
     path: Path,
     filename: str,

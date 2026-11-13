@@ -41,18 +41,18 @@ class GFMProducer(Producer):
 
     def get_producer_path(self) -> Path:
         """
-        Retrieves the absolute path to the producer's INI file.
+        Retrieves the directory that holds the producer's INI file.
 
         Returns
         -------
         Path
-            The absolute path to the INI file.
+            The directory of the INI file.
         """
         return self._producer_ini_path
 
     def get_filenames(self, zone: int = 0) -> list[str]:
         """
-        Returns the name of the unit, that of its INI file.
+        Returns the name of the producer, the stem of its INI file.
 
         Parameters
         ----------
@@ -62,7 +62,7 @@ class GFMProducer(Producer):
         Returns
         -------
         list[str]
-            The stem of the INI file.
+            The stem of the producer's INI file, alone.
         """
         return [self._producer_ini.stem]
 

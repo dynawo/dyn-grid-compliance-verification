@@ -507,7 +507,14 @@ missing, so copy its data into the template of the release.
 The workbook is the single source of truth: the model comes from its
 ``Model Map`` sheet, the electrical values from the ``Zone1a`` and ``Zone3``
 sheets, the control parameters from the block sheets that ``Général`` selects,
-and the reference curves from the two ``Signaux`` sheets. The command writes
+and the reference curves from the two ``Signaux`` sheets. Below the parameters
+of some IEC blocks, the template lays out the tables of the model — current
+and reactive power limits, the plant controller's, the decoupling
+protections' — one point per row: a point left empty keeps Dynawo's default,
+and a table marked as belonging to the 2020 edition is left empty for a 2015
+model. The 2015 plant controller reads six points of ``TableQwpUErr``, of which
+the template gives three: the other three keep Dynawo's defaults, at 0.06,
+0.07 and 0.08 pu, so the three you give stay below 0.06 pu. The command writes
 two trees next to the workbook — or under ``--output``, if you give one:
 
 .. code-block:: text
