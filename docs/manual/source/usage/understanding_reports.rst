@@ -142,6 +142,8 @@ reserved for the real connection point of the complete installation, used in
 Zone 3. The Node2 figures (the currents Ip and Iq and the voltage
 at the converter output) are measured at **InternalNode2** (*Node2* in the
 DTR). Both nodes are labeled in the network schema included in each report.
+The version Type C/D of the Fiche I16 compares the curves of InternalNode1
+alone.
 
 
 Structure of a test

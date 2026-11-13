@@ -27,8 +27,19 @@ sys.path.insert(0, str(_TOOL_DIR))
 
 import declared_tests as dt  # noqa: E402
 
+from dycov.configuration.cfg import config  # noqa: E402
+
 BASE_REVISION = "20240215"
 REVISION = "20260723"
+
+
+@pytest.fixture(autouse=True)
+def no_revision_left_behind():
+    """The category reads the thresholds of a revision through the configuration of the
+    process, which the script owns and a test shares: the base leaves that layer empty."""
+    yield
+    config.load_dtr_delta_config(BASE_REVISION)
+
 
 _VERDICT_AT = dt.VERDICT_AT
 
@@ -142,3 +153,50 @@ def test_a_test_that_fell_over_is_named_with_its_verdict(tmp_path):
     assert fell_over["Wind/WECC4B"] == {
         ("PCS_RTE-I16z3.GridVoltageDip.Qzero", "Simulation time out"),
     }
+
+
+@pytest.mark.parametrize("revision", [BASE_REVISION, REVISION])
+@pytest.mark.parametrize(
+    "example, category",
+    [("BESS/WECC", "B"), ("BESS/GridFormingDroop", "C"), ("BESS/GridFormingEpri", "C")],
+)
+def test_the_category_of_an_example_is_the_one_its_zone3_gives(
+    monkeypatch, revision, example, category
+):
+    """15 MW at 225 kV is a storage of type B, 40 MW a type C, under either revision."""
+    monkeypatch.chdir(_REPO)
+
+    assert dt.installation_category(example, revision) == category
+
+
+@pytest.mark.parametrize(
+    "revision, category, versions",
+    [(REVISION, "C", ["TypeCD.ini"]), (REVISION, "B", []), (BASE_REVISION, "C", [])],
+)
+def test_a_version_by_category_is_the_one_the_revision_writes(
+    monkeypatch, revision, category, versions
+):
+    monkeypatch.chdir(_REPO)
+    description = dt.TEMPLATES / "BESS" / "PCS_RTE-I16z1" / "PCSDescription.ini"
+
+    assert [path.name for path in dt.version_of(description, revision, category)] == versions
+
+
+def test_a_test_run_only_with_its_reference_is_not_one_that_must_run(monkeypatch):
+    """The Fiche I16.2 asks for the tests of the Fiche I18 at OC2 and OC3, and at the others
+    only when the producer records them."""
+    monkeypatch.chdir(_REPO)
+
+    declared = dt.declared_tests("BESS", "BESS/GridFormingDroop", REVISION)
+
+    angle_steps = {oc for pcs, benchmark, oc in declared if benchmark == "S_VolAngStep1"}
+    assert angle_steps == {"OC2", "OC3"}
+
+
+def test_the_base_revision_gives_a_storage_of_type_c_the_fiche_i16(monkeypatch):
+    monkeypatch.chdir(_REPO)
+
+    declared = dt.declared_tests("BESS", "BESS/GridFormingDroop", BASE_REVISION)
+
+    zone1 = {benchmark for pcs, benchmark, oc in declared if pcs == "PCS_RTE-I16z1"}
+    assert zone1 == {"ThreePhaseFault", "SetPointStep", "GridVoltageStep"}

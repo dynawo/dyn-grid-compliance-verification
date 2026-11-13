@@ -10,11 +10,14 @@
 
 from pathlib import Path
 
+import pytest
+
 
 class DummyProducer:
-    def __init__(self, reference_path=None):
+    def __init__(self, reference_path=None, installation_category=None):
         self.zone = None
         self._reference_path = reference_path
+        self._installation_category = installation_category
 
     def set_zone(self, zone, name):
         self.zone = zone
@@ -30,6 +33,9 @@ class DummyProducer:
 
     def get_reference_path(self):
         return self._reference_path
+
+    def get_installation_category(self):
+        return self._installation_category
 
 
 class DummyParams:
@@ -81,8 +87,10 @@ class DummyConfig:
     def get_list(self, section, key):
         return ["BM"]
 
-    def load_pcs_config(self, pcs_path, user_pcs_path=None, pcs_dtr_delta_path=None):
-        self.loaded = (pcs_path, user_pcs_path, pcs_dtr_delta_path)
+    def load_pcs_config(
+        self, pcs_path, user_pcs_path=None, pcs_dtr_delta_path=None, pcs_dtr_version_path=None
+    ):
+        self.loaded = (pcs_path, user_pcs_path, pcs_dtr_delta_path, pcs_dtr_version_path)
 
 
 def _make_pcs(monkeypatch, bms=("BM_OK", "BM_KO")):
@@ -189,8 +197,46 @@ def test_prepare_pcs_config_loads_both_files_at_once(monkeypatch, tmp_path):
 
     pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, tool_file, user_file)
 
-    assert dummy_config.loaded == (tool_file, user_file, None)
+    assert dummy_config.loaded == (tool_file, user_file, None, None)
     assert pcs.is_valid() is True
+
+
+@pytest.mark.parametrize("category, version", [("C", "TypeCD.ini"), ("B", None)])
+def test_the_version_a_revision_writes_for_the_category_of_the_installation_patches_its_delta(
+    monkeypatch, tmp_path, category, version
+):
+    from dycov.model.pcs import Pcs
+
+    tool_file = tmp_path / "tool" / "PCSDescription.ini"
+    delta = tmp_path / "revisions" / "20260723" / "PCS"
+    (delta / "performance" / "PCS_Test").mkdir(parents=True)
+    (delta / "performance" / "PCS_Test" / "TypeCD.ini").write_text("")
+    monkeypatch.setattr(Pcs, "_Pcs__get_delta_templates_path", lambda self: delta)
+
+    pcs, dummy_config = _prepare_pcs_config(
+        monkeypatch,
+        tmp_path,
+        tool_file,
+        None,
+        DummyProducer(installation_category=category),
+    )
+
+    assert dummy_config.loaded == (
+        tool_file,
+        None,
+        None,
+        delta / "performance" / "PCS_Test" / version if version else None,
+    )
+
+
+def test_a_verification_that_gives_every_category_the_same_fiches_loads_no_version(tmp_path):
+    from dycov.model.pcs import _version_for_category
+
+    (tmp_path / "TypeCD.ini").write_text("")
+
+    assert _version_for_category(tmp_path, None) is None
+    assert _version_for_category(tmp_path, "B") is None
+    assert _version_for_category(tmp_path, "D") == tmp_path / "TypeCD.ini"
 
 
 def test_prepare_pcs_config_loads_only_the_files_that_exist(monkeypatch, tmp_path):
@@ -198,7 +244,7 @@ def test_prepare_pcs_config_loads_only_the_files_that_exist(monkeypatch, tmp_pat
 
     pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, None, user_file)
 
-    assert dummy_config.loaded == (None, user_file, None)
+    assert dummy_config.loaded == (None, user_file, None, None)
     assert pcs._has_pcs_config is False
     assert pcs._has_user_config is True
 
@@ -206,7 +252,7 @@ def test_prepare_pcs_config_loads_only_the_files_that_exist(monkeypatch, tmp_pat
 def test_prepare_pcs_config_without_any_file_is_not_a_valid_pcs(monkeypatch, tmp_path):
     pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, None, None)
 
-    assert dummy_config.loaded == (None, None, None)
+    assert dummy_config.loaded == (None, None, None, None)
     assert pcs.is_valid() is False
 
 
@@ -222,7 +268,7 @@ def test_the_description_delivered_with_the_reference_curves_is_the_user_one(
 
     pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, tool_file, user_file, producer)
 
-    assert dummy_config.loaded == (tool_file, delivered, None)
+    assert dummy_config.loaded == (tool_file, delivered, None, None)
     assert pcs.is_valid() is True
 
 
@@ -235,7 +281,7 @@ def test_a_description_delivered_for_another_pcs_is_not_the_user_one(monkeypatch
 
     pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, None, user_file, producer)
 
-    assert dummy_config.loaded == (None, user_file, None)
+    assert dummy_config.loaded == (None, user_file, None, None)
 
 
 def test_only_a_description_file_delivered_with_the_reference_curves_is_read(
@@ -248,7 +294,7 @@ def test_only_a_description_file_delivered_with_the_reference_curves_is_read(
 
     pcs, dummy_config = _prepare_pcs_config(monkeypatch, tmp_path, None, None, producer)
 
-    assert dummy_config.loaded == (None, None, None)
+    assert dummy_config.loaded == (None, None, None, None)
 
 
 def test_a_pcs_without_benchmarks_declares_no_test(monkeypatch):

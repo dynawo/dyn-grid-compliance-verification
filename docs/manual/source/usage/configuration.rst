@@ -60,8 +60,10 @@ The ``[DTR]`` section holds it:
   another norm in silence.
 
 To run the same producer against two revisions, give each run a file with
-``--user-config`` that sets its ``current``. Only the criteria change, so the
-curves need no regeneration.
+``--user-config`` that sets its ``current``. The curves of a test both
+revisions share need no regeneration; a test one of them adds or changes, such
+as those of the Fiche I16.2 of a storage installation of type C or D under the
+revision 20260723, needs reference curves of its own.
 
 The revision to use is the one in force at the date of the *Proposition
 Technique et Financière* of the installation, because the specifications of

@@ -81,6 +81,12 @@ class CurvesManager:
         )
         self._reference_curves_generator = curves_factory.get_reference(producer)
 
+    def release_curves(self) -> None:
+        """Lets the curves of the last test go, once the benchmark has validated all of its
+        tests."""
+        self._before_filters_curves = {"calculated": pd.DataFrame(), "reference": pd.DataFrame()}
+        self._curves = {"calculated": pd.DataFrame(), "reference": pd.DataFrame()}
+
     def __copy_curves_to_before_filters(self):
         self._before_filters_curves["calculated"] = self._curves["calculated"].copy()
         self._before_filters_curves["reference"] = self._curves["reference"].copy()

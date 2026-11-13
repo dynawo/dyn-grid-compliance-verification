@@ -90,7 +90,7 @@ fi
 # 2. Check what ran before anything is written. A selection of PCS, of benchmarks or of
 #    operating conditions anywhere would produce fewer tests, and the curves of the rest would
 #    be written by nothing.
-coverage=$(python3 "$script_dir/declared_tests.py" \
+coverage=$("$(dirname "$(command -v dycov)")/python3" "$script_dir/declared_tests.py" \
     --log "$run_log" --examples "$example" 2>&1) ||
     fail "$example: the run did not cover every test it declares. Nothing was written.
 $coverage"

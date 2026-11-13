@@ -124,6 +124,9 @@ class GenParams(Equipment):
     use_voltage_droop: bool
     ppc_local: bool = True
     converter_lv_control: bool = True
+    # Between its terminal and the point where the model takes its references (pu, base UNom,
+    # SNom): zero when it takes them at its terminal
+    reference_impedance: complex = 0j
     p_min: Optional[float] = None
     p_max: Optional[float] = None
     q_min: Optional[float] = None
