@@ -272,3 +272,21 @@ class TestReplacePlaceholders:
 
             content = f.read_text()
             assert 'value="3.0"' in content
+
+
+def test_modify_stop_time_sets_the_stop_time_of_the_simulation(tmp_path):
+    from dycov.files.replace_placeholders import modify_stop_time
+
+    (tmp_path / "TSOModel.jobs").write_text(
+        '<dyn:jobs xmlns:dyn="http://www.rte-france.com/dynawo"><dyn:job name="TSOModel">'
+        '<dyn:simulation startTime="0.0" stopTime="100.0" precision="1e-06"/>'
+        "</dyn:job></dyn:jobs>"
+    )
+
+    modify_stop_time(tmp_path, "TSOModel.jobs", 3.15)
+
+    simulation = etree.parse(str(tmp_path / "TSOModel.jobs")).find(
+        ".//{http://www.rte-france.com/dynawo}simulation"
+    )
+    assert simulation.get("stopTime") == "3.15"
+    assert simulation.get("startTime") == "0.0"
