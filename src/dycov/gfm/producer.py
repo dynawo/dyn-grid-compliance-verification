@@ -39,6 +39,17 @@ class GFMProducer(Producer):
         """
         return self._producer_ini_path
 
+    def get_producer_ini(self) -> Path:
+        """
+        Retrieves the producer's INI file.
+
+        Returns
+        -------
+        Path
+            The INI file the producer is read from.
+        """
+        return self._producer_ini
+
     def get_filenames(self, zone: int = 0) -> list[str]:
         """
         Returns the name of the producer, the stem of its INI file.
