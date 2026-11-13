@@ -190,7 +190,8 @@ class SCRJump(GFMCalculator):
         inertia_variations: np.ndarray,
     ) -> None:
         """
-        Marks the envelopes as inconsistent when the variations do not all damp the same way.
+        Marks the envelopes as inconsistent when the variations do not all damp the same way,
+        and clears the mark when they do.
 
         Parameters
         ----------
@@ -202,7 +203,9 @@ class SCRJump(GFMCalculator):
             The H of each variation.
         """
         is_overdamped = epsilon_results >= 1
-        if np.all(is_overdamped == is_overdamped[0]):
+        self._is_inconsistent = not np.all(is_overdamped == is_overdamped[0])
+        if not self._is_inconsistent:
+            self._disclaimer_message = None
             return
 
         eps_str = np.array2string(epsilon_results, precision=2)
@@ -216,7 +219,6 @@ class SCRJump(GFMCalculator):
             f"Variations must maintain the same damping type."
         )
         LOGGER.warning(msg)
-        self._is_inconsistent = True
         self._disclaimer_message = msg
 
     def _modify_envelope(
