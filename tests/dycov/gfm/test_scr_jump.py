@@ -130,6 +130,44 @@ def test_scr_jump_initialization():
     assert scr_jump._final_scr == test_params.get_final_scr()
 
 
+class _PowerLimits:
+    """GFM parameters with the given power limits and 1.0 for anything else."""
+
+    def __init__(self, p_min: float, p_max: float):
+        self._p_min = p_min
+        self._p_max = p_max
+
+    def is_emt(self) -> bool:
+        return False
+
+    def get_min_active_power(self) -> float:
+        return self._p_min
+
+    def get_max_active_power(self) -> float:
+        return self._p_max
+
+    def __getattr__(self, name):
+        return lambda *args, **kwargs: 1.0
+
+
+@pytest.mark.parametrize(
+    "p_min, p_max, envelope_value, held_value, expected_in_window",
+    [(0.1, 1.0, 0.5, 0.05, 0.3), (-1.0, -0.1, -0.5, -0.05, -0.3)],
+)
+def test_the_hold_leaves_the_envelope_outside_its_window_whatever_the_power_limits(
+    p_min, p_max, envelope_value, held_value, expected_in_window
+):
+    scr_jump = SCRJump(gfm_params=_PowerLimits(p_min, p_max))
+    time = np.linspace(-0.1, 0.2, 31)
+    envelope = np.full_like(time, envelope_value)
+
+    held = scr_jump._modify_envelope(envelope, np.full_like(time, held_value), time, 0.0)
+
+    in_window = (time >= 0.0) & (time <= 0.03)
+    assert np.all(held[~in_window] == envelope_value)
+    assert held[in_window] == pytest.approx(np.full(in_window.sum(), expected_in_window))
+
+
 def test_scr_jump_overdamped_envelopes_event_at_0s():
     start_time = -1
     end_time = 2
