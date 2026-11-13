@@ -68,7 +68,8 @@ manuals, and at runtime to compile the PDF reports.
 ### 3.2 LaTeX packages
 
 DyCoV generates PDF reports and therefore requires LaTeX to be installed on the
-system.
+system. The installer also compiles the PDF manual, which is set in the TeX Gyre
+fonts of `tex-gyre`.
 
 ```bash
 sudo apt install \
@@ -78,6 +79,7 @@ sudo apt install \
   texlive-latex-extra \
   texlive-science \
   texlive-lang-french \
+  tex-gyre \
   latexmk \
   dvisvgm
 ```
