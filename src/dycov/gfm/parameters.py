@@ -7,21 +7,37 @@
 #     demiguelm@aia.es
 
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Callable, Optional, TypeVar
 
 import numpy as np
 
 from dycov.configuration.cfg import config
 from dycov.core.parameters import Parameters
 from dycov.files import value_registry
+from dycov.gfm import constants
 from dycov.gfm.producer import GFMProducer
+
+_GFM_SECTION = "GFM Parameters"
+_DEFAULT_SECTION = "DEFAULT"
+
+_T = TypeVar("_T")
 
 
 class GFMParameters(Parameters):
-    """Configuration entity to define and manage GFM model validation parameters."""
+    """The parameters of a GFM envelope generation.
+
+    Two sources feed it: the producer's INI file, which describes the unit, and the PCS
+    configuration, which describes the test and is read from the most specific section that sets
+    each option (the operating condition, then the benchmark, then the PCS).
+    """
 
     def __init__(
-        self, producer_ini: Path, selected_pcs: str, output_dir: Path, only_dtr: bool, emt: bool
+        self,
+        producer_ini: Path,
+        selected_pcs: Optional[str],
+        output_dir: Path,
+        only_dtr: bool,
+        emt: bool,
     ) -> None:
         """
         Initializes the parameters object with producer configuration and runtime options.
@@ -30,7 +46,7 @@ class GFMParameters(Parameters):
         ----------
         producer_ini : Path
             Path to the producer's INI configuration file.
-        selected_pcs : str
+        selected_pcs : str, optional
             The specific PCS to evaluate.
         output_dir : Path
             The directory path for saving outputs.
@@ -45,18 +61,17 @@ class GFMParameters(Parameters):
 
     def set_section(self, pcs_name: str, bm_name: str, oc_name: str) -> None:
         """
-        Updates internal hierarchical section identifiers for parameter retrieval.
+        Sets the operating condition whose PCS configuration the getters read.
 
         Parameters
         ----------
         pcs_name : str
-            Name of the PCS section.
+            Name of the PCS.
         bm_name : str
-            Name of the Base Model section.
+            Name of the benchmark.
         oc_name : str
-            Name of the Operating Condition section.
+            Name of the operating condition.
         """
-        # Establishes resolution order: Operating Condition -> Base Model -> PCS
         self._pcs_section = pcs_name
         self._bm_section = f"{pcs_name}.{bm_name}"
         self._oc_section = f"{pcs_name}.{bm_name}.{oc_name}"
@@ -104,7 +119,7 @@ class GFMParameters(Parameters):
         float
             The effective reactance value in pu.
         """
-        return float(self._producer._config.get("GFM Parameters", "Xeff"))
+        return self.__get_producer_float("Xeff")
 
     def get_damping_constant(self) -> float:
         """
@@ -115,7 +130,7 @@ class GFMParameters(Parameters):
         float
             The damping constant.
         """
-        return float(self._producer._config.get("GFM Parameters", "D"))
+        return self.__get_producer_float("D")
 
     def get_inertia_constant(self) -> float:
         """
@@ -126,7 +141,7 @@ class GFMParameters(Parameters):
         float
             The inertia constant in seconds.
         """
-        return float(self._producer._config.get("GFM Parameters", "H"))
+        return self.__get_producer_float("H")
 
     def get_nominal_apparent_power(self) -> float:
         """
@@ -137,7 +152,7 @@ class GFMParameters(Parameters):
         float
             The nominal apparent power.
         """
-        return float(self._producer._config.get("GFM Parameters", "Snom"))
+        return self.__get_producer_float("Snom")
 
     def get_initial_active_power(self) -> float:
         """
@@ -162,10 +177,7 @@ class GFMParameters(Parameters):
         float
             The minimum active power in pu.
         """
-        return (
-            float(self._producer._config.get("DEFAULT", "p_min_injection"))
-            / self.get_nominal_apparent_power()
-        )
+        return self.__get_per_unit_power("p_min_injection")
 
     def get_max_active_power(self) -> float:
         """
@@ -176,10 +188,7 @@ class GFMParameters(Parameters):
         float
             The maximum active power in pu.
         """
-        return (
-            float(self._producer._config.get("DEFAULT", "p_max_injection"))
-            / self.get_nominal_apparent_power()
-        )
+        return self.__get_per_unit_power("p_max_injection")
 
     def get_initial_reactive_power(self) -> float:
         """
@@ -208,10 +217,7 @@ class GFMParameters(Parameters):
         float
             The minimum reactive power in pu.
         """
-        return (
-            float(self._producer._config.get("DEFAULT", "q_min"))
-            / self.get_nominal_apparent_power()
-        )
+        return self.__get_per_unit_power("q_min")
 
     def get_max_reactive_power(self) -> float:
         """
@@ -222,10 +228,7 @@ class GFMParameters(Parameters):
         float
             The maximum reactive power in pu.
         """
-        return (
-            float(self._producer._config.get("DEFAULT", "q_max"))
-            / self.get_nominal_apparent_power()
-        )
+        return self.__get_per_unit_power("q_max")
 
     def get_initial_voltage(self) -> float:
         """
@@ -380,12 +383,8 @@ class GFMParameters(Parameters):
             The phase jump delta in degrees.
         """
         value_definition = self.__get_value("DeltaPhase")
-
-        # Support dynamic calculation if delta phase relies on total reactance multiplication
-        if "*" in value_definition:
-            term1 = float(value_definition.split("*")[0])
-            delta_rad = term1 * (self.get_effective_reactance() + self.get_grid_reactance())
-        else:
+        delta_rad = self.__times_total_reactance(value_definition)
+        if delta_rad is None:
             delta_rad = float(value_definition)
 
         return delta_rad * 180 / np.pi
@@ -400,10 +399,10 @@ class GFMParameters(Parameters):
             The voltage step at the grid in percentage.
         """
         value_definition = self.__get_value("VoltageStepAtGrid")
-        if "*" in value_definition:
-            term1 = float(value_definition.split("*")[0])
-            return term1 * (self.get_effective_reactance() + self.get_grid_reactance()) * 100
-        return float(value_definition)
+        voltage_step = self.__times_total_reactance(value_definition)
+        if voltage_step is None:
+            return float(value_definition)
+        return voltage_step * 100
 
     def get_voltage_step_at_pdr(self) -> float:
         """
@@ -440,9 +439,9 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            The normalized RoCoF value.
+            The RoCoF value, in pu of the nominal frequency per second.
         """
-        return self.__get_float_value("RoCoF", 0.0) / self._producer._f_nom
+        return self.__get_float_value("RoCoF", 0.0) / self._producer.get_nominal_frequency()
 
     def get_change_frequency_duration(self) -> float:
         """
@@ -462,9 +461,9 @@ class GFMParameters(Parameters):
         Returns
         -------
         float
-            The normalized initial frequency.
+            The initial frequency, in pu of the nominal frequency.
         """
-        return self.__get_float_value("Frequency0", 0.0) / self._producer._f_nom
+        return self.__get_float_value("Frequency0", 0.0) / self._producer.get_nominal_frequency()
 
     def get_t_expo_decrease(self) -> float:
         """
@@ -503,18 +502,21 @@ class GFMParameters(Parameters):
         """
         Retrieves the Short-Circuit Ratio (SCR).
 
+        The PCS configuration gives it as a number or as the name of an option of the ``[GFM]``
+        section of the tool's configuration (``SCRmin``, ``SCRmax``); without it, ``SCRmax``.
+
         Returns
         -------
         float
             The Short-Circuit Ratio.
         """
         scr = self.__get_value("SCR")
-        if scr:
-            try:
-                return float(scr)
-            except Exception:
-                return config.get_float("GFM", scr, 0.0)
-        return config.get_float("GFM", "SCRmax", 0.0)
+        if not scr:
+            return config.get_float("GFM", "SCRmax", 0.0)
+        try:
+            return float(scr)
+        except ValueError:
+            return config.get_float("GFM", scr, 0.0)
 
     def get_initial_scr(self) -> float:
         """
@@ -538,82 +540,35 @@ class GFMParameters(Parameters):
         """
         return self.__get_float_value("SCRfinal", 0.0)
 
-    def __get_value(self, option: str) -> str:
-        """
-        Traverses the hierarchical configuration framework to retrieve a string value.
-
-        Parameters
-        ----------
-        option : str
-            The configuration key to find.
-
-        Returns
-        -------
-        str
-            The configuration value as a string.
-        """
-        # Fallback sequence: Specific Operating Condition -> Base Model -> General PCS -> Default
-        for section in self._eval_sections:
-            if config.has_option(section, option):
-                return config.get_value(section, option)
-        return config.get_value("DEFAULT", option)
-
-    def __get_float_value(self, option: str, default_value: float) -> float:
-        """
-        Traverses the hierarchical configuration framework to retrieve a float value.
-
-        Parameters
-        ----------
-        option : str
-            The configuration key to find.
-        default_value : float
-            The default value if not found.
-
-        Returns
-        -------
-        float
-            The configuration value as a float.
-        """
-        # Identical fallback sequence for numeric evaluations
-        for section in self._eval_sections:
-            if config.has_option(section, option):
-                return config.get_float(section, option, default_value)
-        return config.get_float("DEFAULT", option, default_value)
-
-    def get_hybrid_parameters(self) -> Optional[Tuple[float, float, float, float]]:
+    def get_hybrid_parameters(self) -> Optional[tuple[float, ...]]:
         """
         Retrieves the D and H parameters for hybrid (over/underdamped) conditions.
 
         Returns
         -------
-        Optional[Tuple[float, float, float, float]]
+        Optional[tuple[float, ...]]
             A tuple containing
-            (D_Overdamped, H_Overdamped, D_Underdamped, H_Underdamped) or None if incomplete.
+            (D_Overdamped, H_Overdamped, D_Underdamped, H_Underdamped), or None unless all four
+            are given.
         """
-        params = (
-            self._get_optional_float("D_Overdamped"),
-            self._get_optional_float("H_Overdamped"),
-            self._get_optional_float("D_Underdamped"),
-            self._get_optional_float("H_Underdamped"),
+        return self.__all_or_none(
+            ("D_Overdamped", "H_Overdamped", "D_Underdamped", "H_Underdamped")
         )
-        # Ensure strict validation: return None if any of the 4 variables is missing
-        return params if None not in params else None
 
-    def get_standard_parameters(self) -> Optional[Tuple[float, float]]:
+    def get_standard_parameters(self) -> Optional[tuple[float, ...]]:
         """
         Retrieves standard D and H parameters.
 
         Returns
         -------
-        Optional[Tuple[float, float]]
-            A tuple containing (D, H) or None if incomplete.
+        Optional[tuple[float, ...]]
+            A tuple containing (D, H), or None unless both are given.
         """
-        params = (self._get_optional_float("D"), self._get_optional_float("H"))
-        return params if None not in params else None
+        return self.__all_or_none(("D", "H"))
 
     def _get_optional_float(self, option: str) -> Optional[float]:
         """
-        Safely parses and retrieves an optional float value from config.
+        Retrieves a number the PCS configuration or the producer may give.
 
         Parameters
         ----------
@@ -623,7 +578,8 @@ class GFMParameters(Parameters):
         Returns
         -------
         Optional[float]
-            The parsed float value or None if invalid/missing.
+            The number the PCS configuration gives, else the one the producer gives, or None
+            when neither gives a number.
         """
         val_str = self.__get_value(option)
         if val_str:
@@ -631,13 +587,7 @@ class GFMParameters(Parameters):
                 return float(val_str)
             except ValueError:
                 pass
-
-        if self._producer._config.has_option("GFM Parameters", option):
-            try:
-                return float(self._producer._config.get("GFM Parameters", option))
-            except ValueError:
-                return None
-        return None
+        return self.__get_producer_option(option, self._producer.get_config().getfloat, None)
 
     def should_save_all_envelopes(self) -> bool:
         """
@@ -648,12 +598,9 @@ class GFMParameters(Parameters):
         bool
             True if all envelopes should be saved, False otherwise.
         """
-        if self._producer._config.has_option("GFM Parameters", "save_all_envelopes"):
-            try:
-                return self._producer._config.getboolean("GFM Parameters", "save_all_envelopes")
-            except ValueError:
-                return False
-        return False
+        return self.__get_producer_option(
+            "save_all_envelopes", self._producer.get_config().getboolean, False
+        )
 
     def get_emt_delay(self) -> float:
         """
@@ -664,12 +611,50 @@ class GFMParameters(Parameters):
         float
             The EMT delay in seconds.
         """
-        if self._producer._config.has_option("GFM Parameters", "emt_delay"):
-            try:
-                return float(self._producer._config.get("GFM Parameters", "emt_delay"))
-            except ValueError:
-                pass
+        return self.__get_producer_option(
+            "emt_delay", self._producer.get_config().getfloat, constants.EMT_DELAY_S
+        )
 
-        from dycov.gfm import constants
+    def __all_or_none(self, options: tuple[str, ...]) -> Optional[tuple[float, ...]]:
+        values = tuple(self._get_optional_float(option) for option in options)
+        return values if None not in values else None
 
-        return constants.EMT_DELAY_S
+    def __times_total_reactance(self, value_definition: str) -> Optional[float]:
+        """The value of a definition ``k*(Xeff+Xgrid)``, or None if it is a plain number."""
+        if "*" not in value_definition:
+            return None
+        multiplier = float(value_definition.split("*")[0])
+        return multiplier * (self.get_effective_reactance() + self.get_grid_reactance())
+
+    def __get_per_unit_power(self, option: str) -> float:
+        return (
+            float(self._producer.get_config().get(_DEFAULT_SECTION, option))
+            / self.get_nominal_apparent_power()
+        )
+
+    def __get_producer_float(self, option: str) -> float:
+        return float(self._producer.get_config().get(_GFM_SECTION, option))
+
+    def __get_producer_option(
+        self, option: str, read: Callable[[str, str], _T], fallback: _T
+    ) -> _T:
+        """An option of the producer's GFM section, or fallback when it is missing or malformed."""
+        if not self._producer.get_config().has_option(_GFM_SECTION, option):
+            return fallback
+        try:
+            return read(_GFM_SECTION, option)
+        except ValueError:
+            return fallback
+
+    def __section_setting(self, option: str) -> str:
+        """The most specific section of the PCS configuration that sets option."""
+        return next(
+            (section for section in self._eval_sections if config.has_option(section, option)),
+            _DEFAULT_SECTION,
+        )
+
+    def __get_value(self, option: str) -> str:
+        return config.get_value(self.__section_setting(option), option)
+
+    def __get_float_value(self, option: str, default_value: float) -> float:
+        return config.get_float(self.__section_setting(option), option, default_value)

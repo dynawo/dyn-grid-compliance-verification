@@ -9,8 +9,16 @@
 import configparser
 import re
 from pathlib import Path
+from typing import Iterator
 
 from dycov.model.producer import Producer
+
+_INI_FILE = re.compile(r".*\.[iI][nN][iI]")
+
+
+def _ini_files(directory: Path) -> Iterator[Path]:
+    """The INI files of a directory, in the order the file system lists them."""
+    return (file for file in directory.resolve().iterdir() if _INI_FILE.match(str(file)))
 
 
 class GFMProducer(Producer):
@@ -30,18 +38,18 @@ class GFMProducer(Producer):
 
     def get_producer_path(self) -> Path:
         """
-        Retrieves the absolute path to the producer's INI file.
+        Retrieves the directory that holds the producer's INI file.
 
         Returns
         -------
         Path
-            The absolute path to the INI file.
+            The directory of the INI file.
         """
         return self._producer_ini_path
 
     def get_filenames(self, zone: int = 0) -> list[str]:
         """
-        Returns a list of INI filenames found in the producer's directory.
+        Returns the INI files found in the producer's directory.
 
         Parameters
         ----------
@@ -51,17 +59,9 @@ class GFMProducer(Producer):
         Returns
         -------
         list[str]
-            A sorted list of configuration filename stems.
+            The sorted stems of the INI files.
         """
-        # Case-insensitive regex to capture both .ini and .INI extensions
-        pattern = re.compile(r".*\.[iI][nN][iI]")
-        return sorted(
-            [
-                file.stem
-                for file in self._producer_ini_path.resolve().iterdir()
-                if pattern.match(str(file))
-            ]
-        )
+        return sorted(file.stem for file in _ini_files(self._producer_ini_path))
 
     def get_sim_type_str(self) -> str:
         """
@@ -76,7 +76,7 @@ class GFMProducer(Producer):
 
     def set_zone(self, zone: int, filename: str) -> None:
         """
-        Sets the active zone and filename.
+        Does nothing: a GFM producer has no zones.
 
         Parameters
         ----------
@@ -85,7 +85,6 @@ class GFMProducer(Producer):
         filename : str
             The name of the file to associate.
         """
-        pass
 
     def get_config(self) -> configparser.ConfigParser:
         """
@@ -98,9 +97,20 @@ class GFMProducer(Producer):
         """
         return self._config
 
+    def get_nominal_frequency(self) -> float:
+        """
+        Retrieves the nominal frequency of the network.
+
+        Returns
+        -------
+        float
+            The nominal frequency in Hz.
+        """
+        return self._f_nom
+
     def __read_producer_ini(self) -> configparser.ConfigParser:
         """
-        Locates and parses the producer's INI configuration file.
+        Parses the first INI file the producer's directory lists.
 
         Returns
         -------
@@ -110,20 +120,12 @@ class GFMProducer(Producer):
         Raises
         ------
         FileNotFoundError
-            If the INI file cannot be located in the directory.
+            If the directory holds no INI file.
         """
-
-        def __get_producer_ini(path: Path, pattern: re.Pattern) -> Path:
-            for file in path.resolve().iterdir():
-                if pattern.match(str(file)):
-                    return path.resolve() / file
+        producer_ini_path = next(_ini_files(self.get_producer_path()), None)
+        if producer_ini_path is None:
             raise FileNotFoundError("Producer INI file not found.")
 
-        pattern_ini = re.compile(r".*\.[iI][nN][iI]")
-        producer_ini_path = __get_producer_ini(self.get_producer_path(), pattern_ini)
-
-        # Allow inline comments starting with '#' in the INI file
         producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         producer_config.read(producer_ini_path)
-
         return producer_config
