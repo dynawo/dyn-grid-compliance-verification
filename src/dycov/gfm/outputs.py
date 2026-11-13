@@ -90,7 +90,13 @@ def find_start_trim_index(
     int
         The index buffer_points before the first step where any of the signals changes by more
         than the tolerance, or 0 if none does.
+
+    Raises
+    ------
+    ValueError
+        If the signals differ in length.
     """
+    _check_same_length(pcc_signal, lower_envelope, upper_envelope)
     signals = (pcc_signal, lower_envelope, upper_envelope)
     for i in range(len(pcc_signal) - 1):
         if any(abs(signal[i + 1] - signal[i]) > tolerance for signal in signals):
@@ -126,12 +132,29 @@ def find_end_trim_index(
     int
         The index buffer_points after the last step where any of the signals changes by more
         than the tolerance, or the length of the signals if none does.
+
+    Raises
+    ------
+    ValueError
+        If the signals differ in length.
     """
+    _check_same_length(pcc_signal, lower_envelope, upper_envelope)
     signals = (pcc_signal, lower_envelope, upper_envelope)
     for i in range(len(pcc_signal) - 1, 0, -1):
         if any(abs(signal[i] - signal[i - 1]) > tolerance for signal in signals):
             return min(i + buffer_points, len(pcc_signal))
     return len(pcc_signal)
+
+
+def _check_same_length(
+    pcc_signal: np.ndarray, lower_envelope: np.ndarray, upper_envelope: np.ndarray
+) -> None:
+    lengths = (len(pcc_signal), len(lower_envelope), len(upper_envelope))
+    if len(set(lengths)) > 1:
+        raise ValueError(
+            "The PCC signal and the lower and upper envelopes must have the same length, not "
+            f"{lengths[0]}, {lengths[1]} and {lengths[2]}."
+        )
 
 
 @dataclass
@@ -194,7 +217,17 @@ def plot_results(
         Custom disclaimer text. Defaults to None.
     extra_envelopes : dict[str, np.ndarray], optional
         Additional signals to plot. Defaults to None.
+
+    Raises
+    ------
+    TypeError
+        If the output format or the disclaimer message is not text.
+    ValueError
+        If the output format names neither png nor html, or the time, the signal and the
+        envelopes differ in length.
     """
+    _check_plot_options(output_format, disclaimer_message)
+    _check_plot_lengths(time_array, pcc_signal, lower_envelope, upper_envelope, extra_envelopes)
     window = _transient_window(
         time_array, pcc_signal, lower_envelope, upper_envelope, extra_envelopes
     )
@@ -222,6 +255,42 @@ def plot_results(
             params_list,
             _html_disclaimer(disclaimer_message) if show_disclaimer else None,
             watermark_text,
+        )
+
+
+def _check_plot_options(output_format: str, disclaimer_message: Optional[str]) -> None:
+    if not isinstance(output_format, str):
+        raise TypeError(
+            f"The output format must be text, not of type {type(output_format).__name__}."
+        )
+    if "png" not in output_format and "html" not in output_format:
+        raise ValueError(f"The output format must name png, html or both, not {output_format!r}.")
+    if disclaimer_message is not None and not isinstance(disclaimer_message, str):
+        raise TypeError(
+            "The disclaimer message must be text, not of type "
+            f"{type(disclaimer_message).__name__}."
+        )
+
+
+def _check_plot_lengths(
+    time_array: np.ndarray,
+    pcc_signal: np.ndarray,
+    lower_envelope: np.ndarray,
+    upper_envelope: np.ndarray,
+    extra_envelopes: Optional[dict[str, np.ndarray]],
+) -> None:
+    lengths = {
+        "time": len(time_array),
+        "PCC signal": len(pcc_signal),
+        "lower envelope": len(lower_envelope),
+        "upper envelope": len(upper_envelope),
+        **{name: len(signal) for name, signal in (extra_envelopes or {}).items()},
+    }
+    if len(set(lengths.values())) > 1:
+        raise ValueError(
+            "The time, the PCC signal and the envelopes must have the same length, not "
+            + ", ".join(f"{length} ({name})" for name, length in lengths.items())
+            + "."
         )
 
 
