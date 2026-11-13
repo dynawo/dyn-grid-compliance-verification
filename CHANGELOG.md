@@ -50,6 +50,8 @@ read, with a warning, and its protection curves written as before (#394).
   `HTB1_p_max` now changes those two keys instead (#744).
 - `generate_gfm_envelopes` reads the producer file `-i` names and no other INI of its folder, and
   stops when that file does not exist (#766).
+- The native installation lists `tex-gyre`, the fonts of the PDF manual the installer compiles,
+  and the installer checks for them before it starts (#768).
 - The figures of the GFM RoCoF tests give their initial frequency and RoCoF in Hz with the
   nominal frequency of the configuration, where they took 50 Hz (#770).
 - The Epsilon of the GFM SCR jump figures is that of the producer's D and H, not that of one of
