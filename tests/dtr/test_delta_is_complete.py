@@ -63,6 +63,9 @@ def test_every_test_a_delta_changes_carries_its_report_template(revision):
     missing = []
     for description in _descriptions(revision):
         pcs = description.relative_to(revision / "PCS").parent
+        if pcs.parts[0] == "gfm":
+            # The tests of a Grid Forming PCS share one page, written from their results
+            continue
         shipped = _read(TEMPLATES / "PCS" / pcs / "PCSDescription.ini")
         delta = _read(description)
 
@@ -80,11 +83,15 @@ def test_every_test_a_delta_changes_carries_its_report_template(revision):
 
 
 @pytest.mark.parametrize("revision", REVISIONS, ids=lambda path: path.name)
-def test_a_delta_describes_a_PCS_the_tool_ships(revision):
-    """A delta overlays a description; it does not invent the directory of a PCS."""
+def test_a_delta_describes_a_PCS_the_tool_ships_or_the_revision_adds(revision):
+    """A delta overlays a shipped description, or holds the whole description of a fiche the
+    revision adds; it does not invent the directory of a PCS."""
     for description in _descriptions(revision):
         pcs = description.relative_to(revision / "PCS").parent
+        if (TEMPLATES / "PCS" / pcs / "PCSDescription.ini").is_file():
+            continue
+        delta = _read(description)
 
-        assert (TEMPLATES / "PCS" / pcs / "PCSDescription.ini").is_file(), (
-            f"the tool ships no description for {pcs}"
-        )
+        assert delta.has_option(pcs.name, "report_name") and delta.has_option(
+            "PCS-Benchmarks", pcs.name
+        ), f"the tool ships no description for {pcs}, and the delta holds no whole one"

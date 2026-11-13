@@ -93,7 +93,7 @@ class DycovCLI:
             self.logger.info(f"Dynawo launcher path resolved to: {dynawo_launcher_path}")
         else:
             dynawo_launcher_path = None
-        if args.command in {"performance", "validate"} and not getattr(args, "curves_only", False):
+        if self._builds_report(args):
             check_report_tools_availability()
 
         # Apply diagnostic mode BEFORE initialization
@@ -107,6 +107,14 @@ class DycovCLI:
 
         # Dispatch the command to the appropriate handler function.
         return self._dispatch_command(parser, args, dynawo_launcher_path)
+
+    @staticmethod
+    def _builds_report(args) -> bool:
+        if args.command == "generate_gfm_envelopes":
+            return True
+        return args.command in {"performance", "validate"} and not getattr(
+            args, "curves_only", False
+        )
 
     def _check_user_config(self, parser, args) -> None:
         """Stops when the file given with --user-config cannot be read, rather than run without

@@ -342,6 +342,16 @@ def test_get_filenames_ignores_a_zone_name_above_the_curves_directory(tmp_path, 
     assert producer.get_filenames() == ["Producer"]
 
 
+def test_the_ini_of_a_producer_is_the_one_named_after_it(tmp_path):
+    curves_path = _curves_tree(tmp_path)
+    (curves_path / "BigProducer.ini").write_text("")
+    producer = _producer_with_curves(curves_path)
+
+    assert producer.get_producer_ini(0, "Producer") is None
+    (curves_path / "Producer.ini").write_text("")
+    assert producer.get_producer_ini(0, "Producer") == (curves_path / "Producer.ini").resolve()
+
+
 def test_get_filenames_skips_a_folder_of_the_curves_that_no_ini_describes(tmp_path, caplog):
     """#687: the Results a run leaves next to the INI is no producer, and stops nothing."""
     (tmp_path / "Producer").mkdir()

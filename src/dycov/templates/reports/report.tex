@@ -26,6 +26,7 @@
 \usepackage{amstext}
 \usepackage{ifthen}
 \usepackage{tabularx}
+\usepackage{longtable}  % for summary tables longer than a page
 \usepackage{draftwatermark}
 
 %% Watermark defaults
@@ -45,6 +46,11 @@
 
 % Short-hand column specifier for tables (uses dcolumn):
 \newcolumntype{d}[1]{D{.}{.}{#1}}
+
+% A section may hold over a hundred tests, whose numbers would run into their titles
+\makeatletter
+\renewcommand*\l@subsection{\@dottedtocline{2}{1.5em}{3.2em}}
+\makeatother
 
 % Fancy header
 \fancyhf{}
@@ -93,7 +99,12 @@
     \vspace{0.5cm}
     \today
 }
+%% The Grid Forming envelopes are analytical, no Dynawo simulation is involved
+\BLOCK{if gridforming}
+\lhead{Results from running DTR tests~\cite{DTRhome}.}
+\BLOCK{else}
 \lhead{Results from running DTR tests~\cite{DTRhome}, using \Dynawo~\cite{Dynawo}.}
+\BLOCK{endif}
 % A figure of a test that did not run is not on disk. The one that is missing takes the
 % placeholder, so the report is built either way and no list of figures is kept.
 \let\dycovgraphics\includegraphics
@@ -113,17 +124,19 @@
     \section{Summary}
     {{summary_description}}
 
-    \begin{center}
-        \begin{tabularx}{\textwidth}{l l l l l}
-            \toprule
-            Producer & Pcs & Benchmark & Operating Condition & Overall Result \\
-            \midrule
-            \BLOCK{for row in summaryReport}
-            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} \\
-            \BLOCK{endfor}
-            \bottomrule
-        \end{tabularx}
-    \end{center}
+    % The longest names of the tests and of the results do not fit the page at the size of the text
+    {\footnotesize\setlength{\tabcolsep}{5pt}
+    \begin{longtable}{@{}l l l l >{\raggedright\arraybackslash}p{2.4cm}@{}}
+        \toprule
+        Producer & Pcs & Benchmark & Operating Condition & Overall Result \\
+        \midrule
+        \endhead
+        \BLOCK{for row in summaryReport}
+        {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} \\
+        \BLOCK{endfor}
+        \bottomrule
+    \end{longtable}
+    }
 
     \BLOCK{for report in reports}
     \newpage
@@ -135,16 +148,20 @@
       \bibitem{DTRhome} \textit{Documentation technique de référence en cours de
         validité.}  RTE. 2024. \textsc{url:}
         \url{https://www.services-rte.com/fr/decouvrez-nos-offres-de-service/raccorder-une-installation-de-production.html}.
+      \BLOCK{if not gridforming}
       \bibitem{Dynawo} \textit{\Dynawo --- A hybrid C++/Modelica open source suite of
         simulation tools for power systems}. RTE. 2015--2024. \textsc{url:}
         \url{https://dynawo.github.io}.
+      \BLOCK{endif}
     \end{thebibliography}
 
+    \BLOCK{if not gridforming}
     \newpage
     \section*{Appendix: step-response characteristics}
 
     Illustration depicting the definition of the step-response characteristics,
     taken from IEC 61400-21-1 (Section 3, Terms and definitions).\\[1.5cm]
     \includegraphics[width=\textwidth]{step_response_characteristics}
+    \BLOCK{endif}
 
 \end{document}

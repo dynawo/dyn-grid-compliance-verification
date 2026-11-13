@@ -71,6 +71,12 @@ simulations) or from producer-provided curves. You would use the command
 
 .. include:: helps/performance.rst
 
+Given the curves of a storage, it also checks the Grid Forming tests of the
+DTR Fiche I18, which are not simulated: their curves are checked against
+envelopes, read from the output of ``dycov generate_gfm_envelopes`` given with
+``-g`` or else generated from the INI file of the producer (see :ref:`Grid
+Forming tests in the performance verification <gfm_performance>`).
+
 .. note::
    If you installed DyCoV natively on Linux, make sure the virtual
    environment is active before running any command:
@@ -92,14 +98,17 @@ GFM Envelope Generation
 Grid-Forming (GFM) analysis is a purely analytical workflow — no dynamic
 simulation is involved. Given the key parameters of a GFM unit (inertia,
 damping, effective reactance), the tool computes the admissible upper and
-lower response envelopes for specific grid disturbances.
+lower response envelopes for specific grid disturbances: the tests of the DTR
+Fiche I18 for a storage unit, those agreed before it for a power park module.
 
 You would use the command ``dycov generate_gfm_envelopes``:
 
 .. include:: helps/generate_gfm_envelopes.rst
 
 The output consists of CSV files with the envelope data, static PNG figures,
-and interactive HTML plots.
+interactive HTML plots, and a PDF report that gathers every test. The
+performance verification of a storage unit checks its curves against these
+envelopes, and gives the verdict of each test.
 
 .. seealso::
    For a detailed description of the supported disturbance cases, input

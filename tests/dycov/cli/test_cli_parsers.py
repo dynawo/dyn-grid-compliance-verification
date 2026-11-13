@@ -49,6 +49,7 @@ def test_completion_script_covers_every_command(parser):
         ("validate", "--curves", shtab.DIRECTORY),
         ("validate", "--excel", shtab.FILE),
         ("validate", "--output", shtab.DIRECTORY),
+        ("performance", "--gfm-envelopes", shtab.DIRECTORY),
         ("performance", "--launcher", shtab.FILE),
         ("generate_gfm_envelopes", "--producer_ini", shtab.FILE),
         ("anonymize", "--results", shtab.DIRECTORY),
@@ -95,3 +96,8 @@ def test_the_revision_of_the_dtr_is_no_option_of_the_command_line(parser):
     """#753: the configuration declares it, where the files of a run keep it."""
     with pytest.raises(SystemExit):
         parser.parse_args(["--dtr", "20240215", "performance"])
+
+
+def test_envelope_generation_no_longer_takes_producer_curves(parser):
+    with pytest.raises(SystemExit):
+        parser.parse_args(["generate_gfm_envelopes", "-i", "Producer.ini", "-c", "Curves"])

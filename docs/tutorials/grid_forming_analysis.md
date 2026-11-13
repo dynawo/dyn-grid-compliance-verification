@@ -20,9 +20,10 @@ This workflow produces **analytical envelopes** that characterize
 the admissible dynamic response of a Grid‑Forming unit
 for specific disturbance families.
 
-The GFM workflow is independent from:
-- RMS model validation,
-- electrical performance verification.
+The envelope generation is independent from the RMS model validation. The
+electrical performance verification of a storage unit, on the other hand,
+checks the curves of its Grid Forming tests against these envelopes, the tests
+of the DTR Fiche I18 (see [section 11](#11-checking-the-curves-of-a-storage-unit)).
 
 ---
 
@@ -53,16 +54,16 @@ DyCoV currently supports GFM envelope generation for
 Each case corresponds to a well-defined analytical formulation
 and a specific class of grid disturbance:
 
-- **Amplitude Step** — reactive current and reactive power envelopes
-  in response to a grid voltage amplitude step.
-- **Phase Jump** — active power response to a sudden change
-  in the grid voltage phase angle.
+- **Amplitude Step** — reactive current envelopes in response to a grid
+  voltage amplitude step.
+- **Phase Jump** — active current response to a sudden change in the grid
+  voltage phase angle.
 - **RoCoF** (Rate of Change of Frequency) — active power response to a
-  frequency ramp; finite-duration events are modeled by superimposing
-  step responses.
-- **SCR Jump** — stability and power response following a sudden change
-  in the Short Circuit Ratio (grid impedance), differentiated between
-  overdamped and underdamped responses.
+  frequency ramp, or active current response for the Fiche I18;
+  finite-duration events are modeled by superimposing step responses.
+- **SCR Jump** — active current response following a sudden change in the
+  Short Circuit Ratio (grid impedance), differentiated between overdamped and
+  underdamped responses.
 
 The supported cases are implemented directly in DyCoV
 and exposed through the GFM workflow.
@@ -100,13 +101,19 @@ section of `Producer.ini`:
 
 | Parameter | Description |
 |-----------|-------------|
+| `generator_type` | Kind of unit, `BESS` (the DTR Fiche I18) or `PPM` (the tests agreed before it) |
 | `u_nom` | Nominal voltage at the PDR bus (kV). Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore) |
 | `p_max_injection` | Maximum active power injection (MW) |
 | `p_min_injection` | Minimum active power injection (MW, negative for absorption) |
+| `p_max_consumption` | Maximum consumption (MW), as the INI file of a performance verification declares it; when present, it gives the minimum active power instead of `p_min_injection` |
 | `q_max` | Maximum reactive power (MVar) |
 | `q_min` | Minimum reactive power (MVar) |
 
-The remaining parameters are defined inside the `[GFM Parameters]` section.
+The remaining parameters are defined inside the `[GFM Parameters]` section,
+which may also declare the powers above when the unit under test, the PGU,
+differs from the installation `[DEFAULT]` describes (see
+[section 11](#11-checking-the-curves-of-a-storage-unit)): its values are used
+instead.
 
 **Nominal quantities:**
 
@@ -118,14 +125,15 @@ The remaining parameters are defined inside the `[GFM Parameters]` section.
 
 | Parameter | Description |
 |-----------|-------------|
-| `Xeff` | Effective reactance (pu) |
+| `Xeff` | Effective reactance (pu). The DTR Fiche I18 fixes 0.27 pu, which its events and envelopes use whatever the unit declares; this value serves the PCS of a power park module |
+| `Imax` | Optional short-duration maximum current (pu of `Snom`), which the Fiche I18 asks the manufacturer to define; when declared, it bounds every envelope |
 
 **Standard control parameters** (used when operating in Standard mode):
 
 | Parameter | Description |
 |-----------|-------------|
 | `D` | Damping coefficient |
-| `H` | Inertia constant (s) |
+| `H` | Inertia constant (s). The Fiche I18 fixes 5 s (TR = 10 s): its envelopes use that value, in Hybrid mode too, whatever the file says |
 
 **Hybrid control parameters** (used when operating in Hybrid mode):
 
@@ -142,13 +150,15 @@ The remaining parameters are defined inside the `[GFM Parameters]` section.
 |-----------|-------------|
 | `save_all_envelopes` | If `true`, the CSV output includes all intermediate envelopes (individual overdamped and underdamped traces) in addition to the final merged envelope |
 | `emt_delay` | Time shift (s) applied to the envelopes when running in EMT mode (`-e`); defaults to 0.02 when absent |
+| `emt` | If `true`, the curves of the unit come from EMT simulations and its envelopes are always generated in EMT mode, by `generate_gfm_envelopes` and by the performance verification alike; defaults to `false` |
 
 > **Note**
 > `RatioMin` and `RatioMax` — the bounds applied to parameter variations for
 > the sensitivity analysis — are **not** read from `Producer.ini`. They belong
-> to the tool's PCS configuration (most `PCS_RTE-IGFMx` templates define their
-> own values; when a template does not, both bounds default to 1.0) and can be
-> overridden through the tool configuration like any other PCS option.
+> to the tool's PCS configuration (the settings of each test of
+> `PCS_RTE-I18z1`, and most `PCS_RTE-IGFMx` templates, define their own values;
+> when a template does not, both bounds default to 1.0) and can be overridden
+> through the tool configuration like any other PCS option.
 
 ---
 
@@ -239,8 +249,9 @@ dycov generate_gfm_envelopes -i Producer.ini -e
 
 In EMT mode, the envelopes and the PCC signal are shifted in time by the
 `emt_delay` value (in seconds) defined in `[GFM Parameters]`, to account for
-the initial response of an EMT simulation. Without `-e`, `emt_delay` has no
-effect.
+the initial response of an EMT simulation. Without EMT mode, `emt_delay` has
+no effect. A unit may also declare `emt = true` in `[GFM Parameters]`, which
+puts every generation of its envelopes in EMT mode.
 
 ---
 
@@ -259,18 +270,22 @@ A typical structure is:
 
 ```text
 Results/
-└── PCS_RTE-IGFMx/
+├── Reports/
+│   └── report.pdf
+└── <PCS>/
     └── S_<Scenario>/
         └── OC<k>/
             ├── *.csv
             ├── *.png
             ├── *.html
-            └── *_ini_dump.txt   (only for hybrid cases)
+            ├── *_ini_dump.txt
+            └── results.json
 ```
 
 Where:
 
-- `PCS_RTE-IGFMx` identifies the GFM PCS family.
+- `<PCS>` identifies the GFM PCS: `PCS_RTE-I18z1` for a storage unit,
+  `PCS_RTE-IGFM1` to `4` for a power park module.
 - `S_<Scenario>` identifies the disturbance scenario
   (e.g. voltage angle step, voltage amplitude step, SCR variation, RoCoF).
 - `OC<k>` identifies a specific operating condition for that scenario.
@@ -282,7 +297,7 @@ Where:
 For each combination of PCS, scenario and operating condition, DyCoV generates:
 
 - **CSV file** containing the numerical time series of the admissible
-  envelopes (upper and lower bounds for the relevant signal: $P$, $Q$, or $I_q$).
+  envelopes (upper and lower bounds for the relevant signal: $P$, $I_p$ or $I_q$).
   When `save_all_envelopes = true`, the file also includes the intermediate
   overdamped and underdamped traces.
 - **PNG figure** providing a static visualization of the envelopes alongside
@@ -290,12 +305,17 @@ For each combination of PCS, scenario and operating condition, DyCoV generates:
   be shown.
 - **HTML file** providing an interactive visualization of the same content.
 
-For **hybrid GFM cases only**, DyCoV also generates:
-
 - **INI dump file (`*_ini_dump.txt`)** containing the exact set of input
   parameters used for that calculation, including internally derived values
-  such as the damping ratio $\varepsilon$. Intended for full traceability
-  when hybrid configurations are used.
+  such as the damping ratio $\varepsilon$, one for each damping regime in
+  Hybrid mode. Intended for full traceability.
+- **`results.json`** describing the envelopes: the magnitude they bound,
+  whether they are for EMT simulations, the duration of the event and the
+  parameters of the test. The performance verification reads it back, with
+  the CSV file, when it is given the envelopes.
+
+The **PDF report** in `Reports/` gathers every test, with a page per test: its
+parameters, its envelope figure and a link to the HTML one.
 
 ---
 
@@ -344,6 +364,45 @@ After GFM analysis, you may:
   - [RMS model validation](rms_model_validation.md)
   - [electrical performance verification](electrical_performance_verification.md)
 
+
+---
+
+## 11. Checking the curves of a storage unit
+
+The performance verification of a storage installation of type C or D given
+its curves, `dycov performance -c`, runs the tests of the DTR Fiche I18 along
+with those of the other fiches, as `PCS_RTE-I18z1`; the fiche is one the
+revision 20260723 of the DTR adds, so a run on an earlier revision leaves it
+out. The tests are not simulated, and a run on a Dynawo model leaves them out
+too: the curves of each test, among the curves of the producer
+(`ProducerCurves/<producer>/PCS_RTE-I18z1.<scenario>.<OC>.csv` and its `.dict`),
+are checked against the envelopes of the test and the damping criterion of the
+fiche. The `[DEFAULT]` section of the `Producer.ini` describes the
+installation, from which its type follows, and the `[GFM Parameters]` section
+the single converter the fiche tests, the PGU: its `Snom` and, when they
+differ from those of the installation, its powers. The envelopes come from one
+of two places:
+
+* the output of `dycov generate_gfm_envelopes`, given with `-g`, as the fiche
+  has RTE send them to the producer. It holds a subdirectory per producer,
+  named after it, or a single output that serves every producer:
+
+  ```bash
+  dycov generate_gfm_envelopes -i ProducerCurves/Producer.ini -o Envelopes
+  dycov performance -c ProducerCurves -g Envelopes
+  ```
+
+* or else the `[GFM Parameters]` of the INI file of the producer, which the
+  performance verification generates them from. The same INI file serves both
+  commands.
+
+A producer that declares no `[GFM Parameters]`, and whose envelopes are not
+given, has its tests reported as missing the envelopes; `-p PCS_RTE-I18z1`
+limits the run to the Grid Forming tests. The report lists every test in its
+summary, and the tests whose curves were judged have a page with the figure of
+the envelopes and the curve, and the checks with their verdict. The criteria
+are described in the user manual, under *Grid Forming tests in the performance
+verification*.
 
 ---
 

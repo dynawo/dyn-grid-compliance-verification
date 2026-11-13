@@ -142,5 +142,8 @@ The three example configurations represent different dynamic regimes:
 * ``Fusion/`` — hybrid mode, combining overdamped and underdamped envelopes
   into a single merged envelope
 
-Outputs are CSV files with the envelope data, static PNG figures, and
-interactive HTML plots, all written under ``Results/``.
+Outputs are CSV files with the envelope data, static PNG figures,
+interactive HTML plots and the ``results.json`` of each test, with a PDF
+report of them all, written under ``Results/``. The three units are storage
+units (``generator_type = BESS``), so their envelopes are those of the DTR
+Fiche I18.

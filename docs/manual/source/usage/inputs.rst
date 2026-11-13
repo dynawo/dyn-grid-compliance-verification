@@ -106,7 +106,19 @@ GFM Producer Input (.ini file)
 The ``dycov generate_gfm_envelopes`` command takes a dedicated ``.ini`` file that
 describes the Grid-Forming unit. It must contain a ``[DEFAULT]`` section for
 nominal and operational parameters, and a ``[GFM Parameters]`` section for
-the core GFM control constants.
+the core GFM control constants. The INI file of a producer of a performance
+verification can be that file: given the same ``[GFM Parameters]``, the
+performance verification of a storage generates the envelopes of the producer
+from it (see :ref:`Grid Forming tests in the performance verification
+<gfm_performance>`). Its maximum consumption, ``p_max_consumption``, then gives
+the lowest active power of the unit, which the INI file of an envelope
+generation declares as a negative ``p_min_injection``.
+
+The ``generator_type`` of the ``[DEFAULT]`` section, ``BESS`` or ``PPM``, says
+what the unit is, and with it which tests it is given: a storage unit gets
+the matrix of the DTR Fiche I18, a power park module the tests agreed with RTE
+before the fiche (see :ref:`Tests by kind of unit <gfm_tests_by_unit>`). The
+command stops when it is missing.
 
 A typical file looks like this:
 
@@ -114,12 +126,15 @@ A typical file looks like this:
    :caption: Example GFM Producer INI file
 
    [DEFAULT]
+   # Kind of unit: BESS or PPM
+   generator_type = BESS
    # Nominal voltage at the PDR bus (in kV)
    # Allowed values: 400, 225, 150, 90, 63 (land) and 132, 66 (offshore)
    u_nom = 225
-   # Active power limits (in MW)
+   # Active power limits (in MW), the consumption of a storage unit as a
+   # negative minimum injection
    p_max_injection = 100.0
-   p_min_injection = 0.0
+   p_min_injection = -100.0
    # Reactive power limits (in MVar)
    q_max = 50.0
    q_min = -50.0
@@ -129,16 +144,37 @@ A typical file looks like this:
    D = 20.0
    # Inertia constant (in seconds)
    H = 3.5
-   # Effective reactance from the inverter to the PDR (in pu)
+   # Effective reactance from the inverter to the PGU terminals (in pu of Snom)
    Xeff = 0.15
-   # Nominal apparent power (in MVA)
+   # Nominal apparent power of the PGU (in MVA)
    Snom = 110.0
+   # Optional: the limits of the PGU, when [DEFAULT] describes the whole
+   # installation, as in a performance verification (in MW and MVAr)
+   p_max_injection = 100.0
+   q_max = 50.0
+   q_min = -50.0
+   # Optional: short-duration maximum current (in pu of Snom), which the
+   # DTR Fiche I18 asks the manufacturer to define and bounds every envelope by
+   Imax = 1.2
+   # Optional: the curves of the unit come from EMT simulations, so its
+   # envelopes are for them (false when absent)
+   emt = false
+
+The DTR Fiche I18 fixes the effective reactance, 0.27 pu, and the inertia,
+TR = 10 s (an ``H`` of 5 s), of the ideal converter its envelopes are drawn
+from, which RTE may change in the convention d'exploitation: its PCS declares
+them, so the events and the envelopes of the fiche use them whatever the file
+says, and the ``Xeff`` of the file serves only the PCS that fix none, those of a
+power park module. A description of the user
+for ``PCS_RTE-I18z1`` holds the values RTE sets otherwise: ``Xeff``, and the
+inertia as ``H`` and, for the Hybrid mode, ``H_Overdamped`` and
+``H_Underdamped``, the three keys the PCS declares.
 
 For **Hybrid mode** (combining overdamped and underdamped envelopes), the
 ``[GFM Parameters]`` section should instead define separate damping and
-inertia sets — ``Xeff`` is still required, and ``save_all_envelopes`` controls
-whether the intermediate overdamped and underdamped traces are kept in the
-CSV output alongside the merged envelope:
+inertia sets — ``Xeff`` is still required by the PCS that fix none, and
+``save_all_envelopes`` controls whether the intermediate overdamped and
+underdamped traces are kept in the CSV output alongside the merged envelope:
 
 .. code-block:: ini
 
@@ -365,6 +401,14 @@ Each folder of the directory, other than ``Zone1`` and ``Zone3``, is a
 producer whose INI carries its name, next to the folder or in the zone folders.
 A folder that no INI describes, such as the ``Results`` an earlier run left
 there, is skipped with a warning, and the other producers are validated.
+
+For a storage, the directory of a producer may also hold the curves of its
+Grid Forming tests (``PCS_RTE-I18z1.<scenario>.<OC>``), the currents and the
+voltage at the PGU terminals that are checked against envelopes; the
+``[DEFAULT]`` section of its ``Producer.ini`` still describes the installation,
+which decides whether those tests apply, and its ``[GFM Parameters]`` section
+describes the PGU (see :ref:`Grid Forming tests in the performance
+verification <gfm_performance>`).
 
 
 .. _topologies:

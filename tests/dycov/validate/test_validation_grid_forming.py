@@ -1,0 +1,294 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+#
+# (c) 2026 RTE
+# Developed by Grupo AIA
+#     marinjl@aia.es
+#     omsg@aia.es
+#     demiguelm@aia.es
+#
+"""The performance verification of a storage given its curves runs the Grid Forming tests of the
+DTR Fiche I18, which are not simulated: the curves of each producer are checked against envelopes,
+read from the directory given or else generated from the INI file of the producer."""
+
+import logging
+from pathlib import Path
+
+import pytest
+
+from dycov.core.global_variables import ELECTRIC_PERFORMANCE_BESS, ELECTRIC_PERFORMANCE_PPM
+from dycov.gfm.parameters import GFMParameters
+from dycov.gfm.report import GFMTestReport
+from dycov.model.compliance import Compliance
+from dycov.validate import validation
+from dycov.validate.validation import Validation, _validate_pcs
+
+_I18 = "PCS_RTE-I18z1"
+# The PGU under test, which [GFM Parameters] describes apart from the whole installation
+_GFM_PARAMETERS = (
+    "[GFM Parameters]\nSnom = 1\np_max_injection = 1\nq_max = 0.3\nq_min = -0.3\n"
+    "Xeff = 0.27\nD = 100\nH = 5\n"
+)
+
+
+@pytest.fixture(autouse=True)
+def _fiche_i18_revision(dtr_revision):
+    """The Fiche I18 is one the revision 20260723 of the DTR adds."""
+    dtr_revision("20260723")
+
+
+class _Producer:
+    """A storage given by its curves: an INI file next to the directory of the curves."""
+
+    def __init__(self, tmp_path: Path, sim_type: int, gfm_parameters: str, p_max: float):
+        self._sim_type = sim_type
+        self._curves = tmp_path / "ProducerCurves"
+        self._curves.mkdir(parents=True)
+        (self._curves / "Producer.ini").write_text(
+            f"[DEFAULT]\ngenerator_type = BESS\nu_nom = 225\np_max_injection = {p_max}\n"
+            f"q_max = 13\nq_min = -13\n{gfm_parameters}"
+        )
+
+    def get_sim_type(self):
+        return self._sim_type
+
+    def get_filenames(self, zone=0):
+        return ["Producer"]
+
+    def get_producer_ini(self, zone, filename):
+        return self._curves / f"{filename}.ini"
+
+    def get_producer_curves_path(self):
+        return self._curves
+
+
+class _Parameters:
+    def __init__(
+        self,
+        tmp_path,
+        sim_type,
+        gfm_parameters=_GFM_PARAMETERS,
+        envelopes=None,
+        dynawo_model=False,
+        selected_pcs=None,
+        p_max=40,
+    ):
+        self._producer = _Producer(tmp_path, sim_type, gfm_parameters, p_max)
+        self._working_dir = tmp_path / "working"
+        self._output_dir = tmp_path / "Results"
+        self._envelopes = envelopes
+        self._dynawo_model = dynawo_model
+        self._selected_pcs = selected_pcs
+
+    def get_producer(self):
+        return self._producer
+
+    def get_sim_type(self):
+        return self._producer.get_sim_type()
+
+    def get_selected_pcs(self):
+        return self._selected_pcs
+
+    def get_only_dtr(self):
+        # The PCS of the user's configuration directory stay out of the tests
+        return True
+
+    def get_working_dir(self):
+        return self._working_dir
+
+    def get_output_dir(self):
+        return self._output_dir
+
+    def get_gfm_envelopes_path(self):
+        return self._envelopes
+
+    def is_dynawo_model_valid(self):
+        return self._dynawo_model
+
+
+def _pcs_list(parameters):
+    return [(pcs, producer, args) for args, pcs, producer, _ in Validation(parameters)._pcs_list]
+
+
+def test_a_storage_given_its_curves_is_given_the_grid_forming_pcs(tmp_path):
+    parameters = _Parameters(tmp_path, ELECTRIC_PERFORMANCE_BESS)
+
+    pcs_list = _pcs_list(parameters)
+
+    gfm_parameters = next(args for pcs, _, args in pcs_list if pcs == _I18)
+    assert isinstance(gfm_parameters, GFMParameters)
+    assert gfm_parameters.get_producer().get_sim_type_str() == "gfm/BESS"
+    assert gfm_parameters.get_producer_curves_path() == tmp_path / "ProducerCurves"
+    assert gfm_parameters.get_working_dir() == parameters.get_working_dir()
+    assert all(args is parameters for pcs, _, args in pcs_list if pcs != _I18)
+
+
+def test_a_storage_installation_of_type_b_is_not_given_the_grid_forming_pcs(tmp_path, caplog):
+    with caplog.at_level(logging.INFO, logger="DyCoV"):
+        pcs_list = _pcs_list(_Parameters(tmp_path, ELECTRIC_PERFORMANCE_BESS, p_max=15))
+
+    assert not any(pcs == _I18 for pcs, _, _ in pcs_list)
+    assert any("of type B" in record.getMessage() for record in caplog.records)
+
+
+def test_a_storage_given_its_model_is_not_given_the_grid_forming_pcs(tmp_path):
+    pcs_list = _pcs_list(_Parameters(tmp_path, ELECTRIC_PERFORMANCE_BESS, dynawo_model=True))
+
+    assert not any(pcs == _I18 for pcs, _, _ in pcs_list)
+
+
+def test_a_storage_given_its_curves_and_the_grid_forming_pcs_alone_is_given_that_pcs(tmp_path):
+    parameters = _Parameters(tmp_path, ELECTRIC_PERFORMANCE_BESS, selected_pcs=_I18)
+
+    assert [pcs for pcs, _, _ in _pcs_list(parameters)] == [_I18]
+
+
+def test_a_storage_given_its_model_and_the_grid_forming_pcs_alone_is_given_none(tmp_path, caplog):
+    parameters = _Parameters(
+        tmp_path, ELECTRIC_PERFORMANCE_BESS, dynawo_model=True, selected_pcs=_I18
+    )
+
+    pcs_list = _pcs_list(parameters)
+
+    warnings = [record.getMessage() for record in caplog.records if record.levelname == "WARNING"]
+    warning = (
+        f"{_I18} is checked on the curves of the producer (-c), so a run on a model leaves it out"
+    )
+    assert pcs_list == []
+    # The message may carry the prefix of the test context an earlier test left
+    assert len([message for message in warnings if message.endswith(warning)]) == 1
+
+
+def test_a_power_park_module_is_given_no_grid_forming_pcs(tmp_path):
+    pcs_list = _pcs_list(_Parameters(tmp_path, ELECTRIC_PERFORMANCE_PPM))
+
+    assert not any(isinstance(args, GFMParameters) for _, _, args in pcs_list)
+
+
+@pytest.mark.parametrize("by_unit", [True, False])
+def test_the_envelopes_of_a_producer_are_its_own_directory_or_the_one_given(tmp_path, by_unit):
+    envelopes = tmp_path / "Envelopes"
+    unit_envelopes = envelopes / "Producer" if by_unit else envelopes
+    unit_envelopes.mkdir(parents=True)
+    parameters = _Parameters(tmp_path, ELECTRIC_PERFORMANCE_BESS, envelopes=envelopes)
+
+    gfm_parameters = next(args for pcs, _, args in _pcs_list(parameters) if pcs == _I18)
+
+    assert gfm_parameters.get_envelopes_path() == unit_envelopes
+
+
+def test_a_producer_without_parameters_nor_envelopes_is_warned(tmp_path, caplog):
+    parameters = _Parameters(tmp_path, ELECTRIC_PERFORMANCE_BESS, gfm_parameters="")
+
+    gfm_parameters = next(args for pcs, _, args in _pcs_list(parameters) if pcs == _I18)
+
+    warnings = [record.getMessage() for record in caplog.records if record.levelname == "WARNING"]
+    warning = (
+        f"{tmp_path / 'ProducerCurves' / 'Producer.ini'} declares no [GFM Parameters] and "
+        "no Grid Forming envelopes are given, so the Grid Forming tests of Producer cannot "
+        "be checked"
+    )
+    assert not gfm_parameters.declares_unit_parameters()
+    # The message may carry the prefix of the test context an earlier test left
+    assert len([message for message in warnings if message.endswith(warning)]) == 1
+
+
+def _test(oc, compliance):
+    return GFMTestReport(
+        producer_name="Producer",
+        pcs=_I18,
+        benchmark="S_VolAngStep1",
+        operating_condition=oc,
+        magnitude="Ip",
+        parameters=[],
+        compliance=compliance,
+        envelope=None,
+        modes=[],
+    )
+
+
+def _grid_forming_pcs(tests):
+    class GridFormingPcs:
+        def __init__(self, producer_name, pcs_name, parameters):
+            self._producer_name = producer_name
+            self._name = pcs_name
+
+        def is_valid(self):
+            return True
+
+        def declares_tests(self):
+            return True
+
+        def get_producer_name(self):
+            return self._producer_name
+
+        def get_name(self):
+            return self._name
+
+        def get_id(self):
+            return 18
+
+        def get_zone(self):
+            return 1
+
+        def get_report_name(self):
+            return "report.RTE-I18z1.tex"
+
+        def generate(self):
+            return tests
+
+        def validate(self, summary_list):
+            raise AssertionError("a Grid Forming test is not simulated")
+
+    return GridFormingPcs
+
+
+def _validate_grid_forming_pcs(tmp_path):
+    parameters = _Parameters(tmp_path, ELECTRIC_PERFORMANCE_BESS)
+    gfm_parameters = next(args for pcs, _, args in _pcs_list(parameters) if pcs == _I18)
+    return _validate_pcs((gfm_parameters, _I18, "Producer", Path("latex")))
+
+
+def test_a_grid_forming_pcs_is_checked_instead_of_simulated(tmp_path, monkeypatch):
+    tests = [
+        _test("OC1", Compliance.Compliant),
+        _test("OC2", Compliance.NonCompliant),
+        _test("OC3", Compliance.WithoutProducerCurves),
+        _test("OC4", Compliance.WithoutEnvelopes),
+    ]
+    sections = []
+    monkeypatch.setattr(validation, "Pcs", _grid_forming_pcs(tests))
+    monkeypatch.setattr(
+        validation.gfm_report,
+        "prepare_pcs_report",
+        lambda pcs_report, *args, **kwargs: sections.append((pcs_report, kwargs)),
+    )
+
+    producer, pcs, summary_list, pcs_results = _validate_grid_forming_pcs(tmp_path)
+
+    assert (producer, pcs) == ("Producer", _I18)
+    assert [(item.id, item.zone, item.compliance) for item in summary_list] == [
+        (18, 1, test.compliance) for test in tests
+    ]
+    assert pcs_results == {"producer": "Producer", "report_name": "report.RTE-I18z1.tex"}
+    # Only the tests whose curves were judged get a page, as the simulated tests do
+    pcs_report, kwargs = sections[0]
+    assert [test.operating_condition for test in pcs_report.tests] == ["OC1", "OC2"]
+    assert kwargs == {"outputs_by_producer": True}
+
+
+def test_the_verdicts_of_a_grid_forming_pcs_survive_a_section_that_cannot_be_written(
+    tmp_path, monkeypatch
+):
+    tests = [_test("OC1", Compliance.Compliant), _test("OC2", Compliance.NonCompliant)]
+    monkeypatch.setattr(validation, "Pcs", _grid_forming_pcs(tests))
+
+    def missing_template(*args, **kwargs):
+        raise FileNotFoundError("Producer.report.Missing.tex")
+
+    monkeypatch.setattr(validation.gfm_report, "prepare_pcs_report", missing_template)
+
+    _, _, summary_list, pcs_results = _validate_grid_forming_pcs(tmp_path)
+
+    assert [item.compliance for item in summary_list] == [test.compliance for test in tests]
+    assert pcs_results == {}

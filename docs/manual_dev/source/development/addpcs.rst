@@ -26,6 +26,7 @@ The tree under ``src/dycov/templates/`` is organized as follows:
    src/dycov/templates/
    ├── PCS/
    │   ├── gfm/
+   │   │   └── PPM/
    │   ├── model/
    │   │   ├── BESS/
    │   │   └── PPM/
@@ -33,12 +34,19 @@ The tree under ``src/dycov/templates/`` is organized as follows:
    │       ├── BESS/
    │       ├── PPM/
    │       └── SM/
-   └── reports/
-       ├── model/
-       └── performance/
+   ├── reports/
+   │   ├── gfm/
+   │   ├── model/
+   │   └── performance/
+   └── revisions/
+       └── 20260723/
+           ├── PCS/gfm/BESS/
+           └── reports/gfm/BESS/
 
-The ``gfm`` category holds its PCS directories directly, without a technology
-level, and has no ``reports/`` counterpart.
+The ``gfm`` category splits its PCS by the kind of unit they are for, as the
+others do: ``BESS/`` holds the DTR Fiche I18, which the revision ``20260723``
+adds and so describes under ``revisions/20260723/``, and ``PPM/`` the tests
+agreed with RTE before it.
 
 
 .. _scenario_a:

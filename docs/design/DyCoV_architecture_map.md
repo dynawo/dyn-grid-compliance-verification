@@ -208,6 +208,53 @@ in Zone 1 reference-curve dictionaries. The curves of a unit are named after the
 `naming.from_legacy_name` lets the importer read, in any zone, the names they had before
 (`InjTerminal`, `ControlledPu`).
 
+## Grid Forming (`gfm/`)
+
+`dycov generate_gfm_envelopes` is analytical, no Dynawo: `GFMGeneration` (`generator.py`) runs
+`Pcs.generate` → `Benchmark.generate` → `OperatingCondition.generate` → `GridForming.generate`
+(`gfm.py`), whose calculator (`calculators/`, named by the benchmark `calculator` key) returns the
+`P`/`Ip`/`Iq` envelopes (RoCoF bounds `P` unless the PCS names `envelope_magnitude`, which I18
+does). The producer INI declares `generator_type` (`gfm/producer.py`, which reads exactly the INI
+it is given), which picks the PCS tree: `gfm/BESS` holds the DTR Fiche I18 as one Zone 1 PCS,
+`PCS_RTE-I18z1`, which the revision `20260723` adds and so describes in its delta alone
+(`templates/revisions/20260723/PCS/gfm/BESS`; its scenarios inherit the settings of their test
+from the `*Test` aliases of `config_aliases.ini`, the active power of its OCs and its
+`Pmax/PminMOISTunnel` in pu of Pn, the rest in pu of the converter rating; its PCS fixes `Xeff` 0.27 and `H` 5 whatever the producer
+declares), `gfm/PPM` the four PCS agreed before the fiche. Generator and
+validation list the PCS of the shipped tree, of the delta and of the user's directory. A declared
+`Imax` bounds every envelope (`gfm.py`). `GFMParameters` holds the run (`Parameters` of the CLI,
+or the `ValidationParameters`), whose working and output dirs it uses; its powers come from
+`[GFM Parameters]`, the PGU, over `[DEFAULT]`. A test whose envelopes cannot be obtained (missing
+`Snom`, D or H) is `Compliance.InvalidTest`, and a generation that obtains none exits with an
+error. Every OC with envelopes writes `results.json`, the description of its envelopes
+(magnitude, EMT, event duration, figure parameters) that `outputs.read_envelopes` reads back with
+the CSV. `gfm/report.py` writes a page per test (`templates/reports/gfm/report.GFMTest.tex`) and a
+section by PCS (`templates/reports/gfm/<tech>/<PCS>`, `prepare_pcs_report`); `create_pdf` compiles
+the envelope PDF on the main `report.tex` (`gridforming` drops the Dynawo header and the
+step-response appendix). `report.compile_pdf` runs pdflatex three times for both reports: with a
+page per test the contents span several pages, and only a third pass numbers them right.
+
+**I18 in the performance**: `Validation` (`validate/validation.py`) adds the PCS of `gfm/BESS` to
+those of `performance/BESS` for a storage given its curves (`_GRID_FORMING_UNITS`,
+`__checks_grid_forming_curves`: a run on a model leaves them out, DyCoV does not simulate them)
+whose installation is of type C or D (`__takes_grid_forming_tests`, `get_generator_category` on
+`[DEFAULT]`), and gives each producer a `GFMParameters` of its own: its INI (`ModelProducer.get_producer_ini`,
+which describes the PGU: `[GFM Parameters]` with an optional `emt`, Pmin from
+`p_max_consumption`), its curves, and the envelopes of `-g` (`<dir>/<producer>/` or `<dir>`).
+`_validate_pcs` sends a GFM PCS to `_check_grid_forming_pcs`, which generates instead of
+simulating, turns each `GFMTestReport` into a `Summary` and writes the section for the tests with
+`show_report()`, with the criteria the user altered (`[GFM]` is a section of the norm). Without
+envelopes nor `[GFM Parameters]` a test is `Compliance.WithoutEnvelopes`; curves missing U, Ip or
+Iq, or stopping before the end of the envelope, are `WithoutProducerCurves`. `verification/curves_compliance.py` reads the curves through
+`CurvesImporter` (Zone 1 naming), filters them at the `[GFM]` cutoff (30 Hz) per
+`signal_windows.filter_windows` to check the envelope, estimates the damping of Ip and Iq on the
+unfiltered curves with `sigpro/matrix_pencil.py`, a port of RTE's implementation that the fiche
+names (6 poles on the curve sampled every 5 ms, from 5 ms after the event to the end of the
+envelope; a complex fit and SciPy's eigenvalues, without which the ill-conditioned pencil finds
+other poles; `_oscillates_in` drops the modes whose window holds less than half of their period or that
+are below `damping_min_amplitude`), and `results.json` adds the verdict. `report.create_pdf` inputs
+`commonz1`/`commonz3` only when they were copied, which a performance verification does not.
+
 ## Logging (`logging/`)
 
 `dycov_logging` is one process-wide `DycovLogger`. `init_handlers` (from `core/initialization.py`) keeps

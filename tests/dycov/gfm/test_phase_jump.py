@@ -16,7 +16,6 @@ import numpy as np
 import pandas as pd
 
 from dycov.configuration.cfg import config
-from dycov.core.parameters import Parameters
 from dycov.gfm.calculators.phase_jump import PhaseJump
 from dycov.gfm.parameters import GFMParameters
 from dycov.gfm.producer import GFMProducer
@@ -95,9 +94,7 @@ class ProducerHelper(GFMProducer):
 
 class ParametersHelper(GFMParameters):
     def __init__(self, config_str: str):
-        Parameters.__init__(self, None, "", None, False)
-        self._emt = True
-        self._producer = ProducerHelper(config_str)
+        super().__init__(None, ProducerHelper(config_str), emt=True)
         self._pcs_section = "DEFAULT"
         self._bm_section = "DEFAULT"
         self._oc_section = "DEFAULT"

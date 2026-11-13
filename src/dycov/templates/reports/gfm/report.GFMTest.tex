@@ -1,0 +1,79 @@
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Grid Forming test %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    % The watermark that a page before may have set does not apply to this one
+    \SetWatermarkText{}
+
+    \subsection{Test \texttt{%
+{{ testname }}%
+}}
+
+    \subsubsection*{Test parameters}
+
+    \begin{center}
+        \begin{tabular}{lr}
+            \toprule
+            \textbf{Parameter} & \textbf{Value} \\
+            \midrule
+            \BLOCK{for row in parameters}
+            {{row[0]}} & {{row[1]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \subsubsection*{Envelopes}
+
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=0.9\textwidth]{%
+{{ figure }}%
+}
+        \caption{Envelopes of the test and the response of the ideal voltage source behind the
+        effective reactance\BLOCK{if envelope}, with the producer curve\BLOCK{endif}.}
+    \end{figure}
+
+    Go to {{ link }}
+
+    \BLOCK{if checked}
+    \subsubsection*{Compliance checks}
+
+    \noindent The producer curve, low-pass filtered at {{ cutoff }}~Hz, must stay inside the
+    envelopes, with a tolerance of {{ tolerance }}~pu:
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{lcccc}
+            \toprule
+            Magnitude & From (s) & To (s) & Max. excess (pu) & Compl. \\
+            \midrule
+            {{envelope[0]}} & {{envelope[1]}} & {{envelope[2]}} & {{envelope[3]}} & {{envelope[4]}} \\
+            \bottomrule
+        \end{tabular}
+    \end{center}
+
+    \noindent Every oscillation of the active and reactive currents between {{ fmin }} and
+    {{ fmax }}~Hz must have a damping ratio of at least {{ threshold }}. The damping ratio is
+    estimated with the Matrix Pencil method as RTE implements it: the unfiltered curve, during
+    the event and after it up to the end of the envelope, is sampled every {{ timestep }}~s and
+    fitted with {{ pencil }} poles. A mode of the fit is an oscillation of the curve when its
+    window holds half of its period and its amplitude reaches {{ min_amplitude }}~pu:
+    \BLOCK{if modes}
+    \begin{center}
+        \scriptsize
+        \begin{tabular}{llcccc}
+            \toprule
+            Curve & Window & Frequency (Hz) & Damping ratio & Amplitude (pu) & Compl. \\
+            \midrule
+            \BLOCK{for row in modes}
+            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} & {{row[5]}} \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+    \BLOCK{else}
+    no oscillation in the band.
+    \BLOCK{endif}
+
+    \noindent Result: {{ compliance }}
+    \BLOCK{endif}

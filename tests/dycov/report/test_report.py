@@ -14,6 +14,7 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
+from dycov.core.global_variables import ELECTRIC_PERFORMANCE_BESS, REPORT_NAME
 from dycov.model.benchmark import Summary
 from dycov.model.compliance import Compliance
 from dycov.report import report
@@ -379,6 +380,68 @@ def test_an_unstable_test_is_labelled_with_a_latex_command_in_red():
 
     assert label == r"\textcolor{red}{unstable}"
     assert "\t" not in label
+
+
+def test_main_template_of_a_verification_keeps_dynawo_and_the_step_response_appendix():
+    templates = Path(report.__file__).resolve().parent.parent / "templates" / "reports"
+
+    rendered = report.get_template(templates, REPORT_NAME).render(
+        {"summaryReport": [], "reports": []}
+    )
+
+    assert r"using \Dynawo~\cite{Dynawo}" in rendered
+    assert "step_response_characteristics" in rendered
+
+
+def test_a_report_whose_tests_have_no_page_brings_the_logo_it_includes(tmp_path):
+    class Producer:
+        def is_dynawo_model(self):
+            return False
+
+        def get_producer_path(self):
+            return tmp_path / "ProducerCurves"
+
+        def has_reference_curves_path(self):
+            return False
+
+        def get_sim_type(self):
+            return ELECTRIC_PERFORMANCE_BESS
+
+    class Parameters:
+        def get_working_dir(self):
+            return tmp_path
+
+        def get_producer(self):
+            return Producer()
+
+        def get_sim_type(self):
+            return ELECTRIC_PERFORMANCE_BESS
+
+        def get_producer_workbook(self):
+            return None
+
+    (tmp_path / "Latex").mkdir()
+    test_without_envelopes = Summary(
+        producer_name="Producer",
+        id=18,
+        zone=1,
+        pcs="PCS_RTE-I18z1",
+        benchmark="S_VolAngStep1",
+        operating_condition="OC2",
+        compliance=Compliance.WithoutEnvelopes,
+        report_name="report.RTE-I18z1.tex",
+    )
+    pcs_results = {"producer": "Producer", "report_name": "report.RTE-I18z1.tex"}
+
+    report.create_pdf(
+        [test_without_envelopes],
+        {"Producer_PCS_RTE-I18z1": pcs_results},
+        Parameters(),
+        Path("templates/reports"),
+        dry_run=True,
+    )
+
+    assert (tmp_path / "Latex" / "TSO_logo.pdf").is_file()
 
 
 class _SummaryProducer:
