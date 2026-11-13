@@ -47,7 +47,7 @@ class GFMCalculator(ABC):
         self._pmin_mois_tunnel = gfm_params.get_pmin_mois_tunnel()
 
         # The D, H and damping ratio of each variation the last calculation ran, which the
-        # simulation dump reports.
+        # simulation dump reports and the first of which is the producer's own.
         self._d_vals = None
         self._h_vals = None
         self._epsilon_vals = None
@@ -89,6 +89,17 @@ class GFMCalculator(ABC):
             A tuple containing the
             magnitude name, the main signal, the upper envelope, and the lower envelope.
         """
+
+    def get_damping_ratio(self) -> float:
+        """
+        Retrieves the damping ratio of the producer's D and H in the last calculation.
+
+        Returns
+        -------
+        float
+            The damping ratio of the producer's D and H, not of one of their variations.
+        """
+        return self._epsilon_vals[self._ORIGINAL_PARAMS_IDX]
 
     def _natural_frequency(self, H: float, x_total: float) -> float:
         """

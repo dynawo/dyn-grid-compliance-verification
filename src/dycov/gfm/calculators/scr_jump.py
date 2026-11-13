@@ -495,9 +495,7 @@ class SCRJump(GFMCalculator):
 
     def _calculate_common_params(self, D: float, H: float, Xeff: float) -> _SwingParameters:
         """
-        Derives the swing equation after the jump, and records its damping ratio.
-
-        The damping ratio is kept as the last one computed, which the figures show.
+        Derives the swing equation after the jump.
 
         Parameters
         ----------
@@ -539,7 +537,6 @@ class SCRJump(GFMCalculator):
             else 0
         )
 
-        self._epsilon = damping_ratio
         return _SwingParameters(
             total_reactance, damping_ratio, natural_frequency, peak_power_change
         )

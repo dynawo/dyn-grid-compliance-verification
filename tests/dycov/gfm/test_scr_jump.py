@@ -14,11 +14,16 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
+
+import dycov
 
 # Assuming the classes are in the same project structure
 from dycov.configuration.cfg import config
 from dycov.core.parameters import Parameters
+from dycov.gfm import gfm
 from dycov.gfm.calculators.scr_jump import SCRJump
+from dycov.gfm.gfm import GridForming
 from dycov.gfm.parameters import GFMParameters
 from dycov.gfm.producer import GFMProducer
 
@@ -208,3 +213,86 @@ def test_scr_jump_s_scrup1_oc1():
     assert math.isclose(
         max(np.abs(csv_data[f"{magnitude} upper (pu)"] - p_up)), 0, abs_tol=epsilon
     )
+
+
+_PRODUCER_LIMITS = """
+[DEFAULT]
+p_max_injection = 110
+p_min_injection = -110
+u_nom = 225
+q_max = 40
+q_min = -40
+"""
+
+_SINGLE_SET_PRODUCER = (
+    _PRODUCER_LIMITS
+    + """
+[GFM Parameters]
+Snom = 90.0
+D = 152.0
+H = 2.0
+Xeff = 0.27
+"""
+)
+
+_HYBRID_PRODUCER = (
+    _PRODUCER_LIMITS
+    + """
+[GFM Parameters]
+Snom = 90.0
+D_Overdamped = 152
+D_Underdamped = 95
+H_Overdamped = 2
+H_Underdamped = 5
+Xeff = 0.27
+"""
+)
+
+
+@pytest.fixture
+def scr_jump_pcs():
+    # The calculator tests above leave their [DEFAULT] values in this layer, and a PCS loaded
+    # afterwards would inherit them.
+    layer_defaults = config._pcs_default_config.defaults()
+    leftover_defaults = dict(layer_defaults)
+    layer_defaults.clear()
+    pcs_path = Path(dycov.__file__).parent / "templates/PCS/gfm/PCS_RTE-IGFM3/PCSDescription.ini"
+    config.load_pcs_config(pcs_path)
+    yield
+    config.load_pcs_config(None)
+    layer_defaults.update(leftover_defaults)
+
+
+def _figure_parameters(tmp_path, monkeypatch, producer: str) -> list[str]:
+    producer_ini = tmp_path / "Producer.ini"
+    producer_ini.write_text(producer)
+    parameters = GFMParameters(
+        producer_ini=producer_ini,
+        selected_pcs="PCS_RTE-IGFM3",
+        output_dir=tmp_path / "Results",
+        only_dtr=True,
+        emt=False,
+    )
+    shown = []
+    monkeypatch.setattr(gfm, "plot_results", lambda **kwargs: shown.append(kwargs["params_list"]))
+    try:
+        GridForming().generate(tmp_path, parameters, "PCS_RTE-IGFM3", "S_SCRdown1", "OC1")
+    finally:
+        parameters.cleanup_working_dir(preserve_on_debug=False)
+    (figure,) = shown
+    return figure
+
+
+def test_figures_show_the_damping_ratio_of_the_producer(scr_jump_pcs, tmp_path, monkeypatch):
+    figure = _figure_parameters(tmp_path, monkeypatch, _SINGLE_SET_PRODUCER)
+
+    assert "D = 152.000" in figure
+    assert "H = 2.000 s" in figure
+    assert "Epsilon = 1.882" in figure
+
+
+def test_hybrid_figures_show_no_value_of_a_single_set(scr_jump_pcs, tmp_path, monkeypatch):
+    figure = _figure_parameters(tmp_path, monkeypatch, _HYBRID_PRODUCER)
+
+    assert "Xeff = 0.270 pu" in figure
+    assert not [line for line in figure if line.startswith(("D =", "H =", "Epsilon ="))]
