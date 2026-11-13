@@ -301,7 +301,9 @@ def scr_jump_pcs():
     layer_defaults.update(leftover_defaults)
 
 
-def _figure_parameters(tmp_path, monkeypatch, producer: str) -> list[str]:
+def _figure(
+    tmp_path, monkeypatch, producer: str, benchmark: str = "S_SCRdown1", operating_condition="OC1"
+) -> dict:
     producer_ini = tmp_path / "Producer.ini"
     producer_ini.write_text(producer)
     parameters = GFMParameters(
@@ -311,14 +313,20 @@ def _figure_parameters(tmp_path, monkeypatch, producer: str) -> list[str]:
         only_dtr=True,
         emt=False,
     )
-    shown = []
-    monkeypatch.setattr(gfm, "plot_results", lambda **kwargs: shown.append(kwargs["params_list"]))
+    figures = []
+    monkeypatch.setattr(gfm, "plot_results", lambda **kwargs: figures.append(kwargs))
     try:
-        GridForming().generate(tmp_path, parameters, "PCS_RTE-IGFM3", "S_SCRdown1", "OC1")
+        GridForming().generate(
+            tmp_path, parameters, "PCS_RTE-IGFM3", benchmark, operating_condition
+        )
     finally:
         parameters.cleanup_working_dir(preserve_on_debug=False)
-    (figure,) = shown
+    (figure,) = figures
     return figure
+
+
+def _figure_parameters(tmp_path, monkeypatch, producer: str) -> list[str]:
+    return _figure(tmp_path, monkeypatch, producer)["params_list"]
 
 
 def test_figures_show_the_damping_ratio_of_the_producer(scr_jump_pcs, tmp_path, monkeypatch):
@@ -334,3 +342,35 @@ def test_hybrid_figures_show_no_value_of_a_single_set(scr_jump_pcs, tmp_path, mo
 
     assert "Xeff = 0.270 pu" in figure
     assert not [line for line in figure if line.startswith(("D =", "H =", "Epsilon ="))]
+
+
+def test_a_single_set_disclaimer_has_no_heading(scr_jump_pcs, tmp_path, monkeypatch):
+    figure = _figure(tmp_path, monkeypatch, _SINGLE_SET_PRODUCER, "S_SCRup1", "OC2")
+
+    assert figure["show_disclaimer"]
+    assert figure["disclaimer_message"].startswith("Inconsistent damping behavior")
+
+
+def test_a_hybrid_disclaimer_names_the_set_that_damps_inconsistently(
+    scr_jump_pcs, tmp_path, monkeypatch
+):
+    figure = _figure(tmp_path, monkeypatch, _HYBRID_PRODUCER, "S_SCRup1", "OC2")
+
+    assert figure["show_disclaimer"]
+    assert figure["disclaimer_message"].startswith("Overdamped set:\nInconsistent damping")
+    assert "Underdamped set:" not in figure["disclaimer_message"]
+
+
+def test_a_hybrid_run_whose_sets_are_consistent_has_no_disclaimer(
+    scr_jump_pcs, tmp_path, monkeypatch
+):
+    figure = _figure(tmp_path, monkeypatch, _HYBRID_PRODUCER)
+
+    assert not figure["show_disclaimer"]
+    assert figure["disclaimer_message"] is None
+
+
+def test_a_hybrid_disclaimer_heads_the_message_of_each_set():
+    assert gfm._hybrid_disclaimer("A", "B") == "Overdamped set:\nA\nUnderdamped set:\nB"
+    assert gfm._hybrid_disclaimer(None, "B") == "Underdamped set:\nB"
+    assert gfm._hybrid_disclaimer(None, None) is None
