@@ -52,6 +52,18 @@ read, with a warning, and its protection curves written as before (#394).
   stops when that file does not exist (#766).
 - The native installation lists `tex-gyre`, the fonts of the PDF manual the installer compiles,
   and the installer checks for them before it starts (#768).
+- The figures of the GFM RoCoF tests give their initial frequency and RoCoF in Hz with the
+  nominal frequency of the configuration, where they took 50 Hz (#770).
+- The Epsilon of the GFM SCR jump figures is that of the producer's D and H, not that of one of
+  their variations, and a hybrid run leaves it out as it does D and H (#771).
+- The GFM envelopes scale the base angular frequency `Wb` of the PCS, given for 50 Hz, to the
+  nominal frequency of the configuration (#779).
+- The SCR jump envelopes keep their shape outside the 30 ms hold after the event when the
+  producer's minimum power is above zero or its maximum below zero (#780).
+- The disclaimer of a hybrid SCR jump run names the set of D and H that damps inconsistently
+  (#781).
+- `generate_gfm_envelopes` stops, naming each value, when the producer's D, H or Xeff cannot give
+  envelopes (#782).
 
 ## 1.3.0 — 2026-10-29
 

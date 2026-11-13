@@ -192,7 +192,9 @@ Basic configuration
 
   Grid nominal frequency (fNom), in Hz (default: 50.0). This must match the
   value defined in Dynawo's ``Electrical/SystemBase.mo``. If Dynawo has been
-  customized, update this value accordingly.
+  customized, update this value accordingly. The GFM envelopes follow it too:
+  the GFM PCS give the base angular frequency ``Wb`` for 50 Hz, and the tool
+  scales it to this frequency.
 
 * ``s_nref``
 

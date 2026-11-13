@@ -8,13 +8,17 @@
 
 import configparser
 import importlib.metadata
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, TextIO
 
 import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from matplotlib import pyplot as plt
+
+_DEFAULT_DISCLAIMER = "Inconsistent damping. Envelopes may be unreliable."
+_SECTION_RULE = "=" * 30
 
 
 def save_results_to_csv(
@@ -24,7 +28,7 @@ def save_results_to_csv(
     pcc_signal: np.ndarray,
     lower_envelope: np.ndarray,
     upper_envelope: np.ndarray,
-    extra_envelopes: dict[str, np.ndarray] = None,
+    extra_envelopes: Optional[dict[str, np.ndarray]] = None,
 ) -> None:
     """
     Exports envelopes and signals to a CSV file.
@@ -45,26 +49,17 @@ def save_results_to_csv(
         Array of upper envelope values.
     extra_envelopes : dict[str, np.ndarray], optional
         Additional envelopes to save. Defaults to None.
-
-    Returns
-    -------
-    None
     """
-    # Map core signals to their respective CSV column headers
     data = {
         "Time (s)": time_array,
         f"{magnitude} PGU (pu)": pcc_signal,
         f"{magnitude} lower (pu)": lower_envelope,
         f"{magnitude} upper (pu)": upper_envelope,
     }
+    for name, signal in (extra_envelopes or {}).items():
+        data[f"{magnitude} {name} (pu)"] = signal
 
-    if extra_envelopes:
-        for name, signal in extra_envelopes.items():
-            data[f"{magnitude} {name} (pu)"] = signal
-
-    df = pd.DataFrame(data)
-    # Use scientific notation to preserve precision for sensitive envelope bounds
-    df.to_csv(path, index=False, sep=";", float_format="%.3e")
+    pd.DataFrame(data).to_csv(path, index=False, sep=";", float_format="%.3e")
 
 
 def find_start_trim_index(
@@ -93,17 +88,19 @@ def find_start_trim_index(
     Returns
     -------
     int
-        The calculated starting index.
+        The index buffer_points before the first step where any of the signals changes by more
+        than the tolerance, or 0 if none does.
+
+    Raises
+    ------
+    ValueError
+        If the signals differ in length.
     """
-    # Scan forward to bypass initial flatlines until a significant variation is detected
+    _check_same_length(pcc_signal, lower_envelope, upper_envelope)
+    signals = (pcc_signal, lower_envelope, upper_envelope)
     for i in range(len(pcc_signal) - 1):
-        pcc_changed = abs(pcc_signal[i + 1] - pcc_signal[i]) > tolerance
-        down_changed = abs(lower_envelope[i + 1] - lower_envelope[i]) > tolerance
-        up_changed = abs(upper_envelope[i + 1] - upper_envelope[i]) > tolerance
-
-        if pcc_changed or down_changed or up_changed:
+        if any(abs(signal[i + 1] - signal[i]) > tolerance for signal in signals):
             return max(0, i - buffer_points)
-
     return 0
 
 
@@ -133,18 +130,42 @@ def find_end_trim_index(
     Returns
     -------
     int
-        The calculated ending index.
+        The index buffer_points after the last step where any of the signals changes by more
+        than the tolerance, or the length of the signals if none does.
+
+    Raises
+    ------
+    ValueError
+        If the signals differ in length.
     """
-    # Scan backward from the end to strip trailing stable data
+    _check_same_length(pcc_signal, lower_envelope, upper_envelope)
+    signals = (pcc_signal, lower_envelope, upper_envelope)
     for i in range(len(pcc_signal) - 1, 0, -1):
-        pcc_changed = abs(pcc_signal[i] - pcc_signal[i - 1]) > tolerance
-        down_changed = abs(lower_envelope[i] - lower_envelope[i - 1]) > tolerance
-        up_changed = abs(upper_envelope[i] - upper_envelope[i - 1]) > tolerance
-
-        if pcc_changed or down_changed or up_changed:
+        if any(abs(signal[i] - signal[i - 1]) > tolerance for signal in signals):
             return min(i + buffer_points, len(pcc_signal))
-
     return len(pcc_signal)
+
+
+def _check_same_length(
+    pcc_signal: np.ndarray, lower_envelope: np.ndarray, upper_envelope: np.ndarray
+) -> None:
+    lengths = (len(pcc_signal), len(lower_envelope), len(upper_envelope))
+    if len(set(lengths)) > 1:
+        raise ValueError(
+            "The PCC signal and the lower and upper envelopes must have the same length, not "
+            f"{lengths[0]}, {lengths[1]} and {lengths[2]}."
+        )
+
+
+@dataclass
+class _Window:
+    """The part of the signals the figures draw, around the transient."""
+
+    time: np.ndarray
+    pcc: np.ndarray
+    lower: np.ndarray
+    upper: np.ndarray
+    extra: dict[str, np.ndarray]
 
 
 def plot_results(
@@ -158,10 +179,10 @@ def plot_results(
     lower_envelope: np.ndarray,
     upper_envelope: np.ndarray,
     output_format: str,
-    params_list: list = None,
+    params_list: Optional[list] = None,
     show_disclaimer: bool = False,
-    disclaimer_message: str = None,
-    extra_envelopes: dict[str, np.ndarray] = None,
+    disclaimer_message: Optional[str] = None,
+    extra_envelopes: Optional[dict[str, np.ndarray]] = None,
 ) -> None:
     """
     Renders and exports simulation results graphically.
@@ -169,7 +190,7 @@ def plot_results(
     Parameters
     ----------
     path : Path
-        Destination path for the plot file.
+        Destination path for the plot file; its suffix is replaced by that of each format.
     title : str
         Title of the plot.
     magnitude : str
@@ -197,251 +218,339 @@ def plot_results(
     extra_envelopes : dict[str, np.ndarray], optional
         Additional signals to plot. Defaults to None.
 
-    Returns
-    -------
-    None
+    Raises
+    ------
+    TypeError
+        If the output format or the disclaimer message is not text.
+    ValueError
+        If the output format names neither png nor html, or the time, the signal and the
+        envelopes differ in length.
     """
-    start_index = find_start_trim_index(pcc_signal, lower_envelope, upper_envelope)
-    end_index = find_end_trim_index(pcc_signal, lower_envelope, upper_envelope)
-
-    # Slice all arrays to focus only on the active transient event window
-    time_trimmed = time_array[start_index:end_index]
-    pcc_trimmed = pcc_signal[start_index:end_index]
-    down_trimmed = lower_envelope[start_index:end_index]
-    up_trimmed = upper_envelope[start_index:end_index]
-
-    extra_trimmed = {}
-    if extra_envelopes:
-        for name, signal in extra_envelopes.items():
-            extra_trimmed[name] = signal[start_index:end_index]
-
-    disclaimer_text_mpl = ""
-    disclaimer_text_html = ""
-    if show_disclaimer:
-        default_msg = "Inconsistent damping. Envelopes may be unreliable."
-        disclaimer_text_mpl = "Disclaimer:\n" + (disclaimer_message or default_msg)
-        html_msg = disclaimer_message.replace("\n", "<br>") if disclaimer_message else default_msg
-        disclaimer_text_html = f"<b>Disclaimer:</b><br>{html_msg}"
-
-    # Attempt to watermark plots with the currently installed package version
-    try:
-        software_version = importlib.metadata.version("dycov")
-        watermark_text = f"dycov v{software_version}"
-    except importlib.metadata.PackageNotFoundError:
-        watermark_text = "dycov v(unknown)"
+    _check_plot_options(output_format, disclaimer_message)
+    _check_plot_lengths(time_array, pcc_signal, lower_envelope, upper_envelope, extra_envelopes)
+    window = _transient_window(
+        time_array, pcc_signal, lower_envelope, upper_envelope, extra_envelopes
+    )
+    event_x = event_time + shift_time / 1000
+    watermark_text = _watermark_text()
 
     if "png" in output_format:
-        plt.figure(figsize=(8, 5))
+        _plot_png(
+            path.with_suffix(".png"),
+            title,
+            magnitude,
+            window,
+            event_x,
+            params_list,
+            _png_disclaimer(disclaimer_message) if show_disclaimer else None,
+            watermark_text,
+        )
+    if "html" in output_format:
+        _plot_html(
+            path.with_suffix(".html"),
+            title,
+            magnitude,
+            window,
+            event_x,
+            params_list,
+            _html_disclaimer(disclaimer_message) if show_disclaimer else None,
+            watermark_text,
+        )
 
-        if extra_trimmed:
-            colors = {"overdamped": "purple", "underdamped": "orange"}
-            for name, signal in extra_trimmed.items():
-                style_color = (
-                    colors.get("overdamped")
-                    if "overdamped" in name
-                    else colors.get("underdamped", "gray")
-                )
-                plt.plot(
-                    time_trimmed,
-                    signal,
-                    linestyle=":",
-                    linewidth=1,
-                    color=style_color,
-                    alpha=0.7,
-                    label=name.replace("_", " ").title(),
-                )
 
-        plt.plot(time_trimmed, pcc_trimmed, label=f"{magnitude} at PGU", linewidth=3)
+def _check_plot_options(output_format: str, disclaimer_message: Optional[str]) -> None:
+    if not isinstance(output_format, str):
+        raise TypeError(
+            f"The output format must be text, not of type {type(output_format).__name__}."
+        )
+    if "png" not in output_format and "html" not in output_format:
+        raise ValueError(f"The output format must name png, html or both, not {output_format!r}.")
+    if disclaimer_message is not None and not isinstance(disclaimer_message, str):
+        raise TypeError(
+            "The disclaimer message must be text, not of type "
+            f"{type(disclaimer_message).__name__}."
+        )
+
+
+def _check_plot_lengths(
+    time_array: np.ndarray,
+    pcc_signal: np.ndarray,
+    lower_envelope: np.ndarray,
+    upper_envelope: np.ndarray,
+    extra_envelopes: Optional[dict[str, np.ndarray]],
+) -> None:
+    lengths = {
+        "time": len(time_array),
+        "PCC signal": len(pcc_signal),
+        "lower envelope": len(lower_envelope),
+        "upper envelope": len(upper_envelope),
+        **{name: len(signal) for name, signal in (extra_envelopes or {}).items()},
+    }
+    if len(set(lengths.values())) > 1:
+        raise ValueError(
+            "The time, the PCC signal and the envelopes must have the same length, not "
+            + ", ".join(f"{length} ({name})" for name, length in lengths.items())
+            + "."
+        )
+
+
+def _transient_window(
+    time_array: np.ndarray,
+    pcc_signal: np.ndarray,
+    lower_envelope: np.ndarray,
+    upper_envelope: np.ndarray,
+    extra_envelopes: Optional[dict[str, np.ndarray]],
+) -> _Window:
+    start_index = find_start_trim_index(pcc_signal, lower_envelope, upper_envelope)
+    end_index = find_end_trim_index(pcc_signal, lower_envelope, upper_envelope)
+    window = slice(start_index, end_index)
+    return _Window(
+        time=time_array[window],
+        pcc=pcc_signal[window],
+        lower=lower_envelope[window],
+        upper=upper_envelope[window],
+        extra={name: signal[window] for name, signal in (extra_envelopes or {}).items()},
+    )
+
+
+def _watermark_text() -> str:
+    try:
+        return f"dycov v{importlib.metadata.version('dycov')}"
+    except importlib.metadata.PackageNotFoundError:
+        return "dycov v(unknown)"
+
+
+def _png_disclaimer(disclaimer_message: Optional[str]) -> str:
+    return "Disclaimer:\n" + (disclaimer_message or _DEFAULT_DISCLAIMER)
+
+
+def _html_disclaimer(disclaimer_message: Optional[str]) -> str:
+    html_msg = (
+        disclaimer_message.replace("\n", "<br>") if disclaimer_message else _DEFAULT_DISCLAIMER
+    )
+    return f"<b>Disclaimer:</b><br>{html_msg}"
+
+
+def _extra_envelope_color(name: str) -> str:
+    return "purple" if "overdamped" in name else "orange"
+
+
+def _extra_envelope_label(name: str) -> str:
+    return name.replace("_", " ").title()
+
+
+def _plot_png(
+    path: Path,
+    title: str,
+    magnitude: str,
+    window: _Window,
+    event_x: float,
+    params_list: Optional[list],
+    disclaimer_text: Optional[str],
+    watermark_text: str,
+) -> None:
+    plt.figure(figsize=(8, 5))
+
+    for name, signal in window.extra.items():
         plt.plot(
-            time_trimmed, down_trimmed, label=f"{magnitude} envelopes", linewidth=2, color="red"
-        )
-        plt.plot(time_trimmed, up_trimmed, linewidth=2, color="red")
-
-        plt.xlabel("Time (s)")
-        plt.ylabel(f"{magnitude} (pu)")
-        plt.title(title)
-
-        # Shift event time from ms to seconds for correct vertical line placement
-        plt.axvline(
-            x=event_time + shift_time / 1000, color="black", linestyle="--", label="Event Time"
+            window.time,
+            signal,
+            linestyle=":",
+            linewidth=1,
+            color=_extra_envelope_color(name),
+            alpha=0.7,
+            label=_extra_envelope_label(name),
         )
 
-        if params_list:
-            plt.text(
-                0.98,
-                0.98,
-                "\n".join(params_list),
-                transform=plt.gca().transAxes,
-                fontsize=9,
-                verticalalignment="top",
-                horizontalalignment="right",
-                bbox=dict(boxstyle="round,pad=0.5", fc="wheat", alpha=0.5),
-            )
+    plt.plot(window.time, window.pcc, label=f"{magnitude} at PGU", linewidth=3)
+    plt.plot(window.time, window.lower, label=f"{magnitude} envelopes", linewidth=2, color="red")
+    plt.plot(window.time, window.upper, linewidth=2, color="red")
 
-        if show_disclaimer:
-            plt.text(
-                0.02,
-                0.02,
-                disclaimer_text_mpl,
-                transform=plt.gca().transAxes,
-                fontsize=8,
-                color="red",
-                verticalalignment="bottom",
-                horizontalalignment="left",
-                bbox=dict(boxstyle="round,pad=0.5", fc="white", ec="red", alpha=0.8),
-            )
+    plt.xlabel("Time (s)")
+    plt.ylabel(f"{magnitude} (pu)")
+    plt.title(title)
+    plt.axvline(x=event_x, color="black", linestyle="--", label="Event Time")
 
+    if params_list:
         plt.text(
             0.98,
-            0.02,
-            watermark_text,
+            0.98,
+            "\n".join(params_list),
             transform=plt.gca().transAxes,
-            fontsize=12,
-            color="gray",
-            alpha=0.3,
-            verticalalignment="bottom",
+            fontsize=9,
+            verticalalignment="top",
             horizontalalignment="right",
+            bbox=dict(boxstyle="round,pad=0.5", fc="wheat", alpha=0.5),
         )
 
-        plt.legend(loc="center left", bbox_to_anchor=(1, 0.5), fontsize="small")
-        plt.grid(True, linestyle="--", alpha=0.6)
-        plt.xlim(time_trimmed[0], time_trimmed[-1])
-        plt.tight_layout()
-        plt.savefig(path.with_suffix(".png"), bbox_inches="tight", dpi=300)
-        plt.close()
-
-    if "html" in output_format:
-        fig = go.Figure()
-
-        # Create a shaded area between the upper and lower envelopes
-        fig.add_trace(
-            go.Scatter(
-                x=np.concatenate([time_trimmed, time_trimmed[::-1]]),
-                y=np.concatenate([up_trimmed, down_trimmed[::-1]]),
-                fill="toself",
-                fillcolor="rgba(255, 0, 0, 0.2)",
-                line=dict(color="rgba(255, 255, 255, 0)"),
-                hoverinfo="none",
-                showlegend=False,
-            )
+    if disclaimer_text is not None:
+        plt.text(
+            0.02,
+            0.02,
+            disclaimer_text,
+            transform=plt.gca().transAxes,
+            fontsize=8,
+            color="red",
+            verticalalignment="bottom",
+            horizontalalignment="left",
+            bbox=dict(boxstyle="round,pad=0.5", fc="white", ec="red", alpha=0.8),
         )
 
-        if extra_trimmed:
-            colors = {"overdamped": "purple", "underdamped": "orange"}
-            for name, signal in extra_trimmed.items():
-                style_color = (
-                    colors.get("overdamped")
-                    if "overdamped" in name
-                    else colors.get("underdamped", "gray")
-                )
-                fig.add_trace(
-                    go.Scatter(
-                        x=time_trimmed,
-                        y=signal,
-                        mode="lines",
-                        line=dict(color=style_color, width=1, dash="dot"),
-                        name=name.replace("_", " ").title(),
-                        opacity=0.7,
-                    )
-                )
+    plt.text(
+        0.98,
+        0.02,
+        watermark_text,
+        transform=plt.gca().transAxes,
+        fontsize=12,
+        color="gray",
+        alpha=0.3,
+        verticalalignment="bottom",
+        horizontalalignment="right",
+    )
 
+    plt.legend(loc="center left", bbox_to_anchor=(1, 0.5), fontsize="small")
+    plt.grid(True, linestyle="--", alpha=0.6)
+    plt.xlim(window.time[0], window.time[-1])
+    plt.tight_layout()
+    plt.savefig(path, bbox_inches="tight", dpi=300)
+    plt.close()
+
+
+def _plot_html(
+    path: Path,
+    title: str,
+    magnitude: str,
+    window: _Window,
+    event_x: float,
+    params_list: Optional[list],
+    disclaimer_text: Optional[str],
+    watermark_text: str,
+) -> None:
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(
+            x=np.concatenate([window.time, window.time[::-1]]),
+            y=np.concatenate([window.upper, window.lower[::-1]]),
+            fill="toself",
+            fillcolor="rgba(255, 0, 0, 0.2)",
+            line=dict(color="rgba(255, 255, 255, 0)"),
+            hoverinfo="none",
+            showlegend=False,
+        )
+    )
+
+    for name, signal in window.extra.items():
         fig.add_trace(
             go.Scatter(
-                x=time_trimmed,
-                y=up_trimmed,
+                x=window.time,
+                y=signal,
                 mode="lines",
-                line=dict(color="red", width=2),
-                name=f"{magnitude} envelopes",
-            )
-        )
-        fig.add_trace(
-            go.Scatter(
-                x=time_trimmed,
-                y=down_trimmed,
-                mode="lines",
-                line=dict(color="red", width=2),
-                showlegend=False,
-            )
-        )
-        fig.add_trace(
-            go.Scatter(
-                x=time_trimmed,
-                y=pcc_trimmed,
-                mode="lines",
-                line=dict(color="blue", width=3),
-                name=f"{magnitude} PGU",
+                line=dict(color=_extra_envelope_color(name), width=1, dash="dot"),
+                name=_extra_envelope_label(name),
+                opacity=0.7,
             )
         )
 
-        fig.add_vline(
-            x=event_time + shift_time / 1000,
-            line_width=2,
-            line_dash="dash",
-            line_color="black",
-            annotation_text="Event Time",
-            annotation_position="top right",
+    fig.add_trace(
+        go.Scatter(
+            x=window.time,
+            y=window.upper,
+            mode="lines",
+            line=dict(color="red", width=2),
+            name=f"{magnitude} envelopes",
         )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=window.time,
+            y=window.lower,
+            mode="lines",
+            line=dict(color="red", width=2),
+            showlegend=False,
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=window.time,
+            y=window.pcc,
+            mode="lines",
+            line=dict(color="blue", width=3),
+            name=f"{magnitude} PGU",
+        )
+    )
 
-        if params_list:
-            fig.add_annotation(
-                xref="paper",
-                yref="paper",
-                x=0.98,
-                y=0.98,
-                text="<br>".join(params_list),
-                showarrow=False,
-                align="right",
-                valign="top",
-                bgcolor="rgba(245, 222, 179, 0.7)",
-                borderpad=10,
-            )
+    fig.add_vline(
+        x=event_x,
+        line_width=2,
+        line_dash="dash",
+        line_color="black",
+        annotation_text="Event Time",
+        annotation_position="top right",
+    )
 
-        if show_disclaimer:
-            fig.add_annotation(
-                xref="paper",
-                yref="paper",
-                x=0.02,
-                y=0.02,
-                text=disclaimer_text_html,
-                showarrow=False,
-                align="left",
-                valign="bottom",
-                font=dict(color="red", size=10),
-                bgcolor="rgba(255, 255, 255, 0.8)",
-                bordercolor="red",
-                borderwidth=1,
-                borderpad=10,
-            )
-
+    if params_list:
         fig.add_annotation(
             xref="paper",
             yref="paper",
             x=0.98,
-            y=0.02,
-            text=watermark_text,
+            y=0.98,
+            text="<br>".join(params_list),
             showarrow=False,
-            font=dict(color="gray", size=14),
-            opacity=0.3,
-            xanchor="right",
-            yanchor="bottom",
+            align="right",
+            valign="top",
+            bgcolor="rgba(245, 222, 179, 0.7)",
+            borderpad=10,
         )
 
-        fig.update_layout(
-            title_text=title,
-            xaxis_title="Time (s)",
-            yaxis_title=f"{magnitude} (pu)",
-            legend=dict(x=1.02, y=0.5, xanchor="left", yanchor="middle"),
-            template="plotly_white",
-            margin=dict(r=150),
+    if disclaimer_text is not None:
+        fig.add_annotation(
+            xref="paper",
+            yref="paper",
+            x=0.02,
+            y=0.02,
+            text=disclaimer_text,
+            showarrow=False,
+            align="left",
+            valign="bottom",
+            font=dict(color="red", size=10),
+            bgcolor="rgba(255, 255, 255, 0.8)",
+            bordercolor="red",
+            borderwidth=1,
+            borderpad=10,
         )
-        fig.write_html(path.with_suffix(".html"))
+
+    fig.add_annotation(
+        xref="paper",
+        yref="paper",
+        x=0.98,
+        y=0.02,
+        text=watermark_text,
+        showarrow=False,
+        font=dict(color="gray", size=14),
+        opacity=0.3,
+        xanchor="right",
+        yanchor="bottom",
+    )
+
+    fig.update_layout(
+        title_text=title,
+        xaxis_title="Time (s)",
+        yaxis_title=f"{magnitude} (pu)",
+        legend=dict(x=1.02, y=0.5, xanchor="left", yanchor="middle"),
+        template="plotly_white",
+        margin=dict(r=150),
+    )
+    fig.write_html(path)
 
 
 def save_ini_dump(
     path: Path, parameters: Any, producer_config: configparser.ConfigParser, calculator: Any
 ) -> None:
     """
-    Serializes simulation entity attributes to a text file for debugging.
+    Writes the state of a calculation to a text file, for diagnosis.
+
+    It holds the D, H and damping ratio of each variation the calculator ran, the attributes
+    of the parameters and of the calculator, and the producer's configuration.
 
     Parameters
     ----------
@@ -453,55 +562,51 @@ def save_ini_dump(
         The parsed INI configuration.
     calculator : Any
         The instantiated calculator object.
-
-    Returns
-    -------
-    None
     """
-
-    def _write_dict(f: Any, title: str, data_dict: dict) -> None:
-        f.write(f"\n{'=' * 30}\n {title}\n{'=' * 30}\n")
-        for key, value in sorted(data_dict.items()):
-            # Filter out callable methods to serialize only attributes/properties
-            if not callable(value):
-                f.write(f"{key} = {value}\n")
-
     with open(path, "w", encoding="utf-8") as f:
-        f.write(
-            "GFM SIMULATION DUMP\n"
-            "===================\n\n"
-            f"{'=' * 30}\n"
-            " Key Validation Values\n"
-            f"{'=' * 30}\n"
-        )
-
-        # Extract internal validation arrays safely across calculator instances
-        try:
-            d_vals = getattr(calculator, "_d_vals", None)
-            h_vals = getattr(calculator, "_h_vals", None)
-            eps_vals = getattr(calculator, "_epsilon_vals", None)
-
-            if d_vals is not None and h_vals is not None:
-                for i in range(len(d_vals)):
-                    label = "Nominal" if i == 0 else f"Variation {i}"
-                    line = f"[{label}] D = {d_vals[i]:.6f}, H = {h_vals[i]:.6f}"
-                    if eps_vals is not None and i < len(eps_vals):
-                        line += f", Epsilon = {eps_vals[i]:.6f}"
-                    f.write(line + "\n")
-            else:
-                f.write("D and H variations data not available in calculator.\n")
-        except Exception as e:
-            f.write(f"Could not retrieve validation values: {e}\n")
+        f.write("GFM SIMULATION DUMP\n===================\n\n")
+        f.write(_section_header("Key Validation Values"))
+        _write_validation_values(f, calculator)
 
         if hasattr(parameters, "__dict__"):
-            _write_dict(f, "GFMParameters Attributes", parameters.__dict__)
+            _write_attributes(f, "GFMParameters Attributes", parameters.__dict__)
         if hasattr(calculator, "__dict__"):
-            _write_dict(f, "GFMCalculator Attributes", calculator.__dict__)
+            _write_attributes(f, "GFMCalculator Attributes", calculator.__dict__)
 
-        f.write(f"\n{'=' * 30}\n GFMProducer Configuration (INI)\n{'=' * 30}\n")
+        f.write("\n" + _section_header("GFMProducer Configuration (INI)"))
         if producer_config:
             for section in producer_config.sections():
                 f.write(f"[{section}]\n")
                 for key, value in producer_config.items(section):
                     f.write(f"{key} = {value}\n")
                 f.write("\n")
+
+
+def _section_header(title: str) -> str:
+    return f"{_SECTION_RULE}\n {title}\n{_SECTION_RULE}\n"
+
+
+def _write_validation_values(f: TextIO, calculator: Any) -> None:
+    try:
+        d_vals = getattr(calculator, "_d_vals", None)
+        h_vals = getattr(calculator, "_h_vals", None)
+        eps_vals = getattr(calculator, "_epsilon_vals", None)
+
+        if d_vals is None or h_vals is None:
+            f.write("D and H variations data not available in calculator.\n")
+            return
+        for i in range(len(d_vals)):
+            label = "Nominal" if i == 0 else f"Variation {i}"
+            line = f"[{label}] D = {d_vals[i]:.6f}, H = {h_vals[i]:.6f}"
+            if eps_vals is not None and i < len(eps_vals):
+                line += f", Epsilon = {eps_vals[i]:.6f}"
+            f.write(line + "\n")
+    except Exception as e:
+        f.write(f"Could not retrieve validation values: {e}\n")
+
+
+def _write_attributes(f: TextIO, title: str, attributes: dict) -> None:
+    f.write("\n" + _section_header(title))
+    for key, value in sorted(attributes.items()):
+        if not callable(value):
+            f.write(f"{key} = {value}\n")
