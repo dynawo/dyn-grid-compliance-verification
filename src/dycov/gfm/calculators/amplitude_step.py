@@ -84,7 +84,16 @@ class AmplitudeStep(GFMCalculator):
         tuple[str, np.ndarray, np.ndarray, np.ndarray]
             The magnitude name ("Iq"), the main signal, the upper envelope and the lower
             envelope.
+
+        Raises
+        ------
+        TypeError
+            If the time is not a one-dimensional array of floats or signed integers.
+        ValueError
+            If the time vector has fewer than two points, or is not finite, strictly
+            increasing and evenly spaced.
         """
+        self._check_time_array(time_array)
         LOGGER.debug(f"Input Params D={D} H={H} Xeff {Xeff}")
 
         q_pcc, q_up, q_down = self._get_envelopes(

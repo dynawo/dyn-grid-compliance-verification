@@ -161,6 +161,13 @@ Every concrete calculator must implement two methods:
 Key helper methods
 ^^^^^^^^^^^^^^^^^^^
 
+``_check_time_array()``
+    Rejects a time vector the envelopes cannot be calculated on: one that is
+    not a one-dimensional array of floats or signed integers, has fewer than two
+    points, or is not finite, strictly increasing and evenly spaced, as the
+    delays of the calculators assume. The amplitude step, RoCoF and SCR jump calculators call
+    it before anything else.
+
 ``_natural_frequency()``
     Computes the natural frequency of the swing equation of the unit on the
     grid, from which a calculator derives the damping ratio of each set of

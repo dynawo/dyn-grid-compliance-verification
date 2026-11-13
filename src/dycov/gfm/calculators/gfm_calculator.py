@@ -109,6 +109,43 @@ class GFMCalculator(ABC):
         u_prod = self._initial_voltage * self._grid_voltage
         return np.sqrt(self._base_angular_frequency * u_prod / (2 * H * x_total))
 
+    @staticmethod
+    def _check_time_array(time_array: np.ndarray) -> None:
+        """
+        Rejects a time vector the envelopes cannot be calculated on.
+
+        Parameters
+        ----------
+        time_array : np.ndarray
+            The simulation time vector.
+
+        Raises
+        ------
+        TypeError
+            If the time is not a one-dimensional array of floats or signed integers.
+        ValueError
+            If the time vector has fewer than two points, or is not finite, strictly
+            increasing and evenly spaced.
+        """
+        if not isinstance(time_array, np.ndarray):
+            raise TypeError(
+                "The time must be a one-dimensional array of floats or signed integers, not of "
+                f"type {type(time_array).__name__}."
+            )
+        if time_array.ndim != 1 or time_array.dtype.kind not in "if":
+            raise TypeError(
+                "The time must be a one-dimensional array of floats or signed integers, not an "
+                f"array of shape {time_array.shape} and type {time_array.dtype}."
+            )
+        if time_array.size < 2:
+            raise ValueError("The time vector must have at least two points.")
+        steps = np.diff(time_array)
+        if not np.all(np.isfinite(time_array)) or not np.all(steps > 0):
+            raise ValueError("The time vector must be finite and strictly increasing.")
+        rounding_tolerance = 4 * np.spacing(np.abs(time_array).max())
+        if not np.allclose(steps, steps[0], rtol=1e-6, atol=rounding_tolerance):
+            raise ValueError("The time vector must be evenly spaced.")
+
     def _delay_by_emt(self, signal: np.ndarray, time_array: np.ndarray) -> np.ndarray:
         """
         Delays a signal by the EMT delay, holding its initial value meanwhile.
