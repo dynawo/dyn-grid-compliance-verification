@@ -364,14 +364,19 @@ class GFMParameters(Parameters):
 
     def get_base_angular_frequency(self) -> float:
         """
-        Retrieves the base angular frequency (Wb).
+        Retrieves the base angular frequency (Wb) at the nominal frequency.
+
+        The PCS give Wb for 50 Hz; it is scaled to the nominal frequency of the configuration,
+        the one the frequencies of the PCS are turned into pu with.
 
         Returns
         -------
         float
             The base angular frequency in rad/s.
         """
-        return self.__get_float_value("Wb", 0.0)
+        return self.__get_float_value("Wb", 0.0) * (
+            self.get_nominal_frequency() / constants.PCS_WB_FREQUENCY_HZ
+        )
 
     def get_delta_phase(self) -> float:
         """

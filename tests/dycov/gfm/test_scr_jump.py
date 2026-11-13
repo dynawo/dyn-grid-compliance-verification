@@ -97,7 +97,7 @@ class ProducerHelper(GFMProducer):
     def __init__(self, config_str: str):
         self._config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         self._config.read_string(config_str)
-        self._f_nom = 1.0
+        self._f_nom = 50.0
 
 
 class ParametersHelper(GFMParameters):

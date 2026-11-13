@@ -29,7 +29,7 @@ gfm_overdamped_params = """
 P0=0.5
 Q0=0.0
 SCR=2.0
-RoCoF=-0.05
+RoCoF=-2.5
 RoCoFDuration=0.5
 RatioMin=0.9
 RatioMax=1.1
@@ -54,7 +54,7 @@ gfm_underdamped_params = """
 P0=0.9
 Q0=0.0
 SCR=20.0
-RoCoF=0.2
+RoCoF=10.0
 RatioMin=0.8
 RatioMax=1.2
 Wb=314
@@ -78,7 +78,7 @@ s_rocof_1_params = """
 P0=0.9
 Q0=0.0
 SCR=20.0
-RoCoF=0.2
+RoCoF=10.0
 RatioMin=0.8
 RatioMax=1.2
 Wb=314
@@ -101,7 +101,7 @@ class ProducerHelper(GFMProducer):
     def __init__(self, config_str: str):
         self._config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         self._config.read_string(config_str)
-        self._f_nom = 1.0
+        self._f_nom = 50.0
 
 
 class ParametersHelper(GFMParameters):
