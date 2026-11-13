@@ -319,6 +319,27 @@ def check_simulation_duration(time: float) -> None:
         )
 
 
+_SOLVER_LIBS = ("dynawo_SolverIDA", "dynawo_SolverSIM")
+
+
+def check_fault_search() -> None:
+    """Check the solver and the stop time the fault impedance searches run their steps with,
+    so that a wrong value stops the run before its first test, as one of solver_lib does."""
+    solver_lib = config.get_value("Dynawo", "fault_search_solver_lib", "dynawo_SolverSIM")
+    if solver_lib not in _SOLVER_LIBS:
+        raise ValueError(
+            f"{config.describe_option('Dynawo', 'fault_search_solver_lib')} names a solver "
+            f"library that is not available, {solver_lib}: use one of {', '.join(_SOLVER_LIBS)}."
+        )
+    time_after_clearing = config.get_float("Dynawo", "fault_search_time_after_clearing", 2.0)
+    if time_after_clearing <= 0:
+        raise ValueError(
+            f"{config.describe_option('Dynawo', 'fault_search_time_after_clearing')} must be "
+            f"positive, and is {time_after_clearing}: the searches read the voltage during the "
+            f"fault."
+        )
+
+
 def check_solver(id: str, lib: str) -> None:
     """Check if a solver allowed by the tool has been configured.
 
@@ -329,7 +350,7 @@ def check_solver(id: str, lib: str) -> None:
     lib: str
         Solver library.
     """
-    if lib not in ["dynawo_SolverIDA", "dynawo_SolverSIM"]:
+    if lib not in _SOLVER_LIBS:
         raise ValueError("The solver library is not available.")
 
     if id not in lib:

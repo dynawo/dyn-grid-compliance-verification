@@ -23,6 +23,15 @@ templates of 1.2.1 said 1.2.1 and those of 1.3.0 said 1.0.0, so every workbook m
 warned about. One made on the templates of 1.3.0 only needs that cell set to 1.3.0; an older one
 has its data copied into `workbooks/Producer_IEC.xlsx` or `workbooks/Producer_WECC.xlsx` (#701).
 
+### The fault searches run on the simplified solver
+
+The searches for the impedance of the high-impedance and bolted faults run each of their
+simulations on the SIM solver and stop it 2 s after the fault is cleared, or 2 s after a permanent
+fault starts; a simulation that fails is retried as any other. The test is then simulated as
+before. The impedance they settle on may differ slightly from the one they found on IDA.
+`fault_search_solver_lib` and `fault_search_time_after_clearing`, in `[Dynawo]`, change both
+(#644).
+
 ### Fixed
 
 - A power park module of 250 MW or more connected at HTB1 takes the reactance b the DTR gives it,

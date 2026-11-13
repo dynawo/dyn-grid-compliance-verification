@@ -594,3 +594,42 @@ def test_check_generators_without_zone1_counts_the_zone3_generators():
     )
 
     assert parameter_checks.check_generators([], [ppm, ppm]) == (0, 2, 0)
+
+
+def _fault_search_settings(monkeypatch, solver_lib, time_after_clearing):
+    values = {
+        "fault_search_solver_lib": solver_lib,
+        "fault_search_time_after_clearing": time_after_clearing,
+    }
+    monkeypatch.setattr(
+        "dycov.configuration.cfg.Config.get_value",
+        lambda self, section, key, default=None: values.get(key, default),
+    )
+    monkeypatch.setattr(
+        "dycov.configuration.cfg.Config.get_float",
+        lambda self, section, key, default=None: float(values.get(key, default)),
+    )
+
+
+@pytest.mark.parametrize("solver_lib", ["dynawo_SolverSIM", "dynawo_SolverIDA"])
+def test_check_fault_search_accepts_either_solver(monkeypatch, solver_lib):
+    _fault_search_settings(monkeypatch, solver_lib, 2.0)
+
+    parameter_checks.check_fault_search()
+
+
+@pytest.mark.parametrize(
+    "solver_lib, time_after_clearing, reported",
+    [
+        ("dynawo_SolverFoo", 2.0, "fault_search_solver_lib"),
+        ("dynawo_SolverSIM", 0.0, "fault_search_time_after_clearing"),
+        ("dynawo_SolverSIM", -1.0, "fault_search_time_after_clearing"),
+    ],
+)
+def test_check_fault_search_names_the_setting_it_rejects(
+    monkeypatch, solver_lib, time_after_clearing, reported
+):
+    _fault_search_settings(monkeypatch, solver_lib, time_after_clearing)
+
+    with pytest.raises(ValueError, match=reported):
+        parameter_checks.check_fault_search()
