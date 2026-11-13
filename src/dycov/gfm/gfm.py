@@ -68,11 +68,12 @@ _PLOT_PARAMETERS = (
     _PlotParameter("Xeff", "Xeff = {:.3f} pu", lambda p, c: p.get_effective_reactance()),
     _PlotParameter("D", "D = {:.3f}", lambda p, c: p.get_damping_constant()),
     _PlotParameter("H", "H = {:.3f} s", lambda p, c: p.get_inertia_constant()),
-    _PlotParameter("Epsilon", "Epsilon = {:.3f}", lambda p, c: c._epsilon),
+    _PlotParameter("Epsilon", "Epsilon = {:.3f}", lambda p, c: c.get_damping_ratio()),
 )
 
-# A hybrid run calculates with two sets of D and H, so the figures do not show the single ones.
-_SINGLE_DAMPING_PARAMETERS = ("D", "H")
+# A hybrid run calculates with two sets of D and H, so the figures do not show the values of a
+# single set.
+_SINGLE_DAMPING_PARAMETERS = ("D", "H", "Epsilon")
 
 
 @dataclass
