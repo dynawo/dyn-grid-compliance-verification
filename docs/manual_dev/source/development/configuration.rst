@@ -454,10 +454,11 @@ Impedance calculation factors:
 * ``SCR_r_factor`` — factor to calculate Rcc from Xcc.
 * ``fault_r_factor`` — factor to calculate Rv from Xv.
 * ``Ztanphi`` — factor to derive Xcc and Rcc from Zcc.
-* ``zcc_voltage`` — voltage of the short-circuit impedance of the dips and
-  swells, :math:`Z_{cc} = U^2 / S_{cc}`, as a value definition: ``Udim``, the
-  Uc of article 8.3.3 v3.3 and v3.4, or ``Unom``, the Un the revisions
-  ``20251013`` and ``20260723`` write.
+* ``zcc_voltage`` — voltage of the short-circuit impedance
+  :math:`Z_{cc} = U^2 / S_{cc}`, which the dips have and the swells have from
+  the revision ``20251013``, as a value definition: ``Udim``, the Uc of article
+  8.3.3 v3.3 and v3.4, or ``Unom``, the Un the revisions ``20251013`` and
+  ``20260723`` write.
 
 Signal error thresholds (simulation reference):
     For each signal ``<s>`` in {``P``, ``Q``, ``Ip``, ``Iq``} and each metric

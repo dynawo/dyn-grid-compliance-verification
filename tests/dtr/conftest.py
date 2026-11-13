@@ -91,6 +91,35 @@ def description():
     config.load_pcs_config(None)
 
 
+SWELLS = [
+    ("performance", "SM", "PCS_RTE-I7"),
+    ("performance", "PPM", "PCS_RTE-I7"),
+    ("performance", "BESS", "PCS_RTE-I7"),
+    ("model", "PPM", "PCS_RTE-I16z3"),
+    ("model", "BESS", "PCS_RTE-I16z3"),
+]
+
+
+@pytest.fixture(params=SWELLS, ids=lambda swell: f"{swell[2]}-{swell[1]}")
+def swell_zcc(request, description):
+    """Tells, for every case of the voltage swell of a fiche, whether it declares Zcc.
+
+    Call it once the test has selected its revision, which says which delta it reads.
+    """
+    verification, technology, pcs = request.param
+
+    def read() -> dict[str, bool]:
+        description(verification, technology, pcs)
+        cases = config.get_list("PCS-OperatingConditions", f"{pcs}.GridVoltageSwell")
+        assert cases, f"{pcs} has no voltage swell"
+        return {
+            case.strip(): config.has_option(f"{pcs}.GridVoltageSwell.{case.strip()}.Model", "Zcc")
+            for case in cases
+        }
+
+    return read
+
+
 @pytest.fixture
 def value(description):
     """Reads an option the way the tool reads it, following the suffix of the category."""
