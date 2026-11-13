@@ -106,6 +106,14 @@ or how the `Model Map` key is formed). It reads:
   prepended on output, unless `[Block-Prefixes]` of `excel_names.ini` gives the
   block one of its own because Dynawo keeps it in a separate submodel, as it does
   the WECC voltage ride-through protection with `lhvrt_`).
+- **Tables of the model** — below a block's parameters, the IEC template lays out
+  the tables its models read point by point (current and reactive power limits,
+  the plant controller's, the decoupling protections'): the Dynawo name of the
+  table alone in a cell (`TableIqMaxUwt`), the axis titles below it, then one
+  point per row, the abscissa's label and value and the ordinate's label and
+  value. Point *i* becomes `<table>i1` and `<table>i2` of every variant of the
+  block, so the selected one writes it; a point left empty is left out, and
+  Dynawo keeps its default.
 
 ## What it produces
 
@@ -161,11 +169,7 @@ transformer) → `TransformerRatioTapChanger`.
   per unit, and every unit in `Zone3` with its share of the plant — but an
   `M` workbook is refused: the Excel cannot yet say *which model* each
   duplicated `Zone1<x>` is (RTE questions Q5), and `parse.resolve_unit_models`
-  is where that answer will be read. Also the IEC decoupling
-  protections' LVRT/HVRT curves (`Tablet*wtfilt*`, 25 points × 2 values per
-  model): they are rows like any other, but the template offers only the four
-  thresholds, so the curves take Dynawo's placeholder defaults until it carries
-  them.
+  is where that answer will be read.
 - **No parameter validation.** RTE ships a complete template; the tool does not
   check values or completeness. Empty control cells are omitted (Dynawo applies
   its default); the tool only reports which submodels are present/missing.
@@ -186,13 +190,8 @@ The performance examples carry no reference curves, so their workbooks keep the
 template's placeholder in the results-folder cell.
 
 Every example under `examples/` is the output of its own workbook, so
-regenerating one reproduces it file for file — which is also how the golden test
-keeps the two in step. The exception is the two `IEC*2020WithProtections` cases:
-their PAR keeps, under a `Parameters not available in the Excel template`
-heading, the decoupling protection curves the template has no rows for.
-Regenerating them drops those rows, and the protection then trips on Dynawo's
-placeholder curves (0.33 s instead of 2 s), disconnecting the turbine in tests
-that used to ride through.
+regenerating one reproduces it file for file. The two `IEC*2020WithProtections` cases carry their
+decoupling protection curves in the protection tables of their workbook.
 
 ## Tests
 
