@@ -432,6 +432,17 @@ class GFMParameters(Parameters):
             return 0.0
         return (x_eff / (x_eff + x_grid)) * self.get_delta_phase()
 
+    def get_nominal_frequency(self) -> float:
+        """
+        Retrieves the nominal frequency of the producer, the base of the frequencies in pu.
+
+        Returns
+        -------
+        float
+            The nominal frequency in Hz.
+        """
+        return self._producer.get_nominal_frequency()
+
     def get_change_frequency(self) -> float:
         """
         Retrieves the Rate of Change of Frequency (RoCoF).
@@ -441,7 +452,7 @@ class GFMParameters(Parameters):
         float
             The RoCoF value, in pu of the nominal frequency per second.
         """
-        return self.__get_float_value("RoCoF", 0.0) / self._producer.get_nominal_frequency()
+        return self.__get_float_value("RoCoF", 0.0) / self.get_nominal_frequency()
 
     def get_change_frequency_duration(self) -> float:
         """
@@ -463,7 +474,7 @@ class GFMParameters(Parameters):
         float
             The initial frequency, in pu of the nominal frequency.
         """
-        return self.__get_float_value("Frequency0", 0.0) / self._producer.get_nominal_frequency()
+        return self.__get_float_value("Frequency0", 0.0) / self.get_nominal_frequency()
 
     def get_t_expo_decrease(self) -> float:
         """
