@@ -1055,3 +1055,127 @@ class TestBuildRunInputs:
         curves.get_producer().get_zone.return_value = zone
 
         assert curves._DynawoCurves__build_run_inputs().zone == zone
+
+
+# ---------------------------------------------------------------------------
+# __simulate_fault_search_step
+# ---------------------------------------------------------------------------
+
+_JOBS = """<?xml version="1.0" encoding="UTF-8"?>
+<dyn:jobs xmlns:dyn="http://www.rte-france.com/dynawo">
+  <dyn:job name="TSOModel">
+    <dyn:solver lib="dynawo_SolverIDA" parFile="solvers.par" parId="IDA"/>
+    <dyn:simulation startTime="0.0" stopTime="100.0" precision="1e-06"/>
+  </dyn:job>
+</dyn:jobs>
+"""
+
+
+def _jobs_attributes(working_dir: Path) -> tuple[dict, dict]:
+    from lxml import etree
+
+    root = etree.parse(working_dir / "TSOModel.jobs").getroot()
+    ns = {"dyn": "http://www.rte-france.com/dynawo"}
+    solver = root.find(".//dyn:solver", namespaces=ns)
+    simulation = root.find(".//dyn:simulation", namespaces=ns)
+    return dict(solver.attrib), dict(simulation.attrib)
+
+
+class TestFaultSearchStep:
+    def _step(self, curves, working_dir, stop_time):
+        seen = {}
+
+        def simulate(*args, **kwargs):
+            seen["solver"] = curves._solver.solver_id
+            seen["jobs"] = _jobs_attributes(working_dir)
+            seen["kwargs"] = kwargs
+            return "outcome"
+
+        curves._DynawoCurves__simulate = MagicMock(side_effect=simulate)
+        with patch(f"{_MODULE}.config") as mc, patch(f"{_MODULE}.parameter_checks"):
+            mc.get_value.side_effect = _cfg_get_value
+            mc.get_float.side_effect = _cfg_get_float
+            outcome = curves._DynawoCurves__simulate_fault_search_step(
+                None,
+                working_dir,
+                Path("outputs"),
+                "BM",
+                "OC",
+                disable_retry_logs=True,
+                stop_time=stop_time,
+            )
+        return outcome, seen
+
+    def test_a_step_runs_on_sim_and_stops_when_it_is_told(self, tmp_path):
+        curves, _, _ = _make_real_curves()
+        (tmp_path / "TSOModel.jobs").write_text(_JOBS)
+
+        outcome, seen = self._step(curves, tmp_path, stop_time=3.15)
+
+        assert outcome == "outcome"
+        assert seen["solver"] == "SIM"
+        solver, simulation = seen["jobs"]
+        assert solver["lib"] == "dynawo_SolverSIM"
+        assert solver["parId"] == "SIM"
+        assert float(simulation["stopTime"]) == pytest.approx(3.15)
+        assert seen["kwargs"] == {"disable_retry_logs": True}
+
+    def test_a_step_follows_the_solver_the_configuration_gives(self, tmp_path):
+        curves, _, _ = _make_real_curves()
+        (tmp_path / "TSOModel.jobs").write_text(_JOBS)
+        values = dict(_CONFIG_VALUES) | {("Dynawo", "fault_search_solver_lib"): "dynawo_SolverIDA"}
+
+        with patch.dict(_CONFIG_VALUES, values):
+            _, seen = self._step(curves, tmp_path, stop_time=3.15)
+
+        assert seen["solver"] == "IDA"
+        assert seen["jobs"][0]["lib"] == "dynawo_SolverIDA"
+
+    @pytest.mark.parametrize(
+        "start, duration, after, stop",
+        [
+            (1.0, 0.15, None, 3.15),
+            (1.0, 0.15, 5.0, 6.15),
+            (99.5, 0.15, None, 100.0),
+            (30.0, 9999.0, None, 32.0),
+        ],
+        ids=["two-seconds-after-clearing", "configured", "within-the-simulation", "permanent"],
+    )
+    def test_a_search_stops_its_steps_shortly_after_the_fault(self, start, duration, after, stop):
+        curves, _, _ = _make_real_curves()
+        values = dict(_CONFIG_VALUES)
+        if after is not None:
+            values[("Dynawo", "fault_search_time_after_clearing")] = after
+
+        with patch.dict(_CONFIG_VALUES, values), patch(f"{_MODULE}.config") as mc:
+            mc.get_float.side_effect = _cfg_get_float
+            stop_time = curves._DynawoCurves__fault_search_stop_time(start, duration)
+
+        assert stop_time == pytest.approx(stop)
+
+    @pytest.mark.parametrize("fault", ["hiz_fault", "bolted_fault"])
+    @patch(f"{_MODULE}.measure_voltage_dip")
+    @patch(f"{_MODULE}.config")
+    def test_the_searches_simulate_steps_that_stop_after_the_fault(
+        self, mc, mock_mvd, fault, tmp_path
+    ):
+        mc.get_value.side_effect = _cfg_get_value
+        mc.get_float.side_effect = _cfg_get_float
+        mc.get_boolean.side_effect = lambda s, k, d=False: k == fault
+
+        curves, _, be, outcome, _ = TestObtainSimulatedCurve()._prepare(**{fault: True})
+        curves._DynawoCurves__simulate = MagicMock(return_value=outcome)
+        curves._DynawoCurves__prepare_oc_validation = MagicMock(
+            return_value=(Path("/out"), Path("/jobs"))
+        )
+        curves._DynawoCurves__reset_solver = MagicMock()
+
+        with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
+            curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
+
+        search = be.find_hiz_fault if fault == "hiz_fault" else be.find_bolted_fault
+        step = search.call_args.kwargs["simulate_fn"]
+        assert step.func == curves._DynawoCurves__simulate_fault_search_step
+        assert step.keywords == {"stop_time": pytest.approx(3.15)}
+        assert search.call_args.kwargs["reset_solver_fn"] is curves._DynawoCurves__reset_solver
+        curves._DynawoCurves__simulate.assert_called_once()

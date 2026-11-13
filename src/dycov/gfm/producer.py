@@ -7,7 +7,6 @@
 #     demiguelm@aia.es
 
 import configparser
-import re
 from pathlib import Path
 
 from dycov.model.producer import Producer
@@ -26,22 +25,23 @@ class GFMProducer(Producer):
             The file path to the producer's INI configuration.
         """
         super().__init__(None, producer_ini)
+        self._producer_ini = producer_ini
         self._config = self.__read_producer_ini()
 
     def get_producer_path(self) -> Path:
         """
-        Retrieves the absolute path to the producer's INI file.
+        Retrieves the directory that holds the producer's INI file.
 
         Returns
         -------
         Path
-            The absolute path to the INI file.
+            The directory of the INI file.
         """
         return self._producer_ini_path
 
     def get_filenames(self, zone: int = 0) -> list[str]:
         """
-        Returns a list of INI filenames found in the producer's directory.
+        Returns the name of the producer, the stem of its INI file.
 
         Parameters
         ----------
@@ -51,17 +51,9 @@ class GFMProducer(Producer):
         Returns
         -------
         list[str]
-            A sorted list of configuration filename stems.
+            The stem of the producer's INI file, alone.
         """
-        # Case-insensitive regex to capture both .ini and .INI extensions
-        pattern = re.compile(r".*\.[iI][nN][iI]")
-        return sorted(
-            [
-                file.stem
-                for file in self._producer_ini_path.resolve().iterdir()
-                if pattern.match(str(file))
-            ]
-        )
+        return [self._producer_ini.stem]
 
     def get_sim_type_str(self) -> str:
         """
@@ -100,7 +92,7 @@ class GFMProducer(Producer):
 
     def __read_producer_ini(self) -> configparser.ConfigParser:
         """
-        Locates and parses the producer's INI configuration file.
+        Parses the producer's INI configuration file.
 
         Returns
         -------
@@ -110,20 +102,13 @@ class GFMProducer(Producer):
         Raises
         ------
         FileNotFoundError
-            If the INI file cannot be located in the directory.
+            If the INI file does not exist.
         """
-
-        def __get_producer_ini(path: Path, pattern: re.Pattern) -> Path:
-            for file in path.resolve().iterdir():
-                if pattern.match(str(file)):
-                    return path.resolve() / file
-            raise FileNotFoundError("Producer INI file not found.")
-
-        pattern_ini = re.compile(r".*\.[iI][nN][iI]")
-        producer_ini_path = __get_producer_ini(self.get_producer_path(), pattern_ini)
+        if not self._producer_ini.is_file():
+            raise FileNotFoundError(f"Producer INI file not found: {self._producer_ini}")
 
         # Allow inline comments starting with '#' in the INI file
         producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
-        producer_config.read(producer_ini_path)
+        producer_config.read(self._producer_ini)
 
         return producer_config

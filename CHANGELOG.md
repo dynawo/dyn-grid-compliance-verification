@@ -23,6 +23,15 @@ templates of 1.2.1 said 1.2.1 and those of 1.3.0 said 1.0.0, so every workbook m
 warned about. One made on the templates of 1.3.0 only needs that cell set to 1.3.0; an older one
 has its data copied into `workbooks/Producer_IEC.xlsx` or `workbooks/Producer_WECC.xlsx` (#701).
 
+### The fault searches run on the simplified solver
+
+The searches for the impedance of the high-impedance and bolted faults run each of their
+simulations on the SIM solver and stop it 2 s after the fault is cleared, or 2 s after a permanent
+fault starts; a simulation that fails is retried as any other. The test is then simulated as
+before. The impedance they settle on may differ slightly from the one they found on IDA.
+`fault_search_solver_lib` and `fault_search_time_after_clearing`, in `[Dynawo]`, change both
+(#644).
+
 ### The IEC workbook carries the tables of the models
 
 The IEC template, now version 1.4.0, lays out the tables its models read point by point: the
@@ -39,6 +48,8 @@ read, with a warning, and its protection curves written as before (#394).
   its steps of b from `HTB1_reactance_b_PPM` and the powers between them from `HTB1_p_max_PPM`,
   so a configuration that changed them through `HTB1_reactance_b_low`, `_b_high` or
   `HTB1_p_max` now changes those two keys instead (#744).
+- `generate_gfm_envelopes` reads the producer file `-i` names and no other INI of its folder, and
+  stops when that file does not exist (#766).
 
 ## 1.3.0 — 2026-10-29
 

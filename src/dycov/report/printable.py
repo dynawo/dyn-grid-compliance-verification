@@ -9,6 +9,24 @@
 #
 
 
+NOT_CALCULATED_NOTE = (
+    "Not Calculated because the reference value is exactly zero or very close to zero."
+)
+
+
+def table_note(text: str, defined: bool) -> str:
+    """The note of a table row: its text where the table first needs it, its mark afterwards.
+
+    A table that carries a note sits in a minipage, which numbers its notes on a counter of its
+    own (a, b…): \\footnotemark[\\value{footnote}] would print the document's footnote number,
+    a note that does not exist. Printing the mark of the last note keeps the one its text
+    carries, and makes no link of its own, which would point to no note either.
+    """
+    if defined:
+        return r"\csname @makefnmark\endcsname"
+    return f"\\footnote{{{text}}}"
+
+
 def format_time_error(
     results: dict,
     key: str,
@@ -35,10 +53,8 @@ def format_time_error(
     default_value: str
         Default return value if the key does not exist.
     footnote_defined: bool
-        True if the "not calculated" footnote has already been defined earlier in the
-        same table; the note is then reused via \\footnotemark[\\value{footnote}]
-        instead of being repeated, since \\footnotemark resolves in a single
-        compilation pass, unlike \\ref.
+        True if the "not calculated" note has already been defined earlier in the same
+        table, which then repeats its mark instead of its text.
 
     Returns
     -------
@@ -47,13 +63,7 @@ def format_time_error(
         footnote_defined across successive calls in the same table.
     """
     if results[key] == "-":
-        if not footnote_defined:
-            note = (
-                "\\footnote{Not Calculated because the reference value "
-                "is exactly zero or very close to zero.}"
-            )
-        else:
-            note = "\\footnotemark[\\value{footnote}]"
+        note = table_note(NOT_CALCULATED_NOTE, footnote_defined)
         return f"{note}{results[key]}".strip(), True
     else:
         return (
