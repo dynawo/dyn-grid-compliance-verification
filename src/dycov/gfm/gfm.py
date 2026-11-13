@@ -21,9 +21,6 @@ from dycov.logging import dycov_logging
 
 LOGGER = dycov_logging.get_logger(__name__)
 
-# The figures turn frequencies from pu to Hz on a 50 Hz base, whatever the nominal frequency.
-_PLOT_FREQUENCY_BASE_HZ = 50
-
 
 class _PlotParameter(NamedTuple):
     """A line of the parameter box of the figures."""
@@ -56,12 +53,12 @@ _PLOT_PARAMETERS = (
     _PlotParameter(
         "Frequency0",
         "f0 = {:.3f} Hz",
-        lambda p, c: p.get_initial_frequency() * _PLOT_FREQUENCY_BASE_HZ,
+        lambda p, c: p.get_initial_frequency() * p.get_nominal_frequency(),
     ),
     _PlotParameter(
         "RoCoF",
         "RoCoF = {:.3f} Hz/s",
-        lambda p, c: p.get_change_frequency() * _PLOT_FREQUENCY_BASE_HZ,
+        lambda p, c: p.get_change_frequency() * p.get_nominal_frequency(),
     ),
     _PlotParameter(
         "RoCoFDuration",
