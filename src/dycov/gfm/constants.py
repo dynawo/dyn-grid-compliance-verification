@@ -23,7 +23,6 @@ UNDERDAMPED_MIN_DELAY_S = 0.01
 UNDERDAMPED_MAX_DELAY_S = 0.01
 
 # Limits and modifiers for SCRJump
-SCRJUMP_INITIAL_LIMITING_S = 0.1
 SCRJUMP_MODIFY_ENVELOPE_S = 0.03
 
 # Time Tunnel Calculation Parameters
