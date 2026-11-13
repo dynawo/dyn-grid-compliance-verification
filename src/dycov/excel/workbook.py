@@ -40,7 +40,7 @@ _INFO_SHEET = names.normalize(names.sheet("info"))
 
 # The template each standard's workbook follows, named after the DyCoV release that changed it
 # last: it changes whenever the template does, so a workbook written on an older one is told.
-TEMPLATE_VERSIONS = {"IEC": "1.3.0", "WECC": "1.3.0"}
+TEMPLATE_VERSIONS = {"IEC": "1.4.0", "WECC": "1.3.0"}
 
 # Choices in the configuration sheet that mean "no block selected".
 _NO_BLOCK = names.markers("no_block")
@@ -101,6 +101,25 @@ class Variant:
     sheet: str
     table: str
     parameters: list[Parameter] = field(default_factory=list)
+
+
+@dataclass
+class Table:
+    """A table of the model laid out in a control sheet, under the Dynawo name of its parameters.
+
+    Point *i* is ``{name}{i}1`` (abscissa) and ``{name}{i}2`` (ordinate), as Dynawo names them.
+    """
+
+    name: str
+    title: str | None
+    col: int
+    first_row: int
+    last_row: int
+    points: list[tuple[str | None, str | None]] = field(default_factory=list)
+
+    def covers(self, row: int, col: int) -> bool:
+        """Whether the cell belongs to the table: its title, name, axis titles or points."""
+        return self.first_row <= row <= self.last_row and self.col <= col <= self.col + 3
 
 
 @dataclass
@@ -279,6 +298,7 @@ def _parse_sheet(sheet_name: str, grid: Grid) -> list[Variant]:
     base_columns = _find_extra_columns(grid, header_row, names.anchors("base_unit"))
     comment_columns = _find_extra_columns(grid, header_row, names.anchors("comment"))
     table_labels = _find_table_labels(grid, header_row - 2)
+    tables = _find_tables(grid, header_row)
 
     variants: list[Variant] = []
     for param_col in sorted(column_groups):
@@ -293,9 +313,81 @@ def _parse_sheet(sheet_name: str, grid: Grid) -> list[Variant]:
             sheet=sheet_name,
             table=_label_for_column(table_labels, param_col) or sheet_name,
         )
-        variant.parameters = _parse_parameters(grid, header_row, columns)
+        variant.parameters = _parse_parameters(grid, header_row, columns, tables)
+        variant.parameters += _table_parameters(tables, table_labels, param_col)
         variants.append(variant)
     return variants
+
+
+def _names_a_table(grid: Grid, row: int, col: int) -> bool:
+    """Whether the cell names a table of the model: a single word starting with the table anchor,
+    standing alone where a parameter would have its value and type beside it, and whose first
+    point, below the axis titles, labels both coordinates."""
+    value = _cell(grid, row, col)
+    if not isinstance(value, str) or len(value.split()) != 1:
+        return False
+    return (
+        names.normalize(value).startswith(names.anchor("table"))
+        and not any(_cell(grid, row, col + offset) for offset in (1, 2, 3))
+        and bool(_cell(grid, row + 2, col))
+        and bool(_cell(grid, row + 2, col + 2))
+    )
+
+
+def _find_tables(grid: Grid, header_row: int) -> list[Table]:
+    """Every table of the model the sheet lays out below its parameter header, in sheet order."""
+    return [
+        _read_table(grid, row_idx, col, value.strip())
+        for row_idx in range(header_row + 1, len(grid))
+        for col, value in enumerate(grid[row_idx])
+        if _names_a_table(grid, row_idx, col)
+    ]
+
+
+def _read_table(grid: Grid, name_row: int, col: int, name: str) -> Table:
+    """The table named at (*name_row*, *col*): its title above the name, its axis titles below
+    it, then a point per row, the abscissa label in *col* and its value beside it, the ordinate
+    label and its value in the next two columns, up to the first row without an abscissa."""
+    points = []
+    row = name_row + 2
+    while _cell(grid, row, col):
+        points.append((_cell(grid, row, col + 1), _cell(grid, row, col + 3)))
+        row += 1
+    return Table(
+        name=name,
+        title=_cell(grid, name_row - 1, col),
+        col=col,
+        first_row=name_row - 1,
+        last_row=row - 1,
+        points=points,
+    )
+
+
+def _table_parameters(
+    tables: list[Table], labels: list[tuple[int, str]], param_col: int
+) -> list[Parameter]:
+    """The points of the tables of *param_col*'s block, as parameters of each of its variants:
+    a table serves whichever variant the block selects, and a point left empty is left out."""
+    block_start, block_end = _block_bounds(labels, param_col)
+    return [
+        parameter
+        for table in tables
+        if block_start <= table.col < block_end
+        for parameter in _point_parameters(table)
+    ]
+
+
+def _point_parameters(table: Table) -> list[Parameter]:
+    """The valued coordinates of *table*, the first one carrying its title."""
+    parameters = [
+        Parameter(name=f"{table.name}{index}{axis}", type="double", value=value)
+        for index, point in enumerate(table.points, start=1)
+        for axis, value in enumerate(point, start=1)
+        if value and value != _NOT_APPLICABLE
+    ]
+    if parameters:
+        parameters[0].comment = table.title
+    return parameters
 
 
 _PARAM_HEADER_PREFIXES = names.anchors("param")
@@ -434,12 +526,15 @@ def _extra_for_column(
     return None
 
 
-def _parse_parameters(grid: Grid, header_row: int, columns: Columns) -> list[Parameter]:
+def _parse_parameters(
+    grid: Grid, header_row: int, columns: Columns, tables: tuple[Table, ...] | list[Table] = ()
+) -> list[Parameter]:
     """Parse the data rows of a single variant column group.
 
     A row is valid for this variant when both ``Parameter`` and ``Type`` are
     non-empty. Empty rows (for this variant) are skipped without ending the
-    table, so sparse parallel variants are handled correctly.
+    table, so sparse parallel variants are handled correctly, and so are the rows
+    of the *tables* laid out in its column, whose points are not parameters of their own.
     """
 
     def annotation(row: int, col: int | None) -> str | None:
@@ -451,6 +546,8 @@ def _parse_parameters(grid: Grid, header_row: int, columns: Columns) -> list[Par
         name = _cell(grid, row, columns.param)
         ptype = _cell(grid, row, columns.type)
         if not name or not ptype or name == _NOT_APPLICABLE:
+            continue
+        if any(table.covers(row, columns.param) for table in tables):
             continue
         value = _cell(grid, row, columns.value)
         if value == _NOT_APPLICABLE:

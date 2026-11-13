@@ -59,6 +59,7 @@
     <par type="DOUBLE" name="WT_UpquMaxPu" value="1.1"/>
     <par type="DOUBLE" name="WT_tUFiltcl" value="0.01"/>
     <!-- QLimiter_2015 -->
+    <!-- Si QlConst = False, remplir les tables de limitations ci-dessous. -->
     <par type="BOOL" name="WT_QlConst" value="true"/>
     <!-- Base unit: SnZone1, convention g&#233;n&#233;rateur -->
     <par type="DOUBLE" name="WT_QMaxPu" value="0.8"/>
