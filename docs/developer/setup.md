@@ -59,7 +59,8 @@ sudo apt install \
 
 ### 2.3 LaTeX
 
-DyCoV generates PDF reports, which are often needed during development.
+DyCoV generates PDF reports, which are often needed during development. The PDF
+manuals (`make latexpdf`) are set in the TeX Gyre fonts of `tex-gyre`.
 
 ```bash
 sudo apt install \
@@ -69,6 +70,7 @@ sudo apt install \
   texlive-latex-extra \
   texlive-science \
   texlive-lang-french \
+  tex-gyre \
   latexmk \
   dvisvgm
 ```
