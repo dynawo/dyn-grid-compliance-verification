@@ -14,11 +14,16 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
+
+import dycov
 
 # Assuming the classes are in the same project structure
 from dycov.configuration.cfg import config
 from dycov.core.parameters import Parameters
+from dycov.gfm import gfm
 from dycov.gfm.calculators.scr_jump import SCRJump
+from dycov.gfm.gfm import GridForming
 from dycov.gfm.parameters import GFMParameters
 from dycov.gfm.producer import GFMProducer
 
@@ -92,7 +97,7 @@ class ProducerHelper(GFMProducer):
     def __init__(self, config_str: str):
         self._config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         self._config.read_string(config_str)
-        self._f_nom = 1.0
+        self._f_nom = 50.0
 
 
 class ParametersHelper(GFMParameters):
@@ -123,6 +128,44 @@ def test_scr_jump_initialization():
     scr_jump = SCRJump(gfm_params=test_params)
 
     assert scr_jump._final_scr == test_params.get_final_scr()
+
+
+class _PowerLimits:
+    """GFM parameters with the given power limits and 1.0 for anything else."""
+
+    def __init__(self, p_min: float, p_max: float):
+        self._p_min = p_min
+        self._p_max = p_max
+
+    def is_emt(self) -> bool:
+        return False
+
+    def get_min_active_power(self) -> float:
+        return self._p_min
+
+    def get_max_active_power(self) -> float:
+        return self._p_max
+
+    def __getattr__(self, name):
+        return lambda *args, **kwargs: 1.0
+
+
+@pytest.mark.parametrize(
+    "p_min, p_max, envelope_value, held_value, expected_in_window",
+    [(0.1, 1.0, 0.5, 0.05, 0.3), (-1.0, -0.1, -0.5, -0.05, -0.3)],
+)
+def test_the_hold_leaves_the_envelope_outside_its_window_whatever_the_power_limits(
+    p_min, p_max, envelope_value, held_value, expected_in_window
+):
+    scr_jump = SCRJump(gfm_params=_PowerLimits(p_min, p_max))
+    time = np.linspace(-0.1, 0.2, 31)
+    envelope = np.full_like(time, envelope_value)
+
+    held = scr_jump._modify_envelope(envelope, np.full_like(time, held_value), time, 0.0)
+
+    in_window = (time >= 0.0) & (time <= 0.03)
+    assert np.all(held[~in_window] == envelope_value)
+    assert held[in_window] == pytest.approx(np.full(in_window.sum(), expected_in_window))
 
 
 def test_scr_jump_overdamped_envelopes_event_at_0s():
@@ -208,3 +251,126 @@ def test_scr_jump_s_scrup1_oc1():
     assert math.isclose(
         max(np.abs(csv_data[f"{magnitude} upper (pu)"] - p_up)), 0, abs_tol=epsilon
     )
+
+
+_PRODUCER_LIMITS = """
+[DEFAULT]
+p_max_injection = 110
+p_min_injection = -110
+u_nom = 225
+q_max = 40
+q_min = -40
+"""
+
+_SINGLE_SET_PRODUCER = (
+    _PRODUCER_LIMITS
+    + """
+[GFM Parameters]
+Snom = 90.0
+D = 152.0
+H = 2.0
+Xeff = 0.27
+"""
+)
+
+_HYBRID_PRODUCER = (
+    _PRODUCER_LIMITS
+    + """
+[GFM Parameters]
+Snom = 90.0
+D_Overdamped = 152
+D_Underdamped = 95
+H_Overdamped = 2
+H_Underdamped = 5
+Xeff = 0.27
+"""
+)
+
+
+@pytest.fixture
+def scr_jump_pcs():
+    # The calculator tests above leave their [DEFAULT] values in this layer, and a PCS loaded
+    # afterwards would inherit them.
+    layer_defaults = config._pcs_default_config.defaults()
+    leftover_defaults = dict(layer_defaults)
+    layer_defaults.clear()
+    pcs_path = Path(dycov.__file__).parent / "templates/PCS/gfm/PCS_RTE-IGFM3/PCSDescription.ini"
+    config.load_pcs_config(pcs_path)
+    yield
+    config.load_pcs_config(None)
+    layer_defaults.update(leftover_defaults)
+
+
+def _figure(
+    tmp_path, monkeypatch, producer: str, benchmark: str = "S_SCRdown1", operating_condition="OC1"
+) -> dict:
+    producer_ini = tmp_path / "Producer.ini"
+    producer_ini.write_text(producer)
+    parameters = GFMParameters(
+        producer_ini=producer_ini,
+        selected_pcs="PCS_RTE-IGFM3",
+        output_dir=tmp_path / "Results",
+        only_dtr=True,
+        emt=False,
+    )
+    figures = []
+    monkeypatch.setattr(gfm, "plot_results", lambda **kwargs: figures.append(kwargs))
+    try:
+        GridForming().generate(
+            tmp_path, parameters, "PCS_RTE-IGFM3", benchmark, operating_condition
+        )
+    finally:
+        parameters.cleanup_working_dir(preserve_on_debug=False)
+    (figure,) = figures
+    return figure
+
+
+def _figure_parameters(tmp_path, monkeypatch, producer: str) -> list[str]:
+    return _figure(tmp_path, monkeypatch, producer)["params_list"]
+
+
+def test_figures_show_the_damping_ratio_of_the_producer(scr_jump_pcs, tmp_path, monkeypatch):
+    figure = _figure_parameters(tmp_path, monkeypatch, _SINGLE_SET_PRODUCER)
+
+    assert "D = 152.000" in figure
+    assert "H = 2.000 s" in figure
+    assert "Epsilon = 1.882" in figure
+
+
+def test_hybrid_figures_show_no_value_of_a_single_set(scr_jump_pcs, tmp_path, monkeypatch):
+    figure = _figure_parameters(tmp_path, monkeypatch, _HYBRID_PRODUCER)
+
+    assert "Xeff = 0.270 pu" in figure
+    assert not [line for line in figure if line.startswith(("D =", "H =", "Epsilon ="))]
+
+
+def test_a_single_set_disclaimer_has_no_heading(scr_jump_pcs, tmp_path, monkeypatch):
+    figure = _figure(tmp_path, monkeypatch, _SINGLE_SET_PRODUCER, "S_SCRup1", "OC2")
+
+    assert figure["show_disclaimer"]
+    assert figure["disclaimer_message"].startswith("Inconsistent damping behavior")
+
+
+def test_a_hybrid_disclaimer_names_the_set_that_damps_inconsistently(
+    scr_jump_pcs, tmp_path, monkeypatch
+):
+    figure = _figure(tmp_path, monkeypatch, _HYBRID_PRODUCER, "S_SCRup1", "OC2")
+
+    assert figure["show_disclaimer"]
+    assert figure["disclaimer_message"].startswith("Overdamped set:\nInconsistent damping")
+    assert "Underdamped set:" not in figure["disclaimer_message"]
+
+
+def test_a_hybrid_run_whose_sets_are_consistent_has_no_disclaimer(
+    scr_jump_pcs, tmp_path, monkeypatch
+):
+    figure = _figure(tmp_path, monkeypatch, _HYBRID_PRODUCER)
+
+    assert not figure["show_disclaimer"]
+    assert figure["disclaimer_message"] is None
+
+
+def test_a_hybrid_disclaimer_heads_the_message_of_each_set():
+    assert gfm._hybrid_disclaimer("A", "B") == "Overdamped set:\nA\nUnderdamped set:\nB"
+    assert gfm._hybrid_disclaimer(None, "B") == "Underdamped set:\nB"
+    assert gfm._hybrid_disclaimer(None, None) is None
