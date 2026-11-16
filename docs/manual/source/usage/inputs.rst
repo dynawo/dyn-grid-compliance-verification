@@ -151,6 +151,10 @@ CSV output alongside the merged envelope:
    Snom = 110.0
    save_all_envelopes = False
 
+The command checks these constants before generating anything: every ``H``
+and ``Xeff`` must be a finite number above zero, and every ``D`` a finite
+number not below zero. Otherwise it stops and names each value that fails.
+
 .. seealso::
    :ref:`GFM Envelope Generation <gfm_envelopes_cmd>` for a description of
    supported disturbance cases and output format.

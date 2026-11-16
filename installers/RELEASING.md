@@ -115,7 +115,8 @@ including the Docker build — still runs.
 **Requirements on the build machine:** `docker`, `zip`, and `uv` (used to create the
 throw-away virtualenv for the manuals), plus a LaTeX toolchain for `make latexpdf`,
 `dvisvgm` included: the manual draws its mathematics into the pages at build time so
-that it reads the same without a network.
+that it reads the same without a network. The manual is set in the TeX Gyre fonts of
+`tex-gyre`.
 
 **What the script does, step by step:**
 

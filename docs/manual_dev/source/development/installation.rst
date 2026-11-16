@@ -32,14 +32,15 @@ Build tools:
    sudo apt install git curl unzip make
 
 LaTeX — DyCoV generates PDF compliance reports, so LaTeX must be available
-even during development if you want to inspect the full output:
+even during development if you want to inspect the full output. The PDF manuals
+(``make latexpdf``) are set in the TeX Gyre fonts of ``tex-gyre``:
 
 .. code-block:: console
 
    sudo apt install \
      texlive-base texlive-latex-base texlive-latex-extra \
      texlive-latex-recommended texlive-science texlive-lang-french \
-     latexmk dvisvgm
+     tex-gyre latexmk dvisvgm
 
 Python — DyCoV runs on Python 3.13 and Python 3.14:
 

@@ -161,6 +161,24 @@ Every concrete calculator must implement two methods:
 Key helper methods
 ^^^^^^^^^^^^^^^^^^^
 
+``_check_time_array()``
+    Rejects a time vector the envelopes cannot be calculated on: one that is
+    not a one-dimensional array of floats or signed integers, has fewer than two
+    points, or is not finite, strictly increasing and evenly spaced, as the
+    delays of the calculators assume. The amplitude step, RoCoF and SCR jump calculators call
+    it before anything else.
+
+``_natural_frequency()``
+    Computes the natural frequency of the swing equation of the unit on the
+    grid, from which a calculator derives the damping ratio of each set of
+    D and H.
+
+``_delay_by_emt()`` and ``_apply_delay()``
+    Shift a signal in time, holding a constant value meanwhile: the first one
+    by the EMT delay, holding the signal's initial value, which is how the
+    amplitude step and RoCoF calculators turn RMS envelopes into EMT ones.
+    The other calculators call ``_apply_delay()`` with values of their own.
+
 ``_calculate_epsilon_initial_check()``
     Computes the **damping ratio** :math:`\varepsilon` to determine whether
     the system response is overdamped (:math:`\varepsilon \ge 1`) or
@@ -173,9 +191,9 @@ Key helper methods
     response.
 
 ``_limit_power_envelopes()``
-    Applies final operational limits (``p_min_injection``, ``p_max_injection``)
-    to the computed envelopes, ensuring the result stays within the unit's
-    physical constraints.
+    Turns the computed envelopes into powers and clips one of them to the
+    unit's operational limits (``p_min_injection``, ``p_max_injection``) and the
+    other to the MOIS limits (``PminMOISTunnel``, ``PmaxMOISTunnel``).
 
 Concrete calculator pattern
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -185,8 +203,9 @@ Each concrete calculator follows the same internal structure:
 1. **Initialization** — stores event-specific parameters.
 2. **Main calculation** (``calculate_envelopes``) — orchestrates the
    computation for nominal parameters and their variations.
-3. **Damping-dependent branching** — calls either ``_get_overdamped_delta_p``
-   or ``_get_underdamped_delta_p`` depending on :math:`\varepsilon`.
+3. **Damping-dependent branching** — ``_calculate_delta_p_for_damping``
+   takes the overdamped or the underdamped solution according to the damping
+   ratio :math:`\varepsilon` of the set of D and H.
 4. **Analytical solution** — the ``_get_*damped_delta_p_base`` methods
    implement the closed-form solutions to the second-order ODEs.
 
@@ -199,11 +218,11 @@ step-on ramp and subtracts the delayed response to a step-off ramp.
    # rocof.py -> _calculate_delta_p_for_damping
 
    # 1. Response to the step-on ramp, shifted to the start of the event.
-   p1, p_peak, t_response = calc_func(D, H, x_total, time_array - event_time)
+   p1, p_peak, t_response = calc_func(D, H, wn, epsilon, time_array - event_time)
    p1 = np.where(time_array < event_time, 0, p1)
 
    # 2. Response to the step-off ramp, shifted to the end of the ramp.
-   p2, _, _ = calc_func(D, H, x_total, time_array - rocof_stop_time)
+   p2, _, _ = calc_func(D, H, wn, epsilon, time_array - rocof_stop_time)
    p2 = np.where(time_array < rocof_stop_time, 0, p2)
 
    # 3. The final response is the superposition of both.

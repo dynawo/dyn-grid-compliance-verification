@@ -18,7 +18,8 @@ utilities under `tools/` live in `tests/tools/`. `tests/dtr/` holds the acceptan
 of the DTR, which read the catalogue the tool ships and not the code; its own README
 states how they are written. `tests/gfm/` runs `generate_gfm_envelopes` on a real case: it
 compares what it writes with the envelopes a stable release generated, and checks that it reads
-the producer file it is given and no other INI of its folder. Run everything with:
+the producer file it is given and no other INI of its folder, and that it refuses a D, H or Xeff
+the envelopes cannot be calculated with. Run everything with:
 
 ```bash
 ./dycov_venv/bin/pytest tests -q

@@ -71,14 +71,15 @@ Build tools:
    sudo apt install curl unzip make
 
 LaTeX (for PDF report generation; the installer asks for it, although a
-``--curves-only`` run builds no report and does not use it):
+``--curves-only`` run builds no report and does not use it). The installer also
+compiles the PDF manual, which is set in the TeX Gyre fonts of ``tex-gyre``:
 
 .. code-block:: console
 
    sudo apt install \
      texlive-base texlive-latex-base texlive-latex-extra \
      texlive-latex-recommended texlive-science texlive-lang-french \
-     latexmk dvisvgm
+     tex-gyre latexmk dvisvgm
 
 Python and uv — DyCoV runs on Python 3.13 and Python 3.14; the installer
 provisions 3.13 through ``uv``, so no system Python is needed:
