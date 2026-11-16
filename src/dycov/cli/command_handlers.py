@@ -56,7 +56,7 @@ def handle_generate_gfm_envelopes_command(
 ) -> int:
     """Handles the 'generate_gfm_envelopes' command.
 
-    Initializes and runs a envelope generation based on the provided arguments.
+    Generates the envelopes of the producer the arguments give.
 
     Parameters
     ----------
@@ -64,38 +64,33 @@ def handle_generate_gfm_envelopes_command(
         The argument parser instance.
     args: argparse.Namespace
         Parsed command-line arguments.
+
+    Returns
+    -------
+    int
+        0 on success, 1 on failure.
     """
-    dycov_logging.get_logger("CommandHandlers").info("Handling 'generate_gfm_envelopes' command.")
-    producer_ini: Optional[Path] = None
-    output_dir: Optional[Path] = None
-
-    emt = args.emt
-    if args.producer_ini:
-        producer_ini = Path(args.producer_ini)
-        output_dir = producer_ini.parent / "Results" if args.output is None else Path(args.output)
-
-    if not producer_ini:
-        dycov_logging.get_logger("CommandHandlers").error(
-            "Missing arguments for 'generate_gfm_envelopes' command."
-        )
+    logger = dycov_logging.get_logger("CommandHandlers")
+    logger.info("Handling 'generate_gfm_envelopes' command.")
+    if not args.producer_ini:
+        logger.error("Missing arguments for 'generate_gfm_envelopes' command.")
         parser.error(
             "Missing arguments. Try 'dycov generate_gfm_envelopes -h' for more information."
         )
-        return
 
+    producer_ini = Path(args.producer_ini)
+    output_dir = producer_ini.parent / "Results" if args.output is None else Path(args.output)
     result_code = _generate_gfm_envelopes(
         output_dir=output_dir,
         producer_ini=producer_ini,
-        emt=emt,
+        emt=args.emt,
         user_pcs=args.pcs,
         only_dtr=args.only_dtr,
         functional_tests=args.functional_tests,
     )
 
     if result_code == -1:
-        dycov_logging.get_logger("CommandHandlers").critical(
-            "Validation failed. Check logs for details."
-        )
+        logger.critical("Validation failed. Check logs for details.")
         parser.error(
             "It is not possible to find the producer model or the producer curves. Exiting."
         )
@@ -612,11 +607,37 @@ def _generate_gfm_envelopes(
     output_dir: Path,
     producer_ini: Path,
     emt: bool,
-    user_pcs: bool,
+    user_pcs: Optional[str],
     only_dtr: bool,
-    functional_tests: str = None,
-):
-    dycov_logging.get_logger("CommandHandlers").info("Running generation of envelopes")
+    functional_tests: Optional[str] = None,
+) -> int:
+    """Generates the envelopes and, if asked, compares them with a baseline.
+
+    Parameters
+    ----------
+    output_dir: Path
+        The directory the envelopes are written to.
+    producer_ini: Path
+        The producer's INI file.
+    emt: bool
+        Whether the envelopes are for EMT simulations.
+    user_pcs: str, optional
+        The only PCS to generate.
+    only_dtr: bool
+        Whether to leave out the PCS of the user's configuration directory.
+    functional_tests: str, optional
+        The directory of the envelopes to compare the generated ones with.
+
+    Returns
+    -------
+    int
+        0 on success, -1 when the producer is not a GFM one, 1 on any other failure. The
+        working directory is removed at the end, or kept when running in debug, except when
+        returning -1 or when the envelopes differ from the baseline, which leave it in place.
+    """
+    logger = dycov_logging.get_logger("CommandHandlers")
+    logger.info("Running generation of envelopes")
+    params = None
     try:
         params = GFMParameters(
             producer_ini=producer_ini,
@@ -625,10 +646,9 @@ def _generate_gfm_envelopes(
             only_dtr=only_dtr,
             emt=emt,
         )
-
-        # Determine if the parameters are valid.
         if not params.is_valid():
             return -1
+        params.check_producer_values()
 
         use_parallel = config.get_boolean("Global", "parallel_pcs_validation", True)
         num_processes = config.get_int("Global", "parallel_num_processes", 4)
@@ -636,60 +656,64 @@ def _generate_gfm_envelopes(
         gfm = GFMGeneration(params)
         start_time = time.time()
         gfm.generate(use_parallel=use_parallel, num_processes=num_processes)
-        end_time = time.time()
+        logger.info(f"Generation completed in {time.time() - start_time:.2f} seconds.")
 
-        dycov_logging.get_logger("CommandHandlers").info(
-            f"Generation completed in {end_time - start_time:.2f} seconds."
-        )
+        if functional_tests and not _passes_functional_tests(output_dir, functional_tests):
+            return 1
 
-        if functional_tests:
-            dycov_logging.get_logger("CommandHandlers").info(
-                f"Running Functional Tests comparing Output '{output_dir}' "
-                f"against Baseline '{functional_tests}'..."
-            )
-            try:
-                baseline_path = Path(functional_tests)
-                if not baseline_path.exists():
-                    dycov_logging.get_logger("CommandHandlers").error(
-                        f"Baseline directory not found: {baseline_path}"
-                    )
-                    return 1
-
-                success, error_msg = compare_csv_directories(
-                    baseline_dir=baseline_path, output_dir=output_dir
-                )
-                if success:
-                    dycov_logging.get_logger("CommandHandlers").info(
-                        "SUCCESS: All functional tests passed. Output matches baseline perfectly."
-                    )
-                    print(
-                        "\n✅ SUCCESS: All functional tests passed. "
-                        "Output matches baseline perfectly."
-                    )
-                else:
-                    dycov_logging.get_logger("CommandHandlers").error(
-                        f"Functional test failed: {error_msg}"
-                    )
-                    print(f"\n❌ FAILED: Functional tests found discrepancies.\n{error_msg}")
-                    return 1
-            except Exception as e:
-                dycov_logging.get_logger("CommandHandlers").exception(
-                    f"Unexpected error during functional testing: {e}"
-                )
-                return 1
-
-        # SUCCESS: always delete the temporary directory
         params.cleanup_working_dir()
         return 0
 
     except Exception as e:
-        if dycov_logging.get_logger("CommandHandlers").isEnabledFor(logging.DEBUG):
-            dycov_logging.get_logger("CommandHandlers").exception("Error during generation")
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.exception("Error during generation")
         else:
-            dycov_logging.get_logger("CommandHandlers").error(f"Error during generation: {e}")
-        # Keep artifacts in DEBUG for diagnostics; otherwise, delete
-        try:
-            params.cleanup_working_dir(preserve_on_debug=True)
-        except Exception:
-            pass
+            logger.error(f"Error during generation: {e}")
+        if params is not None:
+            try:
+                params.cleanup_working_dir(preserve_on_debug=True)
+            except Exception:
+                pass
         return 1
+
+
+def _passes_functional_tests(output_dir: Path, functional_tests: str) -> bool:
+    """Whether the envelopes generated match those of a baseline directory.
+
+    Parameters
+    ----------
+    output_dir: Path
+        The directory of the generated envelopes.
+    functional_tests: str
+        The baseline directory.
+
+    Returns
+    -------
+    bool
+        True if every CSV of the baseline is matched.
+    """
+    logger = dycov_logging.get_logger("CommandHandlers")
+    logger.info(
+        f"Running Functional Tests comparing Output '{output_dir}' "
+        f"against Baseline '{functional_tests}'..."
+    )
+    try:
+        baseline_path = Path(functional_tests)
+        if not baseline_path.exists():
+            logger.error(f"Baseline directory not found: {baseline_path}")
+            return False
+
+        success, error_msg = compare_csv_directories(
+            baseline_dir=baseline_path, output_dir=output_dir
+        )
+        if not success:
+            logger.error(f"Functional test failed: {error_msg}")
+            print(f"\n❌ FAILED: Functional tests found discrepancies.\n{error_msg}")
+            return False
+
+        logger.info("SUCCESS: All functional tests passed. Output matches baseline perfectly.")
+        print("\n✅ SUCCESS: All functional tests passed. Output matches baseline perfectly.")
+        return True
+    except Exception as e:
+        logger.exception(f"Unexpected error during functional testing: {e}")
+        return False

@@ -39,7 +39,5 @@ def get_calculator(name: str, gfm_params: GFMParameters) -> Optional[GFMCalculat
     Optional[GFMCalculator]
         An instance of the requested calculator, or None if not found.
     """
-
-    # Retrieve the class definition and instantiate if it exists in the registry
     calc_class = _CALCULATOR_REGISTRY.get(name)
     return calc_class(gfm_params=gfm_params) if calc_class else None
