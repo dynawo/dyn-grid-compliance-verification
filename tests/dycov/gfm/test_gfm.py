@@ -10,6 +10,7 @@
 """The envelopes of a test are generated from the parameters of the unit, or read back from where
 an envelope generation wrote them, and the producer curves are checked against them alike."""
 
+import configparser
 import json
 from pathlib import Path
 
@@ -318,3 +319,34 @@ def test_a_user_description_naming_the_old_scr_max_is_warned(tmp_path, caplog):
     finally:
         config.load_pcs_config(None)
     assert any("names SCRmax" in record.getMessage() for record in caplog.records)
+
+
+_SECTION = "GFMFigureTest"
+
+
+class _Producer(GFMProducer):
+    def __init__(self, f_nom: float):
+        self._config = configparser.ConfigParser()
+        self._f_nom = f_nom
+
+
+class _Parameters(GFMParameters):
+    def __init__(self, f_nom: float):
+        self._producer = _Producer(f_nom)
+        self._eval_sections = (_SECTION,)
+
+
+@pytest.fixture
+def rocof_test():
+    config._pcs_default_config.read_string(f"[{_SECTION}]\nFrequency0 = 49.5\nRoCoF = 0.5\n")
+    yield
+    config._pcs_default_config.remove_section(_SECTION)
+
+
+@pytest.mark.parametrize("f_nom", [50.0, 60.0])
+def test_figures_show_the_frequencies_of_the_pcs(rocof_test, f_nom):
+    lines = GridForming()._get_params_plot_info(
+        _Parameters(f_nom), ["Frequency0", "RoCoF"], calculator=None
+    )
+
+    assert lines == ["f0 = 49.500 Hz", "RoCoF = 0.500 Hz/s"]
