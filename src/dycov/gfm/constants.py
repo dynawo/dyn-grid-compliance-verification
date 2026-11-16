@@ -15,6 +15,9 @@ SIMULATION_END_TIME = 5.0
 SIMULATION_POINTS = 3000
 SIMULATION_EVENT_TIME = 0.0
 
+# The nominal frequency the base angular frequency Wb of the GFM PCS is given for
+PCS_WB_FREQUENCY_HZ = 50.0
+
 # Delay and Time Constants (in seconds)
 EMT_DELAY_S = 0.02
 SCR_BOUND_DELAY_S = 0.01
@@ -30,7 +33,6 @@ ANGLE_DAMPING_PER_DAMPING = 0.1656
 ANGLE_DAMPING_OFFSET = 2.0022
 
 # Limits and modifiers for SCRJump
-SCRJUMP_INITIAL_LIMITING_S = 0.1
 SCRJUMP_MODIFY_ENVELOPE_S = 0.03
 
 # Time Tunnel Calculation Parameters

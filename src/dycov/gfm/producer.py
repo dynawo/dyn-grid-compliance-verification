@@ -39,6 +39,17 @@ class GFMProducer(Producer):
         """
         return self._producer_ini_path
 
+    def get_producer_ini(self) -> Path:
+        """
+        Retrieves the producer's INI file.
+
+        Returns
+        -------
+        Path
+            The INI file the producer is read from.
+        """
+        return self._producer_ini
+
     def get_filenames(self, zone: int = 0) -> list[str]:
         """
         Returns the name of the producer, the stem of its INI file.
@@ -68,7 +79,7 @@ class GFMProducer(Producer):
 
     def set_zone(self, zone: int, filename: str) -> None:
         """
-        Sets the active zone and filename.
+        Does nothing: a GFM producer has no zones.
 
         Parameters
         ----------
@@ -77,7 +88,6 @@ class GFMProducer(Producer):
         filename : str
             The name of the file to associate.
         """
-        pass
 
     def get_config(self) -> configparser.ConfigParser:
         """
@@ -89,6 +99,17 @@ class GFMProducer(Producer):
             The loaded configuration parser instance.
         """
         return self._config
+
+    def get_nominal_frequency(self) -> float:
+        """
+        Retrieves the nominal frequency of the network.
+
+        Returns
+        -------
+        float
+            The nominal frequency in Hz.
+        """
+        return self._f_nom
 
     def __read_producer_ini(self) -> configparser.ConfigParser:
         """
@@ -107,8 +128,6 @@ class GFMProducer(Producer):
         if not self._producer_ini.is_file():
             raise FileNotFoundError(f"Producer INI file not found: {self._producer_ini}")
 
-        # Allow inline comments starting with '#' in the INI file
         producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         producer_config.read(self._producer_ini)
-
         return producer_config

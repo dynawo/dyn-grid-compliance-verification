@@ -249,6 +249,10 @@ for cmd in curl unzip make pdflatex latexmk dvisvgm git awk uv sha256sum; do
         exit 1
     fi
 done
+if ! kpsewhich tgtermes.sty > /dev/null; then
+    color_err_msg "ERROR: Required LaTeX fonts not found: TeX Gyre, which the manual is set in. Please install them (package 'tex-gyre' on Debian and Ubuntu)."
+    exit 1
+fi
 
 color_msg ""
 color_msg "Starting the installation of the DyCoV tool in: $INSTALL_DIR"
