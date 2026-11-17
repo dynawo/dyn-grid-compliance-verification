@@ -241,7 +241,9 @@ dycov generate_gfm_envelopes -i Producer.ini -e
 In EMT mode, the envelopes and the PCC signal are shifted in time by the
 `emt_delay` value (in seconds) defined in `[GFM Parameters]`, to account for
 the initial response of an EMT simulation. Without `-e`, `emt_delay` has no
-effect.
+effect. During the delay of a phase jump, the envelopes span from the initial
+active current to the values they start from once the delay is over, so they
+hold both a unit that has not responded yet and one that already has.
 
 ---
 

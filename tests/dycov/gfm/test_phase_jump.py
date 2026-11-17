@@ -227,7 +227,40 @@ def test_phase_jump_emt_delays_the_envelopes():
     response_emt, upper_emt, lower_emt = _envelopes(params, 200, time_array, emt=True)
 
     assert (response_emt[:delay_samples] == 0.5).all()
-    assert (upper_emt[:delay_samples] == 0.5).all() and (lower_emt[:delay_samples] == 0.5).all()
     assert response_emt[delay_samples:] == pytest.approx(response[:-delay_samples])
     assert upper_emt[delay_samples:] == pytest.approx(upper[:-delay_samples])
     assert lower_emt[delay_samples:] == pytest.approx(lower[:-delay_samples])
+
+
+@pytest.mark.parametrize("delta_phase", [np.deg2rad(30), np.deg2rad(-30)])
+def test_phase_jump_emt_band_spans_from_p0_to_the_envelopes_after_the_delay(delta_phase):
+    params = _phase_jump_params(0.5, delta_phase, 2)
+    time_array = np.linspace(0, 5, 1001)
+    delay_samples = int(0.02 / (time_array[1] - time_array[0])) + 1
+
+    _, upper, lower = _envelopes(params, 200, time_array)
+    _, upper_emt, lower_emt = _envelopes(params, 200, time_array, emt=True)
+
+    assert (upper_emt[:delay_samples] == max(0.5, upper[0])).all()
+    assert (lower_emt[:delay_samples] == min(0.5, lower[0])).all()
+    assert upper_emt[0] - lower_emt[0] > 0.1
+
+
+def test_phase_jump_emt_delay_starts_at_the_event():
+    params = _phase_jump_params(0.5, np.deg2rad(30), 2)
+    time_array = np.linspace(0, 5, 1001)
+    event_index = 40
+    event_time = time_array[event_index]
+    delay_samples = int(0.02 / (time_array[1] - time_array[0])) + 1
+
+    response, upper, lower = _envelopes(params, 200, time_array, event_time)
+    response_emt, upper_emt, lower_emt = _envelopes(params, 200, time_array, event_time, emt=True)
+
+    assert (response_emt[: event_index + delay_samples] == 0.5).all()
+    assert (upper_emt[:event_index] == 0.5).all() and (lower_emt[:event_index] == 0.5).all()
+    during_delay = slice(event_index, event_index + delay_samples)
+    assert (upper_emt[during_delay] == max(0.5, upper[event_index])).all()
+    assert (lower_emt[during_delay] == min(0.5, lower[event_index])).all()
+    assert upper_emt[event_index + delay_samples :] == pytest.approx(
+        upper[event_index : len(time_array) - delay_samples]
+    )

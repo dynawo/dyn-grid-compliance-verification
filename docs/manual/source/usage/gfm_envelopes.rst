@@ -102,7 +102,10 @@ In EMT mode, the envelopes and the PCC signal are shifted in time by the
 ``emt_delay`` value (in seconds) read from the ``[GFM Parameters]`` section of
 the input file, to account for the initial response of an EMT simulation. The
 delay defaults to 0.02 s when the key is absent; all the shipped examples
-define it explicitly. Without ``-e``, ``emt_delay`` has no effect.
+define it explicitly. Without ``-e``, ``emt_delay`` has no effect. During the
+delay of a phase jump, the envelopes span from the initial active current to
+the values they start from once the delay is over, so they hold both a unit
+that has not responded yet and one that already has.
 
 
 .. _gfm_outputs:

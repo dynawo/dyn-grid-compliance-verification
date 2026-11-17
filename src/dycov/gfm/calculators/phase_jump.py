@@ -132,14 +132,56 @@ class PhaseJump(GFMCalculator):
         )
 
         if self._is_emt_flag:
-            p0 = self._initial_active_power
-            upper_envelope = self._apply_delay(self._emt_delay, p0, time_array, p_up)
-            lower_envelope = self._apply_delay(self._emt_delay, p0, time_array, p_down)
-            pcc_signal = self._apply_delay(self._emt_delay, p0, time_array, p_pcc)
+            pcc_signal, upper_envelope, lower_envelope = self._delay_by_emt_from_p0(
+                p_pcc, p_up, p_down, time_array, event_time
+            )
         else:
             upper_envelope, lower_envelope, pcc_signal = p_up, p_down, p_pcc
 
         return "Ip", pcc_signal, upper_envelope, lower_envelope
+
+    def _delay_by_emt_from_p0(
+        self,
+        p_pcc: np.ndarray,
+        p_up: np.ndarray,
+        p_down: np.ndarray,
+        time_array: np.ndarray,
+        event_time: float,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """
+        Delays the response and its envelopes by the EMT delay, from the event.
+
+        Meanwhile the response holds P0, and the envelopes span from P0 to the values they start
+        from after the delay, so that both a unit still at P0 and one already responding stay
+        within them.
+
+        Parameters
+        ----------
+        p_pcc : np.ndarray
+            The response of the nominal D and H.
+        p_up : np.ndarray
+            The upper envelope.
+        p_down : np.ndarray
+            The lower envelope.
+        time_array : np.ndarray
+            The simulation time vector, equally spaced.
+        event_time : float
+            The timestamp of the event.
+
+        Returns
+        -------
+        tuple[np.ndarray, np.ndarray, np.ndarray]
+            The delayed response, upper envelope and lower envelope.
+        """
+        p0 = self._initial_active_power
+        event_index = int(np.argmax(time_array >= event_time))
+        upper_meanwhile = max(p0, p_up[event_index])
+        lower_meanwhile = min(p0, p_down[event_index])
+        return (
+            self._apply_delay(self._emt_delay, p0, time_array, p_pcc, event_time),
+            self._apply_delay(self._emt_delay, upper_meanwhile, time_array, p_up, event_time),
+            self._apply_delay(self._emt_delay, lower_meanwhile, time_array, p_down, event_time),
+        )
 
     def _get_transfer_function(
         self, D: float, H: float, x_total: float

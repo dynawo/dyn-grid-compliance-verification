@@ -179,7 +179,9 @@ Key helper methods
     by the EMT delay, holding the signal's initial value, which is how the
     amplitude step and RoCoF calculators turn RMS envelopes into EMT ones.
     The phase jump and SCR jump calculators call ``_apply_delay()`` with values
-    of their own.
+    of their own: in EMT mode the phase jump holds P0 in its response and, in
+    its envelopes, the span from P0 to the values they start from after the
+    delay (``_delay_by_emt_from_p0()``).
 
 ``_get_time_tunnel()``
     Calculates a time-dependent tolerance band that grows exponentially after
