@@ -100,15 +100,39 @@ def test_zone1_of_types_c_and_d_simulates_the_tests_of_the_fiche_i18(version):
     assert _operating_conditions("S_Fault4")[:3] == ["OC1_SCR2", "OC1_SCR10", "OC1_SCR20"]
 
 
-def test_every_test_of_the_fiche_i18_runs_for_oc2_and_oc3_and_the_others_when_recorded(version):
+def test_every_test_of_the_fiche_i18_runs_for_oc2_and_oc3_and_the_others_when_asked(version):
     version("PCS_RTE-I16z1", "C")
 
     for benchmark in _I18_TESTS:
         for oc in _operating_conditions(benchmark):
-            recorded_only = config.get_boolean(
-                f"PCS_RTE-I16z1.{benchmark}.{oc}", "only_with_reference", False
-            )
-            assert recorded_only is not oc.startswith(("OC2", "OC3")), f"{benchmark}.{oc}"
+            point = config.get_value(f"PCS_RTE-I16z1.{benchmark}.{oc}", "optional_operating_point")
+            if oc.startswith(("OC2", "OC3")):
+                assert point is None, f"{benchmark}.{oc}"
+            else:
+                assert oc.startswith(point), f"{benchmark}.{oc}"
+
+
+def test_the_optional_operating_points_of_the_fiche_i18_are_not_run_unless_asked(version):
+    version("PCS_RTE-I16z1", "C")
+
+    for point in ("OC1", "OC4", "OC5", "OC6", "OC7"):
+        assert config.has_option("PCS_RTE-I16z1", f"run_{point}")
+        assert config.get_value("PCS_RTE-I16z1", f"run_{point}") is None
+        assert config.get_boolean("PCS_RTE-I16z1", f"run_{point}", False) is False
+
+
+def test_asking_for_an_optional_operating_point_does_not_override_the_norm(version):
+    version("PCS_RTE-I16z1", "C")
+    user = config._user_config
+    had_section = user.has_section("PCS_RTE-I16z1")
+    user.read_string("[PCS_RTE-I16z1]\nrun_OC1 = true\n")
+    try:
+        assert config.get_boolean("PCS_RTE-I16z1", "run_OC1", False) is True
+        assert ("PCS_RTE-I16z1", "run_OC1") not in config.overridden_norm_options()
+    finally:
+        user.remove_option("PCS_RTE-I16z1", "run_OC1")
+        if not had_section:
+            user.remove_section("PCS_RTE-I16z1")
 
 
 @pytest.mark.parametrize(

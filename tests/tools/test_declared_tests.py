@@ -182,9 +182,9 @@ def test_a_version_by_category_is_the_one_the_revision_writes(
     assert [path.name for path in dt.version_of(description, revision, category)] == versions
 
 
-def test_a_test_run_only_with_its_reference_is_not_one_that_must_run(monkeypatch):
+def test_a_test_at_an_optional_point_not_asked_for_is_not_one_that_must_run(monkeypatch):
     """The Fiche I16.2 asks for the tests of the Fiche I18 at OC2 and OC3, and at the others
-    only when the producer records them."""
+    only when they drive the unit into current limitation, which its PCS asks for."""
     monkeypatch.chdir(_REPO)
 
     declared = dt.declared_tests("BESS", "BESS/GridFormingDroop", REVISION)

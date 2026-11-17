@@ -129,26 +129,26 @@ class ModelValidator(Validator):
         results["t_P90_ref"] = t_P90_ref
         results["t_P90_error"] = abs(t_P90_ref - t_P90_calc)
 
+    def __response_step(self, measurement_name: str, start_event: float, transient: bool) -> float:
+        """The step of the reference response to an event that steps no setpoint: its change,
+        or the peak of a transient it returns from. The step-response indicators and the
+        tracking errors of such a test are measured against it."""
+        return common.get_response_step(
+            list(self._get_reference_curve_by_name(("time"))),
+            list(self._get_reference_curve_by_name((measurement_name))),
+            start_event,
+            transient,
+        )
+
     def __compare_event_times(
         self,
         measurement_name: str,
         start_event: float,
         setpoint_variation: float,
         results: dict,
-        tracks_response: bool = False,
         transient: bool = False,
     ) -> None:
         results["t_event_start"] = start_event
-        if tracks_response and not setpoint_variation:
-            # An event that steps no setpoint measures the response against the step of the
-            # reference: its change, or the peak of a transient it returns from
-            setpoint_variation = common.get_response_step(
-                list(self._get_reference_curve_by_name(("time"))),
-                list(self._get_reference_curve_by_name((measurement_name))),
-                start_event,
-                transient,
-            )
-
         if compliance_list.contains_key(["reaction_time"], self._validations):
             res_reaction_time, res_reaction_target = common.get_reached_time(
                 0.1,
@@ -368,10 +368,16 @@ class ModelValidator(Validator):
         transient: bool = False,
     ) -> dict:
         results = {}
-        step_magnitude = setpoint_variation
-        if setpoint_variation == 0.0:
-            step_magnitude = 1.0
         try:
+            measurement_name = common.get_measurement_name(
+                modified_setpoint, zone, self._get_calculated_curves().columns
+            )
+            response_step = (
+                self.__response_step(measurement_name, start_event, transient)
+                if tracks_response and not setpoint_variation
+                else setpoint_variation
+            )
+            step_magnitude = response_step or 1.0
             results = {
                 "before": calculate_errors(
                     self._get_curves_by_windows("before"), step_magnitude, zone
@@ -398,15 +404,11 @@ class ModelValidator(Validator):
                 results,
             )
 
-            measurement_name = common.get_measurement_name(
-                modified_setpoint, zone, self._get_calculated_curves().columns
-            )
             self.__compare_event_times(
                 measurement_name,
                 start_event,
-                setpoint_variation,
+                response_step,
                 results,
-                tracks_response,
                 transient,
             )
             self.__compare_ideal_ramp(

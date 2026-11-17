@@ -470,32 +470,6 @@ def _copy_curve_files_by_name(
         return []
 
 
-def has_curves(curves_dir: Path, prefix_name: str) -> bool:
-    """Check whether a curve directory holds the curve of a test, which takes a curve file and
-    its dictionary.
-
-    Parameters
-    ----------
-    curves_dir : Path
-        Directory holding the CurvesFiles.ini of the curves.
-    prefix_name : str
-        Name of the test (PCS.Benchmark.OperatingCondition).
-
-    Returns
-    -------
-    bool
-        True if the curve file and its dictionary are there.
-    """
-    if not (curves_dir / "CurvesFiles.ini").exists():
-        return False
-
-    try:
-        files = _curve_files(*_curve_source(curves_dir, prefix_name))
-    except OSError:
-        return False
-    return len(files) >= 2 and any(file.suffix.lower() == ".dict" for file in files)
-
-
 def copy_base_curves_files(source_path: Path, target_path: Path, prefix_name: str) -> bool:
     """Copy all files that compose a curve from source to target.
 

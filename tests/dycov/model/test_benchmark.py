@@ -92,21 +92,11 @@ def _make_benchmark(
     )
 
 
-class _RecordingProducer(DummyProducer):
-    """A producer whose reference curves are those of the tests it records."""
-
-    def __init__(self, reference_path: Path):
-        super().__init__()
-        self._reference_path = reference_path
-
-    def has_reference_curves_path(self):
-        return True
-
-    def get_reference_curves_path(self):
-        return self._reference_path
-
-
-def _run_operating_conditions(monkeypatch, producer, recorded_only: set) -> list:
+def _run_operating_conditions(
+    monkeypatch, optional: dict, asked: set, condition: str = None
+) -> list:
+    """Builds a benchmark of OC1, OC2 and OC3 whose sections in ``optional`` are optional
+    operating points of the DTR, the PCS asking to run the points in ``asked``."""
     lists = {"PCS-OperatingConditions": {_PCS_BENCHMARK: ["OC1", "OC2", "OC3"]}}
     monkeypatch.setattr(
         Config, "get_list", lambda self, section, key: lists.get(section, {}).get(key, [])
@@ -115,9 +105,19 @@ def _run_operating_conditions(monkeypatch, producer, recorded_only: set) -> list
         Config,
         "get_boolean",
         lambda self, section, key, default=False: (
-            key == "only_with_reference" and section in recorded_only
+            section == "PCS" and key.removeprefix("run_") in asked
         ),
     )
+    get_value = Config.get_value
+
+    def _value(self, section, key, default=None):
+        if key == "optional_operating_point":
+            return optional.get(section, default)
+        if (section, key) == ("PCS", "optional_operating_point_condition") and condition:
+            return condition
+        return get_value(self, section, key, default)
+
+    monkeypatch.setattr(Config, "get_value", _value)
     monkeypatch.setattr(benchmark.manage_files, "create_dir", lambda path: None)
     bm = Benchmark(
         pcs_name="PCS",
@@ -126,115 +126,87 @@ def _run_operating_conditions(monkeypatch, producer, recorded_only: set) -> list
         producer_name="Prod",
         report_name="Report",
         benchmark_name="Bench",
-        parameters=DummyParams(producer),
-        producer=producer,
+        parameters=DummyParams(DummyProducer()),
+        producer=DummyProducer(),
     )
     return [oc.get_name() for oc in bm._oc_list]
 
 
-def test_a_test_asked_only_when_recorded_runs_when_its_reference_is_delivered(
-    monkeypatch, tmp_path
-):
-    curves = tmp_path / "Prod"
-    curves.mkdir()
-    (curves / "CurvesFiles.ini").write_text("[Curves-Files]\n")
-    for stem in (f"{_PCS_BENCHMARK}.OC3",):
-        (curves / f"{stem}.csv").write_text("time;P\n0;1\n")
-        (curves / f"{stem}.dict").write_text("[Curves-Dictionary]\n")
-    recorded_only = {f"{_PCS_BENCHMARK}.OC1", f"{_PCS_BENCHMARK}.OC3"}
+def _told_not_run(monkeypatch) -> list:
+    told = []
 
-    names = _run_operating_conditions(monkeypatch, _RecordingProducer(tmp_path), recorded_only)
+    class _Logger:
+        def info(self, message):
+            if "not run" in message:
+                told.append(message)
+
+        def __getattr__(self, name):
+            return lambda *args, **kwargs: None
+
+    monkeypatch.setattr(benchmark.dycov_logging, "get_logger", lambda name: _Logger())
+    return told
+
+
+def test_an_optional_operating_point_runs_when_its_pcs_asks_for_it(monkeypatch):
+    optional = {f"{_PCS_BENCHMARK}.OC1": "OC1", f"{_PCS_BENCHMARK}.OC3": "OC3"}
+
+    names = _run_operating_conditions(monkeypatch, optional, asked={"OC3"})
+
+    assert names == ["OC2", "OC3"]
+
+
+def test_an_optional_operating_point_is_not_run_unless_its_pcs_asks_for_it(monkeypatch):
+    names = _run_operating_conditions(monkeypatch, {f"{_PCS_BENCHMARK}.OC1": "OC1"}, asked=set())
 
     assert names == ["OC2", "OC3"]
 
 
-def test_a_test_asked_only_when_recorded_is_not_run_without_references(monkeypatch):
-    recorded_only = {f"{_PCS_BENCHMARK}.OC1"}
+def test_operating_conditions_of_one_point_run_together(monkeypatch):
+    optional = {f"{_PCS_BENCHMARK}.OC1": "OC1", f"{_PCS_BENCHMARK}.OC3": "OC1"}
 
-    class _WithoutReferences(DummyProducer):
-        def has_reference_curves_path(self):
-            return False
-
-    names = _run_operating_conditions(monkeypatch, _WithoutReferences(), recorded_only)
-
-    assert names == ["OC2", "OC3"]
+    assert _run_operating_conditions(monkeypatch, optional, asked={"OC1"}) == ["OC1", "OC2", "OC3"]
+    assert _run_operating_conditions(monkeypatch, optional, asked=set()) == ["OC2"]
 
 
 @pytest.mark.parametrize(
-    "left_out, message",
+    "optional, message",
     [
         (
-            ("OC1",),
-            "OC1 not run: the DTR asks for it only under a condition the tool does not check, "
-            "which the producer shows by delivering its reference curve, and it is not "
-            "delivered",
+            {f"{_PCS_BENCHMARK}.OC1": "OC1"},
+            "OC1 not run: the DTR asks for it only under a condition the tool does not check; "
+            "set run_OC1 to true in the [PCS] section of the configuration to run it",
         ),
         (
-            ("OC1", "OC3"),
+            {f"{_PCS_BENCHMARK}.OC1": "OC1", f"{_PCS_BENCHMARK}.OC3": "OC4"},
             "OC1, OC3 not run: the DTR asks for them only under a condition the tool does not "
-            "check, which the producer shows by delivering their reference curves, and none is "
-            "delivered",
+            "check; set run_OC1 and run_OC4 to true in the [PCS] section of the configuration "
+            "to run them",
         ),
     ],
 )
-def test_the_tests_left_out_for_lack_of_their_reference_say_so_once(
-    monkeypatch, left_out, message
+def test_the_operating_points_left_out_say_so_once_and_how_to_run_them(
+    monkeypatch, optional, message
 ):
-    told = []
+    told = _told_not_run(monkeypatch)
 
-    class _Logger:
-        def info(self, message):
-            told.append(message)
+    _run_operating_conditions(monkeypatch, optional, asked=set())
 
-        def __getattr__(self, name):
-            return lambda *args, **kwargs: None
+    assert told == [message]
 
-    class _WithoutReferences(DummyProducer):
-        def has_reference_curves_path(self):
-            return False
 
-    monkeypatch.setattr(benchmark.dycov_logging, "get_logger", lambda name: _Logger())
+def test_an_operating_point_left_out_names_the_condition_its_pcs_gives(monkeypatch):
+    told = _told_not_run(monkeypatch)
 
     _run_operating_conditions(
-        monkeypatch, _WithoutReferences(), {f"{_PCS_BENCHMARK}.{oc}" for oc in left_out}
+        monkeypatch,
+        {f"{_PCS_BENCHMARK}.OC1": "OC1"},
+        asked=set(),
+        condition="current limitation",
     )
 
-    assert [said for said in told if "not run" in said] == [message]
-
-
-def test_a_test_left_out_for_lack_of_its_reference_names_the_condition_its_pcs_gives(
-    monkeypatch,
-):
-    told = []
-
-    class _Logger:
-        def info(self, message):
-            told.append(message)
-
-        def __getattr__(self, name):
-            return lambda *args, **kwargs: None
-
-    class _WithoutReferences(DummyProducer):
-        def has_reference_curves_path(self):
-            return False
-
-    monkeypatch.setattr(benchmark.dycov_logging, "get_logger", lambda name: _Logger())
-    get_value = Config.get_value
-    monkeypatch.setattr(
-        Config,
-        "get_value",
-        lambda self, section, key, default=None: (
-            "current limitation"
-            if (section, key) == ("PCS", "only_with_reference_condition")
-            else get_value(self, section, key, default)
-        ),
-    )
-
-    _run_operating_conditions(monkeypatch, _WithoutReferences(), {f"{_PCS_BENCHMARK}.OC1"})
-
-    assert [said for said in told if "not run" in said] == [
-        "OC1 not run: the DTR asks for it only under current limitation, which the producer "
-        "shows by delivering its reference curve, and it is not delivered"
+    assert told == [
+        "OC1 not run: the DTR asks for it only under current limitation; set run_OC1 to true "
+        "in the [PCS] section of the configuration to run it"
     ]
 
 

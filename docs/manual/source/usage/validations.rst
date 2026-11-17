@@ -444,9 +444,15 @@ I18, 0.27 pu, which the PCS fixes as ``Xeff`` whatever the unit's (a
 description of the user may give it another value), and
 :math:`X_{grid} = 1/SCR`, both in pu of the nominal apparent power of the unit.
 The fiche asks for every test with OC2 and OC3, and for the others only when
-they drive the unit into current limitation: an operating condition other than
-those two runs when the producer delivers its reference curve, and is left out
-of the verification otherwise.
+they drive the unit into current limitation, which the tool does not check on
+a model: the PCS runs them at OC1, OC4 and OC5, and at OC6 and OC7 of the steps
+of the grid voltage, only when ``run_OC1``, ``run_OC4``, ``run_OC5``,
+``run_OC6`` or ``run_OC7`` is ``true`` in its ``[PCS_RTE-I16z1]`` section. They
+are empty as shipped, so those points are not run; set them to ``true`` in that
+section of ``config.ini``, or of a description of your own of the PCS, for the
+operating points at which the unit reaches current limitation. That is the
+producer's to declare, so the report does not count it as a departure from the
+norm. The log names the operating conditions it leaves out.
 
 Some scenarios of the Fiche I18 are not run as its tables give them, as RTE
 reads them. Its unbalanced faults (``S_Fault1`` to ``S_Fault3``) are left out:
@@ -470,7 +476,10 @@ frequency) and after the event, with 20 ms excluded after each change, and the
 steady-state error after it. The tracked magnitude is the active current at
 InternalNode1, or the reactive current there for a step of the grid voltage,
 which each test names with ``tracked_magnitude``; since the event steps no
-setpoint, the errors are in pu and not relative to a step. The tracked
+setpoint, the errors before, during and after the event are relative to the
+step of the reference response, the same against which its step-response
+indicators are measured: the change of the reference for a step of the grid
+voltage, its peak for the transients; the steady-state error stays in pu. The tracked
 magnitude is also checked for its step-response indicators: a step of the grid
 voltage steps the reactive current, which is checked for its rise and settling
 times and overshoot as a setpoint step is, against the change of the reference,

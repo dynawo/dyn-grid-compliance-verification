@@ -115,12 +115,15 @@ observes the results of I18 (`[GridCode] zone1_compared_at_node1`, which turns
 `SCRStepUp/Down_2Lines_InfBus`, a parallel line sized by `switched_SCR`
 (`ModelSetup._get_switched_line`) that a `BooleanTable` (`TableSwitchedLine.txt`) holds open until
 it closes (`line_SwitchOffSignal20 = true`, skipped by `get_line_values`) or an event opens. An OC
-marked `only_with_reference` runs only when its reference curve is there (`Benchmark.__is_run`,
-`manage_files.has_curves`): every I18 test but OC2/OC3. Criterion 5 tracks the `tracked_magnitude`
-an OC names (`ModelValidator.__tracked_magnitude`, `compared_curves.setpoint_label` taking a label)
-when its event steps no setpoint, and its step-response indicators are measured against the step
-of the reference response (`common.get_response_step`: its change, or the peak of a transient an
-OC marks `transient_response`, whose overshoot `get_overshoot` takes towards that peak). Every page of the TypeCD Zone 1 report is the shared
+that names its `optional_operating_point` (every I18 test but OC2/OC3) runs only when the
+`run_<point>` key of its PCS is true, shipped empty so that setting it is no norm option
+(`Benchmark.__is_run`). Criterion 5 tracks the `tracked_magnitude` an OC names
+(`ModelValidator.__tracked_magnitude`,
+`compared_curves.setpoint_label` taking a label) when its event steps no setpoint, and both its
+tracking errors and its step-response indicators are measured against the step of the reference
+response (`ModelValidator.__response_step`, `common.get_response_step`: its change, or the peak of
+a transient an OC marks `transient_response`, whose overshoot `get_overshoot` takes towards that
+peak). Every page of the TypeCD Zone 1 report is the shared
 `report.I16z1.TypeCD.Test.tex`, which prints the conditions of the test from its description
 (`report/tables/conditions.py`). The Grid Forming converters of Dynawo the tool supports
 (`GridFormingConverterDroopControl`, `GridFormingEpri`, family `GFM` in `Storage.ini`) state in the

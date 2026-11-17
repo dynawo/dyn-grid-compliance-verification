@@ -27,15 +27,18 @@ reference dictionaries declare them: `InternalNode1_BUS_Voltage`,
 `InternalNode1_BUS_ActiveCurrent` and `InternalNode1_BUS_ReactiveCurrent`.
 
 The fiche asks for every test of the Fiche I18 at its operating conditions OC2 and OC3, and at the
-others only when they drive the unit into current limitation: the tool runs one of those when its
-reference curve is delivered, and leaves it out otherwise. As RTE reads the fiches, the
+others only when they drive the unit into current limitation, which the tool does not check on a
+model: it runs them at OC1, OC4 and OC5, and at OC6 and OC7 of the grid voltage steps, only when
+`run_OC1`, `run_OC4`, `run_OC5`, `run_OC6` or `run_OC7` is set to true in the `[PCS_RTE-I16z1]`
+section of `config.ini` or of a description of your own of the PCS. As RTE reads the fiches, the
 unbalanced faults of the Fiche I18 are left out, and so is its `S_Fault7`, which no profile
 defines; `S_VolAngStep12` jumps the other way from `S_VolAngStep11`; the phase jumps and the
 voltage steps are sized with the effective reactance of the ideal converter of the fiche, 0.27 pu,
 whatever the unit's, so its events are those its tables print; and the active power of the
 operating points is in pu of Pn, the maximum active power of Zone 1. The tests of the Fiche I18
 that are not faults are tracking tests of the active current, or of the reactive one for a step of
-the grid voltage: besides their tracking and final errors, a step of the grid voltage checks the
+the grid voltage: besides their tracking errors, relative to the change of the reference or to
+the peak of a transient, and their final error, a step of the grid voltage checks the
 rise and settling times and the overshoot of the reactive current and reports its reaction time
 without a verdict, and the other tests, transients the active current returns from, its settling
 time and overshoot against the peak of the reference. The unit runs as delivered, its controls of the plant being in Zone 3, and a ramp of the

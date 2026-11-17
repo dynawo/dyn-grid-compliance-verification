@@ -15,7 +15,7 @@ import pandas as pd
 import pytest
 
 from dycov.model.parameters import ExclusionWindows
-from dycov.validation import common
+from dycov.validation import common, model
 from dycov.validation.common import get_measurement_name
 from dycov.validation.model import ModelValidator, _get_column_name
 
@@ -463,13 +463,13 @@ def test_a_transient_without_a_setpoint_is_measured_against_the_peak_of_the_refe
         curves_manager=DummyCurvesManager(calculated=calculated, reference=reference),
     )
     results = {}
+    step = validator._ModelValidator__response_step(name, 1.0, transient=True)
 
     validator._ModelValidator__compare_event_times(
         measurement_name=name,
         start_event=1.0,
-        setpoint_variation=0.0,
+        setpoint_variation=step,
         results=results,
-        tracks_response=True,
         transient=True,
     )
 
@@ -478,6 +478,53 @@ def test_a_transient_without_a_setpoint_is_measured_against_the_peak_of_the_refe
     assert results["overshoot_tolerance"] == pytest.approx(band)
     assert results["ref_overshoot"] == pytest.approx(0.3)
     assert results["calc_overshoot"] == pytest.approx(0.2)
+
+
+@pytest.mark.parametrize(
+    "setpoint_variation, tracks_response, transient, step",
+    [
+        (0.0, True, True, 0.3),
+        (0.0, True, False, 0.0),
+        (0.2, True, True, 0.2),
+        (0.0, False, True, 0.0),
+    ],
+)
+def test_the_tracking_errors_are_relative_to_the_step_of_the_test(
+    monkeypatch, setpoint_variation, tracks_response, transient, step
+):
+    time = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+    name = "BusPDR_BUS_ActiveCurrent"
+    reference = pd.DataFrame({"time": time, name: [0.5, 0.5, 0.8, 0.55, 0.5, 0.5]})
+    calculated = pd.DataFrame({"time": time, name: [0.5, 0.5, 0.7, 0.52, 0.5, 0.5]})
+    windows = {window: (calculated, reference) for window in ("before", "during", "after")}
+    validator = _make_validator(
+        curves_manager=DummyCurvesManager(
+            calculated=calculated, reference=reference, windows=windows
+        )
+    )
+    magnitudes = []
+
+    def errors(curves, step_magnitude, zone):
+        magnitudes.append(step_magnitude)
+        raise StopIteration
+
+    monkeypatch.setattr(model, "calculate_errors", errors)
+
+    with pytest.raises(StopIteration):
+        validator._ModelValidator__calculate(
+            zone=3,
+            start_event=1.0,
+            duration_event=0.0,
+            freq0=1.0,
+            freq_peak=0.0,
+            modified_setpoint="active_current",
+            setpoint_variation=setpoint_variation,
+            tracks_response=tracks_response,
+            transient=transient,
+        )
+
+    # A test whose reference does not move is measured in pu, as one that steps nothing
+    assert magnitudes == [pytest.approx(step or 1.0)]
 
 
 _MEASURED_AS = ("modified_setpoint", "tracks_response", "transient")

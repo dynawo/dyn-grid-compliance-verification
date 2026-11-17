@@ -7,8 +7,8 @@ of the rest would then be written by nothing.
 What must run is what the PCS of the tool declare plus what the example declares for itself: the
 tests of Fiche F16, which the fiche does not fix and regenerate_f16.sh writes into the example
 before the run. The PCS of the tool are read as the revision of the DTR the run followed writes
-them for the category of the installation of the example, and a test they run only when it is
-recorded is not one that must run.
+them for the category of the installation of the example, and a test at an operating point they
+run only when asked to is one that must run only when they ask for it.
 """
 
 import argparse
@@ -122,11 +122,19 @@ def declared_tests(family: str, example: str, revision: str) -> set:
                 declared.update(
                     (pcs, benchmark, oc)
                     for oc in names_in(conditions)
-                    if not pcs_config.getboolean(
-                        f"{pcs}.{benchmark}.{oc}", "only_with_reference", fallback=False
-                    )
+                    if _is_run(pcs_config, pcs, f"{pcs}.{benchmark}.{oc}")
                 )
     return declared
+
+
+def _is_run(pcs_config: configparser.ConfigParser, pcs: str, section: str) -> bool:
+    """An operating condition that is an optional operating point of the DTR runs only when its
+    PCS asks for that point, which it does not as shipped, and every other one always."""
+    point = pcs_config.get(section, "optional_operating_point", fallback="")
+    if not point:
+        return True
+    asked = pcs_config.get(pcs, f"run_{point}", fallback="").strip().lower()
+    return pcs_config.BOOLEAN_STATES.get(asked, False)
 
 
 def executed_tests(log_path: Path) -> tuple[dict, dict, str]:

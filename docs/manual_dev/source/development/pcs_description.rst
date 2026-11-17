@@ -139,11 +139,19 @@ The PCS section
   of the ideal converter of the Fiche I18, in the version Type C/D of the Fiche
   I16.
 
-``only_with_reference_condition``
-  The condition under which the DTR asks for the operating conditions marked
-  ``only_with_reference``, in the few words the log quotes when one of them is
-  left out for lack of its reference curve: ``current limitation`` for the
-  version Type C/D of the Fiche I16.
+``optional_operating_point_condition``
+  The condition under which the DTR asks for the operating conditions that name
+  an ``optional_operating_point``, in the few words the log quotes when it
+  leaves one of them out: ``current limitation`` for the version Type C/D of the
+  Fiche I16.
+
+``run_<point>``
+  ``true`` to run the operating conditions whose ``optional_operating_point`` is
+  that point; without it they are left out. The version Type C/D of the Fiche
+  I16 declares ``run_OC1``, ``run_OC4``, ``run_OC5``, ``run_OC6`` and
+  ``run_OC7`` empty, a value the DTR does not fix: the user sets to ``true`` the
+  points at which the unit reaches current limitation, and the report does not
+  count that as overriding the norm.
 
 .. code-block:: ini
 
@@ -287,24 +295,25 @@ The operating-condition section
   setpoint, by the label of a compared curve (``active_current``,
   ``reactive_current``, ``active_power``, ``reactive_power``, ``voltage``).
   The tests of the Fiche I18 that the Fiche I16.2 simulates name it. Its
-  step-response indicators are measured against the change of the reference
-  response, the step it has instead of a setpoint step.
+  step-response indicators and its tracking errors are measured against the
+  change of the reference response, the step it has instead of a setpoint step.
 
 ``transient_response``
   ``true`` when the tracked magnitude returns from its response to the event
   instead of stepping to a new value: its settling time and overshoot are then
-  measured against the peak of the reference response, and the overshoot is
-  taken in the direction of that peak. The phase jumps, the jumps of the
+  measured against the peak of the reference response, as are its tracking
+  errors, and the overshoot is taken in the direction of that peak. The phase jumps, the jumps of the
   short-circuit ratio and the ramps of the frequency of the Fiche I18 declare
   it.
 
-``only_with_reference``
-  ``true`` when the DTR asks for the test only under a condition the tool does
-  not check on the model, which the producer then shows by delivering its
-  reference curve: the operating condition is run when that curve is
-  delivered, and left out of the verification otherwise. The Fiche I16.2 asks
-  for the tests of the Fiche I18 at OC2 and OC3, and at the others only when
-  they drive the unit into current limitation.
+``optional_operating_point``
+  The operating point of the DTR the operating condition is, when the DTR asks
+  for the test there only under a condition the tool does not check on the
+  model: the operating condition is run when the ``run_<point>`` key of the PCS
+  section is ``true``, and left out of the verification otherwise. The Fiche
+  I16.2 asks for the tests of the Fiche I18 at OC2 and OC3, and at OC1, OC4 and
+  OC5, and OC6 and OC7 of the steps of the grid voltage, only when they drive
+  the unit into current limitation.
 
 The ``.Model`` section
 ^^^^^^^^^^^^^^^^^^^^^^
