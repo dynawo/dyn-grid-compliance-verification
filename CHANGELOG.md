@@ -48,6 +48,9 @@ read, with a warning, and its protection curves written as before (#394).
   its steps of b from `HTB1_reactance_b_PPM` and the powers between them from `HTB1_p_max_PPM`,
   so a configuration that changed them through `HTB1_reactance_b_low`, `_b_high` or
   `HTB1_p_max` now changes those two keys instead (#744).
+- The SCR jump no longer marks its envelopes as inconsistent when the variations of D and H fall
+  on both sides of critical damping: each takes the response of its own regime, as in the RoCoF
+  (#761).
 - `generate_gfm_envelopes` reads the producer file `-i` names and no other INI of its folder, and
   stops when that file does not exist (#766).
 - The native installation lists `tex-gyre`, the fonts of the PDF manual the installer compiles,
@@ -60,8 +63,6 @@ read, with a warning, and its protection curves written as before (#394).
   nominal frequency of the configuration (#779).
 - The SCR jump envelopes keep their shape outside the 30 ms hold after the event when the
   producer's minimum power is above zero or its maximum below zero (#780).
-- The disclaimer of a hybrid SCR jump run names the set of D and H that damps inconsistently
-  (#781).
 - `generate_gfm_envelopes` stops, naming each value, when the producer's D, H or Xeff cannot give
   envelopes (#782).
 

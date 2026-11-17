@@ -301,9 +301,7 @@ def scr_jump_pcs():
     layer_defaults.update(leftover_defaults)
 
 
-def _figure(
-    tmp_path, monkeypatch, producer: str, benchmark: str = "S_SCRdown1", operating_condition="OC1"
-) -> dict:
+def _figure_parameters(tmp_path, monkeypatch, producer: str) -> list[str]:
     producer_ini = tmp_path / "Producer.ini"
     producer_ini.write_text(producer)
     parameters = GFMParameters(
@@ -316,17 +314,11 @@ def _figure(
     figures = []
     monkeypatch.setattr(gfm, "plot_results", lambda **kwargs: figures.append(kwargs))
     try:
-        GridForming().generate(
-            tmp_path, parameters, "PCS_RTE-IGFM3", benchmark, operating_condition
-        )
+        GridForming().generate(tmp_path, parameters, "PCS_RTE-IGFM3", "S_SCRdown1", "OC1")
     finally:
         parameters.cleanup_working_dir(preserve_on_debug=False)
     (figure,) = figures
-    return figure
-
-
-def _figure_parameters(tmp_path, monkeypatch, producer: str) -> list[str]:
-    return _figure(tmp_path, monkeypatch, producer)["params_list"]
+    return figure["params_list"]
 
 
 def test_figures_show_the_damping_ratio_of_the_producer(scr_jump_pcs, tmp_path, monkeypatch):
@@ -344,33 +336,65 @@ def test_hybrid_figures_show_no_value_of_a_single_set(scr_jump_pcs, tmp_path, mo
     assert not [line for line in figure if line.startswith(("D =", "H =", "Epsilon ="))]
 
 
-def test_a_single_set_disclaimer_has_no_heading(scr_jump_pcs, tmp_path, monkeypatch):
-    figure = _figure(tmp_path, monkeypatch, _SINGLE_SET_PRODUCER, "S_SCRup1", "OC2")
-
-    assert figure["show_disclaimer"]
-    assert figure["disclaimer_message"].startswith("Inconsistent damping behavior")
-
-
-def test_a_hybrid_disclaimer_names_the_set_that_damps_inconsistently(
-    scr_jump_pcs, tmp_path, monkeypatch
-):
-    figure = _figure(tmp_path, monkeypatch, _HYBRID_PRODUCER, "S_SCRup1", "OC2")
-
-    assert figure["show_disclaimer"]
-    assert figure["disclaimer_message"].startswith("Overdamped set:\nInconsistent damping")
-    assert "Underdamped set:" not in figure["disclaimer_message"]
-
-
-def test_a_hybrid_run_whose_sets_are_consistent_has_no_disclaimer(
-    scr_jump_pcs, tmp_path, monkeypatch
-):
-    figure = _figure(tmp_path, monkeypatch, _HYBRID_PRODUCER)
-
-    assert not figure["show_disclaimer"]
-    assert figure["disclaimer_message"] is None
+_MIXED_REGIMES_PARAMS = """
+[DEFAULT]
+P0=0.5
+Q0=0.0
+SCRinitial=2
+SCRfinal=20
+RatioMin=0.85
+RatioMax=1.15
+Wb=314
+U0=1.0
+Ugr=1.0
+MarginHigh=0.3
+MarginLow=0.3
+FinalAllowedTunnelVariation=0.05
+FinalAllowedTunnelPn=0.02
+p_max_injection=1.2
+p_min_injection=-1.2
+[GFM Parameters]
+Snom=1.0
+"""
 
 
-def test_a_hybrid_disclaimer_heads_the_message_of_each_set():
-    assert gfm._hybrid_disclaimer("A", "B") == "Overdamped set:\nA\nUnderdamped set:\nB"
-    assert gfm._hybrid_disclaimer(None, "B") == "Underdamped set:\nB"
-    assert gfm._hybrid_disclaimer(None, None) is None
+def test_variations_on_both_sides_of_critical_damping_each_take_their_own_regime():
+    """S_SCRup1 with H = 5 and D = 200, the case of RTE's reference envelopes: the nominal set
+    and one variation are overdamped and the other underdamped."""
+    time_array = np.linspace(-1, 5, 3001)
+    scr_jump = SCRJump(gfm_params=ParametersHelper(_MIXED_REGIMES_PARAMS))
+    scr_jump._is_emt_flag = False
+
+    _, _, upper, lower = scr_jump.calculate_envelopes(
+        D=200, H=5, Xeff=0.27, time_array=time_array, event_time=0
+    )
+
+    assert scr_jump._epsilon_vals == pytest.approx([1.0095, 1.2592, 0.8002], abs=1e-4)
+    after_event = time_array > 0.05
+    for damping, inertia in zip(scr_jump._d_vals, scr_jump._h_vals):
+        delta_p, *_ = scr_jump._calculate_delta_p_for_damping(
+            damping, inertia, 0.27, time_array, 0
+        )
+        response = 0.5 + delta_p[after_event]
+        assert (lower[after_event] <= response + 1e-9).all(), (damping, inertia)
+        assert (response <= upper[after_event] + 1e-9).all(), (damping, inertia)
+
+
+def test_the_bounds_of_an_underdamped_variation_take_part_whatever_the_last_one_is():
+    time_array = np.linspace(-1, 5, 3001)
+    swapped = _MIXED_REGIMES_PARAMS.replace("RatioMin=0.85", "RatioMin=1.15").replace(
+        "RatioMax=1.15", "RatioMax=0.85"
+    )
+    envelopes = []
+    for params in (_MIXED_REGIMES_PARAMS, swapped):
+        scr_jump = SCRJump(gfm_params=ParametersHelper(params))
+        scr_jump._is_emt_flag = False
+        envelopes.append(
+            scr_jump.calculate_envelopes(
+                D=200, H=5, Xeff=0.27, time_array=time_array, event_time=0
+            )
+        )
+
+    # The last variation, overdamped once the ratios are swapped, no longer brings in half of
+    # its change, but the underdamped one still brings the bounds of its oscillation
+    assert envelopes[1][2] == pytest.approx(envelopes[0][2])

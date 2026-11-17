@@ -31,53 +31,47 @@
         <mxCell id="G9" value="End Loop" style="shape=loopLimit;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;fontSize=12;" parent="1" vertex="1">
           <mxGeometry x="330" y="740" width="140" height="70" as="geometry" />
         </mxCell>
-        <mxCell id="G10" value="Do all the variations damp the same way?" style="rhombus;whiteSpace=wrap;html=1;shadow=0;fontFamily=Helvetica;fontSize=12;align=center;strokeWidth=1;spacing=6;spacingTop=-4;fontColor=#000000;" parent="1" vertex="1">
-          <mxGeometry x="300" y="850" width="200" height="120" as="geometry" />
-        </mxCell>
-        <mxCell id="G11" value="Mark the envelopes as inconsistent&lt;br&gt;(disclaimer on the figures)" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;" parent="1" vertex="1">
-          <mxGeometry x="560" y="875" width="230" height="70" as="geometry" />
-        </mxCell>
         <mxCell id="G12" value="Loop: For each variation of D and H" style="shape=loopLimit;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="320" y="1020" width="160" height="70" as="geometry" />
+          <mxGeometry x="320" y="850" width="160" height="70" as="geometry" />
         </mxCell>
         <mxCell id="G13" value="Tunnel = max(FinalAllowedTunnelPn,&lt;br&gt;FinalAllowedTunnelVariation · |peak power change|)" style="shape=process;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="220" y="1130" width="360" height="70" as="geometry" />
+          <mxGeometry x="220" y="960" width="360" height="70" as="geometry" />
         </mxCell>
         <mxCell id="G14" value="Upper and lower traces: P0 + ΔP widened by MarginHigh and MarginLow, plus and minus the tunnel.&lt;br&gt;On the side the power moves away from: held at P0 + 50% of the nominal change (+0.005 pu) during the first 30 ms after the event, and at PmaxMOISTunnel when the power rises (PminMOISTunnel when it falls) wherever the trace passed it.&lt;br&gt;Both limited to Pmin/Pmax." style="rounded=0;whiteSpace=wrap;html=1;verticalAlign=top;align=left;dashed=1;dashPattern=8 8;fillColor=#FFF8E9;strokeColor=#d6b656;fontSize=12;fontColor=#000000;spacingLeft=6;spacingRight=6;" parent="1" vertex="1">
-          <mxGeometry x="190" y="1240" width="420" height="140" as="geometry" />
+          <mxGeometry x="190" y="1070" width="420" height="140" as="geometry" />
         </mxCell>
-        <mxCell id="G15" value="If underdamped: an extra upper trace from the upper oscillation bound and an extra lower trace from the lower one, built the same way" style="shape=process;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="240" y="1410" width="320" height="80" as="geometry" />
+        <mxCell id="G15" value="If underdamped: an extra upper trace from the upper oscillation bound and an extra lower trace from the lower one, built the same way, which join the candidates whatever the regime of the other variations" style="shape=process;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="240" y="1240" width="320" height="80" as="geometry" />
         </mxCell>
         <mxCell id="G16" value="End Loop" style="shape=loopLimit;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="330" y="1530" width="140" height="70" as="geometry" />
+          <mxGeometry x="330" y="1360" width="140" height="70" as="geometry" />
         </mxCell>
         <mxCell id="G17" value="PCC signal: P0 + nominal ΔP, limited to Pmin/Pmax" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;" parent="1" vertex="1">
-          <mxGeometry x="270" y="1640" width="260" height="60" as="geometry" />
+          <mxGeometry x="270" y="1470" width="260" height="60" as="geometry" />
         </mxCell>
         <mxCell id="G18" value="Is the last variation underdamped?" style="rhombus;whiteSpace=wrap;html=1;shadow=0;fontFamily=Helvetica;fontSize=12;align=center;strokeWidth=1;spacing=6;spacingTop=-4;fontColor=#000000;" parent="1" vertex="1">
-          <mxGeometry x="300" y="1740" width="200" height="120" as="geometry" />
+          <mxGeometry x="300" y="1570" width="200" height="120" as="geometry" />
         </mxCell>
-        <mxCell id="G19" value="Add P0 + 50% of the change of the last variation and the extra traces to the candidates" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;" parent="1" vertex="1">
-          <mxGeometry x="560" y="1765" width="230" height="70" as="geometry" />
+        <mxCell id="G19" value="Add P0 + 50% of the change of the last variation to the candidates" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="560" y="1595" width="230" height="70" as="geometry" />
         </mxCell>
         <mxCell id="G20" value="Final envelopes: the maximum of the upper candidates and the minimum of the lower ones" style="shape=process;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="240" y="1910" width="320" height="80" as="geometry" />
+          <mxGeometry x="240" y="1740" width="320" height="80" as="geometry" />
         </mxCell>
         <mxCell id="G21" value="Delay by 10 ms, plus the EMT delay in EMT, holding its initial value: the lower envelope when the power rises from a non-zero P0, the upper one otherwise" style="shape=process;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="220" y="2030" width="360" height="90" as="geometry" />
+          <mxGeometry x="220" y="1860" width="360" height="90" as="geometry" />
         </mxCell>
         <mxCell id="G22" value="Is EMT simulation?" style="rhombus;whiteSpace=wrap;html=1;shadow=0;fontFamily=Helvetica;fontSize=12;align=center;strokeWidth=1;spacing=6;spacingTop=-4;fontColor=#000000;" parent="1" vertex="1">
-          <mxGeometry x="350" y="2160" width="100" height="100" as="geometry" />
+          <mxGeometry x="350" y="1990" width="100" height="100" as="geometry" />
         </mxCell>
         <mxCell id="G23" value="Delay the other envelope and the PCC signal by the EMT delay, holding their maximum when the power rises from a non-zero P0, their minimum otherwise" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;" parent="1" vertex="1">
-          <mxGeometry x="40" y="2170" width="260" height="80" as="geometry" />
+          <mxGeometry x="40" y="2000" width="260" height="80" as="geometry" />
         </mxCell>
         <mxCell id="G24" value="Return Ip: the PCC signal and the upper and lower envelopes" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;" parent="1" vertex="1">
-          <mxGeometry x="300" y="2300" width="200" height="60" as="geometry" />
+          <mxGeometry x="300" y="2130" width="200" height="60" as="geometry" />
         </mxCell>
         <mxCell id="G25" value="End" style="ellipse;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=#000000;fillColor=#f8cecc;fontSize=12;" parent="1" vertex="1">
-          <mxGeometry x="340" y="2400" width="120" height="80" as="geometry" />
+          <mxGeometry x="340" y="2230" width="120" height="80" as="geometry" />
         </mxCell>
         <mxCell id="edge-G1-G2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=#000000;" parent="1" source="G1" target="G2" edge="1">
           <mxGeometry relative="1" as="geometry" />
@@ -114,21 +108,8 @@
             </Array>
           </mxGeometry>
         </mxCell>
-        <mxCell id="edge-G9-G10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=#000000;" parent="1" source="G9" target="G10" edge="1">
+        <mxCell id="edge-G9-G12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=#000000;" parent="1" source="G9" target="G12" edge="1">
           <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="edge-G10-G11" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=#000000;" parent="1" source="G10" target="G11" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="edge-G10-G12" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=#000000;" parent="1" source="G10" target="G12" edge="1">
-          <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="edge-G11-G12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=#000000;" parent="1" source="G11" target="G12" edge="1">
-          <mxGeometry relative="1" as="geometry">
-            <Array as="points">
-              <mxPoint x="675" y="1055" />
-            </Array>
-          </mxGeometry>
         </mxCell>
         <mxCell id="edge-G12-G13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=#000000;" parent="1" source="G12" target="G13" edge="1">
           <mxGeometry relative="1" as="geometry" />
@@ -157,7 +138,7 @@
         <mxCell id="edge-G19-G20" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=#000000;" parent="1" source="G19" target="G20" edge="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="675" y="1950" />
+              <mxPoint x="675" y="1780" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -176,7 +157,7 @@
         <mxCell id="edge-G23-G24" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=#000000;" parent="1" source="G23" target="G24" edge="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="170" y="2330" />
+              <mxPoint x="170" y="2160" />
             </Array>
           </mxGeometry>
         </mxCell>
@@ -194,8 +175,8 @@
         <mxCell id="loop-G16-G12" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="G16" target="G12" edge="1">
           <mxGeometry relative="1" as="geometry">
             <Array as="points">
-              <mxPoint x="150" y="1565" />
-              <mxPoint x="150" y="1055" />
+              <mxPoint x="150" y="1395" />
+              <mxPoint x="150" y="885" />
             </Array>
           </mxGeometry>
         </mxCell>
