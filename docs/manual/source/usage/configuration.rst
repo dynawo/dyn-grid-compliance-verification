@@ -252,6 +252,13 @@ it changes; the rest keeps the packaged value. It is also the most specific
 file DyCoV reads, so a PCS section written there wins over the same section
 written in ``config.ini``.
 
+A report template placed there replaces the packaged template of the same name,
+and the one of the selected DTR revision; a template under a new name is added
+to them. So does any other file of the report placed there, such as the logo
+``TSO_logo.pdf``. The report of every PCS is compiled in one folder, so a file
+that several PCS ship under the same name, such as ``commonz3.tex``, has to be
+placed in the directory of each of them.
+
 
 Modifying the Benchmarks of a PCS
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -325,8 +332,10 @@ e.g. ``-0.5*Pmax``). The base magnitudes are (all names case-sensitive):
 
 Any base magnitude is accepted in any key — the tool does not restrict, say,
 voltage keys to voltage magnitudes. A definition that cannot be parsed, or
-that names an unknown magnitude, aborts the run with an error identifying the
-configuration file and option it was read from.
+that names an unknown magnitude, ends the test that reads it as *Invalid test*,
+with an error identifying the configuration file and option it was read from;
+the other tests run. ``reference_step_size`` is read only when the report is
+drawn, and a rejected one aborts the report of its PCS.
 
 ``Snom`` and ``Unom`` use the same base as the HTML and report figures (powers in
 per-unit of :math:`S_{nom}`, voltage in per-unit of :math:`U_{nom}`), so the

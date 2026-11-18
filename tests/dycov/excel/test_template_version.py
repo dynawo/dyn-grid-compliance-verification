@@ -28,8 +28,8 @@ WORKBOOKS = Path(__file__).resolve().parents[3] / "workbooks"
 # What each template holds, besides its version cell, for the version it carries. A template
 # that changes fails here until it carries a new version in TEMPLATE_VERSIONS and in its cell.
 TEMPLATE_CONTENTS = {
-    ("IEC", "1.4.0"): "d420091b957600cbd820cba0825ebb7a8e3f840dc2c3e8743f88f5bc7c0b310c",
-    ("WECC", "1.3.0"): "28de818a1a3fd7cb2a484765587713dfe62fd97d6b750a08763478795884a8c1",
+    ("IEC", "1.4.0"): "24f81a4dfc632dd0f162ac673e30849ea586d96575c071b16655fe207a4de6bd",
+    ("WECC", "1.4.0"): "5f373948be2b186cc739e293b3a3a3e1671bcf182f86c3202506939c135f557e",
 }
 
 

@@ -87,7 +87,7 @@ arrives fully commented out, so uncommenting a name is what overrides it:
 | `[Markers]` | The `/` sentinel, the `Choix` values meaning "no block", the empty annotations, and the `Un1 ou Un2` base. |
 | `[Zone1-Rows]`, `[Zone3-Rows]` | Row name of every electrical concept (`main_impedance = Z_cc_TP`). |
 | `[Zone1-Curves]`, `[Zone3-Curves]` | Row label → DyCoV curve, `{gen}` standing for the generator block. |
-| `[Zone1-Tests]`, `[Zone3-Tests]` | DTR case → `PCS.Benchmark.OperatingCondition` (§8). |
+| `[Zone1-Tests]`, `[Zone3-Tests]` | DTR case → `PCS.Benchmark.OperatingCondition` (§8); `[Zone3-Tests.<revision>]`, what a revision of the DTR changes. |
 
 Names are matched without accents and case-insensitively, and headers by substring, so
 `Paramètres (Dynawo)` still reads as `Paramètres`.
@@ -331,6 +331,15 @@ DyCoV reads. The sheets carry only what the user knows — the `.csv` column of 
 `excel_names.ini`, keyed by the row's own label and by the case number (`Cas`) or DTR sheet plus its
 position among the rows of that same sheet (`I2/1`, `I2/2`, …), since a sheet covers several
 operating conditions.
+
+**The tests follow the revision of the DTR being validated.** `[Zone3-Tests]` maps the rows to the
+tests of the base revision; a revision that runs other tests changes it in
+`[Zone3-Tests.<revision>]`, where a row it does not run is left empty. The template carries a row
+for the tests of every revision, in an order that keeps the rows of the base where they were: the
+second `I5` row is the impedant fault the 3.5 adds, and the third `I7` row the swell at Q = 0 that
+replaces the two of the base. A workbook made on an older template lacks those rows: the conversion
+names the tests of the revision that have none, in the run report and as a warning, since they
+would otherwise run without a reference and nothing would say why.
 
 - **`CurvesFiles.ini`** — the `.csv` of every described test, and one curve dictionary per zone.
 - **One `.dict` per test** — its zone's dictionary, plus the `[Curves-Metadata]` keys.

@@ -769,3 +769,19 @@ def test_calculate_errors_ignores_curves_outside_the_measurement_list():
     results = checks.calculate_errors((calculated, reference), 1.0, 3)
 
     assert results == {}
+
+
+@pytest.mark.parametrize(
+    "parts, expected",
+    [
+        ([True, True], True),
+        ([True, False], False),
+        ([True, checks.NOT_COMPUTABLE], checks.NOT_COMPUTABLE),
+        ([checks.NOT_COMPUTABLE, False], False),
+        ([], checks.NOT_COMPUTABLE),
+    ],
+)
+def test_combined_check_fails_on_a_failed_part_before_reporting_one_not_computable(
+    parts, expected
+):
+    assert checks.combined_check(parts) == expected

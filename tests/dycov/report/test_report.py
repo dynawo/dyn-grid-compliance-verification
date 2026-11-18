@@ -374,6 +374,10 @@ def test_a_stable_test_is_labelled_as_such():
     assert report._stability_label(True) == "stable"
 
 
+def test_a_test_whose_stability_is_unknown_is_labelled_not_available():
+    assert report._stability_label("N/A") == "N/A"
+
+
 def test_an_unstable_test_is_labelled_with_a_latex_command_in_red():
     label = report._stability_label(False)
 
@@ -451,6 +455,101 @@ def test_the_summary_of_a_workbook_names_the_workbook_alone(monkeypatch, caplog)
     assert "***Workbook: Producer.xlsx***" in summary
     assert "Model dir" not in summary
     assert "Reference curves dir" not in summary
+
+
+class _LatexPcs:
+    def get_name(self):
+        return "PCS_RTE-I16z3"
+
+
+class _LatexProducer:
+    def get_sim_type_str(self):
+        return "model/PPM"
+
+
+class _LatexParameters:
+    def get_producer(self):
+        return _LatexProducer()
+
+
+_PACKAGED_REPORTS = Path(report.__file__).resolve().parent.parent / "templates"
+_PCS_REPORTS = Path("reports/model/PPM/PCS_RTE-I16z3")
+
+
+def _copy_the_templates(tmp_path: Path, monkeypatch, user_templates: dict) -> Path:
+    config_dir = tmp_path / "config"
+    user_dir = config_dir / "templates" / _PCS_REPORTS
+    user_dir.mkdir(parents=True)
+    for name, text in user_templates.items():
+        (user_dir / name).write_text(text)
+    monkeypatch.setattr(type(report.config), "get_config_dir", lambda self: config_dir)
+    latex_dir = tmp_path / "Latex"
+    latex_dir.mkdir()
+    report._copy_pcs_latex_files(
+        {"pcs": _LatexPcs(), "producer": "Producer"},
+        _LatexParameters(),
+        Path("templates/reports"),
+        latex_dir,
+    )
+    return latex_dir
+
+
+def test_a_user_report_template_replaces_the_packaged_one_of_the_same_name(
+    tmp_path, monkeypatch, set_user_option
+):
+    set_user_option("DTR", "current", "20240215")
+
+    latex_dir = _copy_the_templates(
+        tmp_path, monkeypatch, {"report.GridVoltageSwell.QMax.tex": "USER TEMPLATE"}
+    )
+
+    assert (latex_dir / "Producer.report.GridVoltageSwell.QMax.tex").read_text() == (
+        "USER TEMPLATE"
+    )
+    packaged = _PACKAGED_REPORTS / _PCS_REPORTS / "report.GridVoltageSwell.QMin.tex"
+    assert (latex_dir / "Producer.report.GridVoltageSwell.QMin.tex").read_text() == (
+        packaged.read_text()
+    )
+
+
+def test_a_user_report_template_replaces_the_one_of_the_revision_of_the_dtr(
+    tmp_path, monkeypatch, set_user_option
+):
+    set_user_option("DTR", "current", "20260723")
+
+    latex_dir = _copy_the_templates(
+        tmp_path, monkeypatch, {"report.GridVoltageDip.Qzero.tex": "USER TEMPLATE"}
+    )
+
+    assert (latex_dir / "Producer.report.GridVoltageDip.Qzero.tex").read_text() == (
+        "USER TEMPLATE"
+    )
+
+
+def test_the_revision_of_the_dtr_replaces_the_packaged_report_template(
+    tmp_path, monkeypatch, set_user_option
+):
+    set_user_option("DTR", "current", "20260723")
+
+    latex_dir = _copy_the_templates(tmp_path, monkeypatch, {})
+
+    delta = _PACKAGED_REPORTS / "revisions/20260723" / _PCS_REPORTS
+    assert (latex_dir / "Producer.report.GridVoltageDip.Qzero.tex").read_text() == (
+        (delta / "report.GridVoltageDip.Qzero.tex").read_text()
+    )
+
+
+def test_a_user_report_template_under_a_new_name_is_added_to_the_packaged_ones(
+    tmp_path, monkeypatch, set_user_option
+):
+    set_user_option("DTR", "current", "20240215")
+
+    latex_dir = _copy_the_templates(
+        tmp_path, monkeypatch, {"report.GridVoltageSwell.QMaxBis.tex": "USER TEMPLATE"}
+    )
+
+    assert (latex_dir / "Producer.report.GridVoltageSwell.QMaxBis.tex").exists()
+    assert (latex_dir / "Producer.report.GridVoltageSwell.QMax.tex").exists()
 
 
 class _CircuitPcs:

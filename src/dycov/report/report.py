@@ -206,10 +206,6 @@ def _copy_pcs_latex_files(
         f"{pcs.get_name()}: Tool LaTeX path:{latex_tool_path}"
     )
 
-    if latex_user_path.exists():
-        manage_files.copy_latex_files(
-            latex_user_path, working_path, pcs_results["producer"].replace("_", "")
-        )
     if latex_tool_path.exists():
         manage_files.copy_latex_files(
             latex_tool_path, working_path, pcs_results["producer"].replace("_", "")
@@ -222,6 +218,11 @@ def _copy_pcs_latex_files(
         )
         manage_files.copy_latex_files(
             latex_delta_path, working_path, pcs_results["producer"].replace("_", "")
+        )
+
+    if latex_user_path.exists():
+        manage_files.copy_latex_files(
+            latex_user_path, working_path, pcs_results["producer"].replace("_", "")
         )
 
     if not (latex_tool_path.exists() or latex_user_path.exists()):
@@ -358,7 +359,9 @@ def _pcs_replace(
     return len(subreports)
 
 
-def _stability_label(stabilized: bool) -> str:
+def _stability_label(stabilized: bool | str) -> str:
+    if stabilized == "N/A":
+        return "N/A"
     return "stable" if stabilized else r"\textcolor{red}{unstable}"
 
 
