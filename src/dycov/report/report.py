@@ -269,10 +269,11 @@ def _pcs_replace(
         pcs_results["pcs"].get_name(), "setpoint_tracking_thresholds", ""
     )
 
-    _render_zone1_circuits(working_path, producer, pcs_results["pcs"].get_zone())
+    _render_zone1_circuits(working_path, producer, pcs_results["pcs"].get_zone(), producer_name)
 
     subst_dict = {
-        "producercommand": f"\\renewcommand{{\\Producer}}{{{pcs_results['producer']}}}",
+        "producercommand": f"\\renewcommand{{\\Producer}}{{{pcs_results['producer']}}}"
+        f"\\renewcommand{{\\ProducerFiles}}{{{producer_name}}}",
         "category": producer.get_category(),
     }
     subreports = []
@@ -385,7 +386,9 @@ def _get_template(path, template_file):
     return template
 
 
-def _render_zone1_circuits(working_path: Path, producer: ModelProducer, zone: int) -> None:
+def _render_zone1_circuits(
+    working_path: Path, producer: ModelProducer, zone: int, prefix: str
+) -> None:
     """Render the Zone-1 circuit schematics, hiding the Group_Xfmr when absent.
 
     Zone 1 omits the external group transformer when ConverterLVControl is false: the
@@ -393,7 +396,8 @@ def _render_zone1_circuits(working_path: Path, producer: ModelProducer, zone: in
     must not draw an external one.
 
     Only the report of a Zone 1 PCS renders them, because its producer describes the Zone 1
-    model, and every PCS renders into the same LaTeX directory.
+    model, and each unit renders its own, named after it as its other files are: every PCS and
+    every unit renders into the same LaTeX directory.
     """
     if zone != 1:
         return
@@ -402,7 +406,9 @@ def _render_zone1_circuits(working_path: Path, producer: ModelProducer, zone: in
     for tikz_name in ("circuit_z1_fault.tikz", "circuit_z1_setpoint.tikz"):
         if (working_path / tikz_name).exists():
             tikz_template = _get_template(working_path, tikz_name)
-            tikz_template.stream(hasgroupxfmr=has_group_xfmr).dump(str(working_path / tikz_name))
+            tikz_template.stream(hasgroupxfmr=has_group_xfmr).dump(
+                str(working_path / f"{prefix}.{tikz_name}")
+            )
 
 
 def _get_iq_last_val(plot_curves: list) -> float | None:

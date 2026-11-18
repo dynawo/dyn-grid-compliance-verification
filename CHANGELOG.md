@@ -58,6 +58,14 @@ of the same name, and the one of the revision of the DTR, as the manual says; un
 overwrote it. A copy of a packaged template left there now hides the packaged one, and the
 corrections later releases bring to it, so remove the copies you do not mean to change (#686).
 
+### A copy of `commonz1.tex` names the schematic of its unit
+
+The report of each Zone 1 unit draws its own schematic, which `commonz1.tex` names through
+`\ProducerFiles`. A copy of `commonz1.tex` among your report templates made on an earlier release
+still names the shared template, and its report draws both circuits one over the other: copy it
+again from the package, or write `\ProducerFiles.circuit_z1_fault.tikz` and
+`\ProducerFiles.circuit_z1_setpoint.tikz` where it names the schematics (#793).
+
 ### Fixed
 
 - The IEC wind power plants of zone 3 are measured at Node2 itself, as the turbines of zone 1
@@ -100,6 +108,8 @@ corrections later releases bring to it, so remove the copies you do not mean to 
   nominal frequency of the configuration (#779).
 - The SCR jump envelopes keep their shape outside the 30 ms hold after the event when the
   producer's minimum power is above zero or its maximum below zero (#780).
+- In a model with several Zone 1 units, the report draws for each unit its own Zone 1
+  schematic, where every unit got that of the unit rendered last (#793).
 - `generate_gfm_envelopes` stops, naming each value, when the producer's D, H or Xeff cannot give
   envelopes (#782).
 - A list of the configuration may have spaces around its commas, or a comma at its end: a PCS
