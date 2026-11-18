@@ -98,6 +98,9 @@ This is where the mathematical modeling lives. The structure follows the
        :alt: RoCoF calculation flowchart
 
   * ``scr_jump.py`` (``SCRJump``) — active power response to an SCR jump.
+    Each variation of D and H takes the response of its own regime, as in the
+    RoCoF, and an underdamped one adds the bounds of its oscillation to the
+    envelopes whatever the regime of the others.
 
     .. image:: ../../GFM_Flowchart/SCRJump.*
        :width: 70%
