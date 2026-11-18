@@ -40,6 +40,13 @@ decoupling protection curves, which the previous template listed one parameter p
 data of a workbook made on the template of 1.3.0 into `workbooks/Producer_IEC.xlsx`: it is still
 read, with a warning, and its protection curves written as before (#394).
 
+### Your report templates replace the packaged ones
+
+A report template in `templates/reports` of the configuration directory replaces the packaged one
+of the same name, and the one of the revision of the DTR, as the manual says; until now they
+overwrote it. A copy of a packaged template left there now hides the packaged one, and the
+corrections later releases bring to it, so remove the copies you do not mean to change (#686).
+
 ### Fixed
 
 - `generate_gfm_envelopes` keeps the envelopes of every PCS when one it lists generates none,
