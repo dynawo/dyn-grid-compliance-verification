@@ -102,6 +102,10 @@ corrections later releases bring to it, so remove the copies you do not mean to 
   producer's minimum power is above zero or its maximum below zero (#780).
 - `generate_gfm_envelopes` stops, naming each value, when the producer's D, H or Xeff cannot give
   envelopes (#782).
+- A list of the configuration may have spaces around its commas, or a comma at its end: a PCS
+  listed after a space was looked for with that space in its name, and the run stopped with an
+  error that said nothing about the cause. The voltage figure of the swell of fiche I16 zone 3
+  for storage units, left out by such a space in the shipped description, is back (#792).
 
 ## 1.3.0 — 2026-10-29
 

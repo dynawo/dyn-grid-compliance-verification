@@ -105,6 +105,27 @@ def test_get_list_returns_split_values(tmp_path, empty_parsers):
     assert cfg.get_list("list_section", "mylist") == ["a", "b", "c"]
 
 
+@pytest.mark.parametrize(
+    "value",
+    [
+        "a, b, c",
+        " a ,b , c ",
+        "a,b,c,",
+        "a,\nb,\nc",
+        "a,, b,c",
+    ],
+)
+def test_get_list_ignores_the_spaces_and_the_empty_items_around_the_commas(
+    tmp_path, empty_parsers, value
+):
+    user_config = empty_parsers[1]
+    user_config.add_section("list_section")
+    user_config.set("list_section", "mylist", value)
+    cfg = Config(tmp_path, *empty_parsers)
+
+    assert cfg.get_list("list_section", "mylist") == ["a", "b", "c"]
+
+
 def test_get_value_nonexistent_returns_none_or_default(tmp_path, empty_parsers):
     cfg = Config(tmp_path, *empty_parsers)
     # get_value returns None for missing key

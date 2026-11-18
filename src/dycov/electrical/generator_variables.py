@@ -36,7 +36,7 @@ class GeneratorVariables:
         if option is None:
             return []
         try:
-            return [float(value) for value in config.get_list("GridCode", option) if value.strip()]
+            return [float(value) for value in config.get_list("GridCode", option)]
         except ValueError:
             raise ValueError(
                 f"{config.describe_option('GridCode', option)} is no list of numbers."
