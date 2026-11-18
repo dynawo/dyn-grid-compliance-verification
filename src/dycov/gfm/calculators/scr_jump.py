@@ -49,9 +49,6 @@ class SCRJump(GFMCalculator):
         self._min_active_power = gfm_params.get_min_active_power()
         self._max_active_power = gfm_params.get_max_active_power()
 
-        self._is_inconsistent = False
-        self._disclaimer_message: Optional[str] = None
-
     def get_plot_parameter_names(self) -> list[str]:
         """
         Retrieves parameters relevant for rendering SCRJump plots.
@@ -119,9 +116,9 @@ class SCRJump(GFMCalculator):
         Computes the response of the nominal D and H and of their two variations.
 
         The variations change D and H in opposite directions: D times RatioMax with H times
-        RatioMin, and D times RatioMin with H times RatioMax. A variation that damps differently
-        from the others (one overdamped, another underdamped) marks the envelopes as
-        inconsistent.
+        RatioMin, and D times RatioMin with H times RatioMax. Each one takes the response of its
+        own regime, overdamped or underdamped, so the variations of a unit near critical damping
+        may fall on both sides of it.
 
         Parameters
         ----------
@@ -173,7 +170,6 @@ class SCRJump(GFMCalculator):
         self._d_vals = damping_variations
         self._h_vals = inertia_variations
         self._epsilon_vals = epsilon_results
-        self._check_damping_consistency(epsilon_results, damping_variations, inertia_variations)
 
         return (
             delta_p_results,
@@ -182,44 +178,6 @@ class SCRJump(GFMCalculator):
             peak_power_results,
             epsilon_results,
         )
-
-    def _check_damping_consistency(
-        self,
-        epsilon_results: np.ndarray,
-        damping_variations: np.ndarray,
-        inertia_variations: np.ndarray,
-    ) -> None:
-        """
-        Marks the envelopes as inconsistent when the variations do not all damp the same way,
-        and clears the mark when they do.
-
-        Parameters
-        ----------
-        epsilon_results : np.ndarray
-            The damping ratio of each variation.
-        damping_variations : np.ndarray
-            The D of each variation.
-        inertia_variations : np.ndarray
-            The H of each variation.
-        """
-        is_overdamped = epsilon_results >= 1
-        self._is_inconsistent = not np.all(is_overdamped == is_overdamped[0])
-        if not self._is_inconsistent:
-            self._disclaimer_message = None
-            return
-
-        eps_str = np.array2string(epsilon_results, precision=2)
-        d_str = np.array2string(damping_variations, precision=2)
-        h_str = np.array2string(inertia_variations, precision=2)
-        msg = (
-            f"Inconsistent damping behavior across parameter variations.\n"
-            f"Epsilon values: {eps_str}.\n"
-            f"Is Overdamped (>=1): {is_overdamped}.\n"
-            f"D values: {d_str}. H values: {h_str}.\n"
-            f"Variations must maintain the same damping type."
-        )
-        LOGGER.warning(msg)
-        self._disclaimer_message = msg
 
     def _modify_envelope(
         self,
@@ -357,9 +315,9 @@ class SCRJump(GFMCalculator):
         Constructs active power envelopes by evaluating and merging traces.
 
         Each variation gives an upper and a lower trace. An underdamped one also gives an upper
-        trace from the upper bound of its oscillation and a lower trace from the lower bound.
-        Whether those extra traces, together with half the change of the last variation, take
-        part in an envelope is decided by the last variation alone.
+        trace from the upper bound of its oscillation and a lower trace from the lower bound,
+        whatever the regime of the others, and half the change of the last variation takes part
+        in both envelopes when that variation is underdamped.
 
         Parameters
         ----------
@@ -420,18 +378,14 @@ class SCRJump(GFMCalculator):
             self._initial_active_power + delta_p_array[last, :] * 0.5
         )
 
-        if np.isnan(delta_p_max_env_array[last, 0]):
-            upper_matrix = np.vstack(upper_trace_candidates)
-        else:
-            upper_matrix = np.vstack(
-                (upper_trace_candidates, [power_at_50_percent], upper_traces_from_max_env)
-            )
-        if np.isnan(delta_p_min_env_array[last, 0]):
-            lower_matrix = np.vstack(lower_trace_candidates)
-        else:
-            lower_matrix = np.vstack(
-                (lower_trace_candidates, [power_at_50_percent], lower_traces_from_min_env)
-            )
+        upper_traces = upper_trace_candidates + upper_traces_from_max_env
+        lower_traces = lower_trace_candidates + lower_traces_from_min_env
+        if not np.isnan(delta_p_max_env_array[last, 0]):
+            upper_traces.append(power_at_50_percent)
+        if not np.isnan(delta_p_min_env_array[last, 0]):
+            lower_traces.append(power_at_50_percent)
+        upper_matrix = np.vstack(upper_traces)
+        lower_matrix = np.vstack(lower_traces)
 
         rises_from_nonzero_power = delta_p_at_event > 0 and (
             self._initial_active_power > 0 or self._initial_active_power < 0
