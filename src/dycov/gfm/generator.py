@@ -6,6 +6,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 
+import configparser
 import logging
 import multiprocessing
 import sys
@@ -24,8 +25,8 @@ def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
     """
     Worker function that generates envelopes for a specific PCS.
 
-    A PCS that fails on a missing file or a malformed value is reported and skipped, so the
-    others still run.
+    A PCS whose description cannot be read, or that fails on a missing file or a malformed
+    value, is reported and skipped, so the others still run.
 
     Parameters
     ----------
@@ -34,16 +35,16 @@ def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
         simulation parameters, the PCS name, and the producer name.
     """
     parameters, pcs_name, producer_name = pcs_args
-    pcs = Pcs(producer_name, pcs_name, parameters)
-
+    dycov_logging.clear_test_context()
     try:
+        pcs = Pcs(producer_name, pcs_name, parameters)
         if not pcs.is_valid():
-            LOGGER.error(f"{pcs.get_name()} is not a valid PCS")
+            LOGGER.error(f"{pcs_name} is not a valid PCS")
             return
         pcs.generate()
-    except (OSError, ValueError) as e:
+    except (OSError, ValueError, configparser.Error) as e:
         report = LOGGER.exception if LOGGER.getEffectiveLevel() == logging.DEBUG else LOGGER.error
-        report(f"Aborted execution for {pcs.get_name()}. {e}")
+        report(f"Aborted execution for {pcs_name}. {e}")
 
 
 class GFMGeneration:
@@ -179,10 +180,26 @@ class GFMGeneration:
             for pcs_tuple in self._pcs_list:
                 _generate_pcs(pcs_tuple)
 
+        dycov_logging.clear_test_context()
         for _, pcs_name, producer_name in self._pcs_list:
-            manage_files.copy_directory(
-                self._parameters.get_working_dir() / producer_name,
-                self._parameters.get_output_dir(),
-                pcs_name,
-            )
+            self.__keep_envelopes(producer_name, pcs_name)
         manage_files.remove_dir(self._parameters.get_working_dir())
+
+    def __keep_envelopes(self, producer_name: str, pcs_name: str) -> None:
+        """
+        Copies the envelopes a PCS generated to the output directory. A PCS that is not valid,
+        or whose generation was aborted before its first envelope, generated none, whatever
+        directories it prepared for them: it is reported and left out, and the others are kept.
+
+        Parameters
+        ----------
+        producer_name : str
+            The name of the producer the envelopes are for.
+        pcs_name : str
+            The name of the PCS.
+        """
+        producer_dir = self._parameters.get_working_dir() / producer_name
+        if not any(path.is_file() for path in (producer_dir / pcs_name).rglob("*")):
+            LOGGER.warning(f"{pcs_name} generated no envelopes, so the output leaves it out")
+            return
+        manage_files.copy_directory(producer_dir, self._parameters.get_output_dir(), pcs_name)

@@ -179,8 +179,8 @@ declared the same way.
 
 ## 5. Step 2 — One operating condition per active power level
 
-Each benchmark runs at the three active power levels the fiche fixes, so it
-has three operating conditions. Name them after the level:
+Each benchmark runs at the active power levels the fiche fixes that were
+recorded, one operating condition per level. Name them after the level:
 
 ```ini
 [PCS-OperatingConditions]
