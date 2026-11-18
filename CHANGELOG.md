@@ -49,6 +49,13 @@ corrections later releases bring to it, so remove the copies you do not mean to 
 
 ### Fixed
 
+- `generate_gfm_envelopes` keeps the envelopes of every PCS when one it lists generates none,
+  because it is not a valid PCS, its description cannot be read or its generation stopped before
+  its first envelope: it reports that PCS and leaves it out, where it stopped there and lost the
+  envelopes of the PCS listed after it (#688).
+- The Zone 1 schematic of the report follows the Zone 1 model in a parallel validation too, where
+  it drew the group transformer or left it out depending on which PCS prepared its report first
+  (#740).
 - A power park module of 250 MW or more connected at HTB1 takes the reactance b the DTR gives it,
   0.54 up to 800 MW and 0.6 above, where it took 0.3: its line reactances in the fiches I2, I5,
   I10 and I16 zone 3, and the reactance of the impedant fault, change with it. Such a unit reads

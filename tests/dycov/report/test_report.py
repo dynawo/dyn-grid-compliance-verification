@@ -546,3 +546,76 @@ def test_a_user_report_template_under_a_new_name_is_added_to_the_packaged_ones(
 
     assert (latex_dir / "Producer.report.GridVoltageSwell.QMaxBis.tex").exists()
     assert (latex_dir / "Producer.report.GridVoltageSwell.QMax.tex").exists()
+
+
+class _CircuitPcs:
+    def __init__(self, zone: int):
+        self._zone = zone
+
+    def get_name(self):
+        return f"PCS_RTE-I16z{self._zone}"
+
+    def get_zone(self):
+        return self._zone
+
+
+class _CircuitProducer:
+    def __init__(self, group_xfmrs: list):
+        self.group_xfmrs = group_xfmrs
+
+    def get_category(self):
+        return "B"
+
+    def is_field_measurements(self):
+        return False
+
+
+_ZONE1_SCHEMATIC = "circuit_z1_setpoint.tikz"
+
+
+def _latex_dir_with_the_zone1_schematic(tmp_path: Path) -> Path:
+    shipped = (
+        Path(report.__file__).resolve().parent.parent
+        / "templates/reports/model/PPM/PCS_RTE-I16z1"
+        / _ZONE1_SCHEMATIC
+    )
+    (tmp_path / _ZONE1_SCHEMATIC).write_text(shipped.read_text())
+    (tmp_path / "report.tex").write_text("")
+    return tmp_path
+
+
+def _prepare(latex_dir: Path, zone: int, group_xfmrs: list) -> None:
+    pcs_results = {"producer": "Producer", "pcs": _CircuitPcs(zone)}
+    report._pcs_replace(latex_dir, pcs_results, "report.tex", _CircuitProducer(group_xfmrs))
+
+
+def test_the_zone1_schematic_follows_the_zone1_model_when_a_zone3_pcs_gets_there_first(
+    tmp_path,
+):
+    latex_dir = _latex_dir_with_the_zone1_schematic(tmp_path)
+
+    _prepare(latex_dir, zone=3, group_xfmrs=[])
+    _prepare(latex_dir, zone=1, group_xfmrs=["Group_Xfmr"])
+
+    schematic = (latex_dir / _ZONE1_SCHEMATIC).read_text()
+    assert "Group\\\\ transformer" in schematic
+    assert "BLOCK" not in schematic
+
+
+def test_the_zone1_schematic_draws_no_group_transformer_the_zone1_model_lacks(tmp_path):
+    latex_dir = _latex_dir_with_the_zone1_schematic(tmp_path)
+
+    _prepare(latex_dir, zone=1, group_xfmrs=[])
+
+    schematic = (latex_dir / _ZONE1_SCHEMATIC).read_text()
+    assert "transformer" not in schematic
+    assert "BLOCK" not in schematic
+
+
+def test_a_zone3_pcs_leaves_the_zone1_schematic_to_the_zone1_pcs(tmp_path):
+    latex_dir = _latex_dir_with_the_zone1_schematic(tmp_path)
+    template = (latex_dir / _ZONE1_SCHEMATIC).read_text()
+
+    _prepare(latex_dir, zone=3, group_xfmrs=[])
+
+    assert (latex_dir / _ZONE1_SCHEMATIC).read_text() == template
