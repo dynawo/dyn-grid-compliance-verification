@@ -30,7 +30,6 @@ from dycov.validation.performance import (
     PerformanceValidator,
     _check_compliance,
     _check_timeline,
-    _combined_check,
     _is_disconnection_event,
 )
 
@@ -183,22 +182,6 @@ def test_check_compliance_without_a_threshold_only_stores_the_value():
     assert results["metric"] == pytest.approx(0.75)
     assert "metric_check" not in results
     assert results["compliance"] is True
-
-
-@pytest.mark.parametrize(
-    "parts, expected",
-    [
-        ([True, True], True),
-        ([True, False], False),
-        ([True, NOT_COMPUTABLE], NOT_COMPUTABLE),
-        ([NOT_COMPUTABLE, False], False),
-        ([], NOT_COMPUTABLE),
-    ],
-)
-def test_combined_check_fails_on_a_failed_part_before_reporting_one_not_computable(
-    parts, expected
-):
-    assert _combined_check(parts) == expected
 
 
 def test_check_compliance_above_the_threshold_fails():

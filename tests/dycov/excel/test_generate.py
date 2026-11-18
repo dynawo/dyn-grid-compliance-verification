@@ -56,12 +56,14 @@ def test_reference_curves_report_names_what_is_still_missing():
             "copied": 2,
             "missing": ["rise.csv"],
             "unfilled": ["PCS_RTE-I16z1.SetPointStep.Active"],
+            "without_row": ["PCS_RTE-I16z3.GridVoltageSwell.Qzero"],
         }
     )
 
     assert "tests described : 3" in report
     assert ".csv missing    : 1" in report and "rise.csv" in report
     assert "metadata to fill: 1" in report and "SetPointStep.Active" in report
+    assert "rows missing    : 1" in report and "GridVoltageSwell.Qzero" in report
 
 
 def test_reference_curves_report_says_when_the_sheets_describe_nothing():
@@ -231,3 +233,17 @@ def test_generate_fails_when_zone1_blocks_have_no_values(tmp_path, monkeypatch):
         match=r"Zone1 control blocks \(REEC, REGC, Protection de tension\) carry no parameter",
     ):
         G.generate(Path("ignored.xlsx"), tmp_path)
+
+
+def test_a_workbook_without_the_rows_of_the_revision_is_warned_about(caplog):
+    curves = {"without_row": ["PCS_RTE-I16z3.GridVoltageSwell.Qzero"]}
+
+    G._warn_without_row(Path("Producer.xlsx"), curves)
+
+    assert "Producer.xlsx has no row for PCS_RTE-I16z3.GridVoltageSwell.Qzero" in caplog.text
+
+
+def test_a_workbook_with_every_row_of_the_revision_is_not_warned_about(caplog):
+    G._warn_without_row(Path("Producer.xlsx"), {"without_row": []})
+
+    assert "has no row" not in caplog.text

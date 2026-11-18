@@ -76,3 +76,40 @@ def test_a_parallel_generation_hands_its_workers_the_configuration_of_the_run(
 
     assert _RecordingPool.built_with["initializer"] is worker_initializer
     assert _RecordingPool.built_with["initargs"][1] == config.run_layers()
+
+
+def _generates_all_but(skipped: str):
+    """A stand-in of the generation of a PCS that writes one envelope for every PCS but one,
+    which only prepares the directory of its operating condition, as an aborted one does."""
+
+    def generate_pcs(pcs_args):
+        parameters, pcs_name, producer_name = pcs_args
+        oc_dir = parameters.get_working_dir() / producer_name / pcs_name / "Benchmark" / "OC"
+        oc_dir.mkdir(parents=True)
+        if pcs_name != skipped:
+            (oc_dir / "envelopes.csv").write_text("time\n")
+
+    return generate_pcs
+
+
+def test_a_pcs_that_generates_nothing_is_reported_and_the_others_are_kept(
+    monkeypatch, tmp_path, caplog
+):
+    from dycov.gfm import generator
+
+    monkeypatch.setattr(generator, "_generate_pcs", _generates_all_but("PCS_Invalid"))
+    gfm_generation = object.__new__(generator.GFMGeneration)
+    gfm_generation._parameters = _DummyParameters(tmp_path)
+    gfm_generation._pcs_list = [
+        (gfm_generation._parameters, pcs_name, "Producer")
+        for pcs_name in ("PCS_A", "PCS_Invalid", "PCS_B")
+    ]
+    (tmp_path / "Results").mkdir()
+
+    gfm_generation.generate(use_parallel=False)
+
+    results = tmp_path / "Results"
+    assert sorted(path.name for path in results.iterdir()) == ["PCS_A", "PCS_B"]
+    assert (results / "PCS_B" / "Benchmark" / "OC" / "envelopes.csv").exists()
+    assert "PCS_Invalid generated no envelopes" in caplog.text
+    assert not (tmp_path / "working").exists()

@@ -43,6 +43,11 @@ DyCoV currently supports four predefined disturbance families:
   sudden change in the Short-Circuit Ratio (grid impedance), differentiated
   between overdamped and underdamped responses.
 
+In the RoCoF and the SCR Jump, each variation of D and H takes the response of
+its own regime, overdamped or underdamped, so the variations of a unit close to
+critical damping may fall on both sides of it and the envelopes take them all
+into account.
+
 
 Standard mode vs. Hybrid mode
 -----------------------------
