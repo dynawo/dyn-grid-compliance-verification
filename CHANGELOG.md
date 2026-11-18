@@ -60,6 +60,10 @@ corrections later releases bring to it, so remove the copies you do not mean to 
 
 ### Fixed
 
+- The IEC wind power plants of zone 3 are measured at Node2 itself, as the turbines of zone 1
+  are since 1.3.0. With the low-voltage transformer inside the converter model
+  (`WPP_ConverterLVControl = false`), their voltage and powers there were read on its grid side,
+  at Node1, and so were the currents at Node2 the tool derives from them (#634).
 - Every test an F16 declaration names is run, recorded or not, and one without its record ends as
   missing its reference curves, where the notes of 1.3.0 said only the recorded ones run: declare
   only the tests recorded (#684).

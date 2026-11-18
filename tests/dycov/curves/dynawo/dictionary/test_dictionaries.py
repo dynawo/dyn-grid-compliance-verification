@@ -35,14 +35,19 @@ _DYNAWO_NS = "{http://www.rte-france.com/dynawo}"
 _STATED_FLAGS = {"true", "false"}
 
 
+def _read_dictionary(path: Path) -> configparser.ConfigParser:
+    parser = configparser.ConfigParser(inline_comment_prefixes=("#",), strict=False)
+    parser.optionxform = str
+    parser.read(path)
+    return parser
+
+
 def _models():
     models = []
     for path in sorted(_DICTIONARIES.glob("*.ini")):
         if path.name in _NOT_MODELS:
             continue
-        parser = configparser.ConfigParser(inline_comment_prefixes=("#",), strict=False)
-        parser.optionxform = str
-        parser.read(path)
+        parser = _read_dictionary(path)
         for lib in parser.sections():
             entries = {
                 key: value.lstrip("-")
@@ -133,3 +138,23 @@ def test_every_parameter_a_template_sets_is_a_settable_parameter_of_its_model(
         return name in singles or (array in arrays and index.isdigit())
 
     assert [name for name in names if not is_settable(name)] == []
+
+
+def _iec_models() -> list:
+    parser = _read_dictionary(_DICTIONARIES / "Power_Park.ini")
+    return [
+        pytest.param(lib, dict(parser.items(lib)), id=lib)
+        for lib in parser.sections()
+        if parser.get(lib, "family", fallback="") == "IEC"
+    ]
+
+
+@pytest.mark.parametrize("lib, entries", _iec_models())
+def test_an_iec_model_is_measured_at_node2_on_the_converter_side_of_its_transformer(lib, entries):
+    """The low-voltage transformer of an IEC turbine may be inside its model, and the terminal
+    of the model is then Node1: Node2 is the terminal of its generator system, which gives the
+    voltage and the current, and the powers there are computed from them."""
+    node2 = {key: value for key, value in entries.items() if "Node2" in key}
+
+    assert set(node2) == {"VoltageNode2Re", "VoltageNode2Im", "CurrentNode2Re", "CurrentNode2Im"}
+    assert all("_wT4Injector_genSystem_terminal_" in value for value in node2.values())
