@@ -177,7 +177,13 @@ suffix is silently ignored. Event parameters live in the corresponding
 > Important:
 > Changing an OC affects the simulation results but may not automatically update
 > the textual description in the final PDF report unless the report template is
-> also adapted.
+> also adapted. To adapt it, copy the template the report uses into
+> `~/.config/dycov/templates/reports/<workflow>/<technology>/<PCSName>/` under the
+> same name and edit the copy: it replaces the packaged template, and the one of
+> the selected DTR revision. Start from the one of the revision when it writes
+> one (under `templates/revisions/<revision>/reports/`), or the copy brings back
+> the text of the base revision. A template that several PCS share, such as
+> `commonz3.tex`, has to be placed in the directory of each PCS that ships it.
 
 ---
 
