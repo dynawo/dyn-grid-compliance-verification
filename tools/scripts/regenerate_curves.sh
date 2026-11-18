@@ -12,10 +12,10 @@
 #   3. regenerate_reference_curves.sh   the reference curves of every Model example
 #   4. regenerate_producer_curves.sh    the curves a producer delivers instead of a model
 #
-# A declared test of Fiche F16 is run only where its record exists, so stage 1 declares it and
-# announces the record before anything runs; stage 3 then simulates every test, F16 among them,
-# which is what its record is made of. The producer curves of the Model examples are the curves
-# of a Model example, so stage 4 reads the run of stage 3.
+# A test of Fiche F16 is run because a declaration names it, so stage 1 declares it before
+# anything runs; stage 3 then simulates every test, F16 among them, which is what its record is
+# made of. The producer curves of the Model examples are the curves of a Model example, so
+# stage 4 reads the run of stage 3.
 
 set -o nounset -o noclobber
 set -o errexit -o pipefail

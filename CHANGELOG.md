@@ -42,6 +42,9 @@ read, with a warning, and its protection curves written as before (#394).
 
 ### Fixed
 
+- Every test an F16 declaration names is run, recorded or not, and one without its record ends as
+  missing its reference curves, where the notes of 1.3.0 said only the recorded ones run: declare
+  only the tests recorded (#684).
 - A power park module of 250 MW or more connected at HTB1 takes the reactance b the DTR gives it,
   0.54 up to 800 MW and 0.6 above, where it took 0.3: its line reactances in the fiches I2, I5,
   I10 and I16 zone 3, and the reactance of the impedant fault, change with it. Such a unit reads

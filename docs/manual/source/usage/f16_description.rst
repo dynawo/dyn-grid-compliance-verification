@@ -84,6 +84,9 @@ Both are free names, with one exception noted under the voltage dip and
 swell; they name the sections below, the records
 (``PCS_RTE-F16z3.<Benchmark>.<OperatingCondition>.csv``) and the figures.
 
+Declare only the operating conditions recorded: one declared without its
+record is still simulated, and reported as *Missing some reference curves*.
+
 
 The sections of a declared test
 -------------------------------
