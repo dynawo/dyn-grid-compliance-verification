@@ -84,8 +84,9 @@ and the `{{step_event_*}}` TSO placeholders), and the report
 `reference_step_size` scaling (`figure.py`; `report.py` overrides `Unom`→kV). Adding a base = adding a
 registry entry. `obtain_value` only resolves definitions that reference a magnitude (a `*`, or a
 possibly signed registry name); anything else is a Dynawo parameter value passed through verbatim.
-A rejected definition aborts the run — `obtain_simulated_curve` turns only `SimulationOutcomeError`
-(the bisection outcomes, `model/parameters.py`) into a failed `SimulationResult`.
+A definition rejected while a test is simulated ends that test as `Invalid test`, since
+`obtain_simulated_curve` turns only `SimulationOutcomeError` (the bisection outcomes,
+`model/parameters.py`) into a failed `SimulationResult` and the rest reaches `Benchmark.validate`.
 Out of scope: GFM (own grammar `mult*(Xeff+Xgrid)`, `extract_defined_value` for p0/q0)
 and `line_XPu` (DTR reactance-table base `a`/`b`). `line_XFaultPu` resolves against the registry
 plus `XFaultPu`, the reactance the DTR gives the impedant three-phase fault
@@ -98,7 +99,7 @@ template of the declaration, which `core/initialization.py` copies under that sa
 user's templates (`_copy_pcs_to_declare`, never over a copy already there); a PCS that declares no benchmark is skipped by `_validate_pcs`. The producer declares
 the recorded tests in `<ReferenceCurves>/F16Description.ini`, which `Pcs` takes as the user PCS
 description of the PCS the file names in its `[PCS-Benchmarks]` (`_description_declaring`, in place
-of the one in the configuration directory), so `cfg.py` keeps its five layers. Every
+of the one in the configuration directory), so `cfg.py` keeps its six layers. Every
 declared test is rendered with the shared `report.F16z3.DeclaredTest.tex`: `_pcs_replace` writes
 one `report.<pcs>.<bm>.<oc>.tex` per operating condition and hands the template its maps without the
 `PCS…` suffix (`rm`, `thm`, `tem`…) plus `benchmark`/`operatingcondition`. The F16 error
@@ -106,9 +107,8 @@ thresholds are the `thr_FT_reftrack_*` family of `[GridCode]`: a PCS names the f
 with `setpoint_tracking_thresholds = FT` in its section, and `get_setpoint_tracking_threshold_values`
 reads `thr_<family>_reftrack_*`, the I16 table when the PCS names none. The `is_field_measurements`
 flag of the curves plays no part here: I16 keeps its single table whatever the reference is.
-A PCS section may also declare `recorded_tests_only = true` (F16 does): `Benchmark` then keeps
-only the operating conditions whose reference `.dict` exists under `<reference>/<producer>/`,
-because the fiche fixes no test and a record is what makes one exist. The Zone 1 model is
+Every operating condition the declaration names runs, recorded or not: one without its record
+ends as missing its reference curves. The Zone 1 model is
 what the PCS of zone 1 validate: `ValidationParameters` tells `ModelProducer` whether it is
 required (`_requires_zone1`: any run not limited by `-p` to one zone-3 PCS), and
 `check_validation_model` / `check_validation_curves` demand `Zone1/` only then, so a producer

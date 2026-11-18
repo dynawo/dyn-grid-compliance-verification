@@ -17,7 +17,6 @@ import pandas as pd
 import plotly.graph_objects as go
 from matplotlib import pyplot as plt
 
-_DEFAULT_DISCLAIMER = "Inconsistent damping. Envelopes may be unreliable."
 _SECTION_RULE = "=" * 30
 
 
@@ -180,8 +179,6 @@ def plot_results(
     upper_envelope: np.ndarray,
     output_format: str,
     params_list: Optional[list] = None,
-    show_disclaimer: bool = False,
-    disclaimer_message: Optional[str] = None,
     extra_envelopes: Optional[dict[str, np.ndarray]] = None,
 ) -> None:
     """
@@ -211,22 +208,18 @@ def plot_results(
         The desired output formats (e.g., 'png&html').
     params_list : list, optional
         List of parameter strings to display on the plot. Defaults to None.
-    show_disclaimer : bool, optional
-        Whether to display a warning disclaimer. Defaults to False.
-    disclaimer_message : str, optional
-        Custom disclaimer text. Defaults to None.
     extra_envelopes : dict[str, np.ndarray], optional
         Additional signals to plot. Defaults to None.
 
     Raises
     ------
     TypeError
-        If the output format or the disclaimer message is not text.
+        If the output format is not text.
     ValueError
         If the output format names neither png nor html, or the time, the signal and the
         envelopes differ in length.
     """
-    _check_plot_options(output_format, disclaimer_message)
+    _check_plot_options(output_format)
     _check_plot_lengths(time_array, pcc_signal, lower_envelope, upper_envelope, extra_envelopes)
     window = _transient_window(
         time_array, pcc_signal, lower_envelope, upper_envelope, extra_envelopes
@@ -242,7 +235,6 @@ def plot_results(
             window,
             event_x,
             params_list,
-            _png_disclaimer(disclaimer_message) if show_disclaimer else None,
             watermark_text,
         )
     if "html" in output_format:
@@ -253,23 +245,17 @@ def plot_results(
             window,
             event_x,
             params_list,
-            _html_disclaimer(disclaimer_message) if show_disclaimer else None,
             watermark_text,
         )
 
 
-def _check_plot_options(output_format: str, disclaimer_message: Optional[str]) -> None:
+def _check_plot_options(output_format: str) -> None:
     if not isinstance(output_format, str):
         raise TypeError(
             f"The output format must be text, not of type {type(output_format).__name__}."
         )
     if "png" not in output_format and "html" not in output_format:
         raise ValueError(f"The output format must name png, html or both, not {output_format!r}.")
-    if disclaimer_message is not None and not isinstance(disclaimer_message, str):
-        raise TypeError(
-            "The disclaimer message must be text, not of type "
-            f"{type(disclaimer_message).__name__}."
-        )
 
 
 def _check_plot_lengths(
@@ -320,17 +306,6 @@ def _watermark_text() -> str:
         return "dycov v(unknown)"
 
 
-def _png_disclaimer(disclaimer_message: Optional[str]) -> str:
-    return "Disclaimer:\n" + (disclaimer_message or _DEFAULT_DISCLAIMER)
-
-
-def _html_disclaimer(disclaimer_message: Optional[str]) -> str:
-    html_msg = (
-        disclaimer_message.replace("\n", "<br>") if disclaimer_message else _DEFAULT_DISCLAIMER
-    )
-    return f"<b>Disclaimer:</b><br>{html_msg}"
-
-
 def _extra_envelope_color(name: str) -> str:
     return "purple" if "overdamped" in name else "orange"
 
@@ -346,7 +321,6 @@ def _plot_png(
     window: _Window,
     event_x: float,
     params_list: Optional[list],
-    disclaimer_text: Optional[str],
     watermark_text: str,
 ) -> None:
     plt.figure(figsize=(8, 5))
@@ -383,19 +357,6 @@ def _plot_png(
             bbox=dict(boxstyle="round,pad=0.5", fc="wheat", alpha=0.5),
         )
 
-    if disclaimer_text is not None:
-        plt.text(
-            0.02,
-            0.02,
-            disclaimer_text,
-            transform=plt.gca().transAxes,
-            fontsize=8,
-            color="red",
-            verticalalignment="bottom",
-            horizontalalignment="left",
-            bbox=dict(boxstyle="round,pad=0.5", fc="white", ec="red", alpha=0.8),
-        )
-
     plt.text(
         0.98,
         0.02,
@@ -423,7 +384,6 @@ def _plot_html(
     window: _Window,
     event_x: float,
     params_list: Optional[list],
-    disclaimer_text: Optional[str],
     watermark_text: str,
 ) -> None:
     fig = go.Figure()
@@ -499,23 +459,6 @@ def _plot_html(
             align="right",
             valign="top",
             bgcolor="rgba(245, 222, 179, 0.7)",
-            borderpad=10,
-        )
-
-    if disclaimer_text is not None:
-        fig.add_annotation(
-            xref="paper",
-            yref="paper",
-            x=0.02,
-            y=0.02,
-            text=disclaimer_text,
-            showarrow=False,
-            align="left",
-            valign="bottom",
-            font=dict(color="red", size=10),
-            bgcolor="rgba(255, 255, 255, 0.8)",
-            bordercolor="red",
-            borderwidth=1,
             borderpad=10,
         )
 

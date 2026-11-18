@@ -16,6 +16,16 @@ from dycov.validation import common, compared_curves, threshold_variables
 NOT_COMPUTABLE = "N/A"
 
 
+def combined_check(parts: list) -> bool | str:
+    """A check made of several: failed if one of them fails, otherwise not computable if one of
+    them cannot be computed or if there are none."""
+    if not parts:
+        return NOT_COMPUTABLE
+    if not all(parts):
+        return False
+    return NOT_COMPUTABLE if NOT_COMPUTABLE in parts else True
+
+
 def is_error_within_threshold(error: float, threshold: float) -> bool:
     """Whether the magnitude of an error stays under its maximum permissible value."""
     return abs(error) < threshold

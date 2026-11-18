@@ -24,9 +24,10 @@ compliance criteria it checks. Its purpose is to make those checks reproducible:
 same tests, run the same way, by the producer preparing a connection request and by
 the TSO reviewing it.
 
-DyCoV implements the DTR of 15/02/2024, which carries revision 3.3 of article 8.3.3.
-A later revision enters the tool as a delta over that one, as `docs/design/DTR_revisions.md`
-says.
+DyCoV implements the DTR of 15/02/2024, which carries revision 3.3 of article 8.3.3, and the
+revisions that followed it, up to that of 23/07/2026, which carries revision 3.6. Each later
+revision enters the tool as a delta over the first, as `docs/design/DTR_revisions.md` says, and
+the configuration names the one a run validates against (`current` in its `[DTR]` section).
 
 ---
 
@@ -437,9 +438,9 @@ The following roadmap outlines the main development directions currently guiding
 
 ### Axis 3 — Consistency with DTR updates
 
-* Support for multiple DTR versions
-* Update of fiches according to DTR 2025 revisions (I5)
-* Implementation of fiche F16
+* ~~Support for multiple DTR versions~~ — *available since v1.3.0*
+* ~~Update of fiches according to DTR 2025 revisions (I5)~~ — *available since v1.3.0*
+* ~~Implementation of fiche F16~~ — *available since v1.3.0*
 * New GFM-related fiches (I18) with PPM/BESS differentiation
 
 ---

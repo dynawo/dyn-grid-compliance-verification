@@ -48,16 +48,6 @@ def _check_compliance(
         results["compliance"] &= results[results_name + "_check"]
 
 
-def _combined_check(parts: list) -> bool | str:
-    """A check made of several: failed if one of them fails, otherwise not computable if one of
-    them cannot be computed or if there are none."""
-    if not parts:
-        return checks.NOT_COMPUTABLE
-    if not all(parts):
-        return False
-    return checks.NOT_COMPUTABLE if checks.NOT_COMPUTABLE in parts else True
-
-
 def _warn_not_computable(check: str, missing: str) -> None:
     dycov_logging.get_logger("Performance").warning(
         f"{check} cannot be checked without {missing}: reported as {checks.NOT_COMPUTABLE}"
@@ -209,8 +199,8 @@ class PerformanceValidator(Validator):
             )
 
         if missing:
-            stable_theta = _combined_check([stable_theta, checks.NOT_COMPUTABLE])
-            pass_pi = _combined_check([pass_pi, checks.NOT_COMPUTABLE])
+            stable_theta = checks.combined_check([stable_theta, checks.NOT_COMPUTABLE])
+            pass_pi = checks.combined_check([pass_pi, checks.NOT_COMPUTABLE])
         return stable_theta, first_stable_pos_theta, pass_pi
 
     def __units(self) -> set:
@@ -354,7 +344,7 @@ class PerformanceValidator(Validator):
                 AVR_5_checks.append(gen_AVR_5_check)
                 if gen_AVR_5 != -1:
                     AVR_5 = gen_AVR_5
-            compliance_values["AVR_5_check"] = _combined_check(AVR_5_checks)
+            compliance_values["AVR_5_check"] = checks.combined_check(AVR_5_checks)
             compliance_values["AVR_5"] = AVR_5
             compliance_values["AVR_5_crvs"] = AVR_5_crv
 
@@ -402,7 +392,7 @@ class PerformanceValidator(Validator):
                 freq1_checks.append(gen_check_freq1)
                 if gen_time_freq1 != -1:
                     time_freq1 = gen_time_freq1
-            compliance_values["check_freq1"] = _combined_check(freq1_checks)
+            compliance_values["check_freq1"] = checks.combined_check(freq1_checks)
             compliance_values["time_freq1"] = time_freq1
 
     def __separated_network_frequencies(self, f_nom: float) -> tuple[list, str]:
@@ -814,7 +804,7 @@ class PerformanceValidator(Validator):
             ]
             computed = [percentage for percentage in percentages if percentage is not None]
             results["static_diff"] = max(computed) if computed else -1
-            results["static_diff_check"] = _combined_check(
+            results["static_diff_check"] = checks.combined_check(
                 [
                     checks.NOT_COMPUTABLE if percentage is None else percentage < 0.2
                     for percentage in percentages
@@ -826,7 +816,7 @@ class PerformanceValidator(Validator):
             measured = [is_stable.p, is_stable.q, is_stable.v]
             if not is_non_synchronous:
                 measured += [is_stable.theta, is_stable.pi]
-            stabilized = _combined_check(measured)
+            stabilized = checks.combined_check(measured)
 
             results["stabilized"] = stabilized
             results["stabilized_rotor_angle"] = not is_non_synchronous

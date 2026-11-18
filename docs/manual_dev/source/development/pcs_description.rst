@@ -74,8 +74,9 @@ pu of the nominal voltage at the PDR), and ``line_XPu`` (the reactance
 computed for the operating condition). ``Pmax`` and its two aliases resolve to
 the same value; writing ``PmaxConsumption`` in ``pdr_P`` marks the operating
 condition as a consumption one, which flips the sign of every ``Pmax`` of
-that condition. A definition that names an unknown magnitude aborts the run,
-naming the file and line it was read from.
+that condition. A definition that names an unknown magnitude ends the test
+that reads it as *Invalid test*, naming the file and line it was read from;
+the other tests run.
 
 Voltage levels
 ^^^^^^^^^^^^^^
