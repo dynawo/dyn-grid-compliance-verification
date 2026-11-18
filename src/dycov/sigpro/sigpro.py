@@ -13,7 +13,7 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 from scipy import signal
-from scipy.interpolate import PchipInterpolator
+from scipy.interpolate import CubicSpline, PchipInterpolator
 
 from dycov.configuration.cfg import config
 from dycov.logging import dycov_logging
@@ -22,35 +22,122 @@ from dycov.sigpro import lp_filters
 # For avoiding overflows in PChipInterpolator
 ZERO_THRESHOLD = 1.0e-10
 
+# Fraction of a step a sample may lie away from the grid of whole samples per cycle and still be
+# taken as lying on it: time stamps written with few digits, or in single precision, wander so.
+_ON_GRID_TOLERANCE = 0.01
 
-def _shortfft(x, fs):
-    f, t, Zxx = signal.stft(x, fs, nperseg=100, noverlap=99)
-    return f, t, Zxx
+
+def _fundamental_grid(time: np.ndarray, f_nom: float) -> tuple[np.ndarray, int]:
+    """Build the uniform time grid with a whole number of samples per fundamental cycle.
+
+    Its step is the one closest to the mean step of the samples that divides the cycle exactly,
+    so that the sum over the samples of one cycle integrates every harmonic of that cycle exactly.
+
+    Parameters
+    ----------
+    time : np.ndarray
+        Time stamps of the samples, in seconds.
+    f_nom : float
+        Fundamental frequency, in Hz.
+
+    Returns
+    -------
+    tuple[np.ndarray, int]
+        The grid, spanning the samples, and its number of samples per cycle.
+    """
+    span = time[-1] - time[0]
+    samples_per_cycle = round((len(time) - 1) / (span * f_nom))
+    step = 1 / (f_nom * samples_per_cycle) if samples_per_cycle else np.inf
+    grid = time[0] + step * np.arange(int(span / step + _ON_GRID_TOLERANCE) + 1)
+    if samples_per_cycle < 3 or len(grid) < 2 * (samples_per_cycle // 2) + 2:
+        raise ValueError(
+            f"Three-phase curves sampled every {span / (len(time) - 1):g} s over {span:g} s "
+            f"cannot be converted to RMS: the conversion needs three samples per cycle of "
+            f"{f_nom:g} Hz at least, over more than one cycle"
+        )
+    return grid, samples_per_cycle
 
 
-def _positive_sequence(abc):
+def _lies_on(time: np.ndarray, grid: np.ndarray) -> bool:
+    """Tell whether each sample lies on its point of the grid, within the tolerance."""
+    tolerance = _ON_GRID_TOLERANCE * (grid[1] - grid[0])
+    return len(time) == len(grid) and np.max(np.abs(time - grid)) <= tolerance
+
+
+def _resampled(time: np.ndarray, values: np.ndarray, grid: np.ndarray) -> np.ndarray:
+    """Resample a waveform on the grid with a cubic spline, the most precise interpolant of a
+    sinusoid among the usual ones."""
+    unique_time, first = np.unique(time, return_index=True)
+    return CubicSpline(unique_time, values[first])(grid)
+
+
+def _fundamental_phasor(
+    samples: np.ndarray, grid: np.ndarray, samples_per_cycle: int, f_nom: float
+) -> np.ndarray:
+    """Calculate the fundamental phasor of a waveform over one cycle centred on each sample.
+
+    The phasor is the Fourier coefficient of IEC 61400-21-1, Annex C: 2/T times the integral,
+    over one cycle T, of the waveform times exp(-j 2 pi f_nom t). Its magnitude is the peak of the
+    fundamental. The standard stamps it at the end of the cycle, which delays it by T/2; it is
+    stamped here at the centre, as the synchrophasor standard IEC/IEEE 60255-118-1 does, so that
+    it does not lag behind the RMS simulation it is compared with.
+
+    With N samples per cycle, the integral is summed by the midpoint rule over N samples when N
+    is odd, and by the trapezoidal rule over the N + 1 samples that span the cycle when N is even.
+    Both are exact for every harmonic up to N - 2, and so reject all of them.
+
+    Parameters
+    ----------
+    samples : np.ndarray
+        Waveform sampled on the grid.
+    grid : np.ndarray
+        Uniform time grid with samples_per_cycle samples per cycle, in seconds.
+    samples_per_cycle : int
+        Number of samples per cycle of the grid.
+    f_nom : float
+        Fundamental frequency, in Hz.
+
+    Returns
+    -------
+    np.ndarray
+        Complex phasor at each sample of the grid half a cycle away from both of its ends.
+    """
+    weights = np.ones(samples_per_cycle + 1 - samples_per_cycle % 2)
+    if samples_per_cycle % 2 == 0:
+        weights[[0, -1]] = 0.5
+    demodulated = samples * np.exp(-2j * np.pi * f_nom * grid)
+    return 2 / samples_per_cycle * signal.convolve(demodulated, weights, mode="valid")
+
+
+def _positive_sequence(phasor_a, phasor_b, phasor_c):
+    """Calculate the positive-sequence component of three phase phasors (Fortescue)."""
     a = np.exp(2j * np.pi / 3)
-    A = (1 / 3) * np.linalg.inv(np.array([[1, 1, 1], [1, a**2, a], [1, a, a**2]]))
-    return A.dot(abc)
+    return (phasor_a + a * phasor_b + a**2 * phasor_c) / 3
 
 
-def _abc_to_psrms(abc, fs):
-    Zxx_abc_50 = []
-    for x in abc:
-        f, t, Zxx = _shortfft(x, fs)
-        idx = np.argmin(np.abs(f - 50))
-        Zxx_abc_50.append(
-            Zxx[idx][0:-1]
-        )  # the stft function returns a 1 element longer array than the input
-    ps = _positive_sequence(Zxx_abc_50)[1]
-    return (1 / np.sqrt(2)) * np.abs(ps)
+def _warn_if_undersampled(sampling_frequency: float) -> None:
+    minimum = config.get_float("GridCode", "emt_min_sampling_frequency", 2000.0)
+    if round(sampling_frequency) < minimum:
+        dycov_logging.get_logger("SigPro").warning(
+            f"Three-phase curves sampled at {round(sampling_frequency)} Hz, below the "
+            f"{minimum:.0f} Hz the DTR asks of EMT and measured reference signals: their "
+            f"harmonics may alias onto the fundamental"
+        )
 
 
 def ensure_rms_signals(curves: pd.DataFrame) -> pd.DataFrame:
     """Ensures that the curves DataFrame contains RMS signals, converting from ABC if necessary.
 
-    The function checks if the curves are in ABC format (identified by column names ending with
-    "_a", "_b", "_c") and converts them to positive-sequence RMS values if needed.
+    The columns of a three-phase signal end in "_a", "_b" and "_c", and hold the instantaneous
+    values of its phases. They are replaced by one column, named after the signal, with the RMS
+    value of the positive-sequence component of their fundamental, in the unit of the samples
+    (IEC 61400-21-1, Annex C, without frequency tracking): a balanced voltage of 1 pu RMS, whose
+    phases peak at sqrt(2) pu, gives 1 pu.
+
+    Each phasor needs a whole cycle of samples around it, so the curves lose their first and last
+    half cycle. Samples off a uniform grid with a whole number of samples per cycle are resampled
+    on one, and their RMS value brought back to their own time stamps. The other columns keep
+    their values.
 
     Parameters
     ----------
@@ -62,22 +149,39 @@ def ensure_rms_signals(curves: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame
         DataFrame containing the curves in RMS format
     """
-    time_step = np.mean(np.diff(curves["time"].to_numpy()))
-    fs = 1 / time_step
+    abc_items, rms_items = _find_abc_signal(curves)
+    if not abc_items:
+        return curves
+
+    f_nom = config.get_float("Dynawo", "f_nom", 50.0)
+    time = curves["time"].to_numpy()
+    grid, samples_per_cycle = _fundamental_grid(time, f_nom)
+    _warn_if_undersampled((len(time) - 1) / (time[-1] - time[0]))
+    on_grid = _lies_on(time, grid)
+    half_cycle = samples_per_cycle // 2
+    centres = grid[half_cycle : len(grid) - half_cycle]
+    if on_grid:
+        kept = np.arange(half_cycle, len(time) - half_cycle)
+    else:
+        kept = np.flatnonzero((time >= centres[0]) & (time <= centres[-1]))
 
     processed_curve_dict = {}
-    abc_items, rms_items = _find_abc_signal(curves)
     for abc_item in abc_items:
-        a = curves[abc_item + "_a"]
-        b = curves[abc_item + "_b"]
-        c = curves[abc_item + "_c"]
-        ps_rms = _abc_to_psrms([a, b, c], fs)
-        processed_curve_dict[abc_item] = ps_rms
+        phasors = []
+        for phase in ("a", "b", "c"):
+            samples = curves[f"{abc_item}_{phase}"].to_numpy()
+            if not on_grid:
+                samples = _resampled(time, samples, grid)
+            phasors.append(_fundamental_phasor(samples, grid, samples_per_cycle, f_nom))
+        ps_rms = np.abs(_positive_sequence(*phasors)) / np.sqrt(2)
+        processed_curve_dict[abc_item] = (
+            ps_rms if on_grid else PchipInterpolator(centres, ps_rms)(time[kept])
+        )
 
     for rms_item in rms_items:
-        processed_curve_dict[rms_item] = curves[rms_item]
+        processed_curve_dict[rms_item] = curves[rms_item].to_numpy()[kept]
 
-    return pd.DataFrame.from_dict(processed_curve_dict, orient="columns")
+    return pd.DataFrame(processed_curve_dict)
 
 
 def _find_abc_signal(curves):

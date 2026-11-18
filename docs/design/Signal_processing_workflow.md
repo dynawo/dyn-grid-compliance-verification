@@ -36,12 +36,30 @@ The stages below run in this exact order; the order is load-bearing (see *Adapta
 
 ### 1. EMT → RMS positive-sequence conversion (reference curves only)
 
-`sigpro.ensure_rms_signals` (`sigpro/sigpro.py`). Columns named `*_a`, `*_b`, `*_c` are treated as
-three-phase EMT waveforms and converted to a positive-sequence RMS signal: the phasor of each
-phase is extracted with a moving-window STFT taking the bin closest to the 50 Hz fundamental —
-the no-frequency-tracking approach of IEC 61400-27-2 Annex C, which the technote found to behave
-better around transients than frequency-tracking variants — then the symmetrical components are
-built and the magnitude scaled by 1/√2. Columns already in RMS form pass through untouched.
+`sigpro.ensure_rms_signals` (`sigpro/sigpro.py`). Columns named `*_a`, `*_b`, `*_c` hold the
+instantaneous values of the three phases of a signal, and are replaced by the RMS value of the
+positive-sequence component of their fundamental, in the unit of the samples: a balanced set of
+1 pu RMS, whose phases peak at √2 pu, gives 1 pu. The method is that of IEC 61400-21-1 Annex C,
+which the DTR (fiche I16) names for this processing, without frequency tracking — the technote
+found it cleaner around transients than the frequency-tracking variants:
+
+- the phasor of each phase is its Fourier coefficient over one cycle of `[Dynawo] f_nom`,
+  `2/T ∫ x(τ) e^(−j2πf τ) dτ`, on a moving one-cycle window, which rejects every harmonic;
+- on a uniform grid with a whole number N of samples per cycle that integral is a sum (midpoint
+  rule for an odd N, trapezoidal for an even one), exact for every harmonic up to N − 2 and
+  computed as one convolution. Samples
+  off such a grid (a variable step, or a rate that is not a multiple of `f_nom`) are resampled
+  onto the nearest one with a cubic spline, the most precise interpolant of a sinusoid, and the
+  result is brought back to their own time stamps with PCHIP;
+- the positive sequence is `(Xa + αXb + α²Xc)/3`, and its RMS value `|X1|/√2`.
+
+The window is centred on the time stamp of its phasor, as the synchrophasor standard IEC/IEEE
+60255-118-1 does, where IEC 61400-21-1 writes it as `[t − T, t]`: the values are the same, but a
+window ending at `t` would make the reference lag the RMS simulation by T/2 = 10 ms. Each phasor
+needs a whole cycle of samples, so the curves lose their first and last half cycle; columns
+already in RMS form keep their values on the rows left. Below `[GridCode]
+emt_min_sampling_frequency` (2 kHz, the minimum the DTR asks of EMT and measured signals) a
+warning tells that the harmonics may alias onto the fundamental.
 
 ### 2. First resampling: fixed time step, per set
 
@@ -119,6 +137,7 @@ complete processed curves.
 
 | Topic | IEC 61400-27-2 | DyCoV | Motivation |
 |---|---|---|---|
+| Phasor time stamp | End of the one-cycle window (IEC 61400-21-1 Annex C) | Centre of the window | Same values without the T/2 lag against the RMS simulation (IEC/IEEE 60255-118-1) |
 | Interpolation method | Not specified | Monotone PCHIP everywhere | No overshoot/ringing at sharp transitions; time-domain fidelity (technote §3) |
 | Order of operations | Common resampling suggested before filtering | Per-set resampling → filter → common downsampling | Downsampling before band-limiting would alias (technote §4–5) |
 | Filter application | Single-pass (causal) implied | Zero-phase `filtfilt`, Gustafsson padding | No filter-induced time shift between compared signals |

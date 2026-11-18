@@ -9,69 +9,172 @@
 #
 
 import numpy as np
+import pandas as pd
+import pytest
+from scipy import integrate
 
-from dycov.sigpro.sigpro import _abc_to_psrms, _shortfft
+from dycov.sigpro.sigpro import ensure_rms_signals
 
-PLOT = False
-
-
-def gen_abc(N):
-    end_time = 1
-    step_size = end_time / N
-    t = np.arange(0, end_time, step_size)
-    wt = 2 * np.pi * 50 * t
-
-    rad_angA = float(0) * np.pi / 180
-    rad_angB = float(240) * np.pi / 180
-    rad_angC = float(120) * np.pi / 180
-
-    A = (np.sqrt(2) * float(1)) * np.sin(wt + rad_angA)
-    B = (np.sqrt(2) * float(1)) * np.sin(wt + rad_angB)
-    C = (np.sqrt(2) * float(1)) * np.sin(wt + rad_angC)
-
-    return [A, B, C], 1 / step_size, t
+F_NOM = 50.0
+PERIOD = 1 / F_NOM
+SHIFTS = (0.0, -2 * np.pi / 3, 2 * np.pi / 3)
 
 
-def test_shortfft():
-    abc, fs, _ = gen_abc(300)
-    for x in abc:
-        f, t, Zxx = _shortfft(x, fs)
-        assert f is not None
-        assert t is not None
-        assert Zxx is not None
-
-        idx = np.argmin(np.abs(f - 50))
-        assert idx is not None
-
-
-def test_abc_to_psrms():
-    abc, fs, _ = gen_abc(300)
-    ps_rms = _abc_to_psrms(abc, fs)
-    assert ps_rms is not None
+def _three_phase(t, amplitude=np.sqrt(2), frequency=F_NOM, negative=0.0, harmonics=()):
+    """Phases a, b and c of a positive-sequence set, plus a negative sequence and harmonics."""
+    peak = amplitude(t) if callable(amplitude) else amplitude
+    angle = 2 * np.pi * frequency * t + 0.3
+    phases = []
+    for shift in SHIFTS:
+        x = peak * (np.cos(angle + shift) + negative * np.cos(angle - shift))
+        for order, share in harmonics:
+            x = x + peak * share * np.cos(order * (angle + shift))
+        phases.append(x)
+    return phases
 
 
-def test_ensure_rms_signals():
-    import numpy as np
-    import pandas as pd
+def _curves(t, phases, **rms_columns):
+    columns = {"time": t, "V_a": phases[0], "V_b": phases[1], "V_c": phases[2]}
+    return pd.DataFrame({**columns, **rms_columns})
 
-    from dycov.sigpro.sigpro import ensure_rms_signals
 
-    t = np.linspace(0, 0.02, 200)
-    wt = 2 * np.pi * 50 * t
-    Va = np.sin(wt)
-    Vb = np.sin(wt - 2 * np.pi / 3)
-    Vc = np.sin(wt + 2 * np.pi / 3)
+def _grid(sampling_frequency, duration=0.5):
+    return np.arange(int(round(duration * sampling_frequency)) + 1) / sampling_frequency
 
-    df = pd.DataFrame({"time": t, "Va_a": Va, "Va_b": Vb, "Va_c": Vc})
 
-    out = ensure_rms_signals(df)
+@pytest.mark.parametrize("sampling_frequency", [1000, 2000, 3000, 4096, 10000, 12800, 20000])
+def test_balanced_set_gives_its_rms_value(sampling_frequency):
+    t = _grid(sampling_frequency)
 
-    assert "Va" in out.columns
-    assert len(out["Va"]) == len(t)
+    rms = ensure_rms_signals(_curves(t, _three_phase(t)))["V"]
 
-    # Ensure RMS is positive and in a reasonable STFT‑based range
-    val = np.max(out["Va"])
-    assert 0.05 < val < 0.2
+    assert np.max(np.abs(rms - 1.0)) < 1e-6
+
+
+def test_irregular_sampling_gives_its_rms_value():
+    t = _grid(10000)
+    t[1:-1] += np.random.default_rng(0).uniform(-0.3, 0.3, len(t) - 2) / 10000
+
+    rms = ensure_rms_signals(_curves(t, _three_phase(t)))["V"]
+
+    assert np.max(np.abs(rms - 1.0)) < 1e-6
+
+
+def test_harmonics_and_negative_sequence_do_not_reach_the_positive_sequence():
+    t = _grid(10000)
+    phases = _three_phase(t, negative=0.1, harmonics=((2, 0.1), (3, 0.1), (5, 0.1), (7, 0.1)))
+
+    rms = ensure_rms_signals(_curves(t, phases))["V"]
+
+    assert np.max(np.abs(rms - 1.0)) < 1e-9
+
+
+def test_off_nominal_frequency_only_scales_the_balanced_positive_sequence():
+    t = _grid(10000)
+
+    rms = ensure_rms_signals(_curves(t, _three_phase(t, frequency=49.5)))["V"]
+
+    assert np.max(np.abs(rms - np.sinc(0.5 / F_NOM))) < 1e-7
+
+
+def _iec_61400_21_annex_c(phases, t):
+    """RMS phase voltage of the positive sequence over [t - T, t], by equations C.5 to C.14."""
+    cos_parts, sin_parts = [], []
+    for phase in phases:
+        for parts, carrier in ((cos_parts, np.cos), (sin_parts, np.sin)):
+            integral = integrate.quad(
+                lambda x: phase(x) * carrier(2 * np.pi * F_NOM * x), t - PERIOD, t, limit=200
+            )[0]
+            parts.append(2 / PERIOD * integral)
+    (a_cos, b_cos, c_cos), (a_sin, b_sin, c_sin) = cos_parts, sin_parts
+    u1_cos = (2 * a_cos - b_cos - c_cos - np.sqrt(3) * (c_sin - b_sin)) / 6
+    u1_sin = (2 * a_sin - b_sin - c_sin - np.sqrt(3) * (b_cos - c_cos)) / 6
+    return np.sqrt(1.5 * (u1_sin**2 + u1_cos**2)) / np.sqrt(3)
+
+
+def test_matches_iec_61400_21_annex_c_half_a_cycle_earlier():
+    def amplitude(t):
+        ramp = 0.2 * np.clip(t - 0.2, 0, 0.1) / 0.1
+        return np.sqrt(2) * (1 - ramp + 0.03 * np.sin(6 * np.pi * t))
+
+    def phase(k):
+        return lambda x: _three_phase(np.atleast_1d(x), amplitude, negative=0.05)[k][0]
+
+    t = _grid(10000)
+    converted = ensure_rms_signals(_curves(t, _three_phase(t, amplitude, negative=0.05)))
+    instants = np.array([0.1, 0.2, 0.25, 0.3, 0.42])
+
+    expected = [_iec_61400_21_annex_c([phase(k) for k in range(3)], ti) for ti in instants]
+
+    obtained = np.interp(instants - PERIOD / 2, converted["time"], converted["V"])
+    assert np.max(np.abs(obtained - expected)) < 1e-6
+
+
+def test_phasor_is_stamped_at_the_centre_of_its_cycle():
+    t = _grid(10000)
+    step = 0.25
+
+    amplitude = np.sqrt(2) * np.where(t < step, 1.0, 0.5)
+
+    converted = ensure_rms_signals(_curves(t, _three_phase(t, amplitude)))
+
+    instants = [step - PERIOD / 2, step, step + PERIOD / 2]
+    rms = np.interp(instants, converted["time"], converted["V"])
+    assert rms == pytest.approx([1.0, 0.75, 0.5], abs=2e-3)
+
+
+def test_curves_lose_half_a_cycle_at_each_end_and_keep_their_rms_columns():
+    t = _grid(1000)
+    curves = _curves(t, _three_phase(t), P=np.arange(len(t), dtype=float))
+
+    converted = ensure_rms_signals(curves)
+
+    assert list(converted.columns) == ["V", "time", "P"]
+    assert list(converted.index) == list(range(len(t) - 20))
+    assert converted["time"].iloc[0] == pytest.approx(t[0] + PERIOD / 2)
+    assert converted["time"].iloc[-1] == pytest.approx(t[-1] - PERIOD / 2)
+    assert np.array_equal(converted["P"], curves["P"].to_numpy()[10:-10])
+
+
+def test_irregular_sampling_keeps_its_own_time_stamps():
+    t = np.sort(np.concatenate([_grid(2000), _grid(10000)[1::7] + 1e-5]))
+    curves = _curves(t, _three_phase(t), P=t)
+
+    converted = ensure_rms_signals(curves)
+
+    first, last = converted["time"].iloc[[0, -1]]
+    assert np.array_equal(converted["time"], t[(t >= first) & (t <= last)])
+    assert np.array_equal(converted["P"], converted["time"])
+    assert first - t[0] == pytest.approx(PERIOD / 2, abs=PERIOD / 40)
+    assert t[-1] - last == pytest.approx(PERIOD / 2, abs=PERIOD / 40)
+    assert np.max(np.abs(converted["V"] - 1.0)) < 1e-6
+
+
+def test_curves_without_three_phase_signals_are_returned_as_they_are():
+    curves = pd.DataFrame({"time": [0.0, 0.1, 0.2], "V": [1.0, 1.0, 0.9]})
+
+    assert ensure_rms_signals(curves) is curves
+
+
+@pytest.mark.parametrize(
+    "t", [_grid(100), np.arange(83) / 4096], ids=["too coarse", "barely one cycle off the grid"]
+)
+def test_curves_that_cannot_hold_a_fundamental_phasor_are_rejected(t):
+    with pytest.raises(ValueError, match="three samples per cycle"):
+        ensure_rms_signals(_curves(t, _three_phase(t)))
+
+
+@pytest.mark.parametrize("sampling_frequency, warned", [(1000, True), (1980, True), (2000, False)])
+def test_curves_sampled_below_the_minimum_of_the_dtr_are_warned(
+    mocker, sampling_frequency, warned
+):
+    logger = mocker.MagicMock()
+    mocker.patch("dycov.logging.dycov_logging.get_logger", return_value=logger)
+    t = _grid(sampling_frequency)
+
+    ensure_rms_signals(_curves(t, _three_phase(t)))
+
+    assert logger.warning.called is warned
 
 
 def test_resample_to_fixed_step():

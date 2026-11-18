@@ -418,6 +418,10 @@ Signal processing parameters:
 * ``t_com`` — common sampling interval (s). Must satisfy
   ``t_com < 1 / (2 * cutoff)``.
 * ``cutoff`` — low-pass filter cut-off frequency (Hz).
+* ``emt_min_sampling_frequency`` — sampling frequency (Hz) below which the
+  three-phase (abc) reference curves are warned about when they are converted
+  to RMS: their harmonics may alias onto the fundamental. 2 kHz, the minimum
+  the DTR (fiche I16) asks of the signals of EMT simulations and tests.
 * ``t_integrator_tol`` — numerical tolerance for event timing (accounts for
   the fact that Dynawo's integrator may place events slightly off the
   configured time).
