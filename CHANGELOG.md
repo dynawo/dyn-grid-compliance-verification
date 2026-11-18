@@ -42,6 +42,11 @@ read, with a warning, and its protection curves written as before (#394).
 
 ### Fixed
 
+- In a model with several Zone 1 units, the report draws for each unit its own Zone 1
+  schematic, where every unit got that of the unit rendered last. A copy of `commonz1.tex`
+  among your report templates has to name the schematic of the unit as the packaged one now
+  does, `\ProducerFiles.circuit_z1_fault.tikz` and `\ProducerFiles.circuit_z1_setpoint.tikz`
+  (#793).
 - `generate_gfm_envelopes` keeps the envelopes of every PCS when one it lists generates none,
   because it is not a valid PCS, its description cannot be read or its generation stopped before
   its first envelope: it reports that PCS and leaves it out, where it stopped there and lost the

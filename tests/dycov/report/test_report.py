@@ -489,9 +489,13 @@ def _latex_dir_with_the_zone1_schematic(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def _prepare(latex_dir: Path, zone: int, group_xfmrs: list) -> None:
-    pcs_results = {"producer": "Producer", "pcs": _CircuitPcs(zone)}
+def _prepare(latex_dir: Path, zone: int, group_xfmrs: list, producer: str = "Producer") -> None:
+    pcs_results = {"producer": producer, "pcs": _CircuitPcs(zone)}
     report._pcs_replace(latex_dir, pcs_results, "report.tex", _CircuitProducer(group_xfmrs))
+
+
+def _schematic_of(latex_dir: Path, unit: str = "Producer") -> str:
+    return (latex_dir / f"{unit}.{_ZONE1_SCHEMATIC}").read_text()
 
 
 def test_the_zone1_schematic_follows_the_zone1_model_when_a_zone3_pcs_gets_there_first(
@@ -502,7 +506,7 @@ def test_the_zone1_schematic_follows_the_zone1_model_when_a_zone3_pcs_gets_there
     _prepare(latex_dir, zone=3, group_xfmrs=[])
     _prepare(latex_dir, zone=1, group_xfmrs=["Group_Xfmr"])
 
-    schematic = (latex_dir / _ZONE1_SCHEMATIC).read_text()
+    schematic = _schematic_of(latex_dir)
     assert "Group\\\\ transformer" in schematic
     assert "BLOCK" not in schematic
 
@@ -512,7 +516,7 @@ def test_the_zone1_schematic_draws_no_group_transformer_the_zone1_model_lacks(tm
 
     _prepare(latex_dir, zone=1, group_xfmrs=[])
 
-    schematic = (latex_dir / _ZONE1_SCHEMATIC).read_text()
+    schematic = _schematic_of(latex_dir)
     assert "transformer" not in schematic
     assert "BLOCK" not in schematic
 
@@ -524,3 +528,25 @@ def test_a_zone3_pcs_leaves_the_zone1_schematic_to_the_zone1_pcs(tmp_path):
     _prepare(latex_dir, zone=3, group_xfmrs=[])
 
     assert (latex_dir / _ZONE1_SCHEMATIC).read_text() == template
+    assert not (latex_dir / f"Producer.{_ZONE1_SCHEMATIC}").exists()
+
+
+def test_each_zone1_unit_draws_its_own_schematic_from_the_shared_template(tmp_path):
+    latex_dir = _latex_dir_with_the_zone1_schematic(tmp_path)
+    template = (latex_dir / _ZONE1_SCHEMATIC).read_text()
+
+    _prepare(latex_dir, zone=1, group_xfmrs=["Group_Xfmr"], producer="Unit_A")
+    _prepare(latex_dir, zone=1, group_xfmrs=[], producer="Unit_B")
+
+    assert "Group\\\\ transformer" in _schematic_of(latex_dir, "UnitA")
+    assert "transformer" not in _schematic_of(latex_dir, "UnitB")
+    assert (latex_dir / _ZONE1_SCHEMATIC).read_text() == template
+
+
+def test_the_report_of_a_unit_names_the_files_of_the_unit(tmp_path):
+    latex_dir = _latex_dir_with_the_zone1_schematic(tmp_path)
+    (latex_dir / "report.tex").write_text("{{ producercommand }}")
+
+    _prepare(latex_dir, zone=1, group_xfmrs=[], producer="Unit_B")
+
+    assert "\\renewcommand{\\ProducerFiles}{UnitB}" in (latex_dir / "report.tex").read_text()
