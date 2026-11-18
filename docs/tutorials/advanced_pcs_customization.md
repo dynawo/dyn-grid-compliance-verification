@@ -111,14 +111,15 @@ the packaged value. The file name must be exactly `PCSDescription.ini`; a
 directory holding an INI file under another name is reported as an invalid PCS
 and skipped.
 
-DyCoV reads its settings from five layers, from the highest priority to the
+DyCoV reads its settings from six layers, from the highest priority to the
 lowest:
 
 1. your `templates/PCS/.../PCSDescription.ini`
 2. your `config.ini`
-3. the PCS description of the selected DTR revision (not used yet)
+3. what the selected DTR revision writes differently for the PCS
 4. the `PCSDescription.ini` shipped with the tool
-5. the packaged defaults
+5. what the selected DTR revision writes differently outside any PCS
+6. the packaged defaults
 
 So a PCS section written in your `PCSDescription.ini` wins over the same
 section written in your `config.ini`. Keep PCS‑specific changes in the former

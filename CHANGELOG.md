@@ -42,6 +42,8 @@ read, with a warning, and its protection curves written as before (#394).
 
 ### Fixed
 
+- The reports of fiche I16 zone 1 give the 500 ms high-impedance fault as a dip of 0.7 Un, where
+  they said V = 0.7 Un: the voltage falls to 0.3 Un (#697).
 - A power park module of 250 MW or more connected at HTB1 takes the reactance b the DTR gives it,
   0.54 up to 800 MW and 0.6 above, where it took 0.3: its line reactances in the fiches I2, I5,
   I10 and I16 zone 3, and the reactance of the impedant fault, change with it. Such a unit reads

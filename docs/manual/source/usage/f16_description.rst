@@ -58,8 +58,9 @@ and ``p_min_consumption``), ``Qmax`` and
 and nominal voltages at the PDR). Powers are in pu of the 100 MVA base of
 the simulation, voltages in pu of the nominal voltage. Writing
 ``PmaxConsumption`` in ``pdr_P`` marks a storage operating condition as a
-consumption one. A definition that names an unknown magnitude aborts the
-run, naming the file and line it was read from.
+consumption one. A definition that names an unknown magnitude ends the test
+that reads it as *Invalid test*, naming the file and line it was read from;
+the other tests run.
 
 
 Benchmarks and operating conditions

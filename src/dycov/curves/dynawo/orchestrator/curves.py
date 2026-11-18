@@ -463,7 +463,7 @@ class DynawoCurves(ProducerCurves):
             If the model cannot be set up at all, a rejected configuration value
             being the usual cause. Only the outcomes reported as
             ``SimulationOutcomeError`` are turned into a failed
-            ``SimulationResult``; anything else aborts the run.
+            ``SimulationResult``; anything else ends the test as invalid.
         """
         self.__reset_solver()
         output_dir, jobs_output_dir = self.__prepare_oc_validation(working_oc_dir, bm_name)
