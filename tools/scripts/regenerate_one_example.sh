@@ -31,8 +31,8 @@ usage() {
     echo "  • Its curves are written only once the run has covered every test the PCS of the"
     echo "    tool declare and every one the example declares for itself: half an example is"
     echo "    worse than none."
-    echo "  • Fiche F16 is among the second kind, so regenerate_f16.sh has to have declared and"
-    echo "    announced its tests first."
+    echo "  • Fiche F16 is among the second kind, so regenerate_f16.sh has to have declared its"
+    echo "    tests first."
 }
 
 launcher="dynawo.sh"

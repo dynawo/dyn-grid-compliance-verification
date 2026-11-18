@@ -40,17 +40,37 @@ decoupling protection curves, which the previous template listed one parameter p
 data of a workbook made on the template of 1.3.0 into `workbooks/Producer_IEC.xlsx`: it is still
 read, with a warning, and its protection curves written as before (#394).
 
+### Your report templates replace the packaged ones
+
+A report template in `templates/reports` of the configuration directory replaces the packaged one
+of the same name, and the one of the revision of the DTR, as the manual says; until now they
+overwrote it. A copy of a packaged template left there now hides the packaged one, and the
+corrections later releases bring to it, so remove the copies you do not mean to change (#686).
+
 ### Fixed
 
+- Every test an F16 declaration names is run, recorded or not, and one without its record ends as
+  missing its reference curves, where the notes of 1.3.0 said only the recorded ones run: declare
+  only the tests recorded (#684).
 - The page of a model-validation test without reference curves gives the dynamic behaviour of
   the simulated curves, where it always said "unstable"; when it cannot be told, it says N/A
   (#685).
+- `generate_gfm_envelopes` keeps the envelopes of every PCS when one it lists generates none,
+  because it is not a valid PCS, its description cannot be read or its generation stopped before
+  its first envelope: it reports that PCS and leaves it out, where it stopped there and lost the
+  envelopes of the PCS listed after it (#688).
+- The Zone 1 schematic of the report follows the Zone 1 model in a parallel validation too, where
+  it drew the group transformer or left it out depending on which PCS prepared its report first
+  (#740).
 - A power park module of 250 MW or more connected at HTB1 takes the reactance b the DTR gives it,
   0.54 up to 800 MW and 0.6 above, where it took 0.3: its line reactances in the fiches I2, I5,
   I10 and I16 zone 3, and the reactance of the impedant fault, change with it. Such a unit reads
   its steps of b from `HTB1_reactance_b_PPM` and the powers between them from `HTB1_p_max_PPM`,
   so a configuration that changed them through `HTB1_reactance_b_low`, `_b_high` or
   `HTB1_p_max` now changes those two keys instead (#744).
+- The SCR jump no longer marks its envelopes as inconsistent when the variations of D and H fall
+  on both sides of critical damping: each takes the response of its own regime, as in the RoCoF
+  (#761).
 - `generate_gfm_envelopes` reads the producer file `-i` names and no other INI of its folder, and
   stops when that file does not exist (#766).
 - The native installation lists `tex-gyre`, the fonts of the PDF manual the installer compiles,
@@ -63,8 +83,6 @@ read, with a warning, and its protection curves written as before (#394).
   nominal frequency of the configuration (#779).
 - The SCR jump envelopes keep their shape outside the 30 ms hold after the event when the
   producer's minimum power is above zero or its maximum below zero (#780).
-- The disclaimer of a hybrid SCR jump run names the set of D and H that damps inconsistently
-  (#781).
 - `generate_gfm_envelopes` stops, naming each value, when the producer's D, H or Xeff cannot give
   envelopes (#782).
 
