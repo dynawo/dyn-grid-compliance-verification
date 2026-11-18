@@ -183,24 +183,6 @@ def f16_declaration(generator_type: str) -> str:
     return "".join(lines)
 
 
-_ANNOUNCED_RECORD = """# The record this test was run with. Written by
-# tools/scripts/example_inputs.py to announce it: a declared test of Fiche F16 is only run where
-# its record exists, so the dictionary comes first and the run replaces it with the one its own
-# curves describe.
-
-[Curves-Metadata]
-# True when the reference curves are field measurements
-is_field_measurements = False
-# Instant of time at which the event or fault starts
-sim_t_event_start = {start}
-# Duration of the event or fault
-fault_duration = 0.0
-
-[Curves-Dictionary]
-time = time
-"""
-
-
 def declared_tests(declaration: Path) -> list:
     """Every test a declaration names, as ``PCS.benchmark.operating_condition``."""
     parser = _read_ini(declaration)
@@ -215,27 +197,18 @@ def declared_tests(declaration: Path) -> list:
     return tests
 
 
-def announce_records(declaration: Path, reference_path: Path, model_path: Path, kind: str) -> int:
-    """Announces the records of every test a declaration names: the index of the delivery, which
-    the tool writes from the model, and a dictionary per test, which is what makes the tool run
-    the test at all. Returns how many tests it announced."""
+def announce_delivery(reference_path: Path, model_path: Path, kind: str) -> bool:
+    """Announces the delivery of the records about to be made: its index, which the tool writes
+    from the model. The run simulates every test the declaration names, recorded or not, and
+    the anonymized run then writes the records. Returns whether it wrote the index."""
     from dycov.files.producer_curves import create_producer_curves
 
     producer_path = reference_path / "Producer"
     producer_path.mkdir(parents=True, exist_ok=True)
-    if not (producer_path / "CurvesFiles.ini").is_file():
-        create_producer_curves(model_path, reference_path, f"model_{kind}")
-
-    parser = _read_ini(declaration)
-    announced = 0
-    for test in declared_tests(declaration):
-        dictionary = producer_path / f"{test}.dict"
-        if dictionary.is_file():
-            continue
-        start = parser.get(f"{test}.Event", "sim_t_event_start", fallback="20")
-        dictionary.write_text(_ANNOUNCED_RECORD.format(start=start), encoding="utf-8")
-        announced += 1
-    return announced
+    if (producer_path / "CurvesFiles.ini").is_file():
+        return False
+    create_producer_curves(model_path, reference_path, f"model_{kind}")
+    return True
 
 
 _IMAX_COMMENT = "# Maximum injected current of the generator, which the fault test checks"
@@ -306,9 +279,8 @@ def main() -> None:
     f16.add_argument("--output", type=Path, required=True)
 
     announce = subparsers.add_parser(
-        "announce", help="announce the records of every test a declaration names"
+        "announce", help="announce the delivery of the records: write its index"
     )
-    announce.add_argument("--declaration", type=Path, required=True)
     announce.add_argument("--reference", type=Path, required=True, help="where the records go")
     announce.add_argument("--model", type=Path, required=True, help="the model that is recorded")
     announce.add_argument("--type", required=True, choices=("PPM", "BESS"))
@@ -336,10 +308,8 @@ def main() -> None:
         )
         return
     if arguments.what == "announce":
-        announced = announce_records(
-            arguments.declaration, arguments.reference, arguments.model, arguments.type
-        )
-        print(f"  {announced} tests announced in {arguments.reference}")
+        if announce_delivery(arguments.reference, arguments.model, arguments.type):
+            print(f"  index of the records written in {arguments.reference}")
         return
 
     arguments.output.parent.mkdir(parents=True, exist_ok=True)

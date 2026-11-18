@@ -49,6 +49,9 @@ corrections later releases bring to it, so remove the copies you do not mean to 
 
 ### Fixed
 
+- Every test an F16 declaration names is run, recorded or not, and one without its record ends as
+  missing its reference curves, where the notes of 1.3.0 said only the recorded ones run: declare
+  only the tests recorded (#684).
 - `generate_gfm_envelopes` keeps the envelopes of every PCS when one it lists generates none,
   because it is not a valid PCS, its description cannot be read or its generation stopped before
   its first envelope: it reports that PCS and leaves it out, where it stopped there and lost the
