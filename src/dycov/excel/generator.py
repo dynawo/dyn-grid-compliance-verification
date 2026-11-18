@@ -20,6 +20,7 @@ from __future__ import annotations
 import configparser
 from pathlib import Path
 
+from dycov.configuration.cfg import config as cfg_config
 from dycov.excel import names, par, protection
 from dycov.excel import parse as P
 from dycov.excel import producer_dyd as dyd
@@ -85,7 +86,28 @@ def _reference_curves_report(curves: dict) -> str:
             "  metadata to fill: %d (the workbook leaves some column empty for: %s)"
             % (len(curves["unfilled"]), ", ".join(curves["unfilled"][:4]))
         )
+    if curves["without_row"]:
+        lines.append(
+            "  rows missing    : %d (the DTR revision %s runs them: %s)"
+            % (
+                len(curves["without_row"]),
+                cfg_config.get_value("DTR", "current"),
+                ", ".join(curves["without_row"][:4]),
+            )
+        )
     return "\n".join(lines)
+
+
+def _warn_without_row(excel: Path, curves: dict) -> None:
+    """A workbook made on the template of another revision of the DTR lacks the rows of the
+    tests this one adds: they would run without a reference, and nothing else would say why."""
+    if curves["without_row"]:
+        dycov_logging.get_logger("Excel").warning(
+            f"{excel.name} has no row for {', '.join(curves['without_row'])}, which the DTR "
+            f"revision {cfg_config.get_value('DTR', 'current')} runs: those tests will have no "
+            f"reference curves. Copy the data of the workbook into the template the release "
+            f"ships, which has a row for every test of every revision."
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -261,6 +283,7 @@ def generate(excel: Path, outdir: Path) -> str:
 
     signals = sig.parse_signals(workbook, gen_id, storage=template == "model_BESS")
     curves = rc.write_reference_curves(outdir, PRODUCER_NAME, signals, excel.parent)
+    _warn_without_row(excel, curves)
 
     return "\n".join(
         [
