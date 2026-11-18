@@ -553,7 +553,7 @@ class TestObtainSimulatedCurve:
 
     @patch(f"{_MODULE}.measure_voltage_dip")
     @patch(f"{_MODULE}.config")
-    def test_rejected_value_definition_aborts_the_run(self, mc, mock_mvd, tmp_path):
+    def test_a_rejected_value_definition_reaches_the_test(self, mc, mock_mvd, tmp_path):
         mc.get_value.side_effect = _cfg_get_value
         mc.get_float.side_effect = _cfg_get_float
         mc.get_boolean.return_value = False

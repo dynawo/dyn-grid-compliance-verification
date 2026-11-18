@@ -61,7 +61,8 @@ def _report_unknown(shipped: configparser.ConfigParser, path: Path) -> None:
     unknown = []
     for section in user.sections():
         if not shipped.has_section(section):
-            unknown.append(section)
+            if not _is_data_section(section):
+                unknown.append(section)
             continue
         unknown += [
             f"{section}.{key}"
@@ -75,8 +76,9 @@ def _report_unknown(shipped: configparser.ConfigParser, path: Path) -> None:
 
 
 def _is_data_section(section: str) -> bool:
-    """Sections whose keys are the user's own data, not a fixed set of concepts."""
-    return section.endswith(("-Curves", "-Tests", "-Prefixes"))
+    """Sections whose keys are the user's own data, not a fixed set of concepts. The tests of a
+    revision of the DTR are such a section, named after it: ``Zone3-Tests.20260723``."""
+    return section.split(".")[0].endswith(("-Curves", "-Tests", "-Prefixes"))
 
 
 @lru_cache(maxsize=1)
@@ -181,17 +183,19 @@ def test_suffixes() -> tuple:
 
 
 def tests(zone: str) -> dict:
-    """``{normalized test key -> PCS.Benchmark.OperatingCondition}`` of a signal sheet.
+    """``{normalized test key -> PCS.Benchmark.OperatingCondition}`` of a signal sheet, for the
+    revision of the DTR being validated.
 
     The key is the DTR case number in Zone 1, and the DTR sheet plus its position among the rows
-    of that same sheet in Zone 3 (``I2/1``, ``I2/2``…).
+    of that same sheet in Zone 3 (``I2/1``, ``I2/2``…). ``[<zone>-Tests]`` maps the rows to the
+    tests of the base revision; a revision that runs other tests writes what it changes in
+    ``[<zone>-Tests.<revision>]``, where a row it does not run is left empty.
     """
     parser = _parsed()
-    section = f"{zone}-Tests"
-    if not parser.has_section(section):
-        return {}
-    return {
-        normalize(key): " ".join(test.split())
-        for key, test in parser.items(section)
-        if test.strip()
-    }
+    mapped = {}
+    for section in (f"{zone}-Tests", f"{zone}-Tests.{config.get_value('DTR', 'current')}"):
+        if parser.has_section(section):
+            mapped |= {
+                normalize(key): " ".join(test.split()) for key, test in parser.items(section)
+            }
+    return {key: test for key, test in mapped.items() if test}

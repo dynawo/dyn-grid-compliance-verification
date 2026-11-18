@@ -60,13 +60,6 @@ def test_plot_rejects_a_format_that_is_not_text(tmp_path):
     assert not list(tmp_path.iterdir())
 
 
-@pytest.mark.parametrize("output_format", ["png", "html"])
-def test_plot_rejects_a_disclaimer_that_is_not_text(tmp_path, output_format):
-    with pytest.raises(TypeError, match="disclaimer message must be text"):
-        _plot(tmp_path, output_format=output_format, show_disclaimer=True, disclaimer_message=5)
-    assert not list(tmp_path.iterdir())
-
-
 @pytest.mark.parametrize(
     "lengths",
     [

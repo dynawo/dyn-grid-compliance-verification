@@ -40,12 +40,14 @@ class Test:
 
 @dataclass
 class ZoneSignals:
-    """One signal sheet: the curve mapping, the tests and the folder holding the ``.csv`` files."""
+    """One signal sheet: the curve mapping, the tests and the folder holding the ``.csv`` files,
+    and the tests of the revision of the DTR the sheet has no row for."""
 
     zone: str
     curves: dict = field(default_factory=dict)
     tests: list = field(default_factory=list)
     folder: str | None = None
+    without_row: list = field(default_factory=list)
 
 
 def _header_columns(grid, wanted: dict) -> tuple[int, dict] | None:
@@ -143,7 +145,9 @@ def _metadata_of(grid, row: int, columns: dict) -> dict:
     return filled
 
 
-def _parse_tests(grid, zone: str, suffixes: tuple = ("",)) -> list:
+def _parse_tests(grid, zone: str, suffixes: tuple = ("",)) -> tuple[list, list]:
+    """The tests the rows of the tests table describe, and those of the revision of the DTR no
+    row is there for, as ``(tests, without_row)``."""
     known = names.tests(zone)
     case_column = None
     for key in ("test_case", "test_fiche"):
@@ -152,7 +156,7 @@ def _parse_tests(grid, zone: str, suffixes: tuple = ("",)) -> list:
             break
     file_column = _column_of(grid, names.anchor("test_file"))
     if case_column is None or file_column is None:
-        return []
+        return [], []
     metadata_columns = _metadata_columns(grid)
 
     tests, seen = [], {}
@@ -167,7 +171,16 @@ def _parse_tests(grid, zone: str, suffixes: tuple = ("",)) -> list:
             continue
         metadata = _metadata_of(grid, row, metadata_columns)
         tests += [_suffixed(name, curves_file.strip(), suffix, metadata) for suffix in suffixes]
-    return tests
+    return tests, _without_row(known, seen, suffixes)
+
+
+def _without_row(known: dict, seen: dict, suffixes: tuple) -> list:
+    """The tests *known* maps to a row the table does not have: ``seen`` counts the rows of
+    each case, so ``I7/3`` has a row when ``I7`` has three."""
+    rows = set(seen) | {
+        f"{case}/{ordinal}" for case, count in seen.items() for ordinal in range(1, count + 1)
+    }
+    return [name + suffix for key, name in known.items() if key not in rows for suffix in suffixes]
 
 
 def parse_zone_signals(
@@ -196,7 +209,7 @@ def parse_zone_signals(
     if sheet_name not in workbook:
         return ZoneSignals(zone=zone)
     grid = workbook[sheet_name]
-    tests = _parse_tests(grid, zone, names.test_suffixes() if storage else ("",))
+    tests, without_row = _parse_tests(grid, zone, names.test_suffixes() if storage else ("",))
     if not tests:
         return ZoneSignals(zone=zone)
     return ZoneSignals(
@@ -204,6 +217,7 @@ def parse_zone_signals(
         curves=_parse_curves(grid, zone, generator_id),
         tests=tests,
         folder=_labelled_value(grid, names.anchor("curves_folder")),
+        without_row=without_row,
     )
 
 

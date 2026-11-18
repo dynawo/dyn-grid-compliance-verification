@@ -40,7 +40,7 @@ _INFO_SHEET = names.normalize(names.sheet("info"))
 
 # The template each standard's workbook follows, named after the DyCoV release that changed it
 # last: it changes whenever the template does, so a workbook written on an older one is told.
-TEMPLATE_VERSIONS = {"IEC": "1.4.0", "WECC": "1.3.0"}
+TEMPLATE_VERSIONS = {"IEC": "1.4.0", "WECC": "1.4.0"}
 
 # Choices in the configuration sheet that mean "no block selected".
 _NO_BLOCK = names.markers("no_block")
