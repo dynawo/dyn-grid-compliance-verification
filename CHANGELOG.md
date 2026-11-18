@@ -42,6 +42,10 @@ read, with a warning, and its protection curves written as before (#394).
 
 ### Fixed
 
+- The IEC wind power plants of zone 3 are measured at Node2 itself, as the turbines of zone 1
+  are since 1.3.0. With the low-voltage transformer inside the converter model
+  (`WPP_ConverterLVControl = false`), their voltage and powers there were read on its grid side,
+  at Node1, and so were the currents at Node2 the tool derives from them (#634).
 - A power park module of 250 MW or more connected at HTB1 takes the reactance b the DTR gives it,
   0.54 up to 800 MW and 0.6 above, where it took 0.3: its line reactances in the fiches I2, I5,
   I10 and I16 zone 3, and the reactance of the impedant fault, change with it. Such a unit reads
