@@ -84,8 +84,9 @@ and the `{{step_event_*}}` TSO placeholders), and the report
 `reference_step_size` scaling (`figure.py`; `report.py` overrides `Unom`→kV). Adding a base = adding a
 registry entry. `obtain_value` only resolves definitions that reference a magnitude (a `*`, or a
 possibly signed registry name); anything else is a Dynawo parameter value passed through verbatim.
-A rejected definition aborts the run — `obtain_simulated_curve` turns only `SimulationOutcomeError`
-(the bisection outcomes, `model/parameters.py`) into a failed `SimulationResult`.
+A definition rejected while a test is simulated ends that test as `Invalid test`, since
+`obtain_simulated_curve` turns only `SimulationOutcomeError` (the bisection outcomes,
+`model/parameters.py`) into a failed `SimulationResult` and the rest reaches `Benchmark.validate`.
 Out of scope: GFM (own grammar `mult*(Xeff+Xgrid)`, `extract_defined_value` for p0/q0)
 and `line_XPu` (DTR reactance-table base `a`/`b`). `line_XFaultPu` resolves against the registry
 plus `XFaultPu`, the reactance the DTR gives the impedant three-phase fault
@@ -98,7 +99,7 @@ template of the declaration, which `core/initialization.py` copies under that sa
 user's templates (`_copy_pcs_to_declare`, never over a copy already there); a PCS that declares no benchmark is skipped by `_validate_pcs`. The producer declares
 the recorded tests in `<ReferenceCurves>/F16Description.ini`, which `Pcs` takes as the user PCS
 description of the PCS the file names in its `[PCS-Benchmarks]` (`_description_declaring`, in place
-of the one in the configuration directory), so `cfg.py` keeps its five layers. Every
+of the one in the configuration directory), so `cfg.py` keeps its six layers. Every
 declared test is rendered with the shared `report.F16z3.DeclaredTest.tex`: `_pcs_replace` writes
 one `report.<pcs>.<bm>.<oc>.tex` per operating condition and hands the template its maps without the
 `PCS…` suffix (`rm`, `thm`, `tem`…) plus `benchmark`/`operatingcondition`. The F16 error

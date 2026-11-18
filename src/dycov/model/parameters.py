@@ -28,8 +28,8 @@ class SimulationOutcomeError(ValueError):
 
     Carries the ``SimulationError`` to report for the operating condition. Being a
     distinct type keeps the outcomes a test may legitimately end with apart from
-    the errors — a rejected configuration value, for instance — that must abort
-    the run.
+    the errors — a rejected configuration value, for instance — that end the test
+    as invalid.
     """
 
     def __init__(self, message: str, error: SimulationError):

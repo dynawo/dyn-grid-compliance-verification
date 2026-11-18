@@ -70,6 +70,8 @@ corrections later releases bring to it, so remove the copies you do not mean to 
   because it is not a valid PCS, its description cannot be read or its generation stopped before
   its first envelope: it reports that PCS and leaves it out, where it stopped there and lost the
   envelopes of the PCS listed after it (#688).
+- The reports of fiche I16 zone 1 give the 500 ms high-impedance fault as a dip of 0.7 Un, where
+  they said V = 0.7 Un: the voltage falls to 0.3 Un (#697).
 - The Zone 1 schematic of the report follows the Zone 1 model in a parallel validation too, where
   it drew the group transformer or left it out depending on which PCS prepared its report first
   (#740).

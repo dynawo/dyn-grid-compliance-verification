@@ -494,7 +494,7 @@ manual):
 
 | Key | Checks | Needs |
 |---|---|---|
-| `reaction_time` | The time to reach 10 % of the step, simulated vs recorded, within `thr_reaction_time` (10 %). | A step on the controlled magnitude. |
+| `reaction_time` | The time to reach 10 % of the step, simulated vs recorded, within `thr_reaction_time` (10 %); the revisions of the DTR from 20251013 on give no limit, and report the time and its deviation without a verdict. | A step on the controlled magnitude. |
 | `rise_time` | The time to reach 90 % of the step, within `thr_rise_time` (10 %). | Idem. |
 | `settling_time` | The time to enter and stay in the tolerance band of the final value, within `thr_settling_time` (10 %). | Idem. |
 | `overshoot` | The excess of the maximum over the final value, within `thr_overshoot` (15 %). | Idem. |
