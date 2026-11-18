@@ -42,6 +42,10 @@ read, with a warning, and its protection curves written as before (#394).
 
 ### Fixed
 
+- A list of the configuration may have spaces around its commas, or a comma at its end: a PCS
+  listed after a space was looked for with that space in its name, and the run stopped with an
+  error that said nothing about the cause. The voltage figure of the swell of fiche I16 zone 3
+  for storage units, left out by such a space in the shipped description, is back (#792).
 - `generate_gfm_envelopes` keeps the envelopes of every PCS when one it lists generates none,
   because it is not a valid PCS, its description cannot be read or its generation stopped before
   its first envelope: it reports that PCS and leaves it out, where it stopped there and lost the
