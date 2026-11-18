@@ -359,7 +359,9 @@ def _pcs_replace(
     return len(subreports)
 
 
-def _stability_label(stabilized: bool) -> str:
+def _stability_label(stabilized: bool | str) -> str:
+    if stabilized == "N/A":
+        return "N/A"
     return "stable" if stabilized else r"\textcolor{red}{unstable}"
 
 

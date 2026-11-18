@@ -374,6 +374,10 @@ def test_a_stable_test_is_labelled_as_such():
     assert report._stability_label(True) == "stable"
 
 
+def test_a_test_whose_stability_is_unknown_is_labelled_not_available():
+    assert report._stability_label("N/A") == "N/A"
+
+
 def test_an_unstable_test_is_labelled_with_a_latex_command_in_red():
     label = report._stability_label(False)
 
