@@ -65,12 +65,20 @@ def write_reference_curves(
     -------
     dict
         ``target`` directory (None when nothing was described), how many ``tests`` were written,
-        how many ``.csv`` were ``copied``, which ones are still ``missing``, and the tests whose
-        metadata the workbook left ``unfilled`` — DyCoV refuses to run those.
+        how many ``.csv`` were ``copied``, which ones are still ``missing``, the tests whose
+        metadata the workbook left ``unfilled`` — DyCoV refuses to run those — and the tests of
+        the revision of the DTR the workbook has no row for, ``without_row``.
     """
     described = {zone: signals for zone, signals in signals_by_zone.items() if signals.tests}
     if not described:
-        return {"target": None, "tests": 0, "copied": 0, "missing": [], "unfilled": []}
+        return {
+            "target": None,
+            "tests": 0,
+            "copied": 0,
+            "missing": [],
+            "unfilled": [],
+            "without_row": [],
+        }
 
     target = outdir / "ReferenceCurves" / producer
     target.mkdir(parents=True, exist_ok=True)
@@ -94,4 +102,5 @@ def write_reference_curves(
         "copied": copied,
         "missing": missing,
         "unfilled": unfilled,
+        "without_row": [name for signals in described.values() for name in signals.without_row],
     }

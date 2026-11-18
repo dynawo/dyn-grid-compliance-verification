@@ -292,7 +292,14 @@ def test_write_reference_curves_copies_the_files_it_finds(tmp_path):
 def test_write_reference_curves_writes_nothing_when_no_test_is_described(tmp_path):
     written = rc.write_reference_curves(tmp_path, "Producer", sig.parse_signals({}, GEN))
 
-    assert written == {"target": None, "tests": 0, "copied": 0, "missing": [], "unfilled": []}
+    assert written == {
+        "target": None,
+        "tests": 0,
+        "copied": 0,
+        "missing": [],
+        "unfilled": [],
+        "without_row": [],
+    }
     assert not (tmp_path / "ReferenceCurves").exists()
 
 
@@ -308,3 +315,155 @@ def test_every_curve_of_the_names_file_is_a_dycov_curve():
 def test_a_missing_name_says_where_to_define_it():
     with pytest.raises(ValueError, match="not defined under .Sheets. in excel_names.ini"):
         names.sheet("zone2")
+
+
+# ---------------------------------------------------------------------------
+# The tests of the revision of the DTR
+# ---------------------------------------------------------------------------
+
+_BOLTED = "PCS_RTE-I16z3.ThreePhaseFault.TransientBolted"
+_IMPEDANT = "PCS_RTE-I16z3.ThreePhaseFault.TransientImpedant"
+_QMIN = "PCS_RTE-I16z3.GridVoltageSwell.QMin"
+_QMAX = "PCS_RTE-I16z3.GridVoltageSwell.QMax"
+_QZERO = "PCS_RTE-I16z3.GridVoltageSwell.Qzero"
+
+# The I5 and I7 rows of the template: the bolted and the impedant fault, and the swell at Qmin,
+# Qmax and Q = 0.
+_TEMPLATE_ROWS = [
+    ("I5", "bolted.csv"),
+    ("I5", "impedant.csv"),
+    ("I7", "qmin.csv"),
+    ("I7", "qmax.csv"),
+    ("I7", "qzero.csv"),
+]
+# The rows of a workbook made on the template of the base revision.
+_BASE_TEMPLATE_ROWS = [("I5", "bolted.csv"), ("I7", "qmin.csv"), ("I7", "qmax.csv")]
+
+
+class _RevisionConfig:
+    """The configuration, but for the revision of the DTR being validated."""
+
+    def __init__(self, revision):
+        self._revision = revision
+
+    def get_value(self, section, key, default=None):
+        if (section, key) == ("DTR", "current"):
+            return self._revision
+        return names_config.get_value(section, key, default)
+
+    def get_config_dir(self):
+        return names_config.get_config_dir()
+
+
+names_config = names.config
+
+
+@pytest.fixture
+def revision(monkeypatch):
+    def select(revision_name):
+        monkeypatch.setattr(names, "config", _RevisionConfig(revision_name))
+
+    return select
+
+
+def _zone3_signals(rows: list, storage: bool = False) -> sig.ZoneSignals:
+    workbook = {names.sheet("signals_zone3"): _sheet(ZONE3_ROWS, rows)}
+    return sig.parse_zone_signals(workbook, "Zone3", GEN, storage=storage)
+
+
+def _named(signals: sig.ZoneSignals) -> dict:
+    return {test.name: test.curves_file for test in signals.tests}
+
+
+def _fault_and_swell_without_row(names_without_row: list) -> list:
+    """The tests of I5 and I7 among those without a row: the sheets of these tests have no other
+    row."""
+    return [name for name in names_without_row if ".ThreePhaseFault." in name or "Swell" in name]
+
+
+@pytest.mark.parametrize("revision_name", ["20240215", "20250801", None])
+def test_the_rows_of_the_base_template_run_the_tests_of_the_base(revision, revision_name):
+    revision(revision_name)
+
+    signals = _zone3_signals(_BASE_TEMPLATE_ROWS)
+
+    assert _named(signals) == {_BOLTED: "bolted.csv", _QMIN: "qmin.csv", _QMAX: "qmax.csv"}
+    assert _fault_and_swell_without_row(signals.without_row) == []
+
+
+@pytest.mark.parametrize("revision_name", ["20251013", "20260723"])
+def test_the_template_has_a_row_for_every_test_of_a_later_revision(revision, revision_name):
+    revision(revision_name)
+
+    signals = _zone3_signals(_TEMPLATE_ROWS)
+
+    assert _named(signals) == {
+        _BOLTED: "bolted.csv",
+        _IMPEDANT: "impedant.csv",
+        _QZERO: "qzero.csv",
+    }
+    assert _fault_and_swell_without_row(signals.without_row) == []
+
+
+def test_the_template_runs_the_tests_of_the_base_under_the_base(revision):
+    revision("20240215")
+
+    signals = _zone3_signals(_TEMPLATE_ROWS)
+
+    assert _named(signals) == {_BOLTED: "bolted.csv", _QMIN: "qmin.csv", _QMAX: "qmax.csv"}
+
+
+def test_a_workbook_of_the_base_template_lacks_the_rows_a_later_revision_runs(revision):
+    revision("20260723")
+
+    signals = _zone3_signals(_BASE_TEMPLATE_ROWS)
+
+    assert _named(signals) == {_BOLTED: "bolted.csv"}
+    assert _fault_and_swell_without_row(signals.without_row) == [_IMPEDANT, _QZERO]
+
+
+def test_a_storage_plant_lacks_both_tests_of_a_missing_row(revision):
+    revision("20260723")
+
+    signals = _zone3_signals(_BASE_TEMPLATE_ROWS, storage=True)
+
+    assert _fault_and_swell_without_row(signals.without_row) == [
+        f"{_IMPEDANT}Injection",
+        f"{_IMPEDANT}Consumption",
+        f"{_QZERO}Injection",
+        f"{_QZERO}Consumption",
+    ]
+
+
+def test_a_row_marked_not_applicable_is_not_a_missing_row(revision):
+    revision("20260723")
+    rows = [
+        (case, file if case != "I5" else names.marker("not_applicable"))
+        for case, file in _TEMPLATE_ROWS
+    ]
+
+    signals = _zone3_signals(rows)
+
+    assert _fault_and_swell_without_row(signals.without_row) == []
+    assert _IMPEDANT not in _named(signals)
+
+
+def test_the_tests_without_a_row_reach_the_report_of_the_reference_curves(tmp_path, revision):
+    revision("20260723")
+
+    written = rc.write_reference_curves(
+        tmp_path, "Producer", {"Zone3": _zone3_signals(_BASE_TEMPLATE_ROWS)}
+    )
+
+    assert _fault_and_swell_without_row(written["without_row"]) == [_IMPEDANT, _QZERO]
+
+
+def test_a_revision_section_of_the_user_copy_is_read_and_not_reported_as_unknown(
+    tmp_path, revision, caplog
+):
+    user_copy = tmp_path / "excel_names.ini"
+    user_copy.write_text(f"[Zone3-Tests.20250801]\nI7/3 = {_QZERO}\n")
+
+    names._report_unknown(names._read(names.PACKAGE_NAMES_FILE), user_copy)
+
+    assert "does not read" not in caplog.text

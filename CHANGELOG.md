@@ -20,8 +20,8 @@ finds none, or one the tool does not implement, stops and lists the revisions it
 a template other than the one the release reads, in the `format_version` cell of its
 `Infos générales ->` sheet: rows that differ between the two would be dropped or missing. The
 templates of 1.2.1 said 1.2.1 and those of 1.3.0 said 1.0.0, so every workbook made on them is
-warned about. One made on the templates of 1.3.0 only needs that cell set to 1.3.0; an older one
-has its data copied into `workbooks/Producer_IEC.xlsx` or `workbooks/Producer_WECC.xlsx` (#701).
+warned about: copy its data into `workbooks/Producer_IEC.xlsx` or `workbooks/Producer_WECC.xlsx`,
+whose rows the next sections describe (#701).
 
 ### The fault searches run on the simplified solver
 
@@ -39,6 +39,17 @@ current and reactive power limits of the turbine, the tables of the plant contro
 decoupling protection curves, which the previous template listed one parameter per row. Copy the
 data of a workbook made on the template of 1.3.0 into `workbooks/Producer_IEC.xlsx`: it is still
 read, with a warning, and its protection curves written as before (#394).
+
+### The workbooks carry the tests of every revision of the DTR
+
+The rows of the signal sheets are read as the tests of the revision of the DTR being validated,
+so the records a workbook gives reach the tests that revision runs. Both templates, the WECC one
+now version 1.4.0 as well, carry a row for every test of every revision: a second I5 row, the
+impedant fault, after the bolted one, and a third I7 row, the swell at Q = 0, which the revisions
+from 3.5 on run instead of the two of the base. Copy the data of a workbook made on an earlier
+template into `workbooks/Producer_IEC.xlsx` or `workbooks/Producer_WECC.xlsx` and fill the new
+rows: a workbook without them is still read, and the conversion names the tests it has no row
+for (#679).
 
 ### Fixed
 
