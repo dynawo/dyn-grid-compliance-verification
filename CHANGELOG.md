@@ -66,22 +66,25 @@ still names the shared template, and its report draws both circuits one over the
 again from the package, or write `\ProducerFiles.circuit_z1_fault.tikz` and
 `\ProducerFiles.circuit_z1_setpoint.tikz` where it names the schematics (#793).
 
-### The phase jump envelopes follow the transfer function of the converter
+### The phase jump envelopes of `PCS_RTE-IGFM1` follow the transfer function of the converter
 
 The envelopes of the phase jumps of `PCS_RTE-IGFM1` are built as RTE now builds its own: from the
 simulated response of the transfer function of the converter, a virtual synchronous machine whose
 PLL is a washout filter, whatever its damping. They change for every unit, since that response
 oscillates for values of D the former formulas treated as overdamped (#760).
 
-A description of your own of a phase jump PCS, such as a copy of `PCS_RTE-IGFM1` in the
-configuration directory, needs the same update as the shipped one:
+Its tests name the new calculator, `calculator = PhaseJumpTransferFunction`, and its PCS sets it
+up: `RatioMin` and `RatioMax` at 0.7 and 1.3, now varying H and D in opposite directions;
+`Tpll`, the time constant of the PLL filter; `KddSlope` and `KddOffset`, the linear fit of the
+angle damping on D; and `MarginLowDelay`, the delay of the response scaled by `MarginLow`. Without
+them, or with a `Tpll` of 0, the calculator takes the values of RTE's notebook: 0.01 s, 0.1656,
+2.0022 and 0.01 s. It
+ignores `PmaxMOISTunnel` and `PminMOISTunnel`: its envelopes stop at the limits of the unit and,
+on the inner side, at ±(1 − tunnel).
 
-- `RatioMin` and `RatioMax` now vary H and D in opposite directions, H × `RatioMin` with
-  D × `RatioMax` and the reverse; the shipped PCS sets them to 0.7 and 1.3.
-- `Tpll`, the time constant of the PLL filter, is read by the phase jump too; 0.01 s when absent
-  or 0.
-- `PmaxMOISTunnel` and `PminMOISTunnel` no longer apply to the phase jump, whose envelopes stop at
-  the limits of the unit and, on the inner side, at ±(1 − tunnel).
+Any other phase jump PCS, such as a copy of `PCS_RTE-IGFM1` of your own in the configuration
+directory, keeps `calculator = PhaseJump` and the envelopes it had. Name the new calculator in its
+tests, and set the values above, to move it to the new method.
 
 ### Fixed
 

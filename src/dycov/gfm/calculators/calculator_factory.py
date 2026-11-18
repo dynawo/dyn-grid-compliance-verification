@@ -11,12 +11,14 @@ from typing import Optional
 from dycov.gfm.calculators.amplitude_step import AmplitudeStep
 from dycov.gfm.calculators.gfm_calculator import GFMCalculator
 from dycov.gfm.calculators.phase_jump import PhaseJump
+from dycov.gfm.calculators.phase_jump_transfer_function import PhaseJumpTransferFunction
 from dycov.gfm.calculators.rocof import RoCoF
 from dycov.gfm.calculators.scr_jump import SCRJump
 from dycov.gfm.parameters import GFMParameters
 
 _CALCULATOR_REGISTRY = {
     "PhaseJump": PhaseJump,
+    "PhaseJumpTransferFunction": PhaseJumpTransferFunction,
     "AmplitudeStep": AmplitudeStep,
     "RoCoF": RoCoF,
     "SCRJump": SCRJump,

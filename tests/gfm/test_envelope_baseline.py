@@ -43,8 +43,8 @@ def test_the_envelopes_are_those_of_the_release(tmp_path, run_dycov):
     home = _home_with_user_config(tmp_path)
     baseline = _baseline(tmp_path)
     expected_files = _csv_files(baseline)
-    # The phase jumps follow the transfer function of the converter since the release, so their
-    # envelopes are no longer those it generated
+    # The phase jumps of PCS_RTE-IGFM1 follow the transfer function of the converter since the
+    # release, so their envelopes are no longer those it generated
     shutil.rmtree(baseline / "PCS_RTE-IGFM1")
     output = tmp_path / "Results"
 

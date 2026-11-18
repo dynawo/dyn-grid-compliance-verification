@@ -535,6 +535,39 @@ class GFMParameters(Parameters):
         """
         return self.__get_float_value("Tpll", 0.0)
 
+    def get_margin_low_delay(self) -> float:
+        """
+        Retrieves the delay of the response scaled by the lower margin (MarginLowDelay).
+
+        Returns
+        -------
+        float
+            The delay in seconds.
+        """
+        return self.__get_float_value("MarginLowDelay", constants.PHASE_JUMP_MARGIN_LOW_DELAY_S)
+
+    def get_angle_damping_slope(self) -> float:
+        """
+        Retrieves the slope of the angle damping on D (KddSlope).
+
+        Returns
+        -------
+        float
+            The angle damping per unit of D.
+        """
+        return self.__get_float_value("KddSlope", constants.ANGLE_DAMPING_PER_DAMPING)
+
+    def get_angle_damping_offset(self) -> float:
+        """
+        Retrieves the angle damping at D = 0 (KddOffset).
+
+        Returns
+        -------
+        float
+            The angle damping in pu.
+        """
+        return self.__get_float_value("KddOffset", constants.ANGLE_DAMPING_OFFSET)
+
     def get_grid_reactance(self) -> float:
         """
         Calculates and retrieves the grid reactance based on SCR.

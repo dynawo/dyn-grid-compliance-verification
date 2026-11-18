@@ -1,0 +1,128 @@
+<mxfile host="app.diagrams.net">
+  <diagram name="PhaseJump Flow (Logical)" id="phase-jump-flow-logical">
+    <mxGraphModel dx="1360" dy="793" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="850" pageHeight="1700" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="P1" value="Start: Phase Jump&lt;br&gt;Calculation" style="ellipse;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=default;fillColor=#dae8fc;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="320" y="40" width="160" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="P2" value="Inputs: D, H, Xeff, time_array,&lt;br&gt;event_time" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fontColor=default;" parent="1" vertex="1">
+          <mxGeometry x="300" y="160" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="P3" value="Loop: nominal D, H and its&lt;br&gt;two variations (H and D in&lt;br&gt;opposite directions)" style="shape=loopLimit;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=default;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="290" y="260" width="220" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="P4" value="Build the transfer function&lt;br&gt;of the converter (VSM, PLL&lt;br&gt;washout filter, angle damping)" style="shape=process;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=default;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="280" y="370" width="240" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="P5" value="Simulate its response&lt;br&gt;to the phase step" style="shape=process;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=default;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="300" y="480" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="P6" value="End Loop" style="shape=loopLimit;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=default;fontSize=12;flipV=1;" parent="1" vertex="1">
+          <mxGeometry x="300" y="580" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="P7" value="Margin traces: nominal ΔP&lt;br&gt;× (1 + MarginHigh) and&lt;br&gt;× (1 − MarginLow), also delayed" style="shape=process;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=default;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="280" y="680" width="240" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="P8" value="Exponential bound on the decay&lt;br&gt;of the peaks of the amplified&lt;br&gt;response (or of its slowest mode)" style="shape=process;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=default;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="270" y="790" width="260" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="P9" value="Calculate Dynamic (Time-&lt;br&gt;Dependent) Tunnel" style="shape=process;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=default;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="300" y="900" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="P10" value="Upper: max of all traces + tunnel&lt;br&gt;Lower: min of all traces − tunnel" style="shape=process;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=default;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="270" y="1000" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="P11" value="Clip: tunnel − 1 ≤ upper ≤ Pmax&lt;br&gt;Pmin ≤ lower ≤ 1 − tunnel" style="shape=process;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=default;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="270" y="1100" width="260" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="P12" value="Calculate Final PCC Signal&lt;br&gt;(P0 + Nominal ΔP)" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fontColor=default;" parent="1" vertex="1">
+          <mxGeometry x="300" y="1200" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="P13" value="Is EMT&lt;br&gt;simulation?" style="rhombus;whiteSpace=wrap;html=1;shadow=0;fontFamily=Helvetica;fontSize=12;align=center;strokeWidth=1;spacing=6;spacingTop=-4;fontColor=default;" parent="1" vertex="1">
+          <mxGeometry x="340" y="1300" width="120" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="P14" value="Yes: Apply Final Time&lt;br&gt;Delay" style="shape=process;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=default;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="120" y="1320" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="P15" value="No: Use signals&lt;br&gt;directly" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fontColor=default;" parent="1" vertex="1">
+          <mxGeometry x="530" y="1320" width="150" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="P16" value="Return Final Results (Ip)" style="rounded=1;whiteSpace=wrap;html=1;fontSize=12;glass=0;strokeWidth=1;shadow=0;fontColor=default;" parent="1" vertex="1">
+          <mxGeometry x="300" y="1440" width="200" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="P17" value="End" style="ellipse;whiteSpace=wrap;html=1;rounded=1;glass=0;strokeWidth=1;shadow=0;fontColor=default;fillColor=#f8cecc;fontSize=12;" parent="1" vertex="1">
+          <mxGeometry x="340" y="1540" width="120" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-P1-P2" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="P1" target="P2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-P2-P3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="P2" target="P3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-P3-P4" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="P3" target="P4" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-P4-P5" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="P4" target="P5" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-P5-P6" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="P5" target="P6" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-P6-P3" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="P6" target="P3" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="40" y="610" />
+              <mxPoint x="40" y="295" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-P6-P7" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="P6" target="P7" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-P7-P8" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="P7" target="P8" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-P8-P9" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="P8" target="P9" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-P9-P10" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="P9" target="P10" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-P10-P11" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="P10" target="P11" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-P11-P12" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="P11" target="P12" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-P12-P13" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="P12" target="P13" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-P13-P14" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="P13" target="P14" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-P13-P15" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="P13" target="P15" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge-P14-P16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="P14" target="P16" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="195" y="1470" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-P15-P16" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="P15" target="P16" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="605" y="1470" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="edge-P16-P17" value="" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=0;fontColor=default;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="P16" target="P17" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -21,10 +21,13 @@ PCS_WB_FREQUENCY_HZ = 50.0
 # Delay and Time Constants (in seconds)
 EMT_DELAY_S = 0.02
 SCR_BOUND_DELAY_S = 0.01
+OVERDAMPED_MAX_DELAY_S = 0.01
+UNDERDAMPED_MIN_DELAY_S = 0.01
+UNDERDAMPED_MAX_DELAY_S = 0.01
 
-# Phase jump model and envelopes
+# Phase jump simulated from the transfer function of the converter
 PHASE_JUMP_PLL_TIME_CONSTANT_S = 0.01
-PHASE_JUMP_REDUCED_RESPONSE_DELAY_S = 0.01
+PHASE_JUMP_MARGIN_LOW_DELAY_S = 0.01
 PHASE_JUMP_DECAY_THRESHOLD = 0.05
 PHASE_JUMP_DECAY_TIME_CONSTANTS = 3
 # Extrema below this fraction of the largest one are the rounding noise of the simulation

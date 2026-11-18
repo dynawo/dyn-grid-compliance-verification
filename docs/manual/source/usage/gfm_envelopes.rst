@@ -7,9 +7,10 @@ Overview
 
 Grid-Forming (GFM) analysis needs no Dynawo model nor simulation. Given the
 key parameters of a GFM unit, DyCoV computes its dynamic response, from
-closed-form solutions or, for the phase jump, by simulating its transfer
-function, and derives a set of *admissible response envelopes*: upper and lower bounds on
-the dynamic response for specific grid disturbances.
+closed-form solutions or, for the phase jumps of ``PCS_RTE-IGFM1``, by
+simulating its transfer function, and derives a set of *admissible response
+envelopes*: upper and lower bounds on the dynamic response for specific grid
+disturbances.
 
 The result is not a pass/fail verdict but a quantitative envelope that can be:
 
@@ -30,10 +31,12 @@ DyCoV currently supports four predefined disturbance families:
 
 * **Phase Jump** — computes active current (:math:`I_p`) envelopes in response
   to a sudden change in the grid voltage phase angle. This is typically the
-  most critical disturbance for GFM units. The responses are those of the
-  transfer function of the converter (a virtual synchronous machine whose PLL
-  is a washout filter), as in RTE's reference envelopes, whatever the damping:
-  overdamped and underdamped units are treated alike.
+  most critical disturbance for GFM units. In ``PCS_RTE-IGFM1`` the responses
+  are those of the transfer function of the converter (a virtual synchronous
+  machine whose PLL is a washout filter), as RTE now computes them, whatever
+  the damping: overdamped and underdamped units are treated alike. A phase
+  jump PCS of your own keeps the closed-form response of each regime unless
+  its tests name ``calculator = PhaseJumpTransferFunction``.
 
 * **RoCoF** (Rate of Change of Frequency) — computes active power envelopes
   in response to a frequency ramp. Finite-duration events are modeled by
@@ -108,9 +111,9 @@ In EMT mode, the envelopes and the PCC signal are shifted in time by the
 the input file, to account for the initial response of an EMT simulation. The
 delay defaults to 0.02 s when the key is absent; all the shipped examples
 define it explicitly. Without ``-e``, ``emt_delay`` has no effect. During the
-delay of a phase jump, the envelopes span from the initial active current to
-the values they start from once the delay is over, so they hold both a unit
-that has not responded yet and one that already has.
+delay of a phase jump of ``PCS_RTE-IGFM1``, the envelopes span from the
+initial active current to the values they start from once the delay is over,
+so they hold both a unit that has not responded yet and one that already has.
 
 
 .. _gfm_outputs:
@@ -154,7 +157,7 @@ For each combination of PCS, scenario, and operating condition:
 
 * **INI dump file** (Hybrid mode only) — the exact set of input parameters
   used for the calculation, including internally derived values such as the
-  damping ratio :math:`\varepsilon` of the SCR jump and the RoCoF. Intended for full traceability when hybrid
+  damping ratio :math:`\varepsilon`. Intended for full traceability when hybrid
   configurations are used.
 
 

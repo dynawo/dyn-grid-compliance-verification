@@ -215,6 +215,41 @@ class GFMCalculator(ABC):
         combined_signal = np.concatenate((signal[:start_idx], delay_block, signal[start_idx:]))
         return combined_signal[: len(time_array)]
 
+    def _calculate_epsilon_initial_check(
+        self, D: np.ndarray, H: np.ndarray, x_total_initial: float
+    ) -> np.ndarray:
+        """
+        Computes the damping ratio (epsilon) to classify the dynamic response.
+
+        Parameters
+        ----------
+        D : np.ndarray
+            Array of damping constant variations.
+        H : np.ndarray
+            Array of inertia constant variations.
+        x_total_initial : float
+            The total initial reactance.
+
+        Returns
+        -------
+        np.ndarray
+            An array of calculated epsilon values.
+        """
+        return (
+            D
+            / 2
+            * np.sqrt(
+                x_total_initial
+                / (
+                    2
+                    * H
+                    * self._base_angular_frequency
+                    * self._initial_voltage
+                    * self._grid_voltage
+                )
+            )
+        )
+
     def _get_time_tunnel(
         self, p_peak: float, time_array: np.ndarray, event_time: float
     ) -> np.ndarray:
@@ -242,3 +277,83 @@ class GFMCalculator(ABC):
         )
         tunnel = t_val * tunnel_exp
         return np.where(time_array < event_time, 0, tunnel)
+
+    def _calculate_unlimited_power_envelopes(
+        self, list_of_arrays: list[np.ndarray], tunnel: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Synthesizes theoretical bounding envelopes before hardware constraints.
+
+        Parameters
+        ----------
+        list_of_arrays : list[np.ndarray]
+            A list of all signal variations calculated.
+        tunnel : np.ndarray
+            The computed dynamic tunnel array.
+
+        Returns
+        -------
+        tuple[np.ndarray, np.ndarray]
+            The unlimited lower and upper envelopes.
+        """
+        lower_env = np.minimum.reduce(list_of_arrays) - tunnel
+        upper_env = np.maximum.reduce(list_of_arrays) + tunnel
+        return np.minimum(lower_env, upper_env), np.maximum(lower_env, upper_env)
+
+    def _limit_power_envelopes(
+        self,
+        lower_envelope_unlimited: np.ndarray,
+        upper_envelope_unlimited: np.ndarray,
+        tunnel_value: float,
+        initial_power: float,
+        max_power: float,
+        min_power: float,
+        sign: int,
+        use_opposite_signs: bool,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """
+        Turns the unlimited envelopes into powers and clips them.
+
+        One envelope is clipped to the MOIS limits and the other to the unit's power limits.
+        The lower one takes the MOIS limits, unless use_opposite_signs is set and the sign of
+        the expected transient is not the opposite of that of the initial power, in which case
+        the upper one takes them.
+
+        Parameters
+        ----------
+        lower_envelope_unlimited : np.ndarray
+            The theoretical lower envelope.
+        upper_envelope_unlimited : np.ndarray
+            The theoretical upper envelope.
+        tunnel_value : float
+            The static tolerance margin limit.
+        initial_power : float
+            The pre-event steady-state power.
+        max_power : float
+            The maximum hardware power capability.
+        min_power : float
+            The minimum hardware power capability.
+        sign : int
+            The directional sign of the expected transient.
+        use_opposite_signs : bool
+            Flag indicating if divergent boundary bounding applies.
+
+        Returns
+        -------
+        tuple[np.ndarray, np.ndarray]
+            The finalized, hardware-limited lower and upper envelopes.
+        """
+        mois_limits = (self._pmin_mois_tunnel, self._pmax_mois_tunnel)
+        power_limits = (min_power, max_power)
+
+        lower_takes_mois_limits = not use_opposite_signs or np.sign(initial_power) * sign == -1
+        lower_limits, upper_limits = (
+            (mois_limits, power_limits) if lower_takes_mois_limits else (power_limits, mois_limits)
+        )
+        lower_envelope_limited = np.clip(
+            initial_power - sign * lower_envelope_unlimited, *lower_limits
+        )
+        upper_envelope_limited = np.clip(
+            initial_power - sign * upper_envelope_unlimited, *upper_limits
+        )
+        return lower_envelope_limited, upper_envelope_limited

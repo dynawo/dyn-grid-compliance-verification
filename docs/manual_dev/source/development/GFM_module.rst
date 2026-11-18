@@ -11,9 +11,9 @@ grid events. No network model nor Dynawo simulation is involved.
 
 Given a set of GFM unit parameters (damping, inertia, effective reactance),
 the module computes the dynamic response of the unit, from closed-form
-solutions or, for the phase jump, by simulating its transfer function, and
-generates a nominal response signal together with upper and lower tolerance
-envelopes. These envelopes account for the
+solutions or, for the phase jumps of ``PCS_RTE-IGFM1``, by simulating its
+transfer function, and generates a nominal response signal together with
+upper and lower tolerance envelopes. These envelopes account for the
 parametric variations in **Damping (D)** and **Inertia (H)** that characterize
 the uncertainty band of the GFM response.
 
@@ -74,14 +74,25 @@ This is where the mathematical modeling lives. The structure follows the
   which establishes a common interface and provides shared helper methods
   (see :ref:`gfm_abc` below).
 
-* Concrete calculators, one per disturbance family:
+* Concrete calculators, one per disturbance family and two for the phase jump:
 
-  * ``phase_jump.py`` (``PhaseJump``) — active current response to a phase jump.
+  * ``phase_jump.py`` (``PhaseJump``) — active current response to a phase jump,
+    from the closed-form solutions of the swing equation.
 
     .. image:: ../../GFM_Flowchart/phase_jump.*
        :width: 70%
        :align: center
        :alt: Phase Jump calculation flowchart
+
+  * ``phase_jump_transfer_function.py`` (``PhaseJumpTransferFunction``) — active
+    current response to a phase jump, simulated from the transfer function of
+    the converter as in RTE's notebook. ``PCS_RTE-IGFM1`` uses it; any other
+    phase jump PCS keeps ``PhaseJump`` unless it names this one.
+
+    .. image:: ../../GFM_Flowchart/phase_jump_transfer_function.*
+       :width: 70%
+       :align: center
+       :alt: Phase Jump from the transfer function calculation flowchart
 
   * ``amplitude_step.py`` (``AmplitudeStep``) — reactive current response to
     a voltage amplitude step.
@@ -181,20 +192,32 @@ Key helper methods
     Shift a signal in time, holding a constant value meanwhile: the first one
     by the EMT delay, holding the signal's initial value, which is how the
     amplitude step and RoCoF calculators turn RMS envelopes into EMT ones.
-    The phase jump and SCR jump calculators call ``_apply_delay()`` with values
-    of their own: in EMT mode the phase jump holds P0 in its response and, in
-    its envelopes, the span from P0 to the values they start from after the
-    delay (``_delay_by_emt_from_p0()``).
+    The other calculators call ``_apply_delay()`` with values of their own: in
+    EMT mode ``PhaseJumpTransferFunction`` holds P0 in its response and, in its
+    envelopes, the span from P0 to the values they start from after the delay
+    (``_delay_by_emt_from_p0()``).
+
+``_calculate_epsilon_initial_check()``
+    Computes the **damping ratio** :math:`\varepsilon` to determine whether
+    the system response is overdamped (:math:`\varepsilon \ge 1`) or
+    underdamped (:math:`\varepsilon < 1`). This drives the branching between
+    the two analytical solution paths.
 
 ``_get_time_tunnel()``
     Calculates a time-dependent tolerance band that grows exponentially after
     the event, representing the uncertainty corridor around the nominal
     response.
 
+``_limit_power_envelopes()``
+    Turns the computed envelopes into powers and clips one of them to the
+    unit's operational limits (``p_min_injection``, ``p_max_injection``) and the
+    other to the MOIS limits (``PminMOISTunnel``, ``PmaxMOISTunnel``).
+
 Concrete calculator pattern
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The SCR jump and RoCoF calculators follow the same internal structure:
+The ``PhaseJump``, SCR jump and RoCoF calculators follow the same internal
+structure:
 
 1. **Initialization** — stores event-specific parameters.
 2. **Main calculation** (``calculate_envelopes``) — orchestrates the
@@ -205,20 +228,21 @@ The SCR jump and RoCoF calculators follow the same internal structure:
 4. **Analytical solution** — the ``_get_*damped_delta_p_base`` methods
    implement the closed-form solutions to the second-order ODEs.
 
-The ``PhaseJump`` calculator does not tell the two regimes apart. It builds
-the transfer function of the converter, a virtual synchronous machine whose
-PLL is a washout filter (time constant ``Tpll``) and whose angle damping is a
-linear function of :math:`D`, and simulates its response to the phase step
-with ``scipy.signal.lsim``, for the nominal :math:`H, D` and for two
-variations that move them in opposite directions (:math:`H \cdot` ``RatioMin``
-with :math:`D \cdot` ``RatioMax``, and the reverse). The envelopes are the
-maximum and minimum of those responses, of the nominal one scaled by
-``1 + MarginHigh`` and by ``1 - MarginLow`` (the latter also delayed 10 ms),
-and of an exponential fitted to the decay of the peaks of the scaled-up one,
-widened by the tunnel. They stop at the limits of the unit, and the inner side
-at :math:`\pm(1 - tunnel)`. On a time vector like the notebook's, which starts
-1 s before the jump in steps of 5 ms, this reproduces the envelopes of RTE's
-reference notebook, except where the notebook takes the rounding noise of a
+The ``PhaseJumpTransferFunction`` calculator does not tell the two regimes
+apart. It builds the transfer function of the converter, a virtual synchronous
+machine whose PLL is a washout filter (time constant ``Tpll``) and whose angle
+damping is the linear function ``KddSlope`` :math:`\cdot D +` ``KddOffset``,
+and simulates its response to the phase step with ``scipy.signal.lsim``, for
+the nominal :math:`H, D` and for two variations that move them in opposite
+directions (:math:`H \cdot` ``RatioMin`` with :math:`D \cdot` ``RatioMax``,
+and the reverse). The envelopes are the maximum and minimum of those
+responses, of the nominal one scaled by ``1 + MarginHigh`` and by
+``1 - MarginLow`` (the latter also delayed by ``MarginLowDelay``, to which the
+EMT delay adds in EMT mode), and of an exponential fitted to the decay of the
+peaks of the scaled-up one, widened by the tunnel. They stop at the limits of
+the unit, and the inner side at :math:`\pm(1 - tunnel)`. On a time vector like
+the notebook's, which starts 1 s before the jump in steps of 5 ms, this
+reproduces the envelopes of RTE's reference notebook, except where the notebook takes the rounding noise of a
 response that has died out for one more peak: DyCoV ignores extrema below
 ``PHASE_JUMP_NOISE_FLOOR`` of the largest one.
 

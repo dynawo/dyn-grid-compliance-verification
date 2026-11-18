@@ -56,8 +56,8 @@ and a specific class of grid disturbance:
 - **Amplitude Step** — reactive current and reactive power envelopes
   in response to a grid voltage amplitude step.
 - **Phase Jump** — active current response to a sudden change
-  in the grid voltage phase angle, simulated from the transfer function
-  of the converter whatever its damping.
+  in the grid voltage phase angle; in `PCS_RTE-IGFM1`, simulated from the
+  transfer function of the converter whatever its damping.
 - **RoCoF** (Rate of Change of Frequency) — active power response to a
   frequency ramp; finite-duration events are modeled by superimposing
   step responses.
@@ -150,6 +150,12 @@ The remaining parameters are defined inside the `[GFM Parameters]` section.
 > to the tool's PCS configuration (most `PCS_RTE-IGFMx` templates define their
 > own values; when a template does not, both bounds default to 1.0) and can be
 > overridden through the tool configuration like any other PCS option.
+> So do the settings of the converter model behind the phase jumps of
+> `PCS_RTE-IGFM1`: `Tpll`, the time constant of its PLL filter (0.01 s);
+> `KddSlope` and `KddOffset`, the linear fit of its angle damping on D
+> (0.1656 and 2.0022); and `MarginLowDelay`, the delay of its response scaled
+> by `MarginLow` (0.01 s). The values in brackets apply when the PCS gives none,
+> or a `Tpll` of 0.
 
 ---
 
@@ -241,9 +247,10 @@ dycov generate_gfm_envelopes -i Producer.ini -e
 In EMT mode, the envelopes and the PCC signal are shifted in time by the
 `emt_delay` value (in seconds) defined in `[GFM Parameters]`, to account for
 the initial response of an EMT simulation. Without `-e`, `emt_delay` has no
-effect. During the delay of a phase jump, the envelopes span from the initial
-active current to the values they start from once the delay is over, so they
-hold both a unit that has not responded yet and one that already has.
+effect. During the delay of a phase jump of `PCS_RTE-IGFM1`, the envelopes
+span from the initial active current to the values they start from once the
+delay is over, so they hold both a unit that has not responded yet and one
+that already has.
 
 ---
 
@@ -297,8 +304,8 @@ For **hybrid GFM cases only**, DyCoV also generates:
 
 - **INI dump file (`*_ini_dump.txt`)** containing the exact set of input
   parameters used for that calculation, including internally derived values
-  such as the damping ratio $\varepsilon$ of the SCR jump and the RoCoF.
-  Intended for full traceability when hybrid configurations are used.
+  such as the damping ratio $\varepsilon$. Intended for full traceability
+  when hybrid configurations are used.
 
 ---
 
