@@ -422,6 +422,11 @@ Signal processing parameters:
   three-phase (abc) reference curves are warned about when they are converted
   to RMS: their harmonics may alias onto the fundamental. 2 kHz, the minimum
   the DTR (fiche I16) asks of the signals of EMT simulations and tests.
+* ``emt_resampling_frequency`` — sampling frequency (Hz) below which the
+  three-phase (abc) reference curves are resampled to it with PCHIP before
+  their conversion to RMS, so that the trapezoidal rule integrates their
+  transients as finely as it would a record of that frequency. Faster curves
+  are integrated on their own samples. 10 kHz.
 * ``t_integrator_tol`` — numerical tolerance for event timing (accounts for
   the fact that Dynawo's integrator may place events slightly off the
   configured time).

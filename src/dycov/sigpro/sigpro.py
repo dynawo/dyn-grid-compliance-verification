@@ -13,7 +13,7 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 from scipy import signal
-from scipy.interpolate import CubicSpline, PchipInterpolator
+from scipy.interpolate import PchipInterpolator
 
 from dycov.configuration.cfg import config
 from dycov.logging import dycov_logging
@@ -27,11 +27,8 @@ ZERO_THRESHOLD = 1.0e-10
 _ON_GRID_TOLERANCE = 0.01
 
 
-def _fundamental_grid(time: np.ndarray, f_nom: float) -> tuple[np.ndarray, int]:
-    """Build the uniform time grid with a whole number of samples per fundamental cycle.
-
-    Its step is the one closest to the mean step of the samples that divides the cycle exactly,
-    so that the sum over the samples of one cycle integrates every harmonic of that cycle exactly.
+def _sampling_frequency(time: np.ndarray, f_nom: float) -> float:
+    """Calculate the mean sampling frequency of three-phase curves, checking they can be converted.
 
     Parameters
     ----------
@@ -42,20 +39,24 @@ def _fundamental_grid(time: np.ndarray, f_nom: float) -> tuple[np.ndarray, int]:
 
     Returns
     -------
-    tuple[np.ndarray, int]
-        The grid, spanning the samples, and its number of samples per cycle.
+    float
+        Mean sampling frequency, in Hz.
     """
     span = time[-1] - time[0]
-    samples_per_cycle = round((len(time) - 1) / (span * f_nom))
-    step = 1 / (f_nom * samples_per_cycle) if samples_per_cycle else np.inf
-    grid = time[0] + step * np.arange(int(span / step + _ON_GRID_TOLERANCE) + 1)
-    if samples_per_cycle < 3 or len(grid) < 2 * (samples_per_cycle // 2) + 2:
+    sampling_frequency = (len(time) - 1) / span if span > 0 else 0.0
+    if sampling_frequency < 3 * f_nom or span < 1 / f_nom + 2 / sampling_frequency:
         raise ValueError(
-            f"Three-phase curves sampled every {span / (len(time) - 1):g} s over {span:g} s "
-            f"cannot be converted to RMS: the conversion needs three samples per cycle of "
-            f"{f_nom:g} Hz at least, over more than one cycle"
+            f"Three-phase curves of {len(time)} samples over {span:g} s cannot be converted to "
+            f"RMS: the conversion needs three samples per cycle of {f_nom:g} Hz at least, over "
+            f"more than one cycle"
         )
-    return grid, samples_per_cycle
+    return sampling_frequency
+
+
+def _uniform_grid(time: np.ndarray, samples_per_cycle: int, f_nom: float) -> np.ndarray:
+    """Build the uniform grid, with a whole number of samples per cycle, spanning the samples."""
+    step = 1 / (f_nom * samples_per_cycle)
+    return time[0] + step * np.arange(int((time[-1] - time[0]) / step + _ON_GRID_TOLERANCE) + 1)
 
 
 def _lies_on(time: np.ndarray, grid: np.ndarray) -> bool:
@@ -65,10 +66,10 @@ def _lies_on(time: np.ndarray, grid: np.ndarray) -> bool:
 
 
 def _resampled(time: np.ndarray, values: np.ndarray, grid: np.ndarray) -> np.ndarray:
-    """Resample a waveform on the grid with a cubic spline, the most precise interpolant of a
-    sinusoid among the usual ones."""
+    """Resample a waveform on the grid with PCHIP, which never overshoots its samples and so adds
+    no ringing at the jumps of a transient."""
     unique_time, first = np.unique(time, return_index=True)
-    return CubicSpline(unique_time, values[first])(grid)
+    return PchipInterpolator(unique_time, values[first])(grid)
 
 
 def _fundamental_phasor(
@@ -82,9 +83,10 @@ def _fundamental_phasor(
     stamped here at the centre, as the synchrophasor standard IEC/IEEE 60255-118-1 does, so that
     it does not lag behind the RMS simulation it is compared with.
 
-    With N samples per cycle, the integral is summed by the midpoint rule over N samples when N
-    is odd, and by the trapezoidal rule over the N + 1 samples that span the cycle when N is even.
-    Both are exact for every harmonic up to N - 2, and so reject all of them.
+    The integral is the trapezoidal rule over the N + 1 samples that span the cycle, N being even
+    so that the cycle is centred on a sample. Over a cycle, it is exact for every harmonic up to
+    N - 2 (Trefethen and Weideman, SIAM Review 56(3), 2014, corollary 3.3), and so rejects all of
+    them.
 
     Parameters
     ----------
@@ -93,7 +95,7 @@ def _fundamental_phasor(
     grid : np.ndarray
         Uniform time grid with samples_per_cycle samples per cycle, in seconds.
     samples_per_cycle : int
-        Number of samples per cycle of the grid.
+        Even number of samples per cycle of the grid.
     f_nom : float
         Fundamental frequency, in Hz.
 
@@ -102,11 +104,116 @@ def _fundamental_phasor(
     np.ndarray
         Complex phasor at each sample of the grid half a cycle away from both of its ends.
     """
-    weights = np.ones(samples_per_cycle + 1 - samples_per_cycle % 2)
-    if samples_per_cycle % 2 == 0:
-        weights[[0, -1]] = 0.5
+    weights = np.ones(samples_per_cycle + 1)
+    weights[[0, -1]] = 0.5
     demodulated = samples * np.exp(-2j * np.pi * f_nom * grid)
     return 2 / samples_per_cycle * signal.convolve(demodulated, weights, mode="valid")
+
+
+def _fundamental_phasor_at(
+    time: np.ndarray, samples: np.ndarray, instants: np.ndarray, f_nom: float
+) -> np.ndarray:
+    """Calculate the fundamental phasor of a waveform over one cycle centred on each instant, by
+    the trapezoidal rule on the samples as they are, however irregular their time stamps.
+
+    The trapezoidal rule takes the integrand as linear between consecutive samples; the ends of
+    each cycle, which seldom fall on a sample, are found on that line.
+
+    Parameters
+    ----------
+    time : np.ndarray
+        Time stamps of the samples, in seconds, in increasing order (repeated ones allowed).
+    samples : np.ndarray
+        Waveform at those time stamps.
+    instants : np.ndarray
+        Centres of the cycles, in seconds, half a cycle away from both ends of the samples.
+    f_nom : float
+        Fundamental frequency, in Hz.
+
+    Returns
+    -------
+    np.ndarray
+        Complex phasor at each instant.
+    """
+    demodulated = samples * np.exp(-2j * np.pi * f_nom * time)
+    steps = np.diff(time)
+    integral = np.concatenate(([0.0], np.cumsum(steps * (demodulated[1:] + demodulated[:-1]) / 2)))
+
+    def integral_to(ends):
+        k = np.clip(np.searchsorted(time, ends, side="right") - 1, 0, len(time) - 2)
+        into = ends - time[k]
+        slope = np.divide(
+            demodulated[k + 1] - demodulated[k],
+            steps[k],
+            out=np.zeros(len(k), dtype=complex),
+            where=steps[k] > 0,
+        )
+        return integral[k] + into * (demodulated[k] + slope * into / 2)
+
+    half_cycle = 1 / (2 * f_nom)
+    return 2 * f_nom * (integral_to(instants + half_cycle) - integral_to(instants - half_cycle))
+
+
+def _phasor_estimator(time: np.ndarray, sampling_frequency: float, f_nom: float):
+    """Choose how the fundamental phasor of each phase is calculated, from the sampling.
+
+    Below [GridCode] emt_resampling_frequency (a mean frequency that rounds to it reaches it), the
+    waveform is resampled to that frequency, on a grid with an even number of samples per cycle,
+    so that the trapezoidal rule integrates the transients as finely as it would a record of that
+    frequency; the RMS value is then brought back to the time stamps of the samples. At or above
+    it, the trapezoidal rule runs on the samples themselves: on their uniform grid when they lie
+    on one with an even number of samples per cycle, and on their own time stamps otherwise.
+
+    Parameters
+    ----------
+    time : np.ndarray
+        Time stamps of the samples, in seconds.
+    sampling_frequency : float
+        Mean sampling frequency of the samples, in Hz.
+    f_nom : float
+        Fundamental frequency, in Hz.
+
+    Returns
+    -------
+    tuple
+        The function from the samples of a phase to its phasors, the function that brings values
+        at the instants of those phasors to the rows kept, and the indices of the rows kept: those
+        with a whole cycle around them.
+    """
+    resampling_frequency = config.get_float("GridCode", "emt_resampling_frequency", 10000.0)
+    half_cycle = 1 / (2 * f_nom)
+    tolerance = 1e-6 * half_cycle
+    kept = np.flatnonzero(
+        (time >= time[0] + half_cycle - tolerance) & (time <= time[-1] - half_cycle + tolerance)
+    )
+    if round(sampling_frequency) < resampling_frequency:
+        samples_per_cycle = 2 * int(np.ceil(resampling_frequency / (2 * f_nom)))
+        grid = _uniform_grid(time, samples_per_cycle, f_nom)
+        half = samples_per_cycle // 2
+        instants = grid[half : len(grid) - half]
+        return (
+            lambda samples: _fundamental_phasor(
+                _resampled(time, samples, grid), grid, samples_per_cycle, f_nom
+            ),
+            lambda values: PchipInterpolator(instants, values)(time[kept]),
+            kept,
+        )
+
+    samples_per_cycle = round(sampling_frequency / f_nom)
+    grid = _uniform_grid(time, samples_per_cycle, f_nom)
+    if samples_per_cycle % 2 == 0 and _lies_on(time, grid):
+        half = samples_per_cycle // 2
+        return (
+            lambda samples: _fundamental_phasor(samples, grid, samples_per_cycle, f_nom),
+            lambda values: values,
+            np.arange(half, len(time) - half),
+        )
+
+    return (
+        lambda samples: _fundamental_phasor_at(time, samples, time[kept], f_nom),
+        lambda values: values,
+        kept,
+    )
 
 
 def _positive_sequence(phasor_a, phasor_b, phasor_c):
@@ -134,10 +241,11 @@ def ensure_rms_signals(curves: pd.DataFrame) -> pd.DataFrame:
     (IEC 61400-21-1, Annex C, without frequency tracking): a balanced voltage of 1 pu RMS, whose
     phases peak at sqrt(2) pu, gives 1 pu.
 
-    Each phasor needs a whole cycle of samples around it, so the curves lose their first and last
-    half cycle. Samples off a uniform grid with a whole number of samples per cycle are resampled
-    on one, and their RMS value brought back to their own time stamps. The other columns keep
-    their values.
+    The integral of each phasor is a trapezoidal rule. Waveforms sampled below [GridCode]
+    emt_resampling_frequency are first resampled to it with PCHIP, which adds no overshoot at the
+    jumps of a transient; faster ones are integrated on their own samples. Each phasor needs a
+    whole cycle of samples around it, so the curves lose their first and last half cycle. The
+    other columns keep their values.
 
     Parameters
     ----------
@@ -155,28 +263,15 @@ def ensure_rms_signals(curves: pd.DataFrame) -> pd.DataFrame:
 
     f_nom = config.get_float("Dynawo", "f_nom", 50.0)
     time = curves["time"].to_numpy()
-    grid, samples_per_cycle = _fundamental_grid(time, f_nom)
-    _warn_if_undersampled((len(time) - 1) / (time[-1] - time[0]))
-    on_grid = _lies_on(time, grid)
-    half_cycle = samples_per_cycle // 2
-    centres = grid[half_cycle : len(grid) - half_cycle]
-    if on_grid:
-        kept = np.arange(half_cycle, len(time) - half_cycle)
-    else:
-        kept = np.flatnonzero((time >= centres[0]) & (time <= centres[-1]))
+    sampling_frequency = _sampling_frequency(time, f_nom)
+    _warn_if_undersampled(sampling_frequency)
+    fundamental_phasor, to_kept_rows, kept = _phasor_estimator(time, sampling_frequency, f_nom)
 
     processed_curve_dict = {}
     for abc_item in abc_items:
-        phasors = []
-        for phase in ("a", "b", "c"):
-            samples = curves[f"{abc_item}_{phase}"].to_numpy()
-            if not on_grid:
-                samples = _resampled(time, samples, grid)
-            phasors.append(_fundamental_phasor(samples, grid, samples_per_cycle, f_nom))
+        phasors = [fundamental_phasor(curves[f"{abc_item}_{phase}"].to_numpy()) for phase in "abc"]
         ps_rms = np.abs(_positive_sequence(*phasors)) / np.sqrt(2)
-        processed_curve_dict[abc_item] = (
-            ps_rms if on_grid else PchipInterpolator(centres, ps_rms)(time[kept])
-        )
+        processed_curve_dict[abc_item] = to_kept_rows(ps_rms)
 
     for rms_item in rms_items:
         processed_curve_dict[rms_item] = curves[rms_item].to_numpy()[kept]

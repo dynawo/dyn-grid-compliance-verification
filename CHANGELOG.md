@@ -69,10 +69,12 @@ again from the package, or write `\ProducerFiles.circuit_z1_fault.tikz` and
 ### Fixed
 
 - Reference curves given as abc waveforms are converted to the RMS value of the positive sequence
-  of their fundamental, as IEC 61400-21-1 computes it, at any sampling rate and with its one-cycle
-  window centred, so that it does not lag the simulation; the conversion gave between a seventh
-  and a sixth of that value. Their samples are read in the unit of the RMS curve: a balanced 1 pu
-  voltage peaks at √2 pu. Below 2 kHz, the minimum of the DTR, they are warned about (#23).
+  of their fundamental, as IEC 61400-21-1 computes it, with its one-cycle window centred, so that
+  it does not lag the simulation; the conversion gave between a seventh and a sixth of that value.
+  Curves sampled below 10 kHz are resampled to it first, without overshoot, so that their
+  transients are integrated as finely. Their samples are read in the unit of the RMS curve: a
+  balanced 1 pu voltage peaks at √2 pu. Below 2 kHz, the minimum of the DTR, they are warned
+  about (#23).
 - The IEC wind power plants of zone 3 are measured at Node2 itself, as the turbines of zone 1
   are since 1.3.0. With the low-voltage transformer inside the converter model
   (`WPP_ConverterLVControl = false`), their voltage and powers there were read on its grid side,

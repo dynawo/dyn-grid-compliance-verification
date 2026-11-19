@@ -45,12 +45,19 @@ found it cleaner around transients than the frequency-tracking variants:
 
 - the phasor of each phase is its Fourier coefficient over one cycle of `[Dynawo] f_nom`,
   `2/T ∫ x(τ) e^(−j2πf τ) dτ`, on a moving one-cycle window, which rejects every harmonic;
-- on a uniform grid with a whole number N of samples per cycle that integral is a sum (midpoint
-  rule for an odd N, trapezoidal for an even one), exact for every harmonic up to N − 2 and
-  computed as one convolution. Samples
-  off such a grid (a variable step, or a rate that is not a multiple of `f_nom`) are resampled
-  onto the nearest one with a cubic spline, the most precise interpolant of a sinusoid, and the
-  result is brought back to their own time stamps with PCHIP;
+- that integral is the trapezoidal rule. Where the signal is periodic over the cycle it is exact
+  for every harmonic up to N − 2, N being the number of samples per cycle (Trefethen and
+  Weideman, *SIAM Review* 56(3), 2014, corollary 3.3); where it changes within the cycle it is of
+  second order;
+- so curves sampled below `[GridCode] emt_resampling_frequency` (10 kHz) are first resampled to
+  it, onto a grid with an even number of samples per cycle (200 at 50 Hz), with PCHIP —
+  monotone, so it adds no overshoot at the jumps of a transient, where a cubic spline rings — and
+  the RMS value is brought back to their own time stamps;
+- curves at or above 10 kHz are integrated on their own samples, without interpolation: as one
+  convolution when they lie on a uniform grid with an even number of samples per cycle, and
+  otherwise (a variable step, jittered time stamps, a rate that is not a multiple of `f_nom`, an
+  odd number of samples per cycle) on their own time stamps, the ends of each cycle found by
+  linear interpolation of the integrand, as the trapezoidal rule takes it;
 - the positive sequence is `(Xa + αXb + α²Xc)/3`, and its RMS value `|X1|/√2`.
 
 The window is centred on the time stamp of its phasor, as the synchrophasor standard IEC/IEEE
@@ -138,6 +145,7 @@ complete processed curves.
 | Topic | IEC 61400-27-2 | DyCoV | Motivation |
 |---|---|---|---|
 | Phasor time stamp | End of the one-cycle window (IEC 61400-21-1 Annex C) | Centre of the window | Same values without the T/2 lag against the RMS simulation (IEC/IEEE 60255-118-1) |
+| Slow abc records | Not addressed (the DTR, fiche I16, asks for 2 kHz at least) | Resampled to 10 kHz with PCHIP before the one-cycle integral | The trapezoidal rule is of second order in transients; PCHIP adds no overshoot at their jumps |
 | Interpolation method | Not specified | Monotone PCHIP everywhere | No overshoot/ringing at sharp transitions; time-domain fidelity (technote §3) |
 | Order of operations | Common resampling suggested before filtering | Per-set resampling → filter → common downsampling | Downsampling before band-limiting would alias (technote §4–5) |
 | Filter application | Single-pass (causal) implied | Zero-phase `filtfilt`, Gustafsson padding | No filter-induced time shift between compared signals |
