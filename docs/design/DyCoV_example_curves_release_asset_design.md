@@ -307,12 +307,12 @@ them: a setpoint step of active power and one of voltage, at each power level th
 records. Two examples had that declaration by hand; now every Model example gets it, written from
 `example_inputs.ini`.
 
-It has to be first, and this is the one piece of the design that is not obvious: a declared F16
-test is run **only where its record already exists** (`recorded_tests_only`, which `Benchmark`
-resolves through the reference `.dict`). So the record is announced before the run — a dictionary
-saying when the event happens and nothing else — the run then simulates the test, and the
-anonymized result replaces the announcement with the real record. Measured on one example: the six
-declared tests run, report `WithoutReferenceCurves`, and leave their six `curves_calculated.csv`.
+It has to be first: a test of Fiche F16 is run because the declaration names it, recorded or
+not, so the declaration goes in before the run. An example without reference curves gets their
+index too (`CurvesFiles.ini`, which the tool writes from the model), without which the run does not
+start; the run then simulates the declared tests, and the anonymized result writes their records,
+with an index that names them. Measured on one example: the six declared tests run and leave their
+six `curves_calculated.csv`.
 
 **2 — `regenerate_producer_inis.sh`: the producer each curve directory declares.** A delivery of
 curves has no model, so it states its own magnitudes. Each declaration is written from the model

@@ -333,6 +333,7 @@ class CurvesManager:
             calculated_curves, calculated_windows["sigpro"], f_cutoff
         )
         self._windows["calculated"] = calculated_windows
+        self._windows["reference"] = {}
 
         if dycov_logging.get_logger("Curves Manager").getEffectiveLevel() == logging.DEBUG:
             self.__save_curve(self._curves["calculated"], working_path / "signal.csv")
