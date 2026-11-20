@@ -1,18 +1,17 @@
 #!/bin/bash
 #
 # Declares the on-site tests of the DTR Fiche F16 in every Model example, and announces the
-# records that are about to be made of them.
+# delivery of the records that are about to be made of them.
 #
 # The fiche fixes no test, so a producer declares the ones it recorded and delivers the records
 # with them. The examples have neither, so both are made: the declaration is written from
 # example_inputs.ini, and the records are the tool's own simulations of the tests it declares,
 # anonymized as measurements, exactly as the other curves of the examples are.
 #
-# This is the first stage of the regeneration, and it cannot be any later: a declared test of
-# Fiche F16 is run only where its record exists, so the dictionary that names the record has to
-# be in place before the run — and then the run simulates the test, which is what the record is
-# made of. The announced dictionary says only when the event happens; the run replaces it with
-# the one its own curves describe.
+# This is the first stage of the regeneration, and it cannot be any later: the run simulates the
+# tests the declaration names, which is what their records are made of, so the declaration has
+# to be in place before it. The delivery is announced by its index alone; the run simulates a
+# declared test whether or not its record exists, and the anonymized run writes the records.
 
 set -o nounset -o noclobber
 set -o errexit -o pipefail
@@ -22,16 +21,16 @@ source "$script_dir/models.sh"
 source "$script_dir/curves_common.sh"
 
 usage() {
-    echo "Declares the tests of the DTR Fiche F16 in every Model example and announces their"
-    echo "records, so that the regeneration run simulates them."
+    echo "Declares the tests of the DTR Fiche F16 in every Model example and announces the"
+    echo "delivery of their records, so that the regeneration run simulates them."
     echo "Usage: $0 [options]"
     echo "Options:"
     echo "  -h, --help:     display this help"
     echo
     echo "Notes:"
     echo "  • It must run before regenerate_reference_curves.sh: what makes the tool run a"
-    echo "    declared test is the dictionary of its record, so it goes in first and the run"
-    echo "    then produces the curves the record is made of."
+    echo "    test of Fiche F16 is its declaration, so it goes in first and the run then"
+    echo "    produces the curves the record is made of."
     echo "  • Which tests are declared, and at which power levels, is in example_inputs.ini. The"
     echo "    choice is the same for every example, because it is invented for them: the fiche"
     echo "    selects no test of its own."
@@ -62,7 +61,7 @@ for example in "${examples[@]}"; do
 
     log_msg "Declaring the F16 tests of $example ($family)..."
     $write_inputs f16 --type "$family" --output "$declaration"
-    $write_inputs announce --declaration "$declaration" --reference "$reference_path" \
+    $write_inputs announce --reference "$reference_path" \
         --model "$examples_path/Model/$example/Dynawo" --type "$family"
 done
 

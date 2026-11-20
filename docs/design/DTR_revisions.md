@@ -13,11 +13,11 @@ enters the tool, and what the shipped files already give it.
 
 **The base.** The tool holds the whole catalogue of one revision, the DTR of 15/02/2024, and says
 so. Every value that revision fixes is an option, and the mechanisms a delta needs are in the
-tool, used by nothing. This is where the tool is now.
+tool.
 
-**The revisions.** The loader of a delta, and one delta for each later revision. Nothing of it
-is in the tool yet. The issues #549, #550, #551 and #552 hold that work, and this document is
-their design.
+**The revisions.** The loader of a delta, and one delta for each later revision: 20250801,
+20251013 and 20260723 are in the tool. The issues #549, #550, #551 and #552 held that work, and
+this document is their design.
 
 ## The base and the deltas
 

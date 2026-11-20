@@ -4,7 +4,7 @@
 | --- | --- |
 | `test_tool.sh` | Runs the bundled examples: model validation, performance verification and envelope generation. Documented below. |
 | `regenerate_curves.sh` | Regenerates every curve directory of the examples, the last step before a release. It is the launcher of the four stages below. See the final section. |
-| `regenerate_f16.sh` | Stage 1: declares the tests of the DTR Fiche F16 in every Model example and announces their records. |
+| `regenerate_f16.sh` | Stage 1: declares the tests of the DTR Fiche F16 in every Model example and announces the delivery of their records. |
 | `regenerate_producer_inis.sh` | Stage 2: writes the producer each curve directory declares. |
 | `regenerate_reference_curves.sh` | Stage 3: runs every Model example and writes its reference curves. |
 | `regenerate_one_example.sh` | The whole cycle of one Model example: run, check, anonymize, write. Stage 3 is this, once per example. |
@@ -207,10 +207,11 @@ tools/scripts/regenerate_curves.sh --launcher "$DYNAWOPATH/dynawo.sh"
 It launches four stages, each a script of its own that can be run alone. The order is not a
 matter of taste:
 
-1.  **`regenerate_f16.sh`** — writes the F16 declaration of every Model example and announces the
-    records of the tests it declares. It has to be first: a declared test of Fiche F16 is run
-    only where its record exists, so the dictionary that names the record goes in before the run,
-    and the run is then what produces the curves the record is made of.
+1.  **`regenerate_f16.sh`** — writes the F16 declaration of every Model example, and the index of
+    its reference curves when it has none, which the tool writes from the model and without which
+    the run does not start. It has to be first: a test of Fiche F16 is run because the
+    declaration names it, so the declaration goes in before the run, and the run is then what
+    produces the curves the record is made of.
 2.  **`regenerate_producer_inis.sh`** — writes the producer each curve directory declares, from
     the model whose curves it ships.
 3.  **`regenerate_reference_curves.sh`** — the reference curves of every Model example. Each

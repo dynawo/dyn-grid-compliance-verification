@@ -155,9 +155,8 @@ thresholds are the `thr_FT_reftrack_*` family of `[GridCode]`: a PCS names the f
 with `setpoint_tracking_thresholds = FT` in its section, and `get_setpoint_tracking_threshold_values`
 reads `thr_<family>_reftrack_*`, the I16 table when the PCS names none. The `is_field_measurements`
 flag of the curves plays no part here: I16 keeps its single table whatever the reference is.
-A PCS section may also declare `recorded_tests_only = true` (F16 does): `Benchmark` then keeps
-only the operating conditions whose reference `.dict` exists under `<reference>/<producer>/`,
-because the fiche fixes no test and a record is what makes one exist. The Zone 1 model is
+Every operating condition the declaration names runs, recorded or not: one without its record
+ends as missing its reference curves. The Zone 1 model is
 what the PCS of zone 1 validate: `ValidationParameters` tells `ModelProducer` whether it is
 required (`_requires_zone1`: any run not limited by `-p` to one zone-3 PCS), and
 `check_validation_model` / `check_validation_curves` demand `Zone1/` only then, so a producer

@@ -19,8 +19,8 @@ and organized into six layers, in decreasing order of priority:
 2. **User Configuration** — settings provided by the user in
    ``~/.config/dycov/config.ini``.
 3. **DTR Revision of the PCS** — what the selected revision of the DTR writes
-   for the PCS, under ``src/dycov/templates/revisions/<YYYYMMDD>/PCS/``: the
-   delta of its description, and the version of the fiche the revision gives
+   differently for the PCS, under ``src/dycov/templates/revisions/<YYYYMMDD>/PCS/``:
+   the delta of its description, and the version of the fiche the revision gives
    some categories of unit, when it gives one. That version is a
    ``Type<categories>.ini`` in the directory of the delta, which patches the
    description the revision gives the PCS for the categories it names:
@@ -33,8 +33,9 @@ and organized into six layers, in decreasing order of priority:
 4. :ref:`PCS Configuration <pcsconf>` — settings defined per PCS in
    ``src/dycov/templates/PCS/``. These should only be modified when a DTR
    update changes the PCS definition.
-5. **DTR Revision** — what the selected revision writes outside any PCS, one
-   ``revision_art_<article>.ini`` per article of the DTR it changes.
+5. **DTR Revision** — the rest of what the selected revision writes
+   differently, outside any PCS: the ``revision_art_*.ini`` files of its delta
+   directory.
 6. :ref:`Tool Configuration <toolconf>` — global defaults in
    ``src/dycov/configuration/defaultConfig.ini``. These should only be
    modified when a DTR update changes global conditions.
@@ -460,7 +461,9 @@ Compared curves:
 Step-response time characteristic thresholds:
 
 * ``thr_reaction_time`` — maximum deviation of the reaction time from the
-  reference one, relative to it.
+  reference one, relative to it. ``none`` withdraws the criterion, as the
+  revisions of the DTR from 20251013 on do: the deviation is then reported without
+  a verdict.
 * ``thr_rise_time`` — maximum deviation of the rise time, relative to the
   reference one.
 * ``thr_settling_time`` — maximum deviation of the settling time, relative to

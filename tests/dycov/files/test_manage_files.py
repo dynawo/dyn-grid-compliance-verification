@@ -25,6 +25,7 @@ from dycov.files.manage_files import (
     copy_base_curves_files,
     copy_file,
     copy_from_path,
+    copy_latex_files,
     create_config_file,
     create_dir,
     discard_curves_set_aside,
@@ -720,3 +721,22 @@ def test_the_curves_no_report_took_back_are_discarded(tmp_path):
 
     assert not list(first.iterdir())
     assert not list(second.iterdir())
+
+
+def test_copy_latex_files_prefixes_the_templates_and_lets_the_source_replace_a_resource(
+    tmp_path,
+):
+    source = tmp_path / "templates"
+    source.mkdir()
+    (source / "report.Benchmark.OC.tex").write_text("template")
+    (source / "commonz3.tex").write_text("common")
+    (source / "TSO_logo.pdf").write_text("user logo")
+    target = tmp_path / "Latex"
+    target.mkdir()
+
+    copy_latex_files(source, target, "Producer")
+
+    assert (target / "Producer.report.Benchmark.OC.tex").read_text() == "template"
+    assert (target / "commonz3.tex").read_text() == "common"
+    assert (target / "TSO_logo.pdf").read_text() == "user logo"
+    assert (target / "fig_placeholder.pdf").exists()

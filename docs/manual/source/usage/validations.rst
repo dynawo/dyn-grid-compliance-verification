@@ -258,7 +258,7 @@ defined by an operating point (OP), event parameters, and grid parameters.
       - SCR=3
     * -
       - :math:`U_n,\ P_{max},\ Q=0`
-      - :math:`\text{Hi-Z }(V_r=0.7U_n),\ T_{clear}=500ms`
+      - :math:`\text{Hi-Z }(V_r=0.3U_n),\ T_{clear}=500ms`
       - SCR=3
     * -
       - :math:`U_n,\ P_{max},\ Q=0`

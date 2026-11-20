@@ -254,7 +254,18 @@ def test_apply_signal_processing_without_reference_filters_the_calculated_curves
 
     assert not cm.get_curves("calculated").empty
     assert "validate" in cm._windows["calculated"]
-    assert "reference" not in cm._windows
+    assert cm._windows["reference"] == {}
+
+
+def test_a_test_without_reference_drops_the_reference_windows_of_the_test_before(tmp_path):
+    cm = _manager_for_signal_processing(pd.DataFrame())
+    cm._windows = {"reference": {"validate": {"after": (2.0, 4.0)}}}
+
+    cm.apply_signal_processing(tmp_path, {"start_time": 2.0, "duration_time": 1.0}, False)
+    calculated, reference = cm.get_curves_by_windows("after")
+
+    assert not calculated.empty
+    assert reference.empty
 
 
 def test_get_curves_by_windows_without_reference_returns_an_empty_reference():

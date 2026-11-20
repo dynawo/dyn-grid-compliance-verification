@@ -79,8 +79,7 @@ _SINGLE_DAMPING_PARAMETERS = ("D", "H", "Epsilon")
 @dataclass
 class _Envelopes:
     """
-    What a calculation gives: the expected signal and the envelopes around it, and the
-    disclaimer of envelopes the calculator found unreliable.
+    What a calculation gives: the expected signal and the envelopes around it.
     """
 
     magnitude_name: str
@@ -88,17 +87,6 @@ class _Envelopes:
     upper_envelope: np.ndarray
     lower_envelope: np.ndarray
     extra_envelopes: Optional[dict[str, np.ndarray]] = None
-    disclaimer: Optional[str] = None
-
-
-def _hybrid_disclaimer(overdamped: Optional[str], underdamped: Optional[str]) -> Optional[str]:
-    """The disclaimers of the sets of a hybrid run that have one, each headed by its set."""
-    disclaimers = [
-        f"{label} set:\n{disclaimer}"
-        for label, disclaimer in (("Overdamped", overdamped), ("Underdamped", underdamped))
-        if disclaimer is not None
-    ]
-    return "\n".join(disclaimers) if disclaimers else None
 
 
 class GridForming:
@@ -241,8 +229,7 @@ class GridForming:
         Returns
         -------
         _Envelopes
-            The signal of the overdamped set, the envelopes that cover both sets and the
-            disclaimer of each set that has one, headed by its set.
+            The signal of the overdamped set and the envelopes that cover both sets.
         """
         d_over, h_over, d_under, h_under = hybrid_params
 
@@ -272,7 +259,6 @@ class GridForming:
             upper_envelope,
             lower_envelope,
             extra_envelopes,
-            _hybrid_disclaimer(over.disclaimer, under.disclaimer),
         )
 
     @staticmethod
@@ -362,8 +348,7 @@ class GridForming:
         Returns
         -------
         _Envelopes
-            The magnitude identifier, the expected signal, the upper and lower envelopes and
-            the disclaimer of the calculator, if it found them unreliable.
+            The magnitude identifier, the expected signal and the upper and lower envelopes.
         """
         magnitude_name, pcc_signal, upper_envelope, lower_envelope = (
             calculator.calculate_envelopes(
@@ -374,14 +359,7 @@ class GridForming:
                 event_time=event_time,
             )
         )
-        disclaimer = (
-            getattr(calculator, "_disclaimer_message", None)
-            if getattr(calculator, "_is_inconsistent", False)
-            else None
-        )
-        return _Envelopes(
-            magnitude_name, pcc_signal, upper_envelope, lower_envelope, disclaimer=disclaimer
-        )
+        return _Envelopes(magnitude_name, pcc_signal, upper_envelope, lower_envelope)
 
     def _get_params_plot_info(
         self, parameters: GFMParameters, params_list: list, calculator: GFMCalculator
@@ -456,7 +434,5 @@ class GridForming:
             upper_envelope=envelopes.upper_envelope,
             output_format="png&html",
             params_list=self._get_params_plot_info(parameters, params_list, calculator),
-            show_disclaimer=envelopes.disclaimer is not None,
-            disclaimer_message=envelopes.disclaimer,
             extra_envelopes=envelopes.extra_envelopes,
         )

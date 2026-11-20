@@ -100,9 +100,12 @@ Step-response characteristics
 ``reaction_time``
   Interval between the step and the instant the controlled magnitude first
   reaches 10 % of the change, on the simulated and on the reference curve.
-  Passes when the simulated time is within ``thr_reaction_time`` (default
-  ``0.10``, i.e. 10 %) of the reference one. Needs a step on the controlled
-  magnitude: a setpoint step or a grid voltage step.
+  Passes when the simulated time is within ``thr_reaction_time`` (``0.10``,
+  i.e. 10 %, in the revision of 15/02/2024) of the reference one. The
+  revisions of the DTR from 20251013 on withdraw that criterion
+  (``thr_reaction_time = none``): the report then gives the time and its
+  deviation, and no verdict. Needs a step on the controlled magnitude: a
+  setpoint step or a grid voltage step.
 
 ``rise_time``
   Interval between the reaction time (the 10 % crossing) and the instant the

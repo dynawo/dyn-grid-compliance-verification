@@ -20,9 +20,11 @@ from dycov.logging import dycov_logging
 from dycov.model.producer import Producer
 from dycov.validation import common, compared_curves, compliance_list
 from dycov.validation.checks import (
+    NOT_COMPUTABLE,
     calculate_curves_errors,
     calculate_errors,
     check_measurement,
+    combined_check,
     complete_setpoint_tracking,
     is_error_within_threshold,
     save_measurement_errors,
@@ -281,7 +283,7 @@ class ModelValidator(Validator):
 
     def __is_stabilized(
         self, calculated_curves: pd.DataFrame, measurement_name: str, thr_ss_tol: float
-    ) -> bool:
+    ) -> bool | str:
         # The steady state is judged over the whole post-event window: a slice starting at the
         # settling instant is already inside the steady-state tube by construction.
         try:
@@ -291,9 +293,41 @@ class ModelValidator(Validator):
                 thr_ss_tol,
             )
         except ValueError:
-            return False
+            return NOT_COMPUTABLE
 
-        return is_stabilized
+        return bool(is_stabilized)
+
+    def __stability(self, zone: int, results: dict) -> None:
+        """The stability of the calculated curves after the event, which needs nothing else, so
+        a check that failed before it, or a missing reference, leaves it to be told."""
+        if not compliance_list.contains_key(
+            list(set(_MEAN_ABSOLUTE_ERROR_VALIDATIONS.values())), self._validations
+        ):
+            return
+        try:
+            self.__calculate_stability(zone, self._get_curves_by_windows("after")[0], results)
+        except ValueError:
+            dycov_logging.get_logger("Model Validator").warning(
+                "The stability of the calculated curves could not be told"
+            )
+
+    def __calculate_stability(self, zone: int, calculated_curves: pd.DataFrame, results: dict):
+        """Whether each curve a mean absolute error check compares settles after the event.
+        It depends on the calculated curve alone, so a test without reference curves has it too.
+        """
+        thr_ss_tol = config.get_float("GridCode", "thr_ss_tol", 100.0)
+        for curve in compared_curves.for_zone(zone):
+            validation = _MEAN_ABSOLUTE_ERROR_VALIDATIONS.get(curve.label)
+            if validation is None or not compliance_list.contains_key(
+                [validation], self._validations
+            ):
+                continue
+
+            column = compared_curves.column_of(zone, curve.label, calculated_curves.columns)
+            if column is not None:
+                results[f"mae_{curve.label}_1P_stabilized"] = self.__is_stabilized(
+                    calculated_curves, column, thr_ss_tol
+                )
 
     def __calculate_mean_absolute_error(
         self,
@@ -322,7 +356,6 @@ class ModelValidator(Validator):
             setpoint_variation,
         )
 
-        thr_ss_tol = config.get_float("GridCode", "thr_ss_tol", 100.0)
         for curve in compared_curves.for_zone(zone):
             validation = _MEAN_ABSOLUTE_ERROR_VALIDATIONS.get(curve.label)
             if validation is None or not compliance_list.contains_key(
@@ -338,11 +371,6 @@ class ModelValidator(Validator):
                 list(calculated_curves[column])[res_settlin_t_pos:],
                 list(reference_curves[column])[res_settlin_t_pos:],
                 1.0,
-            )
-            results[f"mae_{curve.label}_1P_stabilized"] = self.__is_stabilized(
-                calculated_curves,
-                column,
-                thr_ss_tol,
             )
 
             calculated_ss = np.average(list(calculated_curves[column])[res_settlin_t_pos:])
@@ -434,16 +462,20 @@ class ModelValidator(Validator):
             results["t_event_start"] = start_event
             results["is_invalid_test"] = "N/A"
 
+        self.__stability(zone, results)
         return results
 
     def __without_reference(self, start_event: float) -> dict:
-        """Every check of this validator compares against a reference curve.
+        """Every check of this validator but the stability compares against a reference curve.
 
-        Without one there is nothing to compute, but the test is still reported: each check
-        is marked as not available. The test itself is not invalid, so that the benchmark can
-        report it as missing its reference curves.
+        Without one there is nothing else to compute, but the test is still reported: each
+        check is marked as not available, and its dynamic behaviour is that of the calculated
+        curves. The test itself is not invalid, so that the benchmark can report it as missing
+        its reference curves.
         """
-        return {"t_event_start": start_event, "is_invalid_test": False}
+        results = {"t_event_start": start_event, "is_invalid_test": False}
+        self.__stability(self._producer.get_zone(), results)
+        return results
 
     def __create_results(
         self,
@@ -599,118 +631,27 @@ class ModelValidator(Validator):
         compliance_values: dict,
     ):
         thr_final_ss_mae = config.get_float("GridCode", "thr_final_ss_mae", 0.01)
-        if compliance_list.contains_key(["mean_absolute_error_voltage"], self._validations):
-            if "mae_voltage_1P" in compliance_values:
-                check_results["mae_voltage_1P"] = compliance_values["mae_voltage_1P"]
-                check_results["ss_error_voltage_1P"] = compliance_values["ss_error_voltage_1P"]
-                check_results["mae_voltage_1P_check"] = is_error_within_threshold(
-                    compliance_values["mae_voltage_1P"], thr_final_ss_mae
+        stability = []
+        for label, validation in _MEAN_ABSOLUTE_ERROR_VALIDATIONS.items():
+            if not compliance_list.contains_key([validation], self._validations):
+                continue
+
+            mae = f"mae_{label}_1P"
+            stabilized = compliance_values.get(f"{mae}_stabilized", NOT_COMPUTABLE)
+            check_results[f"{mae}_stabilized"] = stabilized
+            stability.append(stabilized)
+            if mae in compliance_values:
+                check_results[mae] = compliance_values[mae]
+                check_results[f"ss_error_{label}_1P"] = compliance_values[f"ss_error_{label}_1P"]
+                check_results[f"{mae}_check"] = is_error_within_threshold(
+                    compliance_values[mae], thr_final_ss_mae
                 )
-                check_results["mae_voltage_1P_stabilized"] = compliance_values[
-                    "mae_voltage_1P_stabilized"
-                ]
-                check_results["stabilized"] &= check_results["mae_voltage_1P_stabilized"]
-                check_results["compliance"] &= (
-                    check_results["mae_voltage_1P_check"]
-                    & check_results["mae_voltage_1P_stabilized"]
-                )
+                check_results["compliance"] &= check_results[f"{mae}_check"] & (stabilized is True)
             else:
-                check_results["mae_voltage_1P_check"] = "N/A"
-                check_results["mae_voltage_1P_stabilized"] = "N/A"
-                check_results["stabilized"] = False
+                check_results[f"{mae}_check"] = "N/A"
                 check_results["compliance"] = False
 
-        if compliance_list.contains_key(["mean_absolute_error_power_1P"], self._validations):
-            if "mae_active_power_1P" in compliance_values:
-                check_results["mae_active_power_1P"] = compliance_values["mae_active_power_1P"]
-                check_results["ss_error_active_power_1P"] = compliance_values[
-                    "ss_error_active_power_1P"
-                ]
-                check_results["mae_active_power_1P_check"] = is_error_within_threshold(
-                    compliance_values["mae_active_power_1P"], thr_final_ss_mae
-                )
-                check_results["mae_active_power_1P_stabilized"] = compliance_values[
-                    "mae_active_power_1P_stabilized"
-                ]
-                check_results["stabilized"] &= check_results["mae_active_power_1P_stabilized"]
-                check_results["compliance"] &= (
-                    check_results["mae_active_power_1P_check"]
-                    & check_results["mae_active_power_1P_stabilized"]
-                )
-            else:
-                check_results["mae_active_power_1P_check"] = "N/A"
-                check_results["mae_active_power_1P_stabilized"] = "N/A"
-                check_results["stabilized"] = False
-                check_results["compliance"] = False
-
-            if "mae_reactive_power_1P" in compliance_values:
-                check_results["mae_reactive_power_1P"] = compliance_values["mae_reactive_power_1P"]
-                check_results["ss_error_reactive_power_1P"] = compliance_values[
-                    "ss_error_reactive_power_1P"
-                ]
-                check_results["mae_reactive_power_1P_check"] = is_error_within_threshold(
-                    compliance_values["mae_reactive_power_1P"], thr_final_ss_mae
-                )
-                check_results["mae_reactive_power_1P_stabilized"] = compliance_values[
-                    "mae_reactive_power_1P_stabilized"
-                ]
-                check_results["stabilized"] &= check_results["mae_reactive_power_1P_stabilized"]
-                check_results["compliance"] &= (
-                    check_results["mae_reactive_power_1P_check"]
-                    & check_results["mae_reactive_power_1P_stabilized"]
-                )
-            else:
-                check_results["mae_reactive_power_1P_check"] = "N/A"
-                check_results["mae_reactive_power_1P_stabilized"] = "N/A"
-                check_results["stabilized"] = False
-                check_results["compliance"] = False
-
-        if compliance_list.contains_key(["mean_absolute_error_injection_1P"], self._validations):
-            if "mae_active_current_1P" in compliance_values:
-                check_results["mae_active_current_1P"] = compliance_values["mae_active_current_1P"]
-                check_results["ss_error_active_current_1P"] = compliance_values[
-                    "ss_error_active_current_1P"
-                ]
-                check_results["mae_active_current_1P_check"] = is_error_within_threshold(
-                    compliance_values["mae_active_current_1P"], thr_final_ss_mae
-                )
-                check_results["mae_active_current_1P_stabilized"] = compliance_values[
-                    "mae_active_current_1P_stabilized"
-                ]
-                check_results["stabilized"] &= check_results["mae_active_current_1P_stabilized"]
-                check_results["compliance"] &= (
-                    check_results["mae_active_current_1P_check"]
-                    & check_results["mae_active_current_1P_stabilized"]
-                )
-            else:
-                check_results["mae_active_current_1P_check"] = "N/A"
-                check_results["mae_active_current_1P_stabilized"] = "N/A"
-                check_results["stabilized"] = False
-                check_results["compliance"] = False
-
-            if "mae_reactive_current_1P" in compliance_values:
-                check_results["mae_reactive_current_1P"] = compliance_values[
-                    "mae_reactive_current_1P"
-                ]
-                check_results["ss_error_reactive_current_1P"] = compliance_values[
-                    "ss_error_reactive_current_1P"
-                ]
-                check_results["mae_reactive_current_1P_check"] = is_error_within_threshold(
-                    compliance_values["mae_reactive_current_1P"], thr_final_ss_mae
-                )
-                check_results["mae_reactive_current_1P_stabilized"] = compliance_values[
-                    "mae_reactive_current_1P_stabilized"
-                ]
-                check_results["stabilized"] &= check_results["mae_reactive_current_1P_stabilized"]
-                check_results["compliance"] &= (
-                    check_results["mae_reactive_current_1P_check"]
-                    & check_results["mae_reactive_current_1P_stabilized"]
-                )
-            else:
-                check_results["mae_reactive_current_1P_check"] = "N/A"
-                check_results["mae_reactive_current_1P_stabilized"] = "N/A"
-                check_results["stabilized"] = False
-                check_results["compliance"] = False
+        check_results["stabilized"] = combined_check(stability)
 
     def __check(
         self,

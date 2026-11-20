@@ -624,7 +624,9 @@ class Config:
 
     def get_list(self, section: str, key: str) -> list:
         """Gets a list of string values for a given key and section.
-        Values are assumed to be comma-separated in the configuration file.
+        Values are assumed to be comma-separated in the configuration file, and the spaces
+        around each one are not part of it: an empty item, such as the one a trailing comma
+        leaves, is no item.
 
         The word ``none`` means a list with nothing in it, which an empty value cannot say:
         a layer writing an empty value leaves the layer below to answer. A revision of the
@@ -645,7 +647,7 @@ class Config:
         value = self._get_config_value(section, key)
         if value is None or value.strip().lower() == "none":
             return []
-        return value.split(",")
+        return [item.strip() for item in value.split(",") if item.strip()]
 
     def get_options(self, section: str) -> list:
         """Returns a list of keys of a section, gathered from every layer that defines it.

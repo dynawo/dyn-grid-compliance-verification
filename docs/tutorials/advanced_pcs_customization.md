@@ -116,12 +116,12 @@ lowest:
 
 1. your `templates/PCS/.../PCSDescription.ini`
 2. your `config.ini`
-3. what the selected DTR revision writes for the PCS: the delta of its
-   description and, for some categories of installation, the version of the
+3. what the selected DTR revision writes differently for the PCS: the delta of
+   its description and, for some categories of installation, the version of the
    fiche the revision gives them (`TypeCD.ini` of the Fiche I16, for a storage
    installation of type C or D)
 4. the `PCSDescription.ini` shipped with the tool
-5. what the selected DTR revision writes outside any PCS
+5. what the selected DTR revision writes differently outside any PCS
 6. the packaged defaults
 
 So a PCS section written in your `PCSDescription.ini` wins over the same
@@ -181,7 +181,13 @@ suffix is silently ignored. Event parameters live in the corresponding
 > Important:
 > Changing an OC affects the simulation results but may not automatically update
 > the textual description in the final PDF report unless the report template is
-> also adapted.
+> also adapted. To adapt it, copy the template the report uses into
+> `~/.config/dycov/templates/reports/<workflow>/<technology>/<PCSName>/` under the
+> same name and edit the copy: it replaces the packaged template, and the one of
+> the selected DTR revision. Start from the one of the revision when it writes
+> one (under `templates/revisions/<revision>/reports/`), or the copy brings back
+> the text of the base revision. A template that several PCS share, such as
+> `commonz3.tex`, has to be placed in the directory of each PCS that ships it.
 
 ---
 

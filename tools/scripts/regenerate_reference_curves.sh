@@ -36,7 +36,7 @@ usage() {
     echo "    examples was the response of a model, not an oscillation of the solver."
     echo "  • An example writes nothing unless its run covered every test the PCS of the tool"
     echo "    declare and every one it declares for itself. Fiche F16 is among the second kind,"
-    echo "    so regenerate_f16.sh has to have declared and announced its tests first."
+    echo "    so regenerate_f16.sh has to have declared its tests first."
 }
 
 launcher="dynawo.sh"
