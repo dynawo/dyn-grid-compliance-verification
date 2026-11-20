@@ -135,8 +135,8 @@ power on its converter side in the base of the unit, so its Node2 curves are rea
 as those of the IEC plants of zone 3. The EPRI one has no `NetworkFrequencyReference`, which
 `omega_file` then leaves unconnected: for a unit without it, `TableFile` turns the `TableUPhase` of
 the infinite bus with the frequency of `TableOmegaRefPu` (the I16.2 RoCoF), while the Omega-model
-events (Zone 3 frequency ramp, islanding) do not reach it. The I18 OCs are in pu of the unit's
-`Snom`, the converter rating the Fiche I18 takes as base. The examples `BESS/GridFormingDroop` and
+events (Zone 3 frequency ramp, islanding) do not reach it. The active power of the I18 OCs is in
+pu of Pn, the maximum active power of Zone 1 (`Pmax`). The examples `BESS/GridFormingDroop` and
 `BESS/GridFormingEpri` are type C installations: a Dynawo GFM converter in Zone 1 and a WECC plant
 of 40 MW at 225 kV in Zone 3, because neither GFM model rides through every test of Zone 3 (the
 droop one loses synchronism in the dips); `BESS/WECC`, of 15 MW, is a type B one.

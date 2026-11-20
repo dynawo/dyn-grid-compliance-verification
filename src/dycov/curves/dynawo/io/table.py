@@ -20,6 +20,8 @@ from dycov.logging import dycov_logging
 from dycov.model.parameters import GenInit
 
 _TABLE_FILES = ("TableInfiniteBus.txt", "TableVariableImpedance.txt", "TableSwitchedLine.txt")
+# A switch closes or opens at the instant of its event: smoothing its state would move it
+_SWITCH_TABLES = ("TableSwitchedLine.txt",)
 _TWO_COLUMN_TABLE = re.compile(r"^\s*double\s+(\w+)\s*\(\s*\d+\s*,\s*2\s*\)\s*$")
 # The phase is quadratic over a ramp of the frequency: sampled every 10 ms, the linear
 # interpolation of the table stays within 0.2 mrad of it for the steepest ramp of the Fiche I18
@@ -217,6 +219,8 @@ class TableFile(FileVariables):
         # Replace placeholders in the TableInfiniteBus file with the calculated variables
         replace_placeholders.dump_file(working_oc_dir, filename, variables_dict)
         self.__turn_phase_with_frequency(working_oc_dir / filename)
+        if filename in _SWITCH_TABLES:
+            return
 
         # Post-procesado (configurable por evento)
         enabled = config.get_boolean("Dynawo", "transition_enabled", False)

@@ -64,8 +64,9 @@ Three keys of the operating condition decide what the tests look at:
 An event of the grid that steps no setpoint, as in the tests of the Fiche I18
 that the version Type C/D of the Fiche I16 simulates, names instead the
 magnitude its setpoint-tracking test follows with ``tracked_magnitude``, and
-its errors, with no step to refer them to, are expressed in the per unit of
-the curve of that magnitude.
+its errors, with no setpoint step to refer them to, are relative to the step of
+the reference response: its change for a step of the grid voltage, and the peak
+of a transient it returns from for the other tests.
 
 The error metrics, computed per window on the difference between the
 simulated and the reference curve, are the ones of IEC 61400-27-2: **ME**,
@@ -185,7 +186,8 @@ Faults, dips and swells
   Time to recover 90 % of the active power measured one third into the fault,
   on the simulated and on the reference curve. Passes when the difference is
   below the lesser of 10 % of the reference time and 100 ms. Needs a fault or
-  a dip.
+  a dip. Not applicable when the reference carries no active power before the
+  event, within ``thr_ss_tol``: there is nothing to recover.
 
 Frequency ramp
 ^^^^^^^^^^^^^^

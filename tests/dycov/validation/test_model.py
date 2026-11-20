@@ -625,9 +625,20 @@ def test_compare_event_times_without_validations_only_stores_the_event_start():
     assert results == {"t_event_start": 1.0}
 
 
+def _make_fault_manager(zone=3, power_before=1.0):
+    """The active power drops to zero with a fault at t = 0 and comes back to what it was 2 s
+    later in the calculated curve, 3 s later in the reference one."""
+    time = [-1.0, 0.0, 1.0, 2.0, 3.0, 4.0]
+    name = "BusPDR_BUS_ActivePower" if zone == 3 else "WT_GEN_ActivePowerControlledNode"
+    p = power_before
+    calculated = pd.DataFrame({"time": time, name: [p, 0.0, 0.0, p, p, p]})
+    reference = pd.DataFrame({"time": time, name: [p, 0.0, 0.0, 0.0, p, p]})
+    return DummyCurvesManager(calculated=calculated, reference=reference)
+
+
 def test_active_power_recovery_error_compares_the_p90_instants():
     validator = _make_validator(
-        zone=3, validations=["active_power_recovery"], curves_manager=_make_step_manager()
+        zone=3, validations=["active_power_recovery"], curves_manager=_make_fault_manager()
     )
     results = {}
 
@@ -645,7 +656,7 @@ def test_active_power_recovery_error_compares_the_p90_instants():
 
 def test_active_power_recovery_error_in_zone1_reads_the_controlled_point():
     validator = _make_validator(
-        validations=["active_power_recovery"], curves_manager=_make_step_manager(zone=1)
+        validations=["active_power_recovery"], curves_manager=_make_fault_manager(zone=1)
     )
     results = {}
 
@@ -658,6 +669,24 @@ def test_active_power_recovery_error_in_zone1_reads_the_controlled_point():
 
     assert results["t_P90_ref"] == pytest.approx(2.0)
     assert results["t_P90_error"] == pytest.approx(1.0)
+
+
+def test_active_power_recovery_does_not_apply_without_power_before_the_fault():
+    validator = _make_validator(
+        zone=3,
+        validations=["active_power_recovery"],
+        curves_manager=_make_fault_manager(power_before=0.0),
+    )
+    results = {}
+
+    validator._ModelValidator__active_power_recovery_error(
+        zone=3,
+        start_event=0.0,
+        duration_event=3.0,
+        results=results,
+    )
+
+    assert results == {"t_P90_not_applicable": True}
 
 
 def test_active_power_recovery_error_skipped_without_the_active_power_curve():
@@ -1252,6 +1281,19 @@ def test_check_active_power_recovery_above_the_threshold_fails():
 
     assert check_results["t_P90_check"] is False
     assert check_results["compliance"] is False
+
+
+def test_check_active_power_recovery_that_does_not_apply_leaves_the_compliance_alone():
+    validator = _make_validator(validations=["active_power_recovery"])
+    compliance_values = _make_compliance_values(t_P90_not_applicable=True)
+
+    check_results = validator._ModelValidator__check(
+        compliance_values, modified_setpoint="ActivePowerSetpointPu"
+    )
+
+    assert check_results["t_P90_check"] == "N/A"
+    assert "t_P90_error" not in check_results
+    assert check_results["compliance"] is True
 
 
 def test_check_active_power_recovery_without_a_reference_instant_is_compliant():

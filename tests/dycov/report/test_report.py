@@ -715,3 +715,16 @@ def test_the_report_of_a_unit_names_the_files_of_the_unit(tmp_path):
     _prepare(latex_dir, zone=1, group_xfmrs=[], producer="Unit_B")
 
     assert "\\renewcommand{\\ProducerFiles}{UnitB}" in (latex_dir / "report.tex").read_text()
+
+
+def test_the_summary_table_breaks_across_pages_with_its_header_on_each():
+    template = (
+        Path(report.__file__).resolve().parent.parent / "templates/reports/report.tex"
+    ).read_text()
+    summary = template[
+        template.index("\\section{Summary}") : template.index("{for report in reports}")
+    ]
+
+    assert "\\begin{longtable}" in summary
+    assert "\\endhead" in summary
+    assert "tabularx" not in summary

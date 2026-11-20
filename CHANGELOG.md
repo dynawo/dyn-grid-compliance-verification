@@ -41,9 +41,12 @@ the grid voltage: besides their tracking errors, relative to the change of the r
 the peak of a transient, and their final error, a step of the grid voltage checks the
 rise and settling times and the overshoot of the reactive current and reports its reaction time
 without a verdict, and the other tests, transients the active current returns from, its settling
-time and overshoot against the peak of the reference. The unit runs as delivered, its controls of the plant being in Zone 3, and a ramp of the
-frequency starts from the power the unit settles at after the frequency reaches its starting
-value.
+time and overshoot against the peak of the reference. The unit runs as delivered, as RTE asked,
+and a ramp of the frequency starts from the power the unit settles at after the frequency reaches
+its starting value. The jumps of the short-circuit ratio leave OC1 out, since at no power they
+move no current and leave nothing to validate, and the recovery of the active power after a fault
+is not timed at OC1, where there is no power to recover. The reference curves of the GFM examples
+cover OC2 and OC3 only.
 
 Two of the Grid Forming converters of Dynawo, the droop one and the EPRI one, can be the Zone 1
 unit: the examples `BESS/GridFormingDroop` and `BESS/GridFormingEpri` are such installations, of
@@ -118,6 +121,9 @@ again from the package, or write `\ProducerFiles.circuit_z1_fault.tikz` and
 
 ### Fixed
 
+- The summary table of the PDF report lists every test, page after page: it was cut at the end of
+  its first page, so a run of more than about 56 tests, as every one of the Fiche I16.2 is, lost
+  the rows after it, those of Zone 3 and of the failed tests among them.
 - The report of a PCS of many tests no longer holds the curves of all of them in memory, which
   made the full report of the Zone 1 of a storage installation of type C or D exceed 6 GB: the
   curves of each test wait on disk until the report draws them.

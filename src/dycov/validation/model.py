@@ -111,6 +111,11 @@ class ModelValidator(Validator):
         )
         if measurement_name is None:
             return
+        if abs(self.__reference_value_before(measurement_name, start_event)) < (
+            common.get_ss_tolerance()
+        ):
+            results["t_P90_not_applicable"] = True
+            return
 
         # In order to perform the calculation we must have as a starting point in time
         # an instant of time within the fault.
@@ -130,6 +135,20 @@ class ModelValidator(Validator):
 
         results["t_P90_ref"] = t_P90_ref
         results["t_P90_error"] = abs(t_P90_ref - t_P90_calc)
+
+    def __reference_value_before(self, measurement_name: str, instant: float) -> float:
+        """The value of a reference curve right before an instant: the active power a fault
+        test starts from, which is what its recovery is timed against. A unit that injects none
+        has nothing to recover."""
+        values = [
+            value
+            for time, value in zip(
+                self._get_reference_curve_by_name("time"),
+                self._get_reference_curve_by_name(measurement_name),
+            )
+            if time < instant
+        ]
+        return values[-1] if values else self._get_reference_curve_by_name(measurement_name)[0]
 
     def __response_step(self, measurement_name: str, start_event: float, transient: bool) -> float:
         """The step of the reference response to an event that steps no setpoint: its change,
@@ -724,7 +743,9 @@ class ModelValidator(Validator):
             check_results["setpoint_tracking_reactive_power_name"] = "Q"
 
         if compliance_list.contains_key(["active_power_recovery"], self._validations):
-            if "t_P90_error" in compliance_values:
+            if compliance_values.get("t_P90_not_applicable"):
+                check_results["t_P90_check"] = "N/A"
+            elif "t_P90_error" in compliance_values:
                 check_results["t_P90_error"] = compliance_values["t_P90_error"]
                 t_P90_threshold = min(compliance_values["t_P90_ref"] * 0.1, 100 / 1000)
                 check_results["t_P90_threshold"] = t_P90_threshold

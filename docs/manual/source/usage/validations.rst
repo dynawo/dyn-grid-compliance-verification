@@ -423,7 +423,7 @@ as well:
    * - ``S_SCRup1``, ``S_SCRdown1``
      - a line in parallel with the grid closes (2 → 20) or opens (20 → 2)
      - 2, 20
-     - OC1–OC5
+     - OC2–OC5
    * - ``S_Rocof1``–``12``
      - ramps of the frequency from 49.5 or 50.5 Hz, at :math:`\pm0.5` Hz/s for
        3 s or :math:`\pm2` Hz/s for 0.5 s
@@ -452,7 +452,13 @@ are empty as shipped, so those points are not run; set them to ``true`` in that
 section of ``config.ini``, or of a description of your own of the PCS, for the
 operating points at which the unit reaches current limitation. That is the
 producer's to declare, so the report does not count it as a departure from the
-norm. The log names the operating conditions it leaves out.
+norm. The log names the operating conditions it leaves out. The jumps of the
+short-circuit ratio leave OC1 out whatever ``run_OC1`` says: with no power the
+jump moves no current, so it never drives the unit into current limitation and
+leaves no response to validate. The reference curves of the examples
+``BESS/GridFormingDroop`` and ``BESS/GridFormingEpri`` cover OC2 and OC3 only, so
+turning on another point with them ends its tests as missing their reference
+curves.
 
 Some scenarios of the Fiche I18 are not run as its tables give them, as RTE
 reads them. Its unbalanced faults (``S_Fault1`` to ``S_Fault3``) are left out:
@@ -461,9 +467,9 @@ states. ``S_Fault7``, which its list of tests names and its table of faults does
 not define, is left out too. And ``S_VolAngStep12`` jumps by
 :math:`-0.6\,(X_{eff}+X_{grid})`, the opposite of ``S_VolAngStep11``, as every
 even step of the series does, where the table of the fiche prints the same
-positive jump as for ``S_VolAngStep11``. The unit runs as delivered: the
-controls the Fiche I18 switches off, of the voltage and of the frequency, belong
-to the plant controller, which the model of Zone 1 does not hold.
+positive jump as for ``S_VolAngStep11``. The unit runs as delivered, as RTE
+asked: the controls of the voltage and of the frequency the Fiche I18 switches
+off are not switched off, those of the unit included.
 
 A unit whose model has no input for the frequency reference of the network,
 such as the EPRI Grid Forming converter of Dynawo, sees the frequency of the

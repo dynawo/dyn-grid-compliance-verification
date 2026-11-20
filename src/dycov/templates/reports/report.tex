@@ -26,6 +26,7 @@
 \usepackage{amstext}
 \usepackage{ifthen}
 \usepackage{tabularx}
+\usepackage{longtable}
 \usepackage{draftwatermark}
 
 %% Watermark defaults
@@ -114,17 +115,17 @@
     \section{Summary}
     {{summary_description}}
 
-    \begin{center}
-        \begin{tabularx}{\textwidth}{l l l l l}
-            \toprule
-            Producer & Pcs & Benchmark & Operating Condition & Overall Result \\
-            \midrule
-            \BLOCK{for row in summaryReport}
-            {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} \\
-            \BLOCK{endfor}
-            \bottomrule
-        \end{tabularx}
-    \end{center}
+    \begin{longtable}{l l l l l}
+        \toprule
+        Producer & Pcs & Benchmark & Operating Condition & Overall Result \\
+        \midrule
+        \endhead
+        \bottomrule
+        \endlastfoot
+        \BLOCK{for row in summaryReport}
+        {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} \\
+        \BLOCK{endfor}
+    \end{longtable}
 
     \BLOCK{for report in reports}
     \newpage

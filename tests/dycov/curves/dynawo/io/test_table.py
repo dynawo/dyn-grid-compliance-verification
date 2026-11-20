@@ -26,6 +26,10 @@ _INFINITE_BUS_TABLE = (
     Path(dycov.__file__).parent
     / "model_lib/TSO_model/GridVWDisturbance_1Line_InfBusFromTab/TableInfiniteBus.txt"
 )
+_SWITCHED_LINE_TABLE = (
+    Path(dycov.__file__).parent
+    / "model_lib/TSO_model/SCRStepUp_2Lines_InfBus/TableSwitchedLine.txt"
+)
 
 
 class DummyProducer:
@@ -270,3 +274,15 @@ def test_a_phase_jump_stays_a_step_on_top_of_the_turning_phase(tmp_path, tso_gen
     phase = dict(tables["TableUPhase"])
     assert phase[20.01] - phase[19.99] == pytest.approx(0.2, abs=1e-6)
     assert phase[19.99] == pytest.approx(2 * math.pi * 50.0 * 0.01 * 15.0, abs=1e-6)
+
+
+def test_the_line_switches_at_the_instant_of_the_event(tmp_path, tso_gen):
+    shutil.copy(_SWITCHED_LINE_TABLE, tmp_path)
+    params = {"start_time": 20.0, "duration_time": 0.0, "connect_to": "", "step_value": 0}
+
+    TableFile(_UnitCurves("GridFormingEpri"), "BM", "OC").complete_file(tmp_path, tso_gen, params)
+
+    rows = table._read_two_column_tables((tmp_path / "TableSwitchedLine.txt").read_text())
+    (switch,) = rows.values()
+    assert [value for time, value in switch if time == 20.0] == [1.0, 0.0]
+    assert {value for _, value in switch} == {0.0, 1.0}
