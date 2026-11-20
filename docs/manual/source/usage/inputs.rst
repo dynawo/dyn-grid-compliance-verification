@@ -503,8 +503,13 @@ protections' — one point per row: a point left empty keeps Dynawo's default,
 and a table marked as belonging to the 2020 edition is left empty for a 2015
 model. The 2015 plant controller reads six points of ``TableQwpUErr``, of which
 the template gives three: the other three keep Dynawo's defaults, at 0.06,
-0.07 and 0.08 pu, so the three you give stay below 0.06 pu. The command writes
-two trees next to the workbook — or under ``--output``, if you give one:
+0.07 and 0.08 pu, so the three you give stay below 0.06 pu. The current of the
+turbine is bound by ``IMaxPu`` and ``IMaxDipPu`` and also by ``TableIpMaxUwt``
+and ``TableIqMaxUwt``: left to Dynawo's defaults, the reactive current stays
+under 0.33 pu between 0.925 and 1.075 pu of voltage, whatever ``IMaxPu`` says,
+so give both. The IEC examples fill those two tables with Dynawo's defaults.
+The command writes two trees next to the workbook — or under ``--output``, if
+you give one:
 
 .. code-block:: text
 
