@@ -40,6 +40,12 @@ decoupling protection curves, which the previous template listed one parameter p
 data of a workbook made on the template of 1.3.0 into `workbooks/Producer_IEC.xlsx`: it is still
 read, with a warning, and its protection curves written as before (#394).
 
+The IEC examples fill in the two current-limit tables of their turbines, `TableIpMaxUwt` and
+`TableIqMaxUwt`, in their workbooks and PAR files, with the values Dynawo gives them by default,
+so their results do not change. Those tables bound the currents along with `IMaxPu` and
+`IMaxDipPu`, the reactive one to 0.33 pu around the nominal voltage: a model built from an example
+now shows them, to be adapted with the current limits (#789).
+
 ### The workbooks carry the tests of every revision of the DTR
 
 The rows of the signal sheets are read as the tests of the revision of the DTR being validated,

@@ -58,6 +58,38 @@
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="WT_UpquMaxPu" value="1.1"/>
     <par type="DOUBLE" name="WT_tUFiltcl" value="0.01"/>
+    <!-- Tables IqMax(U). Limites de courant r&#233;actif en fonction de la tension mesur&#233;e (au point de contr&#244;le du convertisseur). -->
+    <par type="DOUBLE" name="WT_TableIqMaxUwt11" value="0"/>
+    <par type="DOUBLE" name="WT_TableIqMaxUwt12" value="0"/>
+    <par type="DOUBLE" name="WT_TableIqMaxUwt21" value="0.1"/>
+    <par type="DOUBLE" name="WT_TableIqMaxUwt22" value="0"/>
+    <par type="DOUBLE" name="WT_TableIqMaxUwt31" value="0.15"/>
+    <par type="DOUBLE" name="WT_TableIqMaxUwt32" value="1"/>
+    <par type="DOUBLE" name="WT_TableIqMaxUwt41" value="0.9"/>
+    <par type="DOUBLE" name="WT_TableIqMaxUwt42" value="1"/>
+    <par type="DOUBLE" name="WT_TableIqMaxUwt51" value="0.925"/>
+    <par type="DOUBLE" name="WT_TableIqMaxUwt52" value="0.33"/>
+    <par type="DOUBLE" name="WT_TableIqMaxUwt61" value="1.075"/>
+    <par type="DOUBLE" name="WT_TableIqMaxUwt62" value="0.33"/>
+    <par type="DOUBLE" name="WT_TableIqMaxUwt71" value="1.1"/>
+    <par type="DOUBLE" name="WT_TableIqMaxUwt72" value="1"/>
+    <par type="DOUBLE" name="WT_TableIqMaxUwt81" value="1.1001"/>
+    <par type="DOUBLE" name="WT_TableIqMaxUwt82" value="1"/>
+    <!-- Tables IpMax(U). Limites de courant actif en fonction de la tension mesur&#233;e (au point du contr&#244;le du convertisseur). -->
+    <par type="DOUBLE" name="WT_TableIpMaxUwt11" value="0"/>
+    <par type="DOUBLE" name="WT_TableIpMaxUwt12" value="0"/>
+    <par type="DOUBLE" name="WT_TableIpMaxUwt21" value="0.1"/>
+    <par type="DOUBLE" name="WT_TableIpMaxUwt22" value="0"/>
+    <par type="DOUBLE" name="WT_TableIpMaxUwt31" value="0.15"/>
+    <par type="DOUBLE" name="WT_TableIpMaxUwt32" value="1"/>
+    <par type="DOUBLE" name="WT_TableIpMaxUwt41" value="0.9"/>
+    <par type="DOUBLE" name="WT_TableIpMaxUwt42" value="1"/>
+    <par type="DOUBLE" name="WT_TableIpMaxUwt51" value="0.925"/>
+    <par type="DOUBLE" name="WT_TableIpMaxUwt52" value="1"/>
+    <par type="DOUBLE" name="WT_TableIpMaxUwt61" value="1"/>
+    <par type="DOUBLE" name="WT_TableIpMaxUwt62" value="1.1"/>
+    <par type="DOUBLE" name="WT_TableIpMaxUwt71" value="1.1"/>
+    <par type="DOUBLE" name="WT_TableIpMaxUwt72" value="1.1"/>
     <!-- QLimiter_2015 -->
     <!-- Si QlConst = False, remplir les tables de limitations ci-dessous. -->
     <par type="BOOL" name="WT_QlConst" value="true"/>
