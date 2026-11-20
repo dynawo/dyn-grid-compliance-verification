@@ -125,7 +125,9 @@ def test_check_dynawo_model_files_rejects_a_model_without_one_file(tmp_path, mis
     with pytest.raises(FileNotFoundError) as not_found_error:
         file_checks.check_dynawo_model_files(model_path)
 
-    assert missing_extension in str(not_found_error.value)
+    assert str(not_found_error.value) == (
+        f"The producer has no .{missing_extension} file in {model_path}"
+    )
 
 
 def test_check_dynawo_model_files_rejects_files_with_different_names(tmp_path):
@@ -693,7 +695,9 @@ def test_check_validation_model_demands_zone1_when_a_pcs_of_zone_1_runs(tmp_path
     with pytest.raises(FileNotFoundError) as not_found_error:
         file_checks.check_validation_model(model_path, reference_path, 2, ["Producer"], [])
 
-    assert "Zone1 model files not found" in str(not_found_error.value)
+    assert str(not_found_error.value) == (
+        f"The producer has no Zone1 model in {model_path / 'Zone1'}: the PCS of zone 1 need it."
+    )
 
 
 def test_check_validation_curves_accepts_zone3_alone_when_no_pcs_of_zone_1_runs(tmp_path):
