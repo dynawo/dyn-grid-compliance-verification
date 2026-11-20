@@ -74,6 +74,9 @@ again from the package, or write `\ProducerFiles.circuit_z1_fault.tikz` and
 
 ### Fixed
 
+- Reference and producer curves given as abc waveforms are converted to RMS as they are read,
+  where they were reported missing: the reference ones were converted after the check for the
+  required curves, and the producer ones never (#695).
 - The IEC wind power plants of zone 3 are measured at Node2 itself, as the turbines of zone 1
   are since 1.3.0. With the low-voltage transformer inside the converter model
   (`WPP_ConverterLVControl = false`), their voltage and powers there were read on its grid side,

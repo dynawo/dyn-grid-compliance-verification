@@ -9,6 +9,8 @@
 import logging
 from pathlib import Path
 
+import numpy as np
+import pandas as pd
 import pytest
 
 from dycov.curves.importer.curves import ImportedCurves
@@ -461,3 +463,60 @@ def test_the_step_of_imported_curves_is_in_the_base_the_curves_are_compared_in(
 
     assert event["connect_to"] == connect_event_to
     assert event["step_value"] == pytest.approx(0.01 * 100.0 / 4.0 if scaled else 0.01)
+
+
+# ---------------------------------------------------------------------------
+# Curves given as abc waveforms
+# ---------------------------------------------------------------------------
+
+
+def _write_abc_voltage_curves(curves_dir: Path) -> None:
+    """A balanced voltage given as its three phases, sampled at 1 kHz."""
+    _write_curves(curves_dir)
+    _overwrite_dict(
+        curves_dir,
+        f"{_FILLED_METADATA}\n[Curves-Dictionary]\ntime = time\n"
+        "BusPDR_BUS_Voltage_a = Va\nBusPDR_BUS_Voltage_b = Vb\nBusPDR_BUS_Voltage_c = Vc\n",
+    )
+    time = np.arange(0.0, 0.5, 1e-3)
+    phases = {
+        name: np.sqrt(2) * np.cos(2 * np.pi * 50 * time + shift)
+        for name, shift in (("Va", 0.0), ("Vb", -2 * np.pi / 3), ("Vc", 2 * np.pi / 3))
+    }
+    pd.DataFrame({"time": time, **phases}).to_csv(
+        curves_dir / "Producer" / f"{_CFG_OC_NAME}.csv", sep=";", index=False
+    )
+
+
+def _is_one_rms_voltage(curves_df) -> bool:
+    return list(curves_df.columns) == ["time", "BusPDR_BUS_Voltage"] and bool(
+        np.isfinite(curves_df["BusPDR_BUS_Voltage"]).all()
+    )
+
+
+def test_reference_curves_given_as_abc_waveforms_are_imported_as_their_rms_value(
+    tmp_path, tool_config
+):
+    ref_dir = tmp_path / "ReferenceCurves"
+    _write_abc_voltage_curves(ref_dir)
+    imported_curves = ImportedCurves(DummyProducer())
+
+    _, curves_df = imported_curves.obtain_reference_curve(
+        _make_working_dir(tmp_path), "Producer", _PCS, _BM, _OC, ref_dir
+    )
+
+    assert _is_one_rms_voltage(curves_df)
+
+
+def test_producer_curves_given_as_abc_waveforms_are_imported_as_their_rms_value(
+    tmp_path, tool_config
+):
+    curves_dir = tmp_path / "ProducerCurves"
+    _write_abc_voltage_curves(curves_dir)
+    imported_curves = ImportedCurves(DummyProducer(curves_path=curves_dir))
+
+    _, _, _, curves_df = imported_curves.obtain_simulated_curve(
+        _make_working_dir(tmp_path), "Producer", _PCS, _BM, _OC, None
+    )
+
+    assert _is_one_rms_voltage(curves_df)

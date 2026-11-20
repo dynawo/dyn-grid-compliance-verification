@@ -34,14 +34,19 @@ nor validated.
 
 The stages below run in this exact order; the order is load-bearing (see *Adaptations* table).
 
-### 1. EMT → RMS positive-sequence conversion (reference curves only)
+### 1. EMT → RMS positive-sequence conversion (imported curves, as they are read)
 
 `sigpro.ensure_rms_signals` (`sigpro/sigpro.py`). Columns named `*_a`, `*_b`, `*_c` are treated as
 three-phase EMT waveforms and converted to a positive-sequence RMS signal: the phasor of each
 phase is extracted with a moving-window STFT taking the bin closest to the 50 Hz fundamental —
 the no-frequency-tracking approach of IEC 61400-27-2 Annex C, which the technote found to behave
 better around transients than frequency-tracking variants — then the symmetrical components are
-built and the magnitude scaled by 1/√2. Columns already in RMS form pass through untouched.
+built and the magnitude scaled by 1/√2. Columns already in RMS form pass through untouched, and a
+signal given both ways keeps its RMS column.
+
+This stage runs before the others, as the reference curves and the curves a producer delivers are
+imported (`curves/importer/curves.py`), so that the check for the required curves finds an abc
+signal under its RMS name. The curves Dynawo writes are RMS already.
 
 ### 2. First resampling: fixed time step, per set
 

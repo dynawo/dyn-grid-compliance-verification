@@ -211,8 +211,9 @@ that the application should perform:
     topologies and system commands, checked before a run starts.
 
 * ``sigpro``
-    Code for signal processing on the provided reference curves. It performs conversion
-    from EMT signals into RMS, positive sequence signals. It also performs the required
+    Code for signal processing on the curves. It converts the EMT signals of the reference
+    and producer curves into RMS, positive sequence signals, as they are imported. It also
+    performs the required
     interpolation, low-pass-filtering, resampling, etc., in order to be able to compare
     two signals.
 

@@ -28,6 +28,7 @@ from dycov.model.parameters import (
     Terminal,
 )
 from dycov.model.producer import Producer
+from dycov.sigpro import sigpro
 
 
 def _get_generators_ini(generators: list, curves: pd.DataFrame) -> list:
@@ -119,6 +120,7 @@ class ImportedCurves(ProducerCurves):
             return has_imported_curves, sim_t_event_start, fault_duration, df_imported_curves
 
         has_imported_curves = True
+        df_imported_curves = sigpro.ensure_rms_signals(df_imported_curves)
         naming.get_network_frequency_curve(df_imported_curves)
         if not is_reference:
             self._generators = self.__get_generators(df_imported_curves)
