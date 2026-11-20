@@ -1,0 +1,19 @@
+#1
+double TableOmegaRefPu(5,2)
+{{simulation_start}} 1.0
+{{end_frequency_settling}} {{bus_omega0pu}}
+{{start_event}} {{bus_omega0pu}}
+{{end_event}} {{bus_omegapu}}
+{{simulation_stop}} {{bus_omegapu}}
+
+double TableUPhase(4,2)
+{{simulation_start}} 0.0
+{{start_event}} 0.0
+{{start_event}} {{bus_uphase}}
+{{simulation_stop}} {{bus_uphase}}
+
+double TableUPu(4,2)
+{{simulation_start}} {{bus_u0pu}}
+{{start_event}} {{bus_u0pu}}
+{{start_event}} {{bus_upu}}
+{{simulation_stop}} {{bus_upu}}

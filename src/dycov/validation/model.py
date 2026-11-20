@@ -14,6 +14,7 @@ import pandas as pd
 
 from dycov.configuration.cfg import config
 from dycov.core.validator import Validator
+from dycov.curves.curves import get_cfg_oc_name
 from dycov.curves.manager import CurvesManager
 from dycov.logging import dycov_logging
 from dycov.model.producer import Producer
@@ -41,6 +42,9 @@ def _get_column_name(
         return "V"
     if modified_setpoint == "NetworkFrequencyPu":
         return "$\\omega"
+    tracked = compared_curves.by_label(modified_setpoint)
+    if tracked is not None:
+        return tracked.display
 
     return "Q"
 
@@ -73,6 +77,20 @@ class ModelValidator(Validator):
             curves_manager, producer, validations, is_field_measurements, pcs_name, bm_name
         )
         self._pcs_bm_name = pcs_bm_name
+
+    def __tracked_magnitude(self, oc_name: str) -> str | None:
+        """The label of the magnitude a test whose event drives no setpoint tracks, as its
+        ``tracked_magnitude`` names it."""
+        return config.get_value(
+            get_cfg_oc_name(self._pcs_name, self._bm_name, oc_name), "tracked_magnitude"
+        )
+
+    def __is_transient(self, oc_name: str) -> bool:
+        """Whether the magnitude a test tracks returns from its response to the event, as
+        ``transient_response`` declares it, instead of stepping to a new value."""
+        return config.get_boolean(
+            get_cfg_oc_name(self._pcs_name, self._bm_name, oc_name), "transient_response", False
+        )
 
     def __thresholds_family(self) -> str:
         """The family of [GridCode] thresholds the PCS applies to the controlled magnitude."""
@@ -113,15 +131,26 @@ class ModelValidator(Validator):
         results["t_P90_ref"] = t_P90_ref
         results["t_P90_error"] = abs(t_P90_ref - t_P90_calc)
 
+    def __response_step(self, measurement_name: str, start_event: float, transient: bool) -> float:
+        """The step of the reference response to an event that steps no setpoint: its change,
+        or the peak of a transient it returns from. The step-response indicators and the
+        tracking errors of such a test are measured against it."""
+        return common.get_response_step(
+            list(self._get_reference_curve_by_name(("time"))),
+            list(self._get_reference_curve_by_name((measurement_name))),
+            start_event,
+            transient,
+        )
+
     def __compare_event_times(
         self,
         measurement_name: str,
         start_event: float,
         setpoint_variation: float,
         results: dict,
+        transient: bool = False,
     ) -> None:
         results["t_event_start"] = start_event
-
         if compliance_list.contains_key(["reaction_time"], self._validations):
             res_reaction_time, res_reaction_target = common.get_reached_time(
                 0.1,
@@ -205,11 +234,13 @@ class ModelValidator(Validator):
                 list(self._get_calculated_curve_by_name(("time"))),
                 list(self._get_calculated_curve_by_name((measurement_name))),
                 start_event,
+                transient,
             )
             ref_overshoot = common.get_overshoot(
                 list(self._get_reference_curve_by_name(("time"))),
                 list(self._get_reference_curve_by_name((measurement_name))),
                 start_event,
+                transient,
             )
             results["calc_overshoot"] = res_overshoot
             results["ref_overshoot"] = ref_overshoot
@@ -361,12 +392,20 @@ class ModelValidator(Validator):
         freq_peak: float,
         modified_setpoint: str,
         setpoint_variation: float,
+        tracks_response: bool = False,
+        transient: bool = False,
     ) -> dict:
         results = {}
-        step_magnitude = setpoint_variation
-        if setpoint_variation == 0.0:
-            step_magnitude = 1.0
         try:
+            measurement_name = common.get_measurement_name(
+                modified_setpoint, zone, self._get_calculated_curves().columns
+            )
+            response_step = (
+                self.__response_step(measurement_name, start_event, transient)
+                if tracks_response and not setpoint_variation
+                else setpoint_variation
+            )
+            step_magnitude = response_step or 1.0
             results = {
                 "before": calculate_errors(
                     self._get_curves_by_windows("before"), step_magnitude, zone
@@ -393,14 +432,12 @@ class ModelValidator(Validator):
                 results,
             )
 
-            measurement_name = common.get_measurement_name(
-                modified_setpoint, zone, self._get_calculated_curves().columns
-            )
             self.__compare_event_times(
                 measurement_name,
                 start_event,
-                setpoint_variation,
+                response_step,
                 results,
+                transient,
             )
             self.__compare_ideal_ramp(
                 measurement_name,
@@ -790,6 +827,8 @@ class ModelValidator(Validator):
         if event_params["connect_to"] == "NetworkFrequencyPu":
             freq_peak = float(event_params["step_value"])
 
+        tracked_magnitude = self.__tracked_magnitude(oc_name)
+        tracked = tracked_magnitude or event_params["connect_to"]
         model_results = (
             self.__calculate(
                 self._producer.get_zone(),
@@ -797,17 +836,16 @@ class ModelValidator(Validator):
                 event_params["duration_time"],
                 freq0,
                 freq_peak,
-                event_params["connect_to"],
+                tracked,
                 abs(self._setpoint_variation),
+                tracks_response=tracked_magnitude is not None,
+                transient=self.__is_transient(oc_name),
             )
             if has_reference
             else self.__without_reference(event_params["start_time"])
         )
 
-        results = self.__check(
-            model_results,
-            event_params["connect_to"],
-        )
+        results = self.__check(model_results, tracked)
 
         exclusion_windows = self._get_exclusion_windows()
         results["event_exclusion_window_start"] = exclusion_windows.event_start

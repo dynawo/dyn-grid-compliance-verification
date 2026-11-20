@@ -8,7 +8,10 @@ They all state the revision they answer for. A test reads the base `20240215` un
 selects another one with the fixture `revision`: the configuration names the newest
 revision, so a test that said nothing would answer for a different DTR at every release.
 Every revision after the base has a file of its own, `test_revision_<YYYYMMDD>.py`, which
-reads the base and the revision one after the other and shows the difference itself.
+reads the base and the revision one after the other and shows the difference itself. A
+fiche a revision splits by category has a file of its own too, `test_fiche_<fiche>.py`:
+the Fiche I16.2 that the revision `20260723` gives a storage installation of type C or D,
+in `test_fiche_i16_2.py`.
 
 `test_delta_is_complete.py` answers for every delta the tool ships, whichever revision wrote
 it. It reads the files and asserts what a delta must hold: that the tool implements the

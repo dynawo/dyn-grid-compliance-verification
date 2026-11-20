@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<dyn:dynamicModelsArchitecture xmlns:dyn="http://www.rte-france.com/dynawo">
+  <!--Topology: S-->
+  <dyn:blackBoxModel id="Bess" lib="GridFormingEpri" parFile="Producer.par" parId="Bess"/>
+
+  <dyn:connect id1="Bess" var1="gfm_terminal" id2="BusPDR" var2="bus_terminal"/>
+</dyn:dynamicModelsArchitecture>

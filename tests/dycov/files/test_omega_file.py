@@ -85,6 +85,18 @@ def test_connect_generator_to_ramp():
     assert len(root) == 1
 
 
+def test_a_model_without_frequency_reference_is_connected_to_no_omega_model():
+    root, ns = _make_root()
+    g = _make_generator()
+    g.lib = "GridFormingEpri"
+
+    _connect_generator_to_infinitebus(root, ns, g)
+    _connect_generator_to_ramp(root, ns, g, grp=0)
+    _connect_generator_to_setpoint(root, ns, g)
+
+    assert len(root) == 0
+
+
 def test_connect_generator_to_dynmodelomegaref(monkeypatch):
     root, ns = _make_root()
     g = _make_generator()
