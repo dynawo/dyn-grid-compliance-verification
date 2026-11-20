@@ -10,6 +10,8 @@
 """Tests for the ModelProducer helpers."""
 
 import configparser
+import re
+import shutil
 from pathlib import Path
 
 import pytest
@@ -364,3 +366,61 @@ def test_get_filenames_of_the_curves_reads_the_ini_of_the_zone(tmp_path, caplog)
     assert producer.get_filenames(zone=1) == []
     assert producer.get_filenames(zone=3) == ["Producer"]
     assert "is skipped" not in caplog.text
+
+
+def test_a_missing_producer_ini_is_reported_by_its_name_and_directory(tmp_path):
+    (tmp_path / "Producer.dyd").write_text("")
+    producer = _model_in(tmp_path, 0)
+
+    with pytest.raises(FileNotFoundError) as error:
+        producer._ModelProducer__read_producer_ini()
+
+    assert str(error.value) == f"The producer has no Producer.ini in {tmp_path}"
+
+
+def test_a_missing_ini_of_a_unit_names_the_unit_and_its_zone(tmp_path):
+    zone1 = tmp_path / "Zone1"
+    zone1.mkdir()
+    (zone1 / "Producer_G2.ini").write_text("[DEFAULT]\n")
+    producer = _model_in(tmp_path, 1, "Producer_G1")
+
+    with pytest.raises(
+        FileNotFoundError, match=rf"no Producer_G1\.ini in {re.escape(str(zone1))}$"
+    ):
+        producer._ModelProducer__read_producer_ini()
+
+
+@pytest.mark.parametrize("extension", ["dyd", "par"])
+def test_a_missing_model_file_is_reported_by_its_extension(tmp_path, extension):
+    zone3 = tmp_path / "Zone3"
+    zone3.mkdir()
+    (zone3 / "Producer.ini").write_text("[DEFAULT]\n")
+    producer = _model_in(tmp_path, 3)
+
+    with pytest.raises(
+        FileNotFoundError, match=rf"no \.{extension} file in {re.escape(str(zone3))}$"
+    ):
+        getattr(producer, f"get_producer_{extension}")()
+
+
+def test_the_files_present_are_found_whatever_the_case_of_their_extension(tmp_path):
+    (tmp_path / "Producer.INI").write_text("[DEFAULT]\np_max_injection = 80\n")
+    (tmp_path / "Plant.Dyd").write_text("")
+    producer = _model_in(tmp_path, 0)
+
+    assert producer._ModelProducer__read_producer_ini().get("DEFAULT", "p_max_injection") == "80"
+    assert producer.get_producer_dyd() == tmp_path.resolve() / "Plant.Dyd"
+
+
+def test_a_unit_model_without_its_zone3_dyd_is_told_so_before_any_unit_file(tmp_path):
+    examples = Path(__file__).resolve().parents[3] / "examples"
+    model = shutil.copytree(examples / "Model" / "Wind" / "WECC4" / "Dynawo", tmp_path / "Dynawo")
+    (model / "Zone3" / "Producer.dyd").unlink()
+    producer = _model_in(model)
+    producer._s_nref = 100.0
+    producer._sim_type = MODEL_VALIDATION_PPM
+
+    with pytest.raises(FileNotFoundError) as error:
+        producer._ModelProducer__set_dynawo_model_validation_type()
+
+    assert str(error.value) == f"The producer has no .dyd file in {model / 'Zone3'}"
