@@ -14,14 +14,17 @@ from pathlib import Path
 
 from dycov.configuration.cfg import config
 from dycov.files import manage_files
+from dycov.gfm import report
 from dycov.gfm.parameters import GFMParameters
+from dycov.gfm.report import PcsReport
 from dycov.logging import dycov_logging, worker_initializer
+from dycov.model.compliance import Compliance
 from dycov.model.pcs import Pcs
 
 LOGGER = dycov_logging.get_logger("GFMGeneration")
 
 
-def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
+def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> PcsReport:
     """
     Worker function that generates envelopes for a specific PCS.
 
@@ -33,18 +36,26 @@ def _generate_pcs(pcs_args: tuple[GFMParameters, str, str]) -> None:
     pcs_args : tuple[GFMParameters, str, str]
         A tuple containing the
         simulation parameters, the PCS name, and the producer name.
+
+    Returns
+    -------
+    PcsReport
+        What the report shows of every test of the PCS, none when the PCS cannot be generated.
     """
     parameters, pcs_name, producer_name = pcs_args
     dycov_logging.clear_test_context()
+    pcs_report = PcsReport(producer_name, pcs_name, None, [])
     try:
         pcs = Pcs(producer_name, pcs_name, parameters)
+        pcs_report = pcs_report._replace(report_name=pcs.get_report_name())
         if not pcs.is_valid():
             LOGGER.error(f"{pcs_name} is not a valid PCS")
-            return
-        pcs.generate()
+            return pcs_report
+        return pcs_report._replace(tests=pcs.generate())
     except (OSError, ValueError, configparser.Error) as e:
-        report = LOGGER.exception if LOGGER.getEffectiveLevel() == logging.DEBUG else LOGGER.error
-        report(f"Aborted execution for {pcs_name}. {e}")
+        log = LOGGER.exception if LOGGER.getEffectiveLevel() == logging.DEBUG else LOGGER.error
+        log(f"Aborted execution for {pcs_name}. {e}")
+        return pcs_report
 
 
 class GFMGeneration:
@@ -63,6 +74,11 @@ class GFMGeneration:
         self._templates_path = Path(config.get_value("Global", "templates_path"))
         self.__initialize_working_environment()
         self._validation_pcs = self.__get_validation_pcs()
+        if not self._validation_pcs:
+            LOGGER.error(
+                f"The DTR revision {config.get_value('DTR', 'current')} gives the units of "
+                f"{self._parameters.get_producer().get_sim_type_str()} no Grid Forming PCS"
+            )
         self._pcs_list = self.__prepare_pcs_list()
 
     def __initialize_working_environment(self) -> None:
@@ -88,8 +104,9 @@ class GFMGeneration:
         Gathers the PCS to generate.
 
         The PCS selected on the command line, else those ``gridforming_pcs`` of the
-        configuration lists, else every GFM PCS of the tool and, unless only the DTR ones are
-        asked for, of the user's configuration directory. Aliases are left out.
+        configuration lists, else every GFM PCS of the kind of unit (PPM or BESS) that the tool
+        ships, that the delta of its revision of the DTR adds and, unless only the DTR ones are
+        asked for, that the user's configuration directory holds. Aliases are left out.
 
         Returns
         -------
@@ -102,7 +119,9 @@ class GFMGeneration:
         if self._parameters.get_selected_pcs():
             validation_pcs.add(self._parameters.get_selected_pcs())
 
-        self.__populate_validation_pcs(validation_pcs, "gridforming_pcs", "gfm")
+        self.__populate_validation_pcs(
+            validation_pcs, "gridforming_pcs", self._parameters.get_producer().get_sim_type_str()
+        )
 
         return sorted(validation_pcs)
 
@@ -127,15 +146,13 @@ class GFMGeneration:
         if not validation_pcs:
             validation_pcs.update(config.get_list("Global", validation_key))
         if not validation_pcs:
+            shipped = tool_path / self._templates_path
+            sources = [shipped, manage_files.dtr_delta_path(shipped)]
             if not self._parameters.get_only_dtr():
-                validation_pcs.update(
-                    manage_files.list_directories(
-                        config.get_config_dir() / self._templates_path / validation_path
-                    )
-                )
-            validation_pcs.update(
-                manage_files.list_directories(tool_path / self._templates_path / validation_path)
-            )
+                sources.append(config.get_config_dir() / self._templates_path)
+            for source in sources:
+                if source is not None and (source / validation_path).is_dir():
+                    validation_pcs.update(manage_files.list_directories(source / validation_path))
 
         validation_pcs.difference_update({pcs for pcs in validation_pcs if "aliases" in pcs})
 
@@ -155,10 +172,10 @@ class GFMGeneration:
             for pcs_name in self._validation_pcs
         ]
 
-    def generate(self, use_parallel: bool = False, num_processes: int = 4) -> None:
+    def generate(self, use_parallel: bool = False, num_processes: int = 4) -> bool:
         """
-        Generates the envelopes of every PCS, then moves them to the output directory and
-        removes the working one.
+        Generates the envelopes of every PCS and their report, then moves them to the output
+        directory and removes the working one.
 
         Parameters
         ----------
@@ -166,6 +183,12 @@ class GFMGeneration:
             Whether to run using multiprocessing. Defaults to False.
         num_processes : int, optional
             Number of CPU cores to utilize. Defaults to 4.
+
+        Returns
+        -------
+        bool
+            False when the PCS generated tests and none of them got envelopes; True otherwise,
+            also when no PCS could be generated, which each PCS reports on its own.
         """
         if use_parallel:
             LOGGER.info(f"Generating envelopes in parallel using {num_processes} processes.")
@@ -174,16 +197,27 @@ class GFMGeneration:
                 initializer=worker_initializer,
                 initargs=(dycov_logging.get_handler_settings(), config.run_layers()),
             ) as pool:
-                pool.map(_generate_pcs, self._pcs_list)
+                pcs_reports = pool.map(_generate_pcs, self._pcs_list)
+                pool.close()
+                pool.join()
         else:
             LOGGER.info("Generating envelopes sequentially.")
-            for pcs_tuple in self._pcs_list:
-                _generate_pcs(pcs_tuple)
+            pcs_reports = [_generate_pcs(pcs_tuple) for pcs_tuple in self._pcs_list]
 
         dycov_logging.clear_test_context()
-        for _, pcs_name, producer_name in self._pcs_list:
-            self.__keep_envelopes(producer_name, pcs_name)
-        manage_files.remove_dir(self._parameters.get_working_dir())
+        try:
+            # The report reads the figures from the working directory, before it is moved
+            report.create_pdf(pcs_reports, self._parameters)
+        finally:
+            for _, pcs_name, producer_name in self._pcs_list:
+                self.__keep_envelopes(producer_name, pcs_name)
+            manage_files.remove_dir(self._parameters.get_working_dir())
+
+        tests = [test for pcs_report in pcs_reports for test in pcs_report.tests]
+        return not tests or any(
+            test.compliance not in (Compliance.WithoutEnvelopes, Compliance.InvalidTest)
+            for test in tests
+        )
 
     def __keep_envelopes(self, producer_name: str, pcs_name: str) -> None:
         """

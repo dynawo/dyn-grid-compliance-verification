@@ -20,7 +20,7 @@ USER_CONFIG = "[DTR]\ncurrent = 20260723\n"
 
 GFM_PCS = ["PCS_RTE-IGFM1", "PCS_RTE-IGFM2", "PCS_RTE-IGFM3", "PCS_RTE-IGFM4"]
 
-SHIPPED_IGFM1 = Path(dycov.__file__).resolve().parent / "templates/PCS/gfm/PCS_RTE-IGFM1"
+SHIPPED_IGFM1 = Path(dycov.__file__).resolve().parent / "templates/PCS/gfm/PPM/PCS_RTE-IGFM1"
 
 
 def _producer(tmp_path: Path) -> Path:
@@ -62,7 +62,9 @@ def test_a_stray_directory_among_the_user_pcs_leaves_the_others_envelopes(tmp_pa
     folder = _producer(tmp_path)
     output = tmp_path / "Results"
     home = tmp_path / "home"
-    (home / ".config" / "dycov" / "templates" / "PCS" / "gfm" / "MyStray").mkdir(parents=True)
+    (home / ".config" / "dycov" / "templates" / "PCS" / "gfm" / "PPM" / "MyStray").mkdir(
+        parents=True
+    )
 
     run = _generate(run_dycov, folder, output, home)
 
@@ -76,7 +78,7 @@ def test_a_stray_directory_among_the_user_pcs_leaves_the_others_envelopes(tmp_pa
 
 
 def _user_gfm_pcs(home: Path, name: str, description: str) -> None:
-    folder = home / ".config" / "dycov" / "templates" / "PCS" / "gfm" / name
+    folder = home / ".config" / "dycov" / "templates" / "PCS" / "gfm" / "PPM" / name
     folder.mkdir(parents=True)
     (folder / "PCSDescription.ini").write_text(description)
 
@@ -103,7 +105,7 @@ def test_a_pcs_whose_description_cannot_be_read_leaves_the_others_envelopes(tmp_
     assert [path.name for path in output.iterdir()] == ["PCS_RTE-IGFM1"]
 
 
-def test_a_pcs_aborted_before_its_first_envelope_is_reported_and_left_out(tmp_path, run_dycov):
+def test_a_pcs_whose_every_test_fails_is_reported_and_left_out(tmp_path, run_dycov):
     home = tmp_path / "home"
     description = (SHIPPED_IGFM1 / "PCSDescription.ini").read_text()
     description = description.replace("PCS_RTE-IGFM1", "PCS_User-Aborted")
@@ -114,6 +116,6 @@ def test_a_pcs_aborted_before_its_first_envelope_is_reported_and_left_out(tmp_pa
 
     log = run.stdout + run.stderr
     assert run.returncode == 0, log
-    assert "Aborted execution for PCS_User-Aborted" in log
+    assert "PCS_User-Aborted.S_VolAngStep1.OC1 cannot be obtained" in log
     assert "PCS_User-Aborted generated no envelopes" in log
     assert [path.name for path in output.iterdir()] == ["PCS_RTE-IGFM1"]

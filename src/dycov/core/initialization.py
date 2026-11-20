@@ -23,7 +23,11 @@ from dycov.logging import dycov_logging, enable_warning_capture
 
 # The technologies each verification mode has PCS for: only the performance verification
 # covers synchronous machines.
-_TEMPLATE_MODELS = {"model": ("BESS", "PPM"), "performance": ("BESS", "PPM", "SM")}
+_TEMPLATE_MODELS = {
+    "model": ("BESS", "PPM"),
+    "performance": ("BESS", "PPM", "SM"),
+    "gfm": ("BESS", "PPM"),
+}
 
 
 def _declares_no_test(description: Path) -> bool:
@@ -42,6 +46,18 @@ def _declaration_templates(pcs_dir: Path) -> list[Path]:
         for path in pcs_dir.glob("*[dD]escription.[iI][nN][iI]")
         if path.name.lower() != "pcsdescription.ini"
     )
+
+
+def _out_of_the_kinds_of_unit(gfm_templates: Path) -> list[Path]:
+    if not gfm_templates.is_dir():
+        return []
+    return [
+        path
+        for path in gfm_templates.iterdir()
+        if path.is_dir()
+        and not path.name.startswith(".")
+        and path.name not in _TEMPLATE_MODELS["gfm"]
+    ]
 
 
 def _get_linux_info() -> str:
@@ -235,6 +251,7 @@ class DycovInitializer:
         Sets up the template directories and user model dictionaries.
         """
         self._configure_templates(tool_path)
+        self._warn_of_grid_forming_templates_out_of_place()
 
         """
         IMPORTANT:
@@ -291,8 +308,6 @@ class DycovInitializer:
             for model in models:
                 self._template_cmd_config(category_path / subdir / model)
 
-        self._template_cmd_config(category_path / "gfm")
-
     def _configure_templates(self, tool_path: Path):
         """
         Sets up the overall template directory structure and copies necessary template files.
@@ -340,15 +355,33 @@ class DycovInitializer:
                 self._template_cmd_config(target_dir)
                 manage_files.copy_from_path(declaration, target_dir)
 
+    def _warn_of_grid_forming_templates_out_of_place(self):
+        """The Grid Forming PCS of the user are read under the kind of unit they are for, as
+        those of the tool are: one left directly under gfm/ is no longer read."""
+        for category in ("PCS", "reports"):
+            gfm_templates = config.get_config_dir() / "templates" / category / "gfm"
+            for pcs in sorted(_out_of_the_kinds_of_unit(gfm_templates)):
+                dycov_logging.get_logger("Initialization").warning(
+                    f"{pcs} is not read: the Grid Forming templates of the user go under "
+                    f"{gfm_templates / 'PPM'} or {gfm_templates / 'BESS'}, by the kind of unit "
+                    "they are for"
+                )
+
     def _copy_dummy_samples(self, tool_path: Path, source: str):
         """
         Copies dummy sample files from the tool's templates to the user's configuration directory.
         """
-        categories = ["performance", "model", "gfm"]
-        for category in categories:
-            if category == "gfm":
-                src = tool_path / "templates" / source / category / ".DummySample"
-                dest = config.get_config_dir() / "templates" / source / category / ".DummySample"
+        for category, models in _TEMPLATE_MODELS.items():
+            for model in models:
+                src = tool_path / "templates" / source / category / model / ".DummySample"
+                dest = (
+                    config.get_config_dir()
+                    / "templates"
+                    / source
+                    / category
+                    / model
+                    / ".DummySample"
+                )
                 if src.exists():
                     try:
                         manage_files.copy_directory(src, dest, dirs_exist_ok=True)
@@ -356,24 +389,6 @@ class DycovInitializer:
                         dycov_logging.get_logger("Initialization").exception(
                             f"Failed to copy {src} to {dest}"
                         )
-            else:
-                for model in _TEMPLATE_MODELS[category]:
-                    src = tool_path / "templates" / source / category / model / ".DummySample"
-                    dest = (
-                        config.get_config_dir()
-                        / "templates"
-                        / source
-                        / category
-                        / model
-                        / ".DummySample"
-                    )
-                    if src.exists():
-                        try:
-                            manage_files.copy_directory(src, dest, dirs_exist_ok=True)
-                        except Exception:
-                            dycov_logging.get_logger("Initialization").exception(
-                                f"Failed to copy {src} to {dest}"
-                            )
 
     def _configure_user_models(self):
         """

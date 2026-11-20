@@ -20,19 +20,23 @@ import dycov
 
 RUN_WITHOUT_FIGURES = textwrap.dedent(
     '''
-    """The command without the figures, which no test reads. Without the pool, no worker
-    imports the module again and draws them anyway."""
+    """The command without the figures and the report, nor the check for the tools that build
+    it, which no test reads. Without the pool, no worker imports the module again and draws
+    them anyway."""
 
     import sys
 
+    import dycov.launchers as launchers
     from dycov.configuration.cfg import config
+    from dycov.gfm import report
     from dycov.gfm.gfm import GridForming
-    from dycov.launchers import dycov
 
     GridForming._plot = lambda *args, **kwargs: None
+    report.create_pdf = lambda *args, **kwargs: None
+    launchers.check_report_tools_availability = lambda: None
     config.set_value("Global", "parallel_pcs_validation", "false")
     sys.argv = ["dycov", *sys.argv[1:]]
-    sys.exit(dycov())
+    sys.exit(launchers.dycov())
     '''
 )
 

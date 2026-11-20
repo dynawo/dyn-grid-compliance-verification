@@ -82,6 +82,9 @@ For Battery Energy Storage Systems, the following PCSs are defined:
 - **PCS‑I6** — Voltage dip ride‑through
 - **PCS‑I7** — Overvoltage ride‑through
 - **PCS‑I10** — Islanded network operation
+- **PCS‑I18** — Grid Forming, for an installation of type C or D given its
+  curves, under the revision 20260723 of the DTR that adds it (see
+  [checking the curves of a storage unit](grid_forming_analysis.md#11-checking-the-curves-of-a-storage-unit))
 
 ---
 

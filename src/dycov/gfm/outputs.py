@@ -8,6 +8,8 @@
 
 import configparser
 import importlib.metadata
+import json
+from collections import namedtuple
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Optional, TextIO
@@ -17,6 +19,28 @@ import pandas as pd
 import plotly.graph_objects as go
 from matplotlib import pyplot as plt
 
+from dycov.configuration.cfg import config
+from dycov.gfm import constants
+
+# The envelopes of a test: the magnitude they bound, whether they are for EMT simulations, their
+# time values with the time and the duration of the event, the response of the ideal voltage
+# source with its two bounds, the extra bounds saved for debugging, and the parameters printed on
+# the figure
+Envelopes = namedtuple(
+    "Envelopes",
+    [
+        "magnitude",
+        "emt",
+        "time",
+        "event_time",
+        "event_duration",
+        "response",
+        "lower",
+        "upper",
+        "extra",
+        "parameters",
+    ],
+)
 _SECTION_RULE = "=" * 30
 
 
@@ -28,6 +52,7 @@ def save_results_to_csv(
     lower_envelope: np.ndarray,
     upper_envelope: np.ndarray,
     extra_envelopes: Optional[dict[str, np.ndarray]] = None,
+    producer_signal: Optional[np.ndarray] = None,
 ) -> None:
     """
     Exports envelopes and signals to a CSV file.
@@ -48,6 +73,8 @@ def save_results_to_csv(
         Array of upper envelope values.
     extra_envelopes : dict[str, np.ndarray], optional
         Additional envelopes to save. Defaults to None.
+    producer_signal : np.ndarray, optional
+        Filtered producer curve on the same time values. Defaults to None.
     """
     data = {
         "Time (s)": time_array,
@@ -57,6 +84,8 @@ def save_results_to_csv(
     }
     for name, signal in (extra_envelopes or {}).items():
         data[f"{magnitude} {name} (pu)"] = signal
+    if producer_signal is not None:
+        data[f"{magnitude} producer (pu)"] = producer_signal
 
     pd.DataFrame(data).to_csv(path, index=False, sep=";", float_format="%.3e")
 
@@ -165,6 +194,7 @@ class _Window:
     lower: np.ndarray
     upper: np.ndarray
     extra: dict[str, np.ndarray]
+    producer: Optional[np.ndarray]
 
 
 def plot_results(
@@ -180,6 +210,7 @@ def plot_results(
     output_format: str,
     params_list: Optional[list] = None,
     extra_envelopes: Optional[dict[str, np.ndarray]] = None,
+    producer_signal: Optional[np.ndarray] = None,
 ) -> None:
     """
     Renders and exports simulation results graphically.
@@ -210,19 +241,24 @@ def plot_results(
         List of parameter strings to display on the plot. Defaults to None.
     extra_envelopes : dict[str, np.ndarray], optional
         Additional signals to plot. Defaults to None.
+    producer_signal : np.ndarray, optional
+        Filtered producer curve on the same time values, checked against the envelopes.
+        Defaults to None.
 
     Raises
     ------
     TypeError
         If the output format is not text.
     ValueError
-        If the output format names neither png nor html, or the time, the signal and the
+        If the output format names neither png nor html, or the time, the signals and the
         envelopes differ in length.
     """
     _check_plot_options(output_format)
-    _check_plot_lengths(time_array, pcc_signal, lower_envelope, upper_envelope, extra_envelopes)
+    _check_plot_lengths(
+        time_array, pcc_signal, lower_envelope, upper_envelope, extra_envelopes, producer_signal
+    )
     window = _transient_window(
-        time_array, pcc_signal, lower_envelope, upper_envelope, extra_envelopes
+        time_array, pcc_signal, lower_envelope, upper_envelope, extra_envelopes, producer_signal
     )
     event_x = event_time + shift_time / 1000
     watermark_text = _watermark_text()
@@ -264,6 +300,7 @@ def _check_plot_lengths(
     lower_envelope: np.ndarray,
     upper_envelope: np.ndarray,
     extra_envelopes: Optional[dict[str, np.ndarray]],
+    producer_signal: Optional[np.ndarray],
 ) -> None:
     lengths = {
         "time": len(time_array),
@@ -271,6 +308,7 @@ def _check_plot_lengths(
         "lower envelope": len(lower_envelope),
         "upper envelope": len(upper_envelope),
         **{name: len(signal) for name, signal in (extra_envelopes or {}).items()},
+        **({"producer signal": len(producer_signal)} if producer_signal is not None else {}),
     }
     if len(set(lengths.values())) > 1:
         raise ValueError(
@@ -286,6 +324,7 @@ def _transient_window(
     lower_envelope: np.ndarray,
     upper_envelope: np.ndarray,
     extra_envelopes: Optional[dict[str, np.ndarray]],
+    producer_signal: Optional[np.ndarray],
 ) -> _Window:
     start_index = find_start_trim_index(pcc_signal, lower_envelope, upper_envelope)
     end_index = find_end_trim_index(pcc_signal, lower_envelope, upper_envelope)
@@ -296,6 +335,7 @@ def _transient_window(
         lower=lower_envelope[window],
         upper=upper_envelope[window],
         extra={name: signal[window] for name, signal in (extra_envelopes or {}).items()},
+        producer=producer_signal[window] if producer_signal is not None else None,
     )
 
 
@@ -339,6 +379,10 @@ def _plot_png(
     plt.plot(window.time, window.pcc, label=f"{magnitude} at PGU", linewidth=3)
     plt.plot(window.time, window.lower, label=f"{magnitude} envelopes", linewidth=2, color="red")
     plt.plot(window.time, window.upper, linewidth=2, color="red")
+    if window.producer is not None:
+        plt.plot(
+            window.time, window.producer, label=f"{magnitude} producer", linewidth=2, color="green"
+        )
 
     plt.xlabel("Time (s)")
     plt.ylabel(f"{magnitude} (pu)")
@@ -438,6 +482,16 @@ def _plot_html(
             name=f"{magnitude} PGU",
         )
     )
+    if window.producer is not None:
+        fig.add_trace(
+            go.Scatter(
+                x=window.time,
+                y=window.producer,
+                mode="lines",
+                line=dict(color="green", width=2),
+                name=f"{magnitude} producer",
+            )
+        )
 
     fig.add_vline(
         x=event_x,
@@ -553,3 +607,96 @@ def _write_attributes(f: TextIO, title: str, attributes: dict) -> None:
     for key, value in sorted(attributes.items()):
         if not callable(value):
             f.write(f"{key} = {value}\n")
+
+
+def save_results(path: Path, envelopes: Envelopes, curves_check: Any = None) -> None:
+    """
+    Exports what describes the envelopes of a test to a JSON file, with the compliance of its
+    producer curves when they are checked. A performance verification given the envelopes reads
+    the description back.
+
+    Parameters
+    ----------
+    path : Path
+        Destination path for the JSON file.
+    envelopes : Envelopes
+        The envelopes of the test.
+    curves_check : Any, optional
+        The result of checking the producer curves against the envelopes and the damping
+        criterion. Defaults to None, when the producer curves are not checked.
+
+    Returns
+    -------
+    None
+    """
+    results = {
+        "magnitude": envelopes.magnitude,
+        "emt": envelopes.emt,
+        "event_duration": envelopes.event_duration,
+        "parameters": envelopes.parameters,
+    }
+    if curves_check is not None:
+        results |= {
+            "compliance": curves_check.compliance.to_str(),
+            "cutoff": config.get_float("GFM", "cutoff", 30.0),
+            "envelope_tolerance": config.get_float("GFM", "envelope_tolerance", 0.005),
+            "envelope": curves_check.envelope._asdict() if curves_check.envelope else None,
+            "thr_damping_ratio": config.get_float("GFM", "thr_damping_ratio", 0.40),
+            "damping_band": [
+                config.get_float("GFM", "damping_f_min", 0.1),
+                config.get_float("GFM", "damping_f_max", 10.0),
+            ],
+            "damping_event_delay": config.get_float("GFM", "damping_event_delay", 0.005),
+            "damping_time_step": config.get_float("GFM", "damping_time_step", 0.005),
+            "damping_pencil_order": config.get_int("GFM", "damping_pencil_order", 6),
+            "damping_min_amplitude": config.get_float("GFM", "damping_min_amplitude", 0.001),
+            "modes": [mode._asdict() for mode in curves_check.modes],
+        }
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(results, f, indent=4)
+
+
+def read_envelopes(directory: Path, title: str) -> Optional[Envelopes]:
+    """
+    Reads back the envelopes of a test from the directory where they were written.
+
+    Parameters
+    ----------
+    directory : Path
+        Directory of the test, holding the CSV file of its envelopes and their description.
+    title : str
+        The name of the test, which names its CSV file.
+
+    Returns
+    -------
+    Optional[Envelopes]
+        The envelopes of the test, or None when the directory lacks either file.
+
+    Raises
+    ------
+    ValueError
+        If either file cannot be parsed.
+    KeyError
+        If either file lacks what describes the envelopes.
+    """
+    csv_path = directory / f"{title}.csv"
+    results_path = directory / "results.json"
+    if not (csv_path.is_file() and results_path.is_file()):
+        return None
+
+    with open(results_path, encoding="utf-8") as f:
+        results = json.load(f)
+    magnitude = results["magnitude"]
+    data = pd.read_csv(csv_path, sep=";")
+    return Envelopes(
+        magnitude=magnitude,
+        emt=results["emt"],
+        time=data["Time (s)"].to_numpy(),
+        event_time=constants.SIMULATION_EVENT_TIME,
+        event_duration=results["event_duration"],
+        response=data[f"{magnitude} PGU (pu)"].to_numpy(),
+        lower=data[f"{magnitude} lower (pu)"].to_numpy(),
+        upper=data[f"{magnitude} upper (pu)"].to_numpy(),
+        extra=None,
+        parameters=results["parameters"],
+    )

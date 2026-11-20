@@ -554,8 +554,7 @@ def copy_latex_files(source: Path, target: Path, prefix_name: str) -> None:
     prefix_name : str
         Prefix for LaTeX file names.
     """
-    for asset in _LATEX_ASSETS:
-        copy_file(asset, target)
+    copy_latex_assets(target)
 
     tex_pattern = re.compile(r".*\.tex")
     tex_pattern2 = re.compile(r"common*")
@@ -564,6 +563,18 @@ def copy_latex_files(source: Path, target: Path, prefix_name: str) -> None:
             copy_file(file, target / f"{prefix_name}.{file.name}")
         else:
             copy_file(file, target)
+
+
+def copy_latex_assets(target: Path) -> None:
+    """Copy the images the LaTeX templates include to the target directory.
+
+    Parameters
+    ----------
+    target : Path
+        Directory where the report is compiled.
+    """
+    for asset in _LATEX_ASSETS:
+        copy_file(asset, target)
 
 
 def create_config_file(config_file: Path, target_file: Path) -> None:

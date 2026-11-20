@@ -1,0 +1,20 @@
+% Custom macros common to all reports:
+{{ producercommand }}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% The document starts here
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+    \section{Results for PCS RTE-IGFM1}
+
+    Grid Forming test agreed with RTE before the DTR Fiche I18, which covers storage units
+    alone: the phase of the voltage at the infinite bus jumps by
+    \(\Delta\theta_{grid} = \pm 0.3\,(x_{eff} + x_{grid})\) rad, with a grid of short-circuit
+    ratio 2 and 10, from the operating points OC1 to OC5. The envelopes bound the active current
+    \(I_p\) at the PGU terminals.
+
+    \BLOCK{for subReport in subReports}
+    {{subReport}}
+    \newpage
+    \BLOCK{endfor}
