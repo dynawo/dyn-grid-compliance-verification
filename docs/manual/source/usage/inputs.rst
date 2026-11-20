@@ -553,8 +553,16 @@ the reference curves.
 
 The run reports what it could not complete rather than failing silently: the
 blocks of ``Général`` whose parameter sheet contributed nothing, the ``.csv``
-files named in the sheets that were not found in the results folder, and the
-tests whose curve metadata is still blank. A row that is needed and is absent,
+files named in the sheets that were not found in the results folder, the
+tests whose curve metadata is still blank, and the tests the revision of the
+DTR being validated runs that the workbook has no row for. The rows of the
+signal sheets are read as the tests of that revision: the template has a row
+for the tests of every revision, and a revision leaves out the rows it does not
+run (the I7 swells at Qmin and Qmax in the revisions from 3.5 on, which run one
+at Q = 0). Keep every row of the tests table, those your revision does not run
+included, and leave the results file of a row blank when you have no record
+for it: a row is read by its position among the rows of its fiche, so removing
+one changes the meaning of the rows after it. A row that is needed and is absent,
 empty or not a number is refused naming the sheet, the row and what was found,
 so an unfilled workbook says so instead of producing half a model.
 

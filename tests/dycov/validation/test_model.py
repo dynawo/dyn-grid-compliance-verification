@@ -721,7 +721,6 @@ def test_calculate_mean_absolute_error_for_voltage():
     # Averaged over the three samples after the calculated settling instant.
     assert results["mae_voltage_1P"] == pytest.approx(0.04 / 3)
     assert results["ss_error_voltage_1P"] == pytest.approx(0.04 / 3)
-    assert results["mae_voltage_1P_stabilized"] is True
 
 
 def test_calculate_mean_absolute_error_for_power_covers_both_components():
@@ -739,8 +738,6 @@ def test_calculate_mean_absolute_error_for_power_covers_both_components():
     assert results["ss_error_active_power_1P"] == pytest.approx(0.04 / 3)
     assert results["mae_reactive_power_1P"] == pytest.approx(0.0)
     assert results["ss_error_reactive_power_1P"] == pytest.approx(0.0)
-    assert results["mae_active_power_1P_stabilized"] is True
-    assert results["mae_reactive_power_1P_stabilized"] is True
 
 
 def test_calculate_mean_absolute_error_for_injection_covers_both_components():
@@ -760,54 +757,71 @@ def test_calculate_mean_absolute_error_for_injection_covers_both_components():
     assert results["ss_error_reactive_current_1P"] == pytest.approx(0.0)
 
 
-def test_calculate_mean_absolute_error_reports_a_curve_still_moving_as_not_stabilized():
-    validator = _make_validator(zone=3, validations=["mean_absolute_error_voltage"])
-    calculated, reference = _make_mae_curves("BusPDR_BUS_Voltage")
-    calculated["BusPDR_BUS_Voltage"] = [1.0, 1.0, 1.02, 1.06]
+def _stability(validator, calculated, zone=3) -> dict:
     results = {}
-
-    validator._ModelValidator__calculate_mean_absolute_error(
-        3, "BusPDR_BUS_Voltage", (calculated, reference), 0.1, results
-    )
-
-    assert results["mae_voltage_1P_stabilized"] is False
+    validator._ModelValidator__calculate_stability(zone, calculated, results)
+    return results
 
 
-def test_calculate_mean_absolute_error_judges_the_stabilization_on_the_whole_after_window():
+def test_calculate_stability_reports_every_settled_curve_as_stabilized():
+    validator = _make_validator(zone=3, validations=["mean_absolute_error_power_1P"])
+    calculated, _ = _make_mae_curves("BusPDR_BUS_ActivePower")
+    calculated["BusPDR_BUS_ReactivePower"] = [0.1, 0.1, 0.1, 0.1]
+
+    results = _stability(validator, calculated)
+
+    assert results == {
+        "mae_active_power_1P_stabilized": True,
+        "mae_reactive_power_1P_stabilized": True,
+    }
+
+
+def test_calculate_stability_reports_a_curve_still_moving_as_not_stabilized():
+    validator = _make_validator(zone=3, validations=["mean_absolute_error_voltage"])
+    calculated, _ = _make_mae_curves("BusPDR_BUS_Voltage")
+    calculated["BusPDR_BUS_Voltage"] = [1.0, 1.0, 1.02, 1.06]
+
+    assert _stability(validator, calculated)["mae_voltage_1P_stabilized"] is False
+
+
+def test_calculate_stability_judges_the_stabilization_on_the_whole_after_window():
     validator = _make_validator(zone=3, validations=["mean_absolute_error_voltage"])
     time = [float(instant) for instant in range(21)]
     voltage = [1.0] * 21
     voltage[18] = 1.5
     calculated = pd.DataFrame({"time": time, "BusPDR_BUS_Voltage": voltage})
-    reference = pd.DataFrame({"time": time, "BusPDR_BUS_Voltage": [1.0] * 21})
-    results = {}
 
-    validator._ModelValidator__calculate_mean_absolute_error(
-        3, "BusPDR_BUS_Voltage", (calculated, reference), 0.1, results
-    )
-
-    # The settling slice begins at the excursion and is flat from the next sample on, so it
-    # hides it; the excursion only shows up when the whole post-event window is judged.
-    assert results["mae_voltage_1P_stabilized"] is False
+    # A slice that began at the settling instant would begin at the excursion and be flat
+    # from the next sample on, so it would hide it.
+    assert _stability(validator, calculated)["mae_voltage_1P_stabilized"] is False
 
 
-def test_calculate_mean_absolute_error_reports_not_stabilized_when_stability_is_undecidable(
+def test_calculate_stability_reports_the_stability_as_unknown_when_it_is_undecidable(
     monkeypatch,
 ):
     validator = _make_validator(zone=3, validations=["mean_absolute_error_voltage"])
-    curves = _make_mae_curves("BusPDR_BUS_Voltage")
+    calculated, _ = _make_mae_curves("BusPDR_BUS_Voltage")
 
     def _raise(time_curve, curve, thr_ss_tol):
         raise ValueError("the curve values and its time series have different length")
 
     monkeypatch.setattr(f"{COMMON_MODULE}.is_stable", _raise)
-    results = {}
 
-    validator._ModelValidator__calculate_mean_absolute_error(
-        3, "BusPDR_BUS_Voltage", curves, 0.1, results
-    )
+    assert _stability(validator, calculated)["mae_voltage_1P_stabilized"] == "N/A"
 
-    assert results["mae_voltage_1P_stabilized"] is False
+
+def test_calculate_stability_leaves_out_a_curve_the_simulation_lacks():
+    validator = _make_validator(zone=3, validations=["mean_absolute_error_power_1P"])
+    calculated, _ = _make_mae_curves("BusPDR_BUS_ActivePower")
+
+    assert _stability(validator, calculated) == {"mae_active_power_1P_stabilized": True}
+
+
+def test_calculate_stability_skips_the_checks_the_benchmark_does_not_declare():
+    validator = _make_validator(zone=3, validations=["mean_absolute_error_voltage"])
+    calculated = _make_pdr_curves()
+
+    assert list(_stability(validator, calculated)) == ["mae_voltage_1P_stabilized"]
 
 
 # ---------------------------------------------------------------------------
@@ -926,8 +940,30 @@ def test_check_mae_without_the_magnitudes_reports_not_available(validation, chec
     for check_key in check_keys:
         assert check_results[check_key] == "N/A"
         assert check_results[check_key.replace("_check", "_stabilized")] == "N/A"
-    assert check_results["stabilized"] is False
+    assert check_results["stabilized"] == "N/A"
     assert check_results["compliance"] is False
+
+
+@pytest.mark.parametrize("stabilized", [True, False])
+def test_check_mae_without_the_error_reports_the_stability_of_the_calculated_curve(stabilized):
+    validator = _make_validator(validations=["mean_absolute_error_voltage"])
+    check_results = {"compliance": True, "stabilized": True}
+
+    validator._ModelValidator__check_mae(check_results, {"mae_voltage_1P_stabilized": stabilized})
+
+    assert check_results["mae_voltage_1P_check"] == "N/A"
+    assert check_results["mae_voltage_1P_stabilized"] is stabilized
+    assert check_results["stabilized"] is stabilized
+    assert check_results["compliance"] is False
+
+
+def test_check_mae_without_mean_absolute_error_checks_reports_the_stability_as_unknown():
+    validator = _make_validator(validations=["reaction_time"])
+    check_results = {"compliance": True, "stabilized": True}
+
+    validator._ModelValidator__check_mae(check_results, {})
+
+    assert check_results == {"compliance": True, "stabilized": "N/A"}
 
 
 # ---------------------------------------------------------------------------
@@ -1063,7 +1099,8 @@ def test_check_creates_the_base_results():
     )
 
     assert check_results["compliance"] is True
-    assert check_results["stabilized"] is True
+    # Without a mean absolute error check nothing tells whether the curves settle.
+    assert check_results["stabilized"] == "N/A"
     assert check_results["sim_t_event_start"] == 1.0
     assert check_results["is_invalid_test"] is False
     assert check_results["curves_error"] is compliance_values
@@ -1323,6 +1360,71 @@ def test_validate_without_reference_curves_reports_the_checks_as_not_available(t
     assert results["t_P90_check"] == "N/A"
     assert results["reaction_time_check"] == "N/A"
     assert results["compliance"] is False
+
+
+_STEP_EVENT = {
+    "start_time": 1.0,
+    "duration_time": 1.0,
+    "connect_to": "ActivePowerSetpointPu",
+    "step_value": 0.1,
+}
+
+
+def _validate_without_reference(tmp_path, voltage=None, windows_raise=False) -> dict:
+    calculated = _make_pdr_curves(voltage=voltage)
+    windows = {window: (calculated, pd.DataFrame()) for window in ("before", "during", "after")}
+    curves_manager = DummyCurvesManager(
+        calculated=calculated, windows=windows, windows_raise=windows_raise
+    )
+    validator = _make_validator(
+        validations=["mean_absolute_error_voltage"], zone=3, curves_manager=curves_manager
+    )
+    return validator.validate("oc", tmp_path, "outputs", _STEP_EVENT, has_reference=False)
+
+
+def test_validate_without_reference_curves_reports_the_stability_of_the_calculated_curves(
+    tmp_path,
+):
+    results = _validate_without_reference(tmp_path)
+
+    assert results["stabilized"] is True
+    assert results["mae_voltage_1P_stabilized"] is True
+    assert results["mae_voltage_1P_check"] == "N/A"
+    assert results["compliance"] is False
+    assert results["incomplete_curves"] is True
+
+
+def test_validate_without_reference_curves_reports_a_calculated_curve_still_moving(tmp_path):
+    results = _validate_without_reference(tmp_path, voltage=[1.0, 1.0, 1.02, 1.06])
+
+    assert results["stabilized"] is False
+
+
+def test_validate_without_reference_curves_nor_windows_reports_the_stability_as_unknown(
+    tmp_path,
+):
+    results = _validate_without_reference(tmp_path, windows_raise=True)
+
+    assert results["stabilized"] == "N/A"
+    assert results["compliance"] is False
+
+
+def test_a_comparison_that_fails_leaves_the_stability_of_the_calculated_curves(
+    tmp_path, monkeypatch
+):
+    def _raise(*args, **kwargs):
+        raise ValueError("a window of the reference is empty")
+
+    monkeypatch.setattr(f"{MODEL_MODULE}.calculate_errors", _raise)
+    curves_manager = _make_window_manager()
+    validator = _make_validator(
+        validations=["mean_absolute_error_voltage"], zone=3, curves_manager=curves_manager
+    )
+
+    results = validator.validate("oc", tmp_path, "outputs", _STEP_EVENT)
+
+    assert results["is_invalid_test"] == "N/A"
+    assert results["stabilized"] is True
 
 
 def test_validate_reports_the_setpoint_tracking_flag_to_the_signal_processing(tmp_path):

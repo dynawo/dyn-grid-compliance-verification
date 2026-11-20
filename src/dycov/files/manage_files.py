@@ -542,6 +542,9 @@ def _copy_pcs_delta_files(
 def copy_latex_files(source: Path, target: Path, prefix_name: str) -> None:
     """Copy LaTeX files and additional resources to target directory.
 
+    The files of the source go last, so a file of the source with the name of a resource
+    replaces it.
+
     Parameters
     ----------
     source : Path
@@ -551,6 +554,8 @@ def copy_latex_files(source: Path, target: Path, prefix_name: str) -> None:
     prefix_name : str
         Prefix for LaTeX file names.
     """
+    copy_latex_assets(target)
+
     tex_pattern = re.compile(r".*\.tex")
     tex_pattern2 = re.compile(r"common*")
     for file in source.iterdir():
@@ -558,8 +563,6 @@ def copy_latex_files(source: Path, target: Path, prefix_name: str) -> None:
             copy_file(file, target / f"{prefix_name}.{file.name}")
         else:
             copy_file(file, target)
-
-    copy_latex_assets(target)
 
 
 def copy_latex_assets(target: Path) -> None:

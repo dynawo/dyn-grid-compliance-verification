@@ -14,6 +14,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from dycov.configuration.cfg import config
 from dycov.gfm.calculators.rocof import RoCoF
@@ -259,3 +260,31 @@ def test_s_rocof_1_rocof():
     assert math.isclose(
         max(np.abs(csv_data[f"{magnitude} upper (pu)"] - p_up)), 0, abs_tol=epsilon
     )
+
+
+def test_variations_on_both_sides_of_critical_damping_each_take_their_own_regime():
+    """At SCR 10 with H = 5 and D = 200 the nominal set and one variation are overdamped and
+    the other underdamped."""
+    params = (
+        gfm_underdamped_params.replace("SCR=20.0", "SCR=10.0")
+        .replace("RoCoF=10.0", "RoCoF=2.0\nRoCoFDuration=0.5")
+        .replace("P0=0.9", "P0=0.5")
+    )
+    time_array = np.linspace(-1, 5, 3001)
+    rocof = RoCoF(gfm_params=ParametersHelper(params))
+    rocof._is_emt_flag = False
+
+    _, _, upper, lower = rocof.calculate_envelopes(
+        D=200, H=5, Xeff=0.27, time_array=time_array, event_time=0
+    )
+
+    assert rocof._epsilon_vals == pytest.approx([1.0855, 0.7767, 1.4269], abs=1e-4)
+    after_event = time_array > 0.05
+    for damping, inertia, damping_ratio in zip(rocof._d_vals, rocof._h_vals, rocof._epsilon_vals):
+        natural_frequency = rocof._natural_frequency(inertia, 0.27 + 1 / 10)
+        delta_p, _, _ = rocof._calculate_delta_p_for_damping(
+            damping, inertia, natural_frequency, damping_ratio, time_array, 0
+        )
+        response = 0.5 + delta_p[after_event]
+        assert (lower[after_event] <= response + 1e-9).all(), (damping, inertia)
+        assert (response <= upper[after_event] + 1e-9).all(), (damping, inertia)

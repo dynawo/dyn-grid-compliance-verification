@@ -60,8 +60,8 @@ finds none, or one the tool does not implement, stops and lists the revisions it
 a template other than the one the release reads, in the `format_version` cell of its
 `Infos générales ->` sheet: rows that differ between the two would be dropped or missing. The
 templates of 1.2.1 said 1.2.1 and those of 1.3.0 said 1.0.0, so every workbook made on them is
-warned about. One made on the templates of 1.3.0 only needs that cell set to 1.3.0; an older one
-has its data copied into `workbooks/Producer_IEC.xlsx` or `workbooks/Producer_WECC.xlsx` (#701).
+warned about: copy its data into `workbooks/Producer_IEC.xlsx` or `workbooks/Producer_WECC.xlsx`,
+whose rows the next sections describe (#701).
 
 ### The fault searches run on the simplified solver
 
@@ -80,14 +80,62 @@ decoupling protection curves, which the previous template listed one parameter p
 data of a workbook made on the template of 1.3.0 into `workbooks/Producer_IEC.xlsx`: it is still
 read, with a warning, and its protection curves written as before (#394).
 
+### The workbooks carry the tests of every revision of the DTR
+
+The rows of the signal sheets are read as the tests of the revision of the DTR being validated,
+so the records a workbook gives reach the tests that revision runs. Both templates, the WECC one
+now version 1.4.0 as well, carry a row for every test of every revision: a second I5 row, the
+impedant fault, after the bolted one, and a third I7 row, the swell at Q = 0, which the revisions
+from 3.5 on run instead of the two of the base. Copy the data of a workbook made on an earlier
+template into `workbooks/Producer_IEC.xlsx` or `workbooks/Producer_WECC.xlsx` and fill the new
+rows: a workbook without them is still read, and the conversion names the tests it has no row
+for (#679).
+
+### Your report templates replace the packaged ones
+
+A report template in `templates/reports` of the configuration directory replaces the packaged one
+of the same name, and the one of the revision of the DTR, as the manual says; until now they
+overwrote it. A copy of a packaged template left there now hides the packaged one, and the
+corrections later releases bring to it, so remove the copies you do not mean to change (#686).
+
+### A copy of `commonz1.tex` names the schematic of its unit
+
+The report of each Zone 1 unit draws its own schematic, which `commonz1.tex` names through
+`\ProducerFiles`. A copy of `commonz1.tex` among your report templates made on an earlier release
+still names the shared template, and its report draws both circuits one over the other: copy it
+again from the package, or write `\ProducerFiles.circuit_z1_fault.tikz` and
+`\ProducerFiles.circuit_z1_setpoint.tikz` where it names the schematics (#793).
+
 ### Fixed
 
+- The IEC wind power plants of zone 3 are measured at Node2 itself, as the turbines of zone 1
+  are since 1.3.0. With the low-voltage transformer inside the converter model
+  (`WPP_ConverterLVControl = false`), their voltage and powers there were read on its grid side,
+  at Node1, and so were the currents at Node2 the tool derives from them (#634).
+- Every test an F16 declaration names is run, recorded or not, and one without its record ends as
+  missing its reference curves, where the notes of 1.3.0 said only the recorded ones run: declare
+  only the tests recorded (#684).
+- The page of a model-validation test without reference curves gives the dynamic behaviour of
+  the simulated curves, where it always said "unstable"; when it cannot be told, it says N/A
+  (#685).
+- `generate_gfm_envelopes` keeps the envelopes of every PCS when one it lists generates none,
+  because it is not a valid PCS, its description cannot be read or its generation stopped before
+  its first envelope: it reports that PCS and leaves it out, where it stopped there and lost the
+  envelopes of the PCS listed after it (#688).
+- The reports of fiche I16 zone 1 give the 500 ms high-impedance fault as a dip of 0.7 Un, where
+  they said V = 0.7 Un: the voltage falls to 0.3 Un (#697).
+- The Zone 1 schematic of the report follows the Zone 1 model in a parallel validation too, where
+  it drew the group transformer or left it out depending on which PCS prepared its report first
+  (#740).
 - A power park module of 250 MW or more connected at HTB1 takes the reactance b the DTR gives it,
   0.54 up to 800 MW and 0.6 above, where it took 0.3: its line reactances in the fiches I2, I5,
   I10 and I16 zone 3, and the reactance of the impedant fault, change with it. Such a unit reads
   its steps of b from `HTB1_reactance_b_PPM` and the powers between them from `HTB1_p_max_PPM`,
   so a configuration that changed them through `HTB1_reactance_b_low`, `_b_high` or
   `HTB1_p_max` now changes those two keys instead (#744).
+- The SCR jump no longer marks its envelopes as inconsistent when the variations of D and H fall
+  on both sides of critical damping: each takes the response of its own regime, as in the RoCoF
+  (#761).
 - `generate_gfm_envelopes` reads the producer file `-i` names and no other INI of its folder, and
   stops when that file does not exist (#766).
 - The native installation lists `tex-gyre`, the fonts of the PDF manual the installer compiles,
@@ -100,10 +148,14 @@ read, with a warning, and its protection curves written as before (#394).
   nominal frequency of the configuration (#779).
 - The SCR jump envelopes keep their shape outside the 30 ms hold after the event when the
   producer's minimum power is above zero or its maximum below zero (#780).
-- The disclaimer of a hybrid SCR jump run names the set of D and H that damps inconsistently
-  (#781).
+- In a model with several Zone 1 units, the report draws for each unit its own Zone 1
+  schematic, where every unit got that of the unit rendered last (#793).
 - `generate_gfm_envelopes` stops, naming each value, when the producer's D, H or Xeff cannot give
   envelopes (#782).
+- A list of the configuration may have spaces around its commas, or a comma at its end: a PCS
+  listed after a space was looked for with that space in its name, and the run stopped with an
+  error that said nothing about the cause. The voltage figure of the swell of fiche I16 zone 3
+  for storage units, left out by such a space in the shipped description, is back (#792).
 
 ## 1.3.0 — 2026-10-29
 

@@ -221,7 +221,8 @@ def copy_pcs_latex_files(
     producer_name: str,
     working_path: Path,
 ) -> None:
-    """Copies the LaTeX templates of a PCS, the user's and the tool's, to the working path.
+    """Copies the LaTeX templates of a PCS to the working path: the tool's, then those of the
+    revision of the DTR, then the user's, so each one replaces a template of the same name.
 
     Parameters
     ----------
@@ -244,8 +245,6 @@ def copy_pcs_latex_files(
     dycov_logging.get_logger("Report").debug(f"{pcs_name}: Tool LaTeX path:{latex_tool_path}")
 
     prefix = producer_name.replace("_", "")
-    if latex_user_path.exists():
-        manage_files.copy_latex_files(latex_user_path, working_path, prefix)
     if latex_tool_path.exists():
         manage_files.copy_latex_files(latex_tool_path, working_path, prefix)
 
@@ -255,6 +254,9 @@ def copy_pcs_latex_files(
             f"{pcs_name}: DTR delta LaTeX path:{latex_delta_path}"
         )
         manage_files.copy_latex_files(latex_delta_path, working_path, prefix)
+
+    if latex_user_path.exists():
+        manage_files.copy_latex_files(latex_user_path, working_path, prefix)
 
     if not (latex_tool_path.exists() or latex_user_path.exists() or latex_delta_path):
         dycov_logging.get_logger("Report").error(f"{pcs_name}: Latex Template do not exist")
@@ -299,10 +301,11 @@ def _pcs_replace(
         pcs_results["pcs"].get_name(), "setpoint_tracking_thresholds", ""
     )
 
-    _render_zone1_circuits(working_path, producer)
+    _render_zone1_circuits(working_path, producer, pcs_results["pcs"].get_zone(), producer_name)
 
     subst_dict = {
-        "producercommand": f"\\renewcommand{{\\Producer}}{{{pcs_results['producer']}}}",
+        "producercommand": f"\\renewcommand{{\\Producer}}{{{pcs_results['producer']}}}"
+        f"\\renewcommand{{\\ProducerFiles}}{{{producer_name}}}",
         "category": producer.get_category(),
     }
     subreports = []
@@ -389,7 +392,9 @@ def _pcs_replace(
     return len(subreports)
 
 
-def _stability_label(stabilized: bool) -> str:
+def _stability_label(stabilized: bool | str) -> str:
+    if stabilized == "N/A":
+        return "N/A"
     return "stable" if stabilized else r"\textcolor{red}{unstable}"
 
 
@@ -413,19 +418,29 @@ def get_template(path, template_file):
     return template
 
 
-def _render_zone1_circuits(working_path: Path, producer: ModelProducer) -> None:
+def _render_zone1_circuits(
+    working_path: Path, producer: ModelProducer, zone: int, prefix: str
+) -> None:
     """Render the Zone-1 circuit schematics, hiding the Group_Xfmr when absent.
 
     Zone 1 omits the external group transformer when ConverterLVControl is false: the
     converter's own transformer already reaches the internal node, so the schematic
     must not draw an external one.
+
+    Only the report of a Zone 1 PCS renders them, because its producer describes the Zone 1
+    model, and each unit renders its own, named after it as its other files are: every PCS and
+    every unit renders into the same LaTeX directory.
     """
+    if zone != 1:
+        return
     group_xfmrs = getattr(producer, "group_xfmrs", None)
     has_group_xfmr = group_xfmrs is None or len(group_xfmrs) > 0
     for tikz_name in ("circuit_z1_fault.tikz", "circuit_z1_setpoint.tikz"):
         if (working_path / tikz_name).exists():
             tikz_template = get_template(working_path, tikz_name)
-            tikz_template.stream(hasgroupxfmr=has_group_xfmr).dump(str(working_path / tikz_name))
+            tikz_template.stream(hasgroupxfmr=has_group_xfmr).dump(
+                str(working_path / f"{prefix}.{tikz_name}")
+            )
 
 
 def _get_iq_last_val(plot_curves: list) -> float | None:

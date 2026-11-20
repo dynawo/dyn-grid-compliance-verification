@@ -375,6 +375,10 @@ def test_a_stable_test_is_labelled_as_such():
     assert report._stability_label(True) == "stable"
 
 
+def test_a_test_whose_stability_is_unknown_is_labelled_not_available():
+    assert report._stability_label("N/A") == "N/A"
+
+
 def test_an_unstable_test_is_labelled_with_a_latex_command_in_red():
     label = report._stability_label(False)
 
@@ -514,3 +518,179 @@ def test_the_summary_of_a_workbook_names_the_workbook_alone(monkeypatch, caplog)
     assert "***Workbook: Producer.xlsx***" in summary
     assert "Model dir" not in summary
     assert "Reference curves dir" not in summary
+
+
+_PACKAGED_REPORTS = Path(report.__file__).resolve().parent.parent / "templates"
+_PCS_REPORTS = Path("reports/model/PPM/PCS_RTE-I16z3")
+
+
+def _copy_the_templates(tmp_path: Path, monkeypatch, user_templates: dict) -> Path:
+    config_dir = tmp_path / "config"
+    user_dir = config_dir / "templates" / _PCS_REPORTS
+    user_dir.mkdir(parents=True)
+    for name, text in user_templates.items():
+        (user_dir / name).write_text(text)
+    monkeypatch.setattr(type(report.config), "get_config_dir", lambda self: config_dir)
+    latex_dir = tmp_path / "Latex"
+    latex_dir.mkdir()
+    report.copy_pcs_latex_files(
+        Path("templates/reports"), "model/PPM", "PCS_RTE-I16z3", "Producer", latex_dir
+    )
+    return latex_dir
+
+
+def test_a_user_report_template_replaces_the_packaged_one_of_the_same_name(
+    tmp_path, monkeypatch, set_user_option
+):
+    set_user_option("DTR", "current", "20240215")
+
+    latex_dir = _copy_the_templates(
+        tmp_path, monkeypatch, {"report.GridVoltageSwell.QMax.tex": "USER TEMPLATE"}
+    )
+
+    assert (latex_dir / "Producer.report.GridVoltageSwell.QMax.tex").read_text() == (
+        "USER TEMPLATE"
+    )
+    packaged = _PACKAGED_REPORTS / _PCS_REPORTS / "report.GridVoltageSwell.QMin.tex"
+    assert (latex_dir / "Producer.report.GridVoltageSwell.QMin.tex").read_text() == (
+        packaged.read_text()
+    )
+
+
+def test_a_user_report_template_replaces_the_one_of_the_revision_of_the_dtr(
+    tmp_path, monkeypatch, set_user_option
+):
+    set_user_option("DTR", "current", "20260723")
+
+    latex_dir = _copy_the_templates(
+        tmp_path, monkeypatch, {"report.GridVoltageDip.Qzero.tex": "USER TEMPLATE"}
+    )
+
+    assert (latex_dir / "Producer.report.GridVoltageDip.Qzero.tex").read_text() == (
+        "USER TEMPLATE"
+    )
+
+
+def test_the_revision_of_the_dtr_replaces_the_packaged_report_template(
+    tmp_path, monkeypatch, set_user_option
+):
+    set_user_option("DTR", "current", "20260723")
+
+    latex_dir = _copy_the_templates(tmp_path, monkeypatch, {})
+
+    delta = _PACKAGED_REPORTS / "revisions/20260723" / _PCS_REPORTS
+    assert (latex_dir / "Producer.report.GridVoltageDip.Qzero.tex").read_text() == (
+        (delta / "report.GridVoltageDip.Qzero.tex").read_text()
+    )
+
+
+def test_a_user_report_template_under_a_new_name_is_added_to_the_packaged_ones(
+    tmp_path, monkeypatch, set_user_option
+):
+    set_user_option("DTR", "current", "20240215")
+
+    latex_dir = _copy_the_templates(
+        tmp_path, monkeypatch, {"report.GridVoltageSwell.QMaxBis.tex": "USER TEMPLATE"}
+    )
+
+    assert (latex_dir / "Producer.report.GridVoltageSwell.QMaxBis.tex").exists()
+    assert (latex_dir / "Producer.report.GridVoltageSwell.QMax.tex").exists()
+
+
+class _CircuitPcs:
+    def __init__(self, zone: int):
+        self._zone = zone
+
+    def get_name(self):
+        return f"PCS_RTE-I16z{self._zone}"
+
+    def get_zone(self):
+        return self._zone
+
+
+class _CircuitProducer:
+    def __init__(self, group_xfmrs: list):
+        self.group_xfmrs = group_xfmrs
+
+    def get_category(self):
+        return "B"
+
+    def is_field_measurements(self):
+        return False
+
+
+_ZONE1_SCHEMATIC = "circuit_z1_setpoint.tikz"
+
+
+def _latex_dir_with_the_zone1_schematic(tmp_path: Path) -> Path:
+    shipped = (
+        Path(report.__file__).resolve().parent.parent
+        / "templates/reports/model/PPM/PCS_RTE-I16z1"
+        / _ZONE1_SCHEMATIC
+    )
+    (tmp_path / _ZONE1_SCHEMATIC).write_text(shipped.read_text())
+    (tmp_path / "report.tex").write_text("")
+    return tmp_path
+
+
+def _prepare(latex_dir: Path, zone: int, group_xfmrs: list, producer: str = "Producer") -> None:
+    pcs_results = {"producer": producer, "pcs": _CircuitPcs(zone)}
+    report._pcs_replace(latex_dir, pcs_results, "report.tex", _CircuitProducer(group_xfmrs))
+
+
+def _schematic_of(latex_dir: Path, unit: str = "Producer") -> str:
+    return (latex_dir / f"{unit}.{_ZONE1_SCHEMATIC}").read_text()
+
+
+def test_the_zone1_schematic_follows_the_zone1_model_when_a_zone3_pcs_gets_there_first(
+    tmp_path,
+):
+    latex_dir = _latex_dir_with_the_zone1_schematic(tmp_path)
+
+    _prepare(latex_dir, zone=3, group_xfmrs=[])
+    _prepare(latex_dir, zone=1, group_xfmrs=["Group_Xfmr"])
+
+    schematic = _schematic_of(latex_dir)
+    assert "Group\\\\ transformer" in schematic
+    assert "BLOCK" not in schematic
+
+
+def test_the_zone1_schematic_draws_no_group_transformer_the_zone1_model_lacks(tmp_path):
+    latex_dir = _latex_dir_with_the_zone1_schematic(tmp_path)
+
+    _prepare(latex_dir, zone=1, group_xfmrs=[])
+
+    schematic = _schematic_of(latex_dir)
+    assert "transformer" not in schematic
+    assert "BLOCK" not in schematic
+
+
+def test_a_zone3_pcs_leaves_the_zone1_schematic_to_the_zone1_pcs(tmp_path):
+    latex_dir = _latex_dir_with_the_zone1_schematic(tmp_path)
+    template = (latex_dir / _ZONE1_SCHEMATIC).read_text()
+
+    _prepare(latex_dir, zone=3, group_xfmrs=[])
+
+    assert (latex_dir / _ZONE1_SCHEMATIC).read_text() == template
+    assert not (latex_dir / f"Producer.{_ZONE1_SCHEMATIC}").exists()
+
+
+def test_each_zone1_unit_draws_its_own_schematic_from_the_shared_template(tmp_path):
+    latex_dir = _latex_dir_with_the_zone1_schematic(tmp_path)
+    template = (latex_dir / _ZONE1_SCHEMATIC).read_text()
+
+    _prepare(latex_dir, zone=1, group_xfmrs=["Group_Xfmr"], producer="Unit_A")
+    _prepare(latex_dir, zone=1, group_xfmrs=[], producer="Unit_B")
+
+    assert "Group\\\\ transformer" in _schematic_of(latex_dir, "UnitA")
+    assert "transformer" not in _schematic_of(latex_dir, "UnitB")
+    assert (latex_dir / _ZONE1_SCHEMATIC).read_text() == template
+
+
+def test_the_report_of_a_unit_names_the_files_of_the_unit(tmp_path):
+    latex_dir = _latex_dir_with_the_zone1_schematic(tmp_path)
+    (latex_dir / "report.tex").write_text("{{ producercommand }}")
+
+    _prepare(latex_dir, zone=1, group_xfmrs=[], producer="Unit_B")
+
+    assert "\\renewcommand{\\ProducerFiles}{UnitB}" in (latex_dir / "report.tex").read_text()

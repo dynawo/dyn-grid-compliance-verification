@@ -9,7 +9,7 @@ through the tool.
 
 The configuration is written in the standard INI format
 (`Python flavor <https://docs.python.org/3/library/configparser.html>`_)
-and organized into five layers, in decreasing order of priority:
+and organized into six layers, in decreasing order of priority:
 
 1. **User PCS Description** — the ``PCSDescription.ini`` the user writes under
    ``~/.config/dycov/templates/PCS/``, or delivers with the reference curves of
@@ -18,12 +18,17 @@ and organized into five layers, in decreasing order of priority:
    most specific file, it takes precedence over everything else.
 2. **User Configuration** — settings provided by the user in
    ``~/.config/dycov/config.ini``.
-3. **DTR Revision** — the PCS description of a selected DTR revision. This
-   layer is not populated yet.
+3. **DTR Revision of the PCS** — what the selected revision of the DTR writes
+   differently for the PCS, the delta of its description under
+   ``src/dycov/templates/revisions/<YYYYMMDD>/PCS/``. The base revision has no
+   delta.
 4. :ref:`PCS Configuration <pcsconf>` — settings defined per PCS in
    ``src/dycov/templates/PCS/``. These should only be modified when a DTR
    update changes the PCS definition.
-5. :ref:`Tool Configuration <toolconf>` — global defaults in
+5. **DTR Revision** — the rest of what the selected revision writes
+   differently, outside any PCS: the ``revision_art_*.ini`` files of its delta
+   directory.
+6. :ref:`Tool Configuration <toolconf>` — global defaults in
    ``src/dycov/configuration/defaultConfig.ini``. These should only be
    modified when a DTR update changes global conditions.
 
@@ -439,7 +444,9 @@ Signal processing parameters:
 Step-response time characteristic thresholds:
 
 * ``thr_reaction_time`` — maximum deviation of the reaction time from the
-  reference one, relative to it.
+  reference one, relative to it. ``none`` withdraws the criterion, as the
+  revisions of the DTR from 20251013 on do: the deviation is then reported without
+  a verdict.
 * ``thr_rise_time`` — maximum deviation of the rise time, relative to the
   reference one.
 * ``thr_settling_time`` — maximum deviation of the settling time, relative to

@@ -150,7 +150,7 @@ class DycovCLI:
         from dycov.configuration.cfg import config
 
         revision = config.get_value("DTR", "current")
-        available = [value.strip() for value in config.get_list("DTR", "available")]
+        available = config.get_list("DTR", "available")
         where = (
             f"set current in the [DTR] section of {config.get_config_dir() / 'config.ini'} or of "
             f"the file given with --user-config to one of the revisions the tool implements: "
