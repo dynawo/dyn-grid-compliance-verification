@@ -20,14 +20,17 @@ usage() {
     echo "  -l, --launcher: Dynawo launcher script (default: dynawo.sh)"
     echo "  -o, --output:   working path for the run and the anonymized curves"
     echo "                  (default: ../RegeneratedCurves)"
+    echo "      --dtr:      revision of the DTR the curves follow, as YYYYMMDD (default: the one"
+    echo "                  release.ini names)"
     echo "      --reuse:    anonymize the run already in the working path instead of running"
-    echo "                  the example again"
+    echo "                  the example again, as the revision of the DTR it followed"
     echo "  -h, --help:     display this help"
     echo
     echo "Notes:"
     echo "  • The example runs in a home directory of its own, with release.ini next to this"
     echo "    script as its configuration, so that neither a PCS selection nor a modified"
-    echo "    template of the machine running it can leave tests out of the release."
+    echo "    template of the machine running it can leave tests out of the release. Another"
+    echo "    revision of the DTR is written into a copy of it in the working path."
     echo "  • Its curves are written only once the run has covered every test the PCS of the"
     echo "    tool declare and every one the example declares for itself: half an example is"
     echo "    worse than none."
@@ -37,6 +40,7 @@ usage() {
 
 launcher="dynawo.sh"
 working_path="../RegeneratedCurves"
+dtr=""
 reuse=false
 example=""
 
@@ -44,6 +48,7 @@ while (($#)); do
     case "$1" in
         -l | --launcher)    launcher=$2;     shift 2 ;;
         -o | --output)      working_path=$2; shift 2 ;;
+        --dtr)              dtr=$2;          shift 2 ;;
         --reuse)            reuse=true;      shift ;;
         -h | --help)        usage; exit 0 ;;
         -*)                 echo "$1: invalid option."; usage; exit 1 ;;
@@ -60,15 +65,20 @@ reference_path="$examples_path/Model/$example/ReferenceCurves"
 results_path="$working_path/Results/Model/$example"
 curves_path="$working_path/Curves/Model/$example"
 run_log="$working_path/Results/Model/$example.log"
-user_config="$script_dir/release.ini"
-
-[ -d "$model_path" ] || fail "There is no Model example at $model_path."
-mkdir -p "$reference_path/Producer" "$(dirname "$run_log")"
-isolate_home "$working_path"
 
 # Whatever stops this example, the one who launched it has to see it stopped — and what stops
 # it is usually a guard calling exit, which no ERR trap ever sees.
 trap 'status=$?; [ "$status" -eq 0 ] || set_state "$example" failed' EXIT
+
+[ -d "$model_path" ] || fail "There is no Model example at $model_path."
+if [ "$reuse" = true ]; then
+    revision=$(revision_to_reuse "$dtr" "$run_log")
+else
+    revision=$(dtr_revision "$dtr")
+fi
+user_config=$(run_configuration "$working_path" "$revision")
+mkdir -p "$reference_path/Producer" "$(dirname "$run_log")"
+isolate_home "$working_path"
 
 # 1. Run it. Nothing the anonymizer does changes a simulation, so a run already made can be
 #    reused when only the anonymizer's settings have changed. The curves are all the

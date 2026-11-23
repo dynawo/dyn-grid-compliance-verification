@@ -223,8 +223,18 @@ matter of taste:
     model: the Model ones from the run of stage 3, the Performance ones from a run of their own,
     in performance mode.
 
-Run `--help` on any of them for what it does. Five things are worth knowing before using it:
+Run `--help` on any of them for what it does. Six things are worth knowing before using it:
 
+*   **One regeneration writes the set of one revision of the DTR.** It follows the revision
+    `release.ini` names, the newest the release implements, unless `--dtr <YYYYMMDD>` asks for
+    another one the tool implements. Every run of every stage reads `release.ini`, or, for another
+    revision, a copy of it written in the working path, so asking for one changes nothing in the
+    repository; the F16 declaration of stage 1 takes the power levels, the checks and the figures
+    of the template of the declaration as that revision writes it. Stage 4 reads the run of
+    stage 3, so it follows the revision of that run, and stops when asked for another one; so
+    does `--reuse`, which anonymizes the runs as the revision they followed, and stops when they
+    followed several, or another than the one asked for. A test the revision does not run leaves
+    no curve, and `examples/.curves-release` records the revision with the commit.
 *   **The run stops at the curves.** The anonymizer reads only the curves of each test and
     the record of what its simulation ran with, so the runs of stages 3 and 4 pass
     `--curves-only`: no check, no figure, no report. The summary of each run still lists
@@ -237,8 +247,8 @@ Run `--help` on any of them for what it does. Five things are worth knowing befo
     swings at the bottom of a dip — never an oscillation of the solver, so the script turns it
     off and says so in its own `--help`.
 *   **Nothing is deduced.** The producer of a curve directory is the producer of the example its
-    curves come from, named in `models.sh`; what no model states — the apparent power, the power
-    levels of the F16 tests — is in `example_inputs.ini`. Both are data, not logic.
+    curves come from, named in `models.sh`; what no model states — the apparent power, the steps
+    of the F16 tests — is in `example_inputs.ini`. Both are data, not logic.
 *   **Each directory is written whole.** The curves, their dictionaries and the index of both
     come from the anonymized run, so a test that is no longer run leaves nothing behind, and the
     dictionaries carry the event of the run that produced them rather than a stale one.

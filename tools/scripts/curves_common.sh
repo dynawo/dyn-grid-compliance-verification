@@ -52,6 +52,70 @@ confirm_replacement() {
     rm -rf "${1:?}"
 }
 
+# The revision of the DTR the regeneration follows: the one asked for, checked against the ones
+# the tool implements, or the one release.ini names.
+dtr_revision() {
+    python3 "$script_dir/example_inputs.py" revision ${1:+--dtr "$1"}
+}
+
+# The configuration every run of the regeneration reads: release.ini, naming the revision of the
+# DTR it follows. Another revision is written into a copy of it in the working path, so that
+# asking for one changes nothing in the repository. Each copy is put in place whole, because the
+# examples of a stage run at the same time and read it as it is written.
+run_configuration() {
+    local working_path="$1"
+    local revision="$2"
+    local release="$script_dir/release.ini"
+
+    if [ "$revision" = "$(dtr_revision)" ]; then
+        echo "$release"
+        return 0
+    fi
+    mkdir -p "$working_path"
+    local configuration
+    configuration="$(cd "$working_path" && pwd)/release_$revision.ini"
+    local draft
+    draft=$(mktemp "$configuration.XXXXXX")
+    sed "s/^current *=.*/current = $revision/" "$release" >| "$draft"
+    mv -f "$draft" "$configuration"
+    echo "$configuration"
+}
+
+# The revision of the DTR a run followed, as its log says it.
+revision_of_run() {
+    sed -n 's/.*Validating against the DTR revision \([0-9A-Za-z_]*\)\..*/\1/p' "$1" | head -n 1
+}
+
+# The revision of the DTR the runs to reuse followed, from their logs. A set of curves is the set
+# of one revision, so runs that followed several cannot be reused together.
+revision_of_runs() {
+    local revision=""
+    local log followed
+    for log in "$@"; do
+        [ -f "$log" ] || fail "There is no log of the run to reuse in $log."
+        followed=$(revision_of_run "$log")
+        [ -n "$followed" ] || fail "The log $log does not say which revision of the DTR it ran."
+        [ -z "$revision" ] || [ "$followed" = "$revision" ] ||
+            fail "The runs to reuse followed the DTR revisions $revision and $followed: run them
+again instead of reusing them."
+        revision=$followed
+    done
+    echo "$revision"
+}
+
+# The revision of the DTR a regeneration that reuses runs follows: the one the runs followed,
+# which has to be the one asked for when one is.
+revision_to_reuse() {
+    local requested="$1"
+    shift
+    local followed
+    followed=$(revision_of_runs "$@")
+    [ -z "$requested" ] || [ "$(dtr_revision "$requested")" = "$followed" ] ||
+        fail "The runs to reuse followed the DTR revision $followed, not $requested: run them
+again instead of reusing them."
+    echo "$followed"
+}
+
 # The curves of a release must not depend on the machine that produced them, and the tool reads
 # its configuration and its PCS templates from the home directory: a selection of PCS there, or
 # a modified template, would leave tests out without saying so. A home of its own removes both.

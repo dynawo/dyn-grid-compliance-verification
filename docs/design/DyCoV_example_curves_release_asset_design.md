@@ -220,10 +220,11 @@ what `execute_tool` maps to produce the same list as before.
 
 What this change does owe them is knowing which curves they ran on. The curves on disk carry where
 they came from, in an ignored `examples/.curves-release`: `fetch_example_curves.sh` writes the
-release it fetched, `regenerate_curves.sh` the commit it regenerated from. The guard above compares
-it against `git describe --tags --abbrev=0` and says which two it is holding when they differ;
-curves regenerated locally are a legitimate answer, so that case is reported and not refused. It
-needs no tracked file, and `prepare_release.sh` writes nothing into a tree that is already tagged.
+release it fetched, `regenerate_curves.sh` the commit it regenerated from and the revision of the
+DTR it followed. The guard above compares it against `git describe --tags --abbrev=0` and says
+which two it is holding when they differ; curves regenerated locally are a legitimate answer, so
+that case is reported and not refused. It needs no tracked file, and `prepare_release.sh` writes
+nothing into a tree that is already tagged.
 
 **Three test files move to `tests_integration/`.** `pytest.ini` has `testpaths = tests`, so what
 lives under `tests/` is what the CI runs on every pull request, and a test that needs the curve
@@ -303,9 +304,10 @@ taste.
 
 **1 — `regenerate_f16.sh`: the declared tests of Fiche F16.** The fiche fixes no test, so a
 producer declares the ones it recorded; the examples declare an invented one, the same for all of
-them: a setpoint step of active power and one of voltage, at each power level the producer
-records. Two examples had that declaration by hand; now every Model example gets it, written from
-`example_inputs.ini`.
+them: a setpoint step of active power and one of voltage, at each power level the fiche fixes. Two
+examples had that declaration by hand; now every Model example gets it, written from
+`example_inputs.ini` and from the template of the declaration, as the revision of the DTR the
+regeneration follows writes it.
 
 It has to be first: a test of Fiche F16 is run because the declaration names it, recorded or
 not, so the declaration goes in before the run. An example without reference curves gets their

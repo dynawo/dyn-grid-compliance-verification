@@ -5,8 +5,9 @@
 #
 # The fiche fixes no test, so a producer declares the ones it recorded and delivers the records
 # with them. The examples have neither, so both are made: the declaration is written from
-# example_inputs.ini, and the records are the tool's own simulations of the tests it declares,
-# anonymized as measurements, exactly as the other curves of the examples are.
+# example_inputs.ini and from the template of the declaration, as the revision of the DTR writes
+# it, and the records are the tool's own simulations of the tests it declares, anonymized as
+# measurements, exactly as the other curves of the examples are.
 #
 # This is the first stage of the regeneration, and it cannot be any later: the run simulates the
 # tests the declaration names, which is what their records are made of, so the declaration has
@@ -25,21 +26,27 @@ usage() {
     echo "delivery of their records, so that the regeneration run simulates them."
     echo "Usage: $0 [options]"
     echo "Options:"
+    echo "      --dtr:      revision of the DTR the curves follow, as YYYYMMDD (default: the one"
+    echo "                  release.ini names)"
     echo "  -h, --help:     display this help"
     echo
     echo "Notes:"
     echo "  • It must run before regenerate_reference_curves.sh: what makes the tool run a"
     echo "    test of Fiche F16 is its declaration, so it goes in first and the run then"
     echo "    produces the curves the record is made of."
-    echo "  • Which tests are declared, and at which power levels, is in example_inputs.ini. The"
-    echo "    choice is the same for every example, because it is invented for them: the fiche"
-    echo "    selects no test of its own."
+    echo "  • Which tests are declared, and their steps, is in example_inputs.ini. The choice is"
+    echo "    the same for every example, because it is invented for them: the fiche selects no"
+    echo "    test of its own. The power levels, the checks and the figures are the ones the fiche"
+    echo "    fixes, as the revision of the DTR writes the template of the declaration."
     echo "  • The declaration is written where the tool reads it and where a producer delivering"
     echo "    records puts it, next to them, under ReferenceCurves."
 }
 
+dtr=""
+
 while (($#)); do
     case "$1" in
+        --dtr)              dtr=$2;          shift 2 ;;
         -h | --help)        usage; exit 0 ;;
         *)                  echo "$1: invalid option."; usage; exit 1 ;;
     esac
@@ -48,6 +55,7 @@ done
 require_repo_root
 examples_path="./examples"
 write_inputs="python3 $script_dir/example_inputs.py"
+revision=$(dtr_revision "$dtr")
 
 declare -a examples=("${MODEL_EXAMPLES_IEC[@]}" "${MODEL_EXAMPLES_WECC[@]}" "${MODEL_EXAMPLES_GFM[@]}")
 
@@ -60,9 +68,9 @@ for example in "${examples[@]}"; do
     declaration="$reference_path/F16Description.ini"
 
     log_msg "Declaring the F16 tests of $example ($family)..."
-    $write_inputs f16 --type "$family" --output "$declaration"
+    $write_inputs f16 --type "$family" --dtr "$revision" --output "$declaration"
     $write_inputs announce --reference "$reference_path" \
         --model "$examples_path/Model/$example/Dynawo" --type "$family"
 done
 
-log_msg "F16 declared and announced in ${#examples[@]} Model examples."
+log_msg "F16 declared and announced in ${#examples[@]} Model examples, for the DTR revision $revision."
