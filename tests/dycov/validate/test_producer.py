@@ -165,18 +165,32 @@ def test_storage_must_declare_the_consumption_limit(monkeypatch):
         _producer_reading(monkeypatch, _PRODUCER_INI, MODEL_VALIDATION_BESS)
 
 
-def _performance_producer(monkeypatch, ini_text: str, model: bool, kinds: tuple) -> ModelProducer:
+def _performance_producer(
+    monkeypatch, ini_text: str, model: bool, kinds: tuple, others: dict = None
+) -> ModelProducer:
     """A producer whose kind of unit a performance verification is about to read, from its
-    model (the generators of its DYD) or from the INI beside its curves."""
+    model (the generators of its DYD) or from the INI beside its curves. The directory holds
+    the producer Producer, described by ini_text, and the others, each described by its text."""
     producer = ModelProducer.__new__(ModelProducer)
     producer._s_nref = 100.0
     producer._sim_type = None
+    producer._zone = 0
+    producer._filename = None
+    producer._installation_category = None
+    producer._installation_categories = {}
     producer._is_dynawo_model = model
     producer._producer_model_path = Path("Model") if model else None
     producer._producer_curves_path = None if model else Path("ProducerCurves")
-    producer_config = configparser.ConfigParser()
-    producer_config.read_string(ini_text)
-    monkeypatch.setattr(producer, "_ModelProducer__read_producer_ini", lambda: producer_config)
+    configs = {}
+    for name, text in {"Producer": ini_text, **(others or {})}.items():
+        configs[name] = configparser.ConfigParser()
+        configs[name].read_string(text)
+    monkeypatch.setattr(
+        producer,
+        "_ModelProducer__read_producer_ini",
+        lambda: configs[producer._filename or "Producer"],
+    )
+    monkeypatch.setattr(producer, "get_filenames", lambda zone=0: sorted(configs))
     monkeypatch.setattr(producer, "get_producer_dyd", lambda: Path("Producer.dyd"))
     monkeypatch.setattr(producer, "get_producer_par", lambda: Path("Producer.par"))
     monkeypatch.setattr(producer_module.file_checks, "check_performance_model", lambda path: None)
@@ -230,6 +244,93 @@ def test_storage_performance_runs_with_the_consumption_limit(monkeypatch, model)
     producer._ModelProducer__set_electric_performance_type()
 
     assert producer.get_sim_type() == ELECTRIC_PERFORMANCE_BESS
+
+
+@pytest.mark.parametrize("model", [True, False], ids=["model", "curves"])
+@pytest.mark.parametrize("p_max_injection, category", [(15, "B"), (40, "C"), (60, "D")])
+def test_storage_performance_takes_the_category_the_dtr_gives_the_installation(
+    monkeypatch, model, p_max_injection, category
+):
+    """The fiches of a storage installation depend on its category, which a performance
+    verification reads from the INI of the installation: at 225 kV it is of type B below 18 MW,
+    C below 50 MW and D above."""
+    producer = _performance_producer(
+        monkeypatch,
+        _PRODUCER_INI.replace("= 80", f"= {p_max_injection}")
+        + "generator_type = BESS\np_max_consumption = 60\n",
+        model,
+        _STORAGE,
+    )
+
+    producer._ModelProducer__set_electric_performance_type()
+
+    assert producer.get_installation_category("Producer") == category
+
+
+@pytest.mark.parametrize("model", [True, False], ids=["model", "curves"])
+def test_each_producer_of_a_performance_directory_takes_the_category_of_its_installation(
+    monkeypatch, model
+):
+    """A directory may hold several producers, each an installation described by the INI of its
+    name, so each takes the category of its own."""
+    storage = "generator_type = BESS\np_max_consumption = 60\n"
+    producer = _performance_producer(
+        monkeypatch,
+        _PRODUCER_INI.replace("= 80", "= 15") + storage,
+        model,
+        _STORAGE,
+        others={"Other": _PRODUCER_INI.replace("= 80", "= 40") + storage},
+    )
+
+    producer._ModelProducer__set_electric_performance_type()
+
+    assert producer.get_installation_category("Producer") == "B"
+    assert producer.get_installation_category("Other") == "C"
+    assert producer._filename is None
+
+
+@pytest.mark.parametrize("model", [True, False], ids=["model", "curves"])
+def test_the_category_of_another_storage_producer_does_not_ask_for_its_consumption(
+    monkeypatch, model
+):
+    producer = _performance_producer(
+        monkeypatch,
+        _PRODUCER_INI + "generator_type = BESS\np_max_consumption = 60\n",
+        model,
+        _STORAGE,
+        others={"Other": _PRODUCER_INI.replace("= 80", "= 15") + "generator_type = BESS\n"},
+    )
+
+    producer._ModelProducer__set_electric_performance_type()
+
+    assert producer.get_installation_category("Other") == "B"
+
+
+def test_a_unit_of_a_model_validation_takes_the_category_of_the_installation():
+    """Zone 1 holds units, named apart from the installation their Zone 3 describes."""
+    producer = ModelProducer.__new__(ModelProducer)
+    producer._installation_category = "C"
+    producer._installation_categories = {}
+
+    assert producer.get_installation_category("Producer_G1") == "C"
+    assert producer.get_installation_category() == "C"
+
+
+@pytest.mark.parametrize("model", [True, False], ids=["model", "curves"])
+def test_a_performance_producer_whose_ini_lacks_the_magnitudes_of_its_category_stops(
+    monkeypatch, model
+):
+    storage = "generator_type = BESS\np_max_consumption = 60\n"
+    producer = _performance_producer(
+        monkeypatch,
+        _PRODUCER_INI + storage,
+        model,
+        _STORAGE,
+        others={"Other": _PRODUCER_INI.replace("u_nom = 225\n", "") + storage},
+    )
+
+    with pytest.raises(ValueError, match="must specify the u_nom"):
+        producer._ModelProducer__set_electric_performance_type()
 
 
 @pytest.mark.parametrize("model", [True, False], ids=["model", "curves"])
@@ -365,7 +466,7 @@ def test_a_storage_installation_takes_the_category_the_dtr_gives_its_zone3(
     producer = _producer_reading_its_zone3(tmp_path, zone3_ini)
     producer._sim_type = MODEL_VALIDATION_BESS
 
-    assert producer._ModelProducer__read_installation_category() == category
+    assert producer._ModelProducer__read_installation_category(zone=3, filename=None) == category
 
 
 @pytest.mark.parametrize(
@@ -384,7 +485,7 @@ def test_the_category_of_the_installation_asks_for_what_its_zone3_lacks(
     producer._sim_type = MODEL_VALIDATION_PPM
 
     with pytest.raises(ValueError, match=message):
-        producer._ModelProducer__read_installation_category()
+        producer._ModelProducer__read_installation_category(zone=3, filename=None)
 
 
 def test_the_category_of_the_installation_ignores_the_zone_in_preparation(tmp_path):
@@ -393,7 +494,7 @@ def test_the_category_of_the_installation_ignores_the_zone_in_preparation(tmp_pa
     producer._sim_type = MODEL_VALIDATION_BESS
     producer._zone = 1
 
-    assert producer._ModelProducer__read_installation_category() == "D"
+    assert producer._ModelProducer__read_installation_category(zone=3, filename=None) == "D"
     assert producer._zone == 1
 
 

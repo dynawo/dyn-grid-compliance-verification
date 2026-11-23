@@ -22,6 +22,8 @@ usage() {
     echo "  -o, --output:   working path for the runs and the anonymized curves"
     echo "                  (default: ../RegeneratedCurves)"
     echo "  -j, --jobs:     how many examples at a time (default: 4)"
+    echo "      --dtr:      revision of the DTR the curves follow, as YYYYMMDD (default: the one"
+    echo "                  release.ini names)"
     echo "      --reuse:    anonymize the runs already in the working path instead of running"
     echo "                  the examples again, for a change that only touches the anonymizer"
     echo "  -y, --yes:      replace a working path that holds a previous run without asking"
@@ -42,6 +44,7 @@ usage() {
 launcher="dynawo.sh"
 working_path="../RegeneratedCurves"
 jobs=4
+dtr=""
 reuse=false
 assume_yes=false
 
@@ -50,6 +53,7 @@ while (($#)); do
         -l | --launcher)    launcher=$2;     shift 2 ;;
         -o | --output)      working_path=$2; shift 2 ;;
         -j | --jobs)        jobs=$2;         shift 2 ;;
+        --dtr)              dtr=$2;          shift 2 ;;
         --reuse)            reuse=true;      shift ;;
         -y | --yes)         assume_yes=true; shift ;;
         -h | --help)        usage; exit 0 ;;
@@ -58,17 +62,24 @@ while (($#)); do
 done
 
 require_repo_root
+declare -a examples=("${MODEL_EXAMPLES_IEC[@]}" "${MODEL_EXAMPLES_WECC[@]}" "${MODEL_EXAMPLES_GFM[@]}")
 
-if [ "$reuse" = false ]; then
+if [ "$reuse" = true ]; then
+    declare -a runs=()
+    for example in "${examples[@]}"; do
+        runs+=("$working_path/Results/Model/$example.log")
+    done
+    revision=$(revision_to_reuse "$dtr" "${runs[@]}")
+else
+    revision=$(dtr_revision "$dtr")
     confirm_replacement "$working_path"
 fi
 mkdir -p "$working_path"
 
-declare -a examples=("${MODEL_EXAMPLES_IEC[@]}" "${MODEL_EXAMPLES_WECC[@]}" "${MODEL_EXAMPLES_GFM[@]}")
-declare -a options=(-l "$launcher" -o "$working_path")
+declare -a options=(-l "$launcher" -o "$working_path" --dtr "$revision")
 [ "$reuse" = true ] && options+=(--reuse)
 
-log_msg "Regenerating ${#examples[@]} Model examples, $jobs at a time..."
+log_msg "Regenerating ${#examples[@]} Model examples for the DTR revision $revision, $jobs at a time..."
 failures="$working_path/failed_examples.txt"
 :>| "$failures"
 

@@ -86,8 +86,10 @@ def _validate_pcs(pcs_args) -> tuple:
             dycov_logging.get_logger("Validation").error(f"{pcs.get_name()} is not a valid PCS")
             return pcs.get_producer_name(), pcs.get_name(), summary_list, {}
         if not pcs.declares_tests():
+            # The process may have run a test of another PCS, whose label would lead this line
+            dycov_logging.clear_test_context()
             dycov_logging.get_logger("Validation").info(
-                f"{pcs.get_name()}: no test declared, nothing to validate"
+                f"{pcs.get_producer_name()} {pcs.get_name()}: {pcs.why_no_test()}"
             )
             return pcs.get_producer_name(), pcs.get_name(), summary_list, {}
 

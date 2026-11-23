@@ -25,10 +25,13 @@ and organized into six layers, in decreasing order of priority:
    ``Type<categories>.ini`` in the directory of the delta, which patches the
    description the revision gives the PCS for the categories it names:
    ``TypeCD.ini`` of ``PCS_RTE-I16z1`` and ``PCS_RTE-I16z3`` in the revision
-   ``20260723``, the Fiche I16.2 of a storage installation of type C or D.
+   ``20260723``, the Fiche I16.2 of a storage installation of type C or D,
+   and ``TypeCD.ini`` of the ``PCS_RTE-I5`` of storage, which withdraws the
+   fiche from those types by writing ``none`` in place of its benchmarks.
    The category is the one the DTR gives the installation, from the
    connection voltage and the maximum power at injection of the Zone 3 INI
-   file of a model validation. The base revision has no delta, and so no
+   file of a model validation, or of the INI of each producer of a
+   performance verification. The base revision has no delta, and so no
    version either.
 4. :ref:`PCS Configuration <pcsconf>` — settings defined per PCS in
    ``src/dycov/templates/PCS/``. These should only be modified when a DTR

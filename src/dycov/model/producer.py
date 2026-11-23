@@ -68,9 +68,15 @@ class Producer:
         """Gets a string according to the type of validation executed."""
         pass
 
-    def get_installation_category(self) -> Optional[str]:
+    def get_installation_category(self, producer_name: Optional[str] = None) -> Optional[str]:
         """Gets the category of the whole installation, as the DTR defines it, which decides the
         version of a fiche the DTR gives it when the fiche has one by category.
+
+        Parameters
+        ----------
+        producer_name: Optional[str]
+            The producer whose installation it is, when the verification gives each producer
+            an installation of its own.
 
         Returns
         -------

@@ -11,7 +11,8 @@ Every revision after the base has a file of its own, `test_revision_<YYYYMMDD>.p
 reads the base and the revision one after the other and shows the difference itself. A
 fiche a revision splits by category has a file of its own too, `test_fiche_<fiche>.py`:
 the Fiche I16.2 that the revision `20260723` gives a storage installation of type C or D,
-in `test_fiche_i16_2.py`.
+in `test_fiche_i16_2.py`, and the Fiche I5 that the same revision asks of a storage
+installation of type B alone, in `test_fiche_i5.py`.
 
 `test_delta_is_complete.py` answers for every delta the tool ships, whichever revision wrote
 it. It reads the files and asserts what a delta must hold: that the tool implements the

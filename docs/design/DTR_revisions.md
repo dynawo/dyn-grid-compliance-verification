@@ -122,10 +122,16 @@ writes no delta of it), and puts a version for the others in the directory of th
 after them: `Type<categories>.ini`. The revision `20260723` splits the Fiche I16 of a storage
 installation this way, into the Fiche I16.1 for type B and the Fiche I16.2, `TypeCD.ini`, for
 types C and D; zone 1 has no delta, so its version stands alone in that directory. The category
-is the one the DTR gives the whole installation, from its Zone 3, and the version is part of what
-the revision writes for the PCS: it shares the layer of the delta and is read after it, so it only
-carries what the categories it names do differently. A revision that does not split the fiche has
-no version, so a run that follows it gives every category the same fiche.
+is the one the DTR gives the whole installation, from its Zone 3 in a model validation and from
+the INI of each producer in a performance verification, and the version is part of what the revision
+writes for the PCS: it shares the layer of the delta and is read after it, so it only carries what
+the categories it names do differently. A revision that does not split the fiche has no version,
+so a run that follows it gives every category the same fiche.
+
+A version may also withdraw the fiche from the categories it names, by writing `none` in place of
+its benchmarks. The revision `20260723` asks the Fiche I5 of a storage installation of type B
+alone, so the `TypeCD.ini` of the `PCS_RTE-I5` of storage writes that word, and the run says in
+its log that the fiche does not apply to the type of the installation.
 
 ## What the tool already gives a delta
 
@@ -370,7 +376,9 @@ The delta of `20251013` writes:
 | The reactance b at HTB1 is 0.3 for a PPM below 250 MW, 0.54 below 800 MW and 0.6 from it, and 0.3 for any storage unit, where it was 0.2 below 50 MW | `HTB1_reactance_b_PPM` and `HTB1_p_max_PPM` in `revision_art_8_3_1.ini`, the `_BESS` keys of `HTB1_reactance_b_low` and `_high` in `revision_art_8_3_4.ini` |
 
 The delta of `20260723` is not compared yet. It carries the seven points above, because its
-revision keeps them, and it writes them itself: a delta is measured against the base.
+revision keeps them, and it writes them itself: a delta is measured against the base. It also
+writes, in versions of the fiche by category, the Fiche I16.2 of a storage installation of type C
+or D, and the withdrawal of the Fiche I5 from those types.
 
 Two fiches of those revisions are not in the tool at all: I17 and F17, on the damping of
 oscillations, which 3.5 adds. A fiche that appears is not a delta of a value; it is a PCS of its

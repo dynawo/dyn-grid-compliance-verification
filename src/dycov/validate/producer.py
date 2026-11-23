@@ -107,6 +107,7 @@ class ModelProducer(Producer):
         self._filename = None
         self._sim_type = None
         self._installation_category = None
+        self._installation_categories = {}
 
         dycov_logging.get_logger("Producer").debug("Initializing Producer:")
         if self._is_dynawo_model:
@@ -206,6 +207,12 @@ class ModelProducer(Producer):
                 "Electric performance verification does not support the modeled generator type"
             )
 
+        # Each producer of the directory is an installation of its own, which its INI describes
+        self._installation_categories = {
+            name: self.__read_installation_category(zone=0, filename=name)
+            for name in self.get_filenames()
+        }
+
     def __set_model_validation_type(self):
         #  Expected input example:
         #  Dynawo
@@ -270,27 +277,40 @@ class ModelProducer(Producer):
         else:
             raise ValueError("Model validation does not support the modeled generator type")
 
-        self._installation_category = self.__read_installation_category()
+        self._installation_category = self.__read_installation_category(
+            zone=3, filename=self._filename
+        )
 
-    def __read_installation_category(self) -> str:
-        """Reads the category of the installation, as the DTR defines it, from the INI file of
-        its Zone 3, which describes the complete installation.
+    def __read_installation_category(self, zone: int, filename: Optional[str]) -> str:
+        """Reads the category of the installation, as the DTR defines it, from the INI file that
+        describes the complete installation.
+
+        Parameters
+        ----------
+        zone: int
+            Zone whose INI file describes the installation: 3 in a model validation, whose
+            Zone 1 describes a unit, and 0 in a performance verification.
+        filename: Optional[str]
+            Name of that INI file, without its extension; Producer when None.
 
         Returns
         -------
         str
             The category of the installation: A, B, C or D.
         """
-        zone, self._zone = self._zone, 3
-        producer_config = self.__read_producer_ini()
-        self._zone = zone
+        previous = self._zone, self._filename
+        self._zone, self._filename = zone, filename
+        try:
+            producer_config = self.__read_producer_ini()
+        finally:
+            self._zone, self._filename = previous
         _check_parameters_definition(
             producer_config, "DEFAULT", self._sim_type == MODEL_VALIDATION_BESS
         )
         return generator_variables.get_generator_category(
             float(producer_config.get("DEFAULT", "u_nom")),
             float(producer_config.get("DEFAULT", "p_max_injection")),
-            self._sim_type == MODEL_VALIDATION_BESS,
+            self._sim_type in (MODEL_VALIDATION_BESS, ELECTRIC_PERFORMANCE_BESS),
         )
 
     def __set_dynawo_model_validation_type(self):
@@ -699,6 +719,24 @@ class ModelProducer(Producer):
             True if has a reference curves directory, False otherwise
         """
         return self._has_reference_curves_path
+
+    def get_installation_category(self, producer_name: Optional[str] = None) -> Optional[str]:
+        """Gets the category of the installation, as the DTR defines it: in a performance
+        verification, that of the producer named, each producer of the directory being an
+        installation described by the INI of its name; in a model validation, that of the one
+        installation its Zone 3 describes.
+
+        Parameters
+        ----------
+        producer_name: Optional[str]
+            The producer whose installation it is.
+
+        Returns
+        -------
+        Optional[str]
+            'A', 'B', 'C' or 'D', None for a producer the verification does not know.
+        """
+        return self._installation_categories.get(producer_name, self._installation_category)
 
     def get_category(self) -> str:
         """Gets the category of the unit, as the DTR defines it.

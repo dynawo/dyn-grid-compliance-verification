@@ -48,6 +48,8 @@ class Pcs:
 
         self._has_pcs_config = False
         self._has_user_config = False
+        self._version_path = None
+        self._withdrawn = False
 
         report_name, bms_by_pcs, pcs_id, pcs_zone = self.__prepare_pcs_config(self._producer)
         self._producer.set_zone(pcs_zone, producer_name)
@@ -86,6 +88,7 @@ class Pcs:
 
         self._has_pcs_config = tool_pcs_path is not None or pcs_dtr_delta_path is not None
         self._has_user_config = user_pcs_path is not None
+        self._version_path = pcs_dtr_version_path
         config.load_pcs_config(
             tool_pcs_path, user_pcs_path, pcs_dtr_delta_path, pcs_dtr_version_path
         )
@@ -95,6 +98,7 @@ class Pcs:
         pcs_id = config.get_int(self._name, "id", 0)
         pcs_zone = config.get_int(self._name, "zone", 0)
         bms_by_pcs = config.get_list("PCS-Benchmarks", self._name)
+        self._withdrawn = _lists_none(config.get_value("PCS-Benchmarks", self._name))
 
         return report_name, bms_by_pcs, pcs_id, pcs_zone
 
@@ -136,7 +140,7 @@ class Pcs:
             / producer.get_sim_type_str()
             / self._name
         )
-        return _version_for_category(path, producer.get_installation_category())
+        return _version_for_category(path, producer.get_installation_category(self._producer_name))
 
     def __get_delta_templates_path(self) -> Union[Path, None]:
         """The templates of the delta of the selected revision of the DTR, which mirror the
@@ -262,14 +266,41 @@ class Pcs:
         Returns
         -------
         bool
-            False for a PCS whose tests the producer has to declare, when none is.
+            False for a PCS whose tests the producer has to declare, when none is, and for a
+            fiche the selected revision of the DTR withdraws for the category of the
+            installation.
         """
         return bool(self._bm_list)
+
+    def why_no_test(self) -> str:
+        """Why a PCS that declares no test has none to run.
+
+        Returns
+        -------
+        str
+            The withdrawal of the fiche, when the version of it the selected revision of the DTR
+            writes for the category of the installation lists its benchmarks as ``none``, or the
+            tests the producer has to declare otherwise.
+        """
+        if self._version_path is None or not self._withdrawn:
+            return "no test declared, nothing to validate"
+        return (
+            f"the DTR revision {config.get_value('DTR', 'current')} does not apply this fiche to "
+            "an installation of type "
+            f"{self._producer.get_installation_category(self._producer_name)}, "
+            "nothing to validate"
+        )
 
 
 def _pcs_description_in(path: Path) -> Union[Path, None]:
     files = {file.stem.lower(): file for file in path.glob("*.[iI][nN][iI]")}
     return files.get("pcsdescription")
+
+
+def _lists_none(value: Optional[str]) -> bool:
+    """Whether a list of the configuration is the word ``none``, which a revision of the DTR
+    writes to withdraw a fiche, where an empty one leaves the tests to declare."""
+    return isinstance(value, str) and value.strip().lower() == "none"
 
 
 def _version_for_category(path: Path, category: Optional[str]) -> Union[Path, None]:
