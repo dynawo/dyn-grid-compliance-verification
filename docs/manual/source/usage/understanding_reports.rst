@@ -172,6 +172,21 @@ This section provides information about the numerical setup:
 * solver parameters,
 * numerical tolerances.
 
+When the test was simulated, a second table gives the conditions the
+simulation ran with, once the definitions of the test are resolved: the
+operating point at the bus of the test (the PDR, or InternalNode1 in Zone 1),
+the short-circuit ratio or impedance of the grid and the impedances of its
+lines, the impedance of the fault, the one its search settled on for a
+high-impedance or bolted fault, the start and duration of the event, the
+setpoint it steps and its step, and the events of the grid: the voltages of
+the stages of a dip or a swell, the step of its frequency, the steps of the
+Grid Forming tests. A short-circuit impedance the model of the grid has no
+line for, its infinite bus being at the bus of the test, is marked as not
+modelled. Powers and impedances are in pu of the reference power of the
+simulation, 100 MVA by default, and powers in MW and Mvar as well. The
+pages shared by the tests of the Fiche I16.2 also give, next to each
+definition of their conditions table, the value the test ran with.
+
 It ensures **traceability and reproducibility** of the results.
 
 

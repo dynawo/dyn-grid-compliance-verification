@@ -167,6 +167,10 @@ This section provides information about the numerical setup:
 - solver parameters,
 - numerical tolerances.
 
+When the test was simulated, a second table gives the conditions the simulation ran with, once
+the definitions of the test are resolved: the operating point, the impedances of the grid and of
+the fault (the one the search settled on, for a high-impedance or bolted fault), and the event.
+
 It ensures **traceability and reproducibility** of the results.
 
 ---

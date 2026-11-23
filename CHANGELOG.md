@@ -54,6 +54,15 @@ type C, with a WECC plant of 40 MW at 225 kV in Zone 3. The `BESS/WECC` example,
 that same size and so was of type C too, is now of 15 MW, a type B: under this revision a
 storage installation of type C has to be Grid Forming, and its unit is not.
 
+### The report shows the values each test ran with
+
+Every simulated test now lists, next to the solver of its simulation, the conditions it ran with
+once its definitions are resolved: the operating point, the short-circuit ratio or impedance and
+the impedances of the grid, the impedance of the fault, including the one the high-impedance or
+bolted fault search settled on, and the event and its step or the voltages of its dip or swell.
+The same values are recorded in the `[Conditions]` section of the `simulation_inputs.ini` of each
+test.
+
 ### The revision of the DTR is set in the configuration
 
 The configuration the tool ships no longer names a revision of the DTR, and `--dtr` is gone from

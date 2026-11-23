@@ -230,7 +230,18 @@ working_oc_dir/outputs/  logs/ (dynawo.log)  curves/ (curves.csv)  timeLine/  co
 
 `simulation_inputs.ini` (`files/simulation_files.SIMULATION_INPUTS_FILE`) is written next to the curves
 of each test after it runs, by `DynawoCurves.__record_simulation_inputs`: a `[Simulation]` section with the
-event, the initial operating point and the solver the run ended with. `dycov anonymize` rebuilds the
+event, the initial operating point and the solver the run ended with, and a `[Conditions]` section with
+what `ModelSetup.conditions_ran_with` resolved (operating point at the bus, `SCR` or `Zcc` as
+`_get_line` took them, the setpoint step at the bus, the dip a HiZ search aims at or the step of the
+grid frequency, `TableFile.grid_events` and the `u_*` stages of a dip or swell table, and the line,
+switched-line and fault impedances the TSO PAR holds once the fault search wrote it,
+`simulation_files.grid_impedances`). Each key is the PCS option that defines the value, where one
+does. A test whose fault search ends in error records none. `Benchmark` puts the same dict
+in the results as `ran_with`, which every test page prints next to its solver
+(`report/tables/ran_with.py`) and the shared I16.2 page as a value column of its definitions
+(`conditions.py`). The anonymizer reads the event from lines naming `sim_t_event_start`/
+`fault_duration`, so `[Conditions]` leaves those out, and `connect_event_to`, which `[Simulation]`
+holds as `event_connected_to`. `dycov anonymize` rebuilds the
 `[Curves-Metadata]` of the dictionaries it generates from it (`curves/anonymizer/sources.py`, which also
 accepts the `dycov.log` older results carry); without it every generated curve set declares its event at
 t = 0.
