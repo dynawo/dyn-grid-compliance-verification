@@ -86,9 +86,12 @@ Each OC folder contains the data generated for that specific test:
 * **results.json** — the computed compliance metrics and intermediate
   values in a structured format, useful for programmatic post-processing.
 * **simulation_inputs.ini** — the record of how the test was run: the event,
-  the initial operating point and the solver the run ended with.
-  ``dycov anonymize`` reads it to rebuild the metadata of the dictionaries it
-  generates.
+  the initial operating point and the solver the run ended with, and, in its
+  ``[Conditions]`` section, the conditions of the test once its definitions
+  are resolved, each under the name of the option of the PCS that defines it,
+  among them the impedances of the grid and of the fault as the simulation
+  ran them. ``dycov anonymize`` reads it to rebuild the metadata of the
+  dictionaries it generates.
 * **outputs/** — Dynawo's raw simulation outputs. See the
   `Dynawo documentation <https://dynawo.github.io/>`_ for details on the
   content of this folder.

@@ -251,6 +251,17 @@ class CurvesManager:
         """
         return self._producer_curves_generator.get_solver()
 
+    def get_simulation_conditions(self) -> dict:
+        """Get the conditions the simulation of the last test ran with, once its definitions
+        are resolved.
+
+        Returns
+        -------
+        dict
+            The conditions, empty when nothing was simulated.
+        """
+        return self._producer_curves_generator.get_simulation_conditions()
+
     def has_required_curves(
         self,
         measurement_names: list,

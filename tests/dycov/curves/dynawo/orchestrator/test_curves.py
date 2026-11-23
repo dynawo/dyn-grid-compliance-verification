@@ -16,6 +16,7 @@ collaborators correctly, not from complex logic.  We therefore:
      with which arguments, and how the return value is assembled.
 """
 
+import configparser
 import logging
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -487,6 +488,35 @@ class TestObtainSimulatedCurve:
 
     @patch(f"{_MODULE}.measure_voltage_dip")
     @patch(f"{_MODULE}.config")
+    def test_a_fault_search_that_fails_leaves_no_conditions_the_test_ran_with(
+        self, mc, mock_mvd, tmp_path
+    ):
+        mc.get_value.side_effect = _cfg_get_value
+        mc.get_float.side_effect = _cfg_get_float
+        mc.get_boolean.side_effect = lambda s, k, d=False: k == "hiz_fault"
+
+        curves, ms, be, outcome, _ = self._prepare(hiz_fault=True)
+        be.find_hiz_fault.side_effect = SimulationOutcomeError(
+            "Fault dip unachievable", SimulationError.FAULT_DIP_UNACHIEVABLE
+        )
+        curves._setup.conditions_ran_with.return_value = {"fault_XPu": 0.0}
+        curves._DynawoCurves__simulate = MagicMock(return_value=outcome)
+        curves._DynawoCurves__prepare_oc_validation = MagicMock(
+            return_value=(Path("/out"), Path("/jobs"))
+        )
+        curves._DynawoCurves__reset_solver = MagicMock()
+
+        with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
+            curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
+
+        curves._DynawoCurves__simulate.assert_not_called()
+        assert curves.get_simulation_conditions() == {}
+        record = configparser.ConfigParser()
+        record.read(tmp_path / SIMULATION_INPUTS_FILE)
+        assert dict(record["Conditions"]) == {}
+
+    @patch(f"{_MODULE}.measure_voltage_dip")
+    @patch(f"{_MODULE}.config")
     def test_bolted_fault_delegates_to_bisection(self, mc, mock_mvd, tmp_path):
         mc.get_value.side_effect = _cfg_get_value
         mc.get_float.side_effect = _cfg_get_float
@@ -633,6 +663,70 @@ class TestObtainSimulatedCurve:
         assert "sim_t_event_start = 1.0" in record
         assert "fault_duration = 0.15" in record
         assert "frequency_sampling = 15.0" in record
+
+    @patch(f"{_MODULE}.measure_voltage_dip")
+    @patch(f"{_MODULE}.config")
+    def test_simulation_record_carries_the_conditions_the_test_ran_with(
+        self, mc, mock_mvd, tmp_path
+    ):
+        mc.get_value.side_effect = _cfg_get_value
+        mc.get_float.side_effect = _cfg_get_float
+        mc.get_int.side_effect = _cfg_get_int
+        mc.get_boolean.return_value = False
+
+        curves, ms, be, outcome, _ = self._prepare()
+        curves._setup.conditions_ran_with.return_value = {
+            "pdr_P": 0.6,
+            "fault_XPu": 2.5,
+            "sim_t_event_start": 1.0,
+            "fault_duration": 0.15,
+        }
+        curves._DynawoCurves__simulate = MagicMock(return_value=outcome)
+        curves._DynawoCurves__prepare_oc_validation = MagicMock(
+            return_value=(Path("/out"), Path("/jobs"))
+        )
+        curves._DynawoCurves__reset_solver = MagicMock()
+
+        with patch(f"{_MODULE}.get_cfg_oc_name", return_value="PCS1.BM1.OC1"):
+            curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
+
+        assert curves.get_simulation_conditions() == {
+            "pdr_P": 0.6,
+            "fault_XPu": 2.5,
+            "sim_t_event_start": 1.0,
+            "fault_duration": 0.15,
+        }
+        record = configparser.ConfigParser()
+        record.optionxform = str
+        record.read(tmp_path / SIMULATION_INPUTS_FILE)
+        assert dict(record["Conditions"]) == {
+            "pdr_P": "0.6",
+            "fault_XPu": "2.5",
+        }
+        assert record["Simulation"]["fault_duration"] == "0.15"
+
+    @patch(f"{_MODULE}.measure_voltage_dip")
+    @patch(f"{_MODULE}.config")
+    def test_a_test_whose_setup_fails_keeps_nothing_of_the_one_before(
+        self, mc, mock_mvd, tmp_path
+    ):
+        mc.get_value.side_effect = _cfg_get_value
+        mc.get_float.side_effect = _cfg_get_float
+        mc.get_int.side_effect = _cfg_get_int
+        mc.get_boolean.return_value = False
+
+        curves, ms, be, outcome, _ = self._prepare()
+        curves._conditions_ran_with = {"pdr_P": 0.6}
+        curves._setup.complete_model.side_effect = ValueError("rejected definition")
+        curves._DynawoCurves__prepare_oc_validation = MagicMock(
+            return_value=(Path("/out"), Path("/jobs"))
+        )
+        curves._DynawoCurves__reset_solver = MagicMock()
+
+        with pytest.raises(ValueError):
+            curves.obtain_simulated_curve(tmp_path, "prod", "PCS1", "BM1", "OC1", 1.0)
+
+        assert curves.get_simulation_conditions() == {}
 
     @patch(f"{_MODULE}.measure_voltage_dip")
     @patch(f"{_MODULE}.config")

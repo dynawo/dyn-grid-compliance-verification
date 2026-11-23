@@ -7,7 +7,10 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+from typing import Optional
+
 from dycov.configuration.cfg import config
+from dycov.report.tables import ran_with
 
 _CONDITIONS = (
     (".Model", "SCR", "SCR"),
@@ -27,7 +30,7 @@ _CONDITIONS = (
 )
 
 
-def create_map(operating_condition: str) -> list:
+def create_map(operating_condition: str, ran_with_conditions: Optional[dict] = None) -> list:
     """Creates a list to populate the table of the conditions of a test in the LaTeX reports,
     for a page shared by several tests, which cannot spell them out itself.
 
@@ -35,15 +38,20 @@ def create_map(operating_condition: str) -> list:
     ----------
     operating_condition: str
         PCS.Benchmark.OperatingCondition name of the test
+    ran_with_conditions: Optional[dict]
+        The conditions the simulation of the test ran with, once those definitions are
+        resolved, by the option that defines each one
 
     Returns
     -------
     list
-        The label and the definition of each condition the PCS description gives the test
+        The label and the definition of each condition the PCS description gives the test,
+        and the value the test ran with, empty when it did not run
     """
     conditions = []
     for suffix, key, label in _CONDITIONS:
         definition = config.get_value(operating_condition + suffix, key)
         if definition:
-            conditions.append([label, rf"\texttt{{\detokenize{{{definition}}}}}"])
+            value = ran_with.format_value(key, ran_with_conditions or {}) or ""
+            conditions.append([label, rf"\texttt{{\detokenize{{{definition}}}}}", value])
     return conditions

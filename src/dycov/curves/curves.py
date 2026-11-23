@@ -254,6 +254,18 @@ class ProducerCurves:
         """
         pass
 
+    def get_simulation_conditions(self) -> dict:
+        """Get the conditions the simulation of the last test ran with, once its definitions
+        are resolved.
+
+        Returns
+        -------
+        dict
+            The conditions, named after the options of the PCS that define them; empty when
+            nothing was simulated.
+        """
+        return {}
+
     @abstractmethod
     def get_generators_imax(self) -> dict:
         """Get the maximum current (Imax) for each generator.

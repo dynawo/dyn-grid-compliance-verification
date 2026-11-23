@@ -62,6 +62,15 @@ verification of a storage installation of type C or D leaves PCS I5 out and says
 The tool computes the category as the DTR does, from the connection voltage and the maximum power
 at injection of the producer's INI file, so nothing has to be declared for it.
 
+### The report shows the values each test ran with
+
+Every simulated test now lists, next to the solver of its simulation, the conditions it ran with
+once its definitions are resolved: the operating point, the short-circuit ratio or impedance and
+the impedances of the grid, the impedance of the fault, including the one the high-impedance or
+bolted fault search settled on, and the event and its step or the voltages of its dip or swell.
+The same values are recorded in the `[Conditions]` section of the `simulation_inputs.ini` of each
+test.
+
 ### The revision of the DTR is set in the configuration
 
 The configuration the tool ships no longer names a revision of the DTR, and `--dtr` is gone from

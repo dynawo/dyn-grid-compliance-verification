@@ -64,6 +64,14 @@ def compute_rx_from_scr(scr: float, x_over_r: float = 10.0) -> tuple[float, floa
     return R, X
 
 
+def _hiz_dip(step_value) -> dict:
+    """The dip a high-impedance fault search aims at, which its step gives with its sign."""
+    try:
+        return {"hiz_dip": abs(float(step_value))}
+    except (TypeError, ValueError):
+        return {}
+
+
 class ModelSetup:
     """
     Calculates initial conditions and completes all Dynawo input files
@@ -99,6 +107,10 @@ class ModelSetup:
         self.switched_line: Optional[complex] = None
         self.curves_dict: dict = {}
         self.pdr: Optional[PdrParams] = None
+        self.step_value: Optional[float] = None
+        self.zcc: Optional[float] = None
+        self._oc_section: Optional[str] = None
+        self._model_section: Optional[str] = None
 
         # Dynawo file handlers (re-created per operating condition)
         self._jobs_file = None
@@ -152,6 +164,7 @@ class ModelSetup:
         x_grid = None
         self.has_line = False
         self.switched_line = None
+        self.zcc = None
         producer = self._owner.get_producer()
 
         if config.has_option(config_section, "line_XPu"):
@@ -204,7 +217,7 @@ class ModelSetup:
             if ztanphi < 1.0:
                 ztanphi = 1.0
             if scc != 0:
-                zcc = uc_pu**2 / scc_pu
+                zcc = self.zcc = uc_pu**2 / scc_pu
                 dycov_logging.get_logger("ModelSetup").debug(f"\tZcc={zcc}")
                 line_xpu = ztanphi * zcc / math.sqrt(1 + ztanphi * ztanphi)
                 line_rpu = line_xpu / ztanphi
@@ -583,8 +596,9 @@ class ModelSetup:
         dycov_logging.get_logger("ModelSetup").debug(f"\tfault_duration={fault_duration}")
 
         step_value = 0.0
+        self.step_value = None
         if config.has_option(config_section, "setpoint_step_value"):
-            step_value = self._owner.obtain_value(
+            step_value = self.step_value = self._owner.obtain_value(
                 str(config.get_value(config_section, "setpoint_step_value")),
                 origin=(config_section, "setpoint_step_value"),
             )
@@ -599,6 +613,67 @@ class ModelSetup:
             "step_value": step_value,
             "connect_to": connect_event_to,
         }
+
+    def conditions_ran_with(self, working_oc_dir: Path, event_params: dict) -> dict:
+        """The conditions the simulation of a test ran with, once its definitions are resolved,
+        named after the options of the PCS that define them.
+
+        Parameters
+        ----------
+        working_oc_dir : Path
+            Working directory of the test, whose files the simulation ran.
+        event_params : dict
+            Event parameters of the test.
+
+        Returns
+        -------
+        dict
+            The operating point at the bus of the test (``pdr_P``, ``pdr_Q`` in pu of SnRef,
+            positive when injected, and ``pdr_U``); the definition of the grid, its
+            short-circuit ratios or its short-circuit impedance ``Zcc`` in pu of SnRef; the
+            impedances of the grid and of the fault, as the PAR file of the TSO model holds
+            them once the fault is searched (``simulation_files.grid_impedances``); the start
+            and the duration of the event; the setpoint it steps, with its step at the bus in
+            pu of SnRef or of the voltage, or the dip a high-impedance fault search aims at
+            (``hiz_dip``); and the events of the grid: the sizes of its steps, the one of its
+            frequency in pu of the nominal frequency (``grid_frequency_step``), and the voltages
+            of the stages of a dip or a swell (``u_*``).
+        """
+        conditions = {}
+        if self.pdr is not None:
+            conditions |= {"pdr_P": -self.pdr.p, "pdr_Q": -self.pdr.q, "pdr_U": self.pdr.u}
+        conditions |= self._grid_definition()
+        conditions |= simulation_files.grid_impedances(working_oc_dir / _TSO_PAR)
+        conditions["sim_t_event_start"] = event_params["start_time"]
+        if event_params["duration_time"]:
+            conditions["fault_duration"] = event_params["duration_time"]
+        steps_grid_voltage = self._table_file is not None and self._table_file.steps_grid_voltage
+        if self._oc_section and config.get_boolean(self._oc_section, "hiz_fault", False):
+            conditions |= _hiz_dip(self.step_value)
+        elif event_params.get("connect_to") == "NetworkFrequencyPu":
+            conditions["grid_frequency_step"] = self.step_value
+        elif event_params.get("connect_to") and not steps_grid_voltage:
+            conditions["connect_event_to"] = event_params["connect_to"]
+            if self.step_value is not None:
+                conditions["setpoint_step_value"] = self.step_value
+        if self._table_file is not None:
+            conditions |= self._table_file.grid_events | self._table_file.voltage_profile
+        return conditions
+
+    def _grid_definition(self) -> dict:
+        """The definition of the grid the test took, in the order ``_get_line`` reads them: its
+        short-circuit ratio, with that of the switched line, unless the test gives the
+        reactance of the line; or else its short-circuit impedance."""
+        section = self._model_section
+        if section is None or config.has_option(section, "line_XPu"):
+            return {}
+        if config.has_option(section, "SCR"):
+            return {
+                key: config.get_float(section, key, 0.0)
+                for key in ("SCR", "switched_SCR")
+                if config.has_option(section, key)
+            }
+        return {} if self.zcc is None else {"Zcc": self.zcc}
 
     def _reference_operating_point(self, gen: GenParams) -> tuple[complex, float]:
         """The power (base SNom, generator convention) and the voltage (base UNom) of a unit
@@ -741,6 +816,9 @@ class ModelSetup:
             working_oc_dir / _TSO_PAR,
         )
 
+        self._oc_section = self._cfg_section(pcs_name, bm_name, oc_name)
+        self._model_section = self._oc_section + ".Model"
+        self._table_file = None
         u_dim = self._owner.get_generator_u_dim()
         pdr = self.pdr = self._get_pdr(pcs_name, bm_name, oc_name, u_dim)
         line_rpu, line_xpu = self._get_line(pcs_name, bm_name, oc_name)

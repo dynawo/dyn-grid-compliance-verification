@@ -897,6 +897,7 @@ class Benchmark:
                 sim.has_simulated_curves,
             )
             results["solver"] = self._curves_manager.get_solver()
+            results["ran_with"] = self._curves_manager.get_simulation_conditions()
         elif curves_result.availability == CurvesAvailability.NO_REFERENCE:
             op_cond_success, results, compliance = self.__validate(
                 op_cond,
@@ -910,6 +911,7 @@ class Benchmark:
             if compliance.show_report():
                 compliance = _compliance_for_missing_curves(curves_result.availability)
             results["solver"] = self._curves_manager.get_solver()
+            results["ran_with"] = self._curves_manager.get_simulation_conditions()
         else:
             compliance = _compliance_for_missing_curves(curves_result.availability)
             results = {**_FAILED_RESULTS}

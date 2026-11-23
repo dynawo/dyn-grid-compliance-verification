@@ -1343,3 +1343,192 @@ class TestApplyReferenceEventStartTime:
         setup._apply_reference_event_start_time(event_params, 30.0)
 
         assert event_params["start_time"] == 30.0
+
+
+# ---------------------------------------------------------------------------
+# conditions_ran_with
+# ---------------------------------------------------------------------------
+
+
+class TestConditionsRanWith:
+    _PAR = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<parametersSet xmlns="http://www.rte-france.com/dynawo">'
+        '<set id="Line"><par type="DOUBLE" name="line_RPu" value="0.8"/>'
+        '<par type="DOUBLE" name="line_XPu" value="8.0"/></set>'
+        '<set id="NodeFault"><par type="DOUBLE" name="fault_RPu" value="0.25"/>'
+        '<par type="DOUBLE" name="fault_XPu" value="2.5"/></set>'
+        "</parametersSet>"
+    )
+
+    def _setup(self, tmp_path):
+        (tmp_path / "TSOModel.par").write_text(self._PAR)
+        setup = _make_setup()
+        setup.pdr = PdrParams(1.02, 0.0, complex(-0.6, 0.1), -0.6, 0.1)
+        setup._oc_section = "PCS1.BM1.OC1"
+        setup._model_section = "PCS1.BM1.OC1.Model"
+        return setup
+
+    @staticmethod
+    def _table(grid_events=None, voltage_profile=None, steps_grid_voltage=False):
+        return MagicMock(
+            grid_events=grid_events or {},
+            voltage_profile=voltage_profile or {},
+            steps_grid_voltage=steps_grid_voltage,
+        )
+
+    @patch(f"{_MS}.config")
+    def test_a_fault_runs_with_the_operating_point_and_the_impedances_of_its_par(
+        self, mock_config, tmp_path
+    ):
+        mock_config.has_option.side_effect = lambda section, key: key == "SCR"
+        mock_config.get_float.return_value = 3.0
+        mock_config.get_boolean.return_value = False
+        setup = self._setup(tmp_path)
+
+        conditions = setup.conditions_ran_with(
+            tmp_path, {"start_time": 30.0, "duration_time": 0.5, "connect_to": None}
+        )
+
+        assert conditions == {
+            "pdr_P": pytest.approx(0.6),
+            "pdr_Q": pytest.approx(-0.1),
+            "pdr_U": pytest.approx(1.02),
+            "SCR": 3.0,
+            "line_RPu": 0.8,
+            "line_XPu": 8.0,
+            "grid_lines": 1,
+            "fault_RPu": 0.25,
+            "fault_XPu": 2.5,
+            "sim_t_event_start": 30.0,
+            "fault_duration": 0.5,
+        }
+
+    @patch(f"{_MS}.config")
+    def test_a_step_runs_with_its_setpoint_its_step_at_the_bus_and_the_events_of_the_grid(
+        self, mock_config, tmp_path
+    ):
+        mock_config.has_option.return_value = False
+        mock_config.get_boolean.return_value = False
+        setup = self._setup(tmp_path)
+        setup.step_value = 0.16
+        setup._table_file = self._table(grid_events={"grid_phase_jump": 0.1})
+
+        conditions = setup.conditions_ran_with(
+            tmp_path,
+            {"start_time": 20.0, "duration_time": 0.0, "connect_to": "ActivePowerSetpointPu"},
+        )
+
+        assert "fault_duration" not in conditions
+        assert conditions["connect_event_to"] == "ActivePowerSetpointPu"
+        assert conditions["setpoint_step_value"] == 0.16
+        assert conditions["grid_phase_jump"] == 0.1
+
+    @patch(f"{_MS}.generator_variables")
+    @patch(f"{_MS}.config")
+    def test_the_step_is_kept_at_the_bus_before_it_is_shared_among_the_units(
+        self, mock_config, mock_gv
+    ):
+        gen = _make_gen(s_nom=50.0)
+        owner = _make_owner(_make_producer(s_nom=50.0, generators=[gen]))
+        owner.obtain_value.side_effect = lambda v, origin=None: 0.1
+        setup = _make_setup(owner, s_nref=100.0)
+        TestGetEventParameters()._setup_config(
+            mock_config, connect_to="ActivePowerSetpointPu", has_step_value=True, step_value=0.1
+        )
+
+        result = setup._get_event_parameters(
+            "PCS1", "BM1", "OC1", pdr=PdrParams(1.0, 0.0, complex(0.5, 0.2), 0.5, 0.2)
+        )
+
+        assert result["step_value"] == [pytest.approx(0.2)]
+        assert setup.step_value == pytest.approx(0.1)
+
+    @patch(f"{_MS}.config")
+    def test_a_grid_given_by_the_reactance_of_its_line_shows_no_short_circuit_ratio(
+        self, mock_config, tmp_path
+    ):
+        mock_config.has_option.side_effect = lambda section, key: key in ("SCR", "line_XPu")
+        mock_config.get_boolean.return_value = False
+        setup = self._setup(tmp_path)
+
+        conditions = setup.conditions_ran_with(
+            tmp_path, {"start_time": 30.0, "duration_time": 0.1, "connect_to": None}
+        )
+
+        assert "SCR" not in conditions
+
+    @patch(f"{_MS}.config")
+    def test_a_dip_runs_with_the_short_circuit_impedance_and_the_voltages_of_its_profile(
+        self, mock_config, tmp_path
+    ):
+        mock_config.has_option.side_effect = lambda section, key: key == "Zcc"
+        mock_config.get_boolean.return_value = False
+        setup = self._setup(tmp_path)
+        setup.zcc = 0.0476
+        setup._table_file = self._table(voltage_profile={"u_fault": 0.05, "u_rec2": 0.85})
+
+        conditions = setup.conditions_ran_with(
+            tmp_path, {"start_time": 30.0, "duration_time": 0.15, "connect_to": None}
+        )
+
+        assert conditions["Zcc"] == 0.0476
+        assert conditions["u_fault"] == 0.05
+        assert conditions["u_rec2"] == 0.85
+
+    @patch(f"{_MS}.config")
+    def test_a_high_impedance_fault_runs_with_the_dip_its_search_aims_at(
+        self, mock_config, tmp_path
+    ):
+        mock_config.has_option.return_value = False
+        mock_config.get_boolean.side_effect = lambda section, key, default=False: (
+            key == "hiz_fault"
+        )
+        setup = self._setup(tmp_path)
+        setup.step_value = -0.7
+
+        conditions = setup.conditions_ran_with(
+            tmp_path, {"start_time": 30.0, "duration_time": 0.5, "connect_to": "None"}
+        )
+
+        assert conditions["hiz_dip"] == pytest.approx(0.7)
+        assert "setpoint_step_value" not in conditions
+        assert "connect_event_to" not in conditions
+
+    @patch(f"{_MS}.config")
+    def test_a_step_the_table_of_the_grid_takes_is_a_step_of_the_grid_voltage(
+        self, mock_config, tmp_path
+    ):
+        mock_config.has_option.return_value = False
+        mock_config.get_boolean.return_value = False
+        setup = self._setup(tmp_path)
+        setup.step_value = -0.1
+        setup._table_file = self._table(
+            grid_events={"grid_voltage_step": -0.1}, steps_grid_voltage=True
+        )
+
+        conditions = setup.conditions_ran_with(
+            tmp_path, {"start_time": 30.0, "duration_time": 0.0, "connect_to": "VoltageSetpointPu"}
+        )
+
+        assert conditions["grid_voltage_step"] == -0.1
+        assert "setpoint_step_value" not in conditions
+        assert "connect_event_to" not in conditions
+
+    @patch(f"{_MS}.config")
+    def test_a_ramp_of_the_frequency_runs_as_a_step_of_the_grid_frequency(
+        self, mock_config, tmp_path
+    ):
+        mock_config.has_option.return_value = False
+        mock_config.get_boolean.return_value = False
+        setup = self._setup(tmp_path)
+        setup.step_value = 0.01
+
+        conditions = setup.conditions_ran_with(
+            tmp_path,
+            {"start_time": 20.0, "duration_time": 0.25, "connect_to": "NetworkFrequencyPu"},
+        )
+
+        assert conditions["grid_frequency_step"] == 0.01
+        assert "setpoint_step_value" not in conditions
+        assert "connect_event_to" not in conditions

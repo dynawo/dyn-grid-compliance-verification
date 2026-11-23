@@ -53,15 +53,16 @@
 
     \begin{description}
         \item Conditions of the test, as its PCS description defines them (the operating point
-        at InternalNode1):
+        at InternalNode1), and the values the simulation ran with:
     \end{description}
     \begin{center}
-        \begin{tabular}{lc}
+        \small
+        \begin{tabular}{lcc}
             \toprule
-            \textbf{Condition} & \textbf{Definition} \\
+            \textbf{Condition} & \textbf{Definition} & \textbf{Value} \\
             \midrule
             \BLOCK{for row in conditions}
-            {{row[0]}}         & {{row[1]}}          \\
+            {{row[0]}}         & {{row[1]}}          & {{row[2]}}     \\
             \BLOCK{endfor}
             \bottomrule
         \end{tabular}
@@ -81,6 +82,23 @@
             \bottomrule
         \end{tabular}
     \end{center}
+
+    \BLOCK{ if ranwith }
+    \noindent\begin{minipage}{\linewidth}
+    Conditions the simulation ran with, once the definitions of the test are resolved:
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+            \textbf{Condition} & \textbf{Value} \\
+            \midrule
+            \BLOCK{for row in ranwith}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+    \end{minipage}
+    \BLOCK{ endif }
 
     \GridSimulationHeaderZone{
         \GridCurvesDescriptionNodeOne
