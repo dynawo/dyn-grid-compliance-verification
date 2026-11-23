@@ -65,6 +65,21 @@ def _replace_table(text: str, name: str, rows: list) -> str:
     return "\n".join(lines) + "\n"
 
 
+def _voltage_levels(variables_dict: dict) -> dict:
+    """The voltages of the grid, by stage, a table of a dip or a swell holds once completed:
+    its ``u_*`` entries, which a key of the PCS may give by the category or the voltage level of
+    the unit."""
+    levels = {}
+    for key, value in variables_dict.items():
+        if not key.startswith("u_"):
+            continue
+        try:
+            levels[key] = float(value)
+        except (TypeError, ValueError):
+            continue
+    return levels
+
+
 def _phase_of_frequency(profile: list, time: float, omega_nom: float) -> float:
     """The angle a grid turns by until the given time, relative to the nominal frequency,
     following a piecewise linear frequency profile in pu."""
@@ -156,15 +171,20 @@ class TableFile(FileVariables):
             bm_section,
             oc_section,
         )
+        self.grid_events: dict = {}
+        self.voltage_profile: dict = {}
+        self.steps_grid_voltage = False
 
     def __grid_event(self, key: str) -> float:
         """The size of an event of the grid the Event section of the test declares, 0 when it
-        declares none."""
+        declares none. The sizes declared are kept in grid_events, by the key that declares
+        them."""
         if not config.has_option(self._event_section, key):
             return 0.0
         value = self._dynawo_curves.obtain_value(
             config.get_value(self._event_section, key), origin=(self._event_section, key)
         )
+        self.grid_events[key] = float(value)
         return float(value)
 
     def __complete_grid_events(
@@ -199,6 +219,7 @@ class TableFile(FileVariables):
         self, working_oc_dir: Path, tso_gen: GenInit, event_params: dict, filename: str
     ) -> None:
         variables_dict = replace_placeholders.get_all_variables(working_oc_dir, filename)
+        follows_grid_voltage = "bus_upu" in variables_dict
 
         variables_dict["start_event"] = event_params["start_time"]
         variables_dict["end_event"] = event_params["start_time"] + event_params["duration_time"]
@@ -209,12 +230,16 @@ class TableFile(FileVariables):
         # Adjust bus voltage or frequency based on the event's connection type
         if event_params["connect_to"] == "VoltageSetpointPu":
             variables_dict["bus_upu"] = tso_gen.u0 + float(event_params["step_value"])
+            if follows_grid_voltage:
+                self.steps_grid_voltage = True
+                self.grid_events["grid_voltage_step"] = float(event_params["step_value"])
         elif event_params["connect_to"] == "NetworkFrequencyPu":
             variables_dict["end_freq"] = 1.0 + float(event_params["step_value"])
 
         # Complete any additional parameters using the inherited method
         self.__complete_Xv_entries(variables_dict, event_params)
         self.complete_parameters(variables_dict, event_params)
+        self.voltage_profile |= _voltage_levels(variables_dict)
 
         # Replace placeholders in the TableInfiniteBus file with the calculated variables
         replace_placeholders.dump_file(working_oc_dir, filename, variables_dict)

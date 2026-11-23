@@ -286,3 +286,59 @@ def test_the_line_switches_at_the_instant_of_the_event(tmp_path, tso_gen):
     (switch,) = rows.values()
     assert [value for time, value in switch if time == 20.0] == [1.0, 0.0]
     assert {value for _, value in switch} == {0.0, 1.0}
+
+
+def test_the_sizes_of_the_events_of_the_grid_are_kept_as_declared(grid_events, tso_gen):
+    working_dir = grid_events(grid_phase_jump=0.12, grid_rocof=2.0)
+    table = TableFile(_NumericCurves(), "BM", "OC")
+    params = {"start_time": 20.0, "duration_time": 1.0, "connect_to": "", "step_value": 0}
+
+    table.complete_file(working_dir, tso_gen, params)
+
+    assert table.grid_events == {"grid_phase_jump": 0.12, "grid_rocof": 2.0}
+
+
+def test_a_step_of_the_voltage_setpoint_a_table_of_the_grid_takes_steps_the_grid(
+    grid_events, tso_gen
+):
+    working_dir = grid_events()
+    table = TableFile(_NumericCurves(), "BM", "OC")
+    params = {
+        "start_time": 20.0,
+        "duration_time": 0.0,
+        "connect_to": "VoltageSetpointPu",
+        "step_value": -0.1,
+    }
+
+    table.complete_file(working_dir, tso_gen, params)
+
+    assert table.steps_grid_voltage is True
+    assert table.grid_events == {"grid_voltage_step": -0.1}
+
+
+class _CategorisedCurves(_NumericCurves):
+    """Curves of a unit whose category and voltage level select the keys of the PCS."""
+
+    def get_producer(self):
+        return DummyProducer()
+
+
+def test_the_voltages_of_the_stages_of_a_dip_are_kept_as_the_table_resolves_them(
+    tmp_path, tso_gen
+):
+    pcs = tmp_path / "PCSDescription.ini"
+    pcs.write_text("[BM.OC.Model]\nu_fault = 0.05\nu_rec2 = 0.85\n")
+    config.load_pcs_config(pcs)
+    (tmp_path / "TableInfiniteBus.txt").write_text(
+        "double TableUPu(3,2)\n{{start_event}} {{u_fault}}\n{{end_event}} {{u_rec2}}\n"
+    )
+    table = TableFile(_CategorisedCurves(), "BM", "OC")
+    params = {"start_time": 20.0, "duration_time": 0.15, "connect_to": "", "step_value": 0}
+
+    try:
+        table.complete_file(tmp_path, tso_gen, params)
+    finally:
+        config.load_pcs_config(None)
+
+    assert table.voltage_profile == {"u_fault": 0.05, "u_rec2": 0.85}
+    assert table.steps_grid_voltage is False

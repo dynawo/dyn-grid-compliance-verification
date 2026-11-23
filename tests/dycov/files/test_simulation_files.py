@@ -88,3 +88,77 @@ def test_write_pdr_comment_updates_the_comment_of_a_previous_run(tmp_path):
     assert [comment.text for comment in comments] == [
         "PDR parameters: U=0.98, UPhase=0.2, S=1.0, P=0.5, Q=0.1"
     ]
+
+
+_PAR = """<?xml version="1.0" encoding="UTF-8"?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+{sets}
+</parametersSet>
+"""
+
+
+def _par_with(tmp_path, *sets):
+    """A PAR file of a TSO model with the given sets, each an id and its parameters."""
+    body = "".join(
+        f'  <set id="{set_id}">'
+        + "".join(f'<par type="DOUBLE" name="{n}" value="{v}"/>' for n, v in parameters.items())
+        + "</set>\n"
+        for set_id, parameters in sets
+    )
+    path = tmp_path / "TSOModel.par"
+    path.write_text(_PAR.format(sets=body))
+    return path
+
+
+def test_the_grid_ran_with_the_impedance_of_its_line_and_of_the_fault_at_a_node(tmp_path):
+    par = _par_with(
+        tmp_path,
+        ("InfiniteBus", {"infiniteBus_UPu": 1.0}),
+        ("Line", {"line_RPu": 0.8292, "line_XPu": 8.292}),
+        ("NodeFault", {"fault_RPu": 0.2539, "fault_XPu": 2.5391, "fault_tBegin": 30}),
+    )
+
+    assert simulation_files.grid_impedances(par) == {
+        "line_RPu": 0.8292,
+        "line_XPu": 8.292,
+        "grid_lines": 1,
+        "fault_RPu": 0.2539,
+        "fault_XPu": 2.5391,
+    }
+
+
+def test_a_grid_of_several_lines_and_a_fault_along_one_of_them(tmp_path):
+    lines = [(f"Line{n}", {"line_RPu": 0.0, "line_XPu": 0.4}) for n in (1, 2, 3)]
+    fault = {"line_RPu": 0.0, "line_XPu": 0.4, "line_RFaultPu": 0.0, "line_XFaultPu": 0.05}
+    par = _par_with(tmp_path, *lines, ("LineFault", fault))
+
+    assert simulation_files.grid_impedances(par) == {
+        "line_RPu": 0.0,
+        "line_XPu": 0.4,
+        "grid_lines": 4,
+        "fault_RPu": 0.0,
+        "fault_XPu": 0.05,
+    }
+
+
+def test_the_line_a_jump_of_the_short_circuit_ratio_switches_is_not_a_line_of_the_grid(tmp_path):
+    par = _par_with(
+        tmp_path,
+        ("Line", {"line_RPu": 0.01, "line_XPu": 0.5}),
+        ("SwitchedLine", {"line_RPu": 0.002, "line_XPu": 0.1}),
+    )
+
+    assert simulation_files.grid_impedances(par) == {
+        "line_RPu": 0.01,
+        "line_XPu": 0.5,
+        "grid_lines": 1,
+        "switched_line_RPu": 0.002,
+        "switched_line_XPu": 0.1,
+    }
+
+
+def test_a_grid_without_lines_or_a_value_not_filled_in_gives_nothing(tmp_path):
+    par = _par_with(tmp_path, ("Line", {"line_RPu": "{{line_RPu}}"}), ("Main_Load", {"P": 1}))
+
+    assert simulation_files.grid_impedances(par) == {}
+    assert simulation_files.grid_impedances(tmp_path / "missing.par") == {}

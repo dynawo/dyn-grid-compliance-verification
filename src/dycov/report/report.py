@@ -44,6 +44,7 @@ from dycov.report.tables import (
     characteristics_response,
     compliance,
     conditions,
+    ran_with,
     results,
     signal_error,
     solver,
@@ -272,6 +273,7 @@ def _pcs_replace(
     )
 
     _render_zone1_circuits(working_path, producer, pcs_results["pcs"].get_zone(), producer_name)
+    operating_point_bus = "InternalNode1" if pcs_results["pcs"].get_zone() == 1 else "the PDR"
 
     subst_dict = {
         "producercommand": f"\\renewcommand{{\\Producer}}{{{pcs_results['producer']}}}"
@@ -307,6 +309,7 @@ def _pcs_replace(
 
         oc_maps = {
             "solver": solver_map,
+            "ranwith": ran_with.create_map(oc_results, operating_point_bus),
             "rm": results_map,
             "cm": compliance_map,
             "thm": thresholds_map,
@@ -345,7 +348,9 @@ def _pcs_replace(
                 "benchmark": benchmark,
                 "operatingcondition": oc_name,
                 "link": latex_link,
-                "conditions": conditions.create_map(operating_condition),
+                "conditions": conditions.create_map(
+                    operating_condition, oc_results.get("ran_with")
+                ),
                 "trackedmagnitude": config.get_value(
                     operating_condition, "tracked_magnitude", ""
                 ).replace("_", " "),

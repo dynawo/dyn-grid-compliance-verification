@@ -40,6 +40,23 @@
         \end{tabular}
     \end{center}
 
+    \BLOCK{ if ranwith }
+    \noindent\begin{minipage}{\linewidth}
+    Conditions the simulation ran with, once the definitions of the test are resolved:
+    \begin{center}
+        \begin{tabular}{lc}
+            \toprule
+            \textbf{Condition} & \textbf{Value} \\
+            \midrule
+            \BLOCK{for row in ranwith}
+            {{row[0]}}         & {{row[1]}}                         \\
+            \BLOCK{endfor}
+            \bottomrule
+        \end{tabular}
+    \end{center}
+    \end{minipage}
+    \BLOCK{ endif }
+
     \GridCurvesDummy
     \\[2\baselineskip]
     Go to  {{ linkPCSIz1Benchmark2OperatingCondition5 }}

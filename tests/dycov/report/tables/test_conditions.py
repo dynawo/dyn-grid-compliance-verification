@@ -34,11 +34,31 @@ def test_the_conditions_of_a_test_are_the_definitions_of_its_description(describ
     test_conditions = conditions.create_map(described_test)
 
     assert test_conditions == [
-        ["SCR", r"\texttt{\detokenize{10}}"],
-        ["$P$", r"\texttt{\detokenize{0.5*PmaxInjection}}"],
-        ["$Q$", r"\texttt{\detokenize{0}}"],
-        ["Phase jump of the grid voltage (rad)", r"\texttt{\detokenize{0.3*(Xeff+Xgrid)}}"],
-        ["Start of the event (s)", r"\texttt{\detokenize{20}}"],
+        ["SCR", r"\texttt{\detokenize{10}}", ""],
+        ["$P$", r"\texttt{\detokenize{0.5*PmaxInjection}}", ""],
+        ["$Q$", r"\texttt{\detokenize{0}}", ""],
+        ["Phase jump of the grid voltage (rad)", r"\texttt{\detokenize{0.3*(Xeff+Xgrid)}}", ""],
+        ["Start of the event (s)", r"\texttt{\detokenize{20}}", ""],
+    ]
+
+
+def test_each_definition_comes_with_the_value_the_test_ran_with(described_test):
+    ran_with = {
+        "SCR": 10.0,
+        "pdr_P": 0.6,
+        "pdr_Q": 0.0,
+        "grid_phase_jump": 0.0942,
+        "sim_t_event_start": 20.0,
+    }
+
+    values = [row[2] for row in conditions.create_map(described_test, ran_with)]
+
+    assert values == [
+        "10",
+        "60 MW (0.6 pu)",
+        "0 Mvar (0 pu)",
+        r"5.397$^\circ$ (0.0942 rad)",
+        "20 s",
     ]
 
 

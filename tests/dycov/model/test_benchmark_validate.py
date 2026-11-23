@@ -63,6 +63,9 @@ class DummyCurvesManager:
     def get_solver(self):
         return "IDA"
 
+    def get_simulation_conditions(self):
+        return {"pdr_P": 0.5}
+
     def get_generators_imax(self):
         return None
 
@@ -238,6 +241,7 @@ def test_missing_curves_make_the_summary_invalid(benchmark, monkeypatch):
     assert compliance == Compliance.InvalidTest
     assert results["summary"] == Compliance.InvalidTest
     assert results["missed_columns"] == ["BusPDR_BUS_Voltage"]
+    assert results["ran_with"] == {"pdr_P": 0.5}
 
 
 def test_a_test_without_reference_curves_keeps_saying_so(benchmark, monkeypatch):
