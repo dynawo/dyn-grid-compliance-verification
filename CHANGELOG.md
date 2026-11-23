@@ -54,6 +54,14 @@ type C, with a WECC plant of 40 MW at 225 kV in Zone 3. The `BESS/WECC` example,
 that same size and so was of type C too, is now of 15 MW, a type B: under this revision a
 storage installation of type C has to be Grid Forming, and its unit is not.
 
+### Fiche I5 applies to storage installations of type B alone from the DTR revision 20260723
+
+The revision of the DTR of 20260723 asks the Fiche I5 of a storage installation of type B alone,
+where the earlier revisions asked it of types B, C and D. Under that revision, the performance
+verification of a storage installation of type C or D leaves PCS I5 out and says why in the log.
+The tool computes the category as the DTR does, from the connection voltage and the maximum power
+at injection of the producer's INI file, so nothing has to be declared for it.
+
 ### The revision of the DTR is set in the configuration
 
 The configuration the tool ships no longer names a revision of the DTR, and `--dtr` is gone from

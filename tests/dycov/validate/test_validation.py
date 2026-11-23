@@ -335,7 +335,7 @@ def test_open_document_survives_a_failing_viewer(monkeypatch, recorded_logs):
     )
 
 
-def test_a_pcs_that_declares_no_test_is_not_validated(monkeypatch):
+def test_a_pcs_that_declares_no_test_is_not_validated(monkeypatch, recorded_logs):
     class UndeclaredPcs:
         def __init__(self, producer_name, pcs_name, parameters):
             self._producer_name = producer_name
@@ -347,6 +347,9 @@ def test_a_pcs_that_declares_no_test_is_not_validated(monkeypatch):
         def declares_tests(self):
             return False
 
+        def why_no_test(self):
+            return "the reason it has none"
+
         def get_producer_name(self):
             return self._producer_name
 
@@ -357,10 +360,18 @@ def test_a_pcs_that_declares_no_test_is_not_validated(monkeypatch):
             raise AssertionError("a PCS without tests must not be validated")
 
     monkeypatch.setattr("dycov.validate.validation.Pcs", UndeclaredPcs)
+    monkeypatch.setattr(
+        "dycov.validate.validation.dycov_logging.clear_test_context",
+        lambda: recorded_logs.append(("context", "cleared")),
+    )
 
     result = _validate_pcs((None, "PCS_RTE-F16z3", "Producer", Path("/tmp")))
 
     assert result == ("Producer", "PCS_RTE-F16z3", [], {})
+    assert recorded_logs[-2:] == [
+        ("context", "cleared"),
+        ("info", "Producer PCS_RTE-F16z3: the reason it has none"),
+    ]
 
 
 def test_an_invalid_pcs_adds_nothing_to_the_summary(monkeypatch):

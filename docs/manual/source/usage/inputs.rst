@@ -399,6 +399,11 @@ producer whose INI carries its name, next to the folder or in the zone folders.
 A folder that no INI describes, such as the ``Results`` an earlier run left
 there, is skipped with a warning, and the other producers are validated.
 
+In an electric performance verification each producer is an installation of
+its own, so the connection voltage and the maximum power at injection of its
+INI give it its category, which decides whether PCS I5 applies to a storage
+installation (see :ref:`pcs-i5`).
+
 
 .. _topologies:
 
