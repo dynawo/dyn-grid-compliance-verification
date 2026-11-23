@@ -13,8 +13,10 @@ Two things are written:
 * **the F16 declaration** (``F16Description.ini``) — the on-site tests the example declares as
   recorded.
 
-What neither the model nor the example states — the apparent power and the power levels of the
-F16 tests — is read from ``example_inputs.ini``, beside this script.
+What neither the model nor the example states — the apparent power and the steps of the F16
+tests — is read from ``example_inputs.ini``, beside this script. What the fiche fixes — the power
+levels of the F16 tests, their checks and their figures — is read from the template of the
+declaration the tool ships, as the revision of the DTR the regeneration follows writes it.
 """
 
 import argparse
@@ -22,6 +24,9 @@ import configparser
 from pathlib import Path
 
 CONFIGURATION = Path(__file__).resolve().parent / "example_inputs.ini"
+RELEASE = Path(__file__).resolve().parent / "release.ini"
+PACKAGE = Path(__file__).resolve().parents[2] / "src" / "dycov"
+TEMPLATES = PACKAGE / "templates"
 
 # The magnitudes of the DTR a producer declares, in the order they are written.
 _DTR_MAGNITUDES = (
@@ -57,19 +62,9 @@ _F16_BENCHMARKS = (
 # The step of the voltage test, which does not depend on the power level.
 _F16_VOLTAGE_STEP = "0.02*Udim"
 
-_F16_CHECKS = (
-    "reaction_time",
-    "rise_time",
-    "response_time",
-    "settling_time",
-    "overshoot",
-    "mean_absolute_error_power_1P",
-    "mean_absolute_error_injection_1P",
-    "mean_absolute_error_voltage",
-    "setpoint_tracking_controlled_magnitude",
-)
-
-_F16_FIGURES = ("fig_P", "fig_Q", "fig_Ip", "fig_Iq", "fig_Ustator", "fig_V")
+# The benchmark of the template of the F16 declaration, whose operating conditions are the power
+# levels the fiche fixes.
+_F16_TEMPLATE_BENCHMARK = "PCS_RTE-F16z3.RecordedTest"
 
 _F16_HEADER = """# Tests of the DTR Fiche F16 declared with their records, as a producer delivers
 # them. Written by tools/scripts/example_inputs.py: the fiche selects no test of its own, so
@@ -84,10 +79,42 @@ _F16_HEADER = """# Tests of the DTR Fiche F16 declared with their records, as a 
 
 
 def _read_ini(path: Path) -> configparser.ConfigParser:
-    parser = configparser.ConfigParser(inline_comment_prefixes=("#",))
+    parser = configparser.ConfigParser(inline_comment_prefixes=("#",), interpolation=None)
     parser.optionxform = str
     if not parser.read(path):
         raise SystemExit(f"{path}: not found.")
+    return parser
+
+
+def _names_in(value: str) -> list:
+    """The names of a list of the configuration. The word ``none`` means a list with nothing
+    in it, which a revision that withdraws a fiche or a test writes."""
+    if value.strip().lower() == "none":
+        return []
+    return [name.strip() for name in value.split(",") if name.strip()]
+
+
+def dtr_revision(requested: str = "") -> str:
+    """The revision of the DTR the regeneration follows: the one asked for, which has to be one
+    the tool implements, or else the one ``release.ini`` names."""
+    if not requested:
+        return _read_ini(RELEASE).get("DTR", "current")
+    available = _names_in(
+        _read_ini(PACKAGE / "configuration" / "defaultConfig.ini").get("DTR", "available")
+    )
+    if requested not in available:
+        raise SystemExit(
+            f"{requested}: not a revision of the DTR the tool implements ({', '.join(available)})."
+        )
+    return requested
+
+
+def _as_the_revision_writes_it(inside: Path, revision: str) -> configparser.ConfigParser:
+    """A file of the templates the tool ships, with what the revision of the DTR writes for it
+    over it: the delta of a revision mirrors the shipped templates, and overlays them key by
+    key."""
+    parser = _read_ini(TEMPLATES / inside)
+    parser.read(TEMPLATES / "revisions" / revision / inside, encoding="utf-8")
     return parser
 
 
@@ -136,15 +163,30 @@ setpoint_step_value = {step}
 """
 
 
-def f16_declaration(generator_type: str) -> str:
+def _listed(template: configparser.ConfigParser, section: str) -> list:
+    """The keys of a section of a template that list a benchmark: the checks or the figures it
+    applies, without those a revision withdraws by writing ``none``."""
+    return [key for key in template.options(section) if _names_in(template.get(section, key))]
+
+
+def f16_declaration(generator_type: str, revision: str) -> str:
     """The ``F16Description.ini`` of an example: the on-site tests it declares as recorded, at
-    the power levels the configuration gives for this kind of producer."""
+    the power levels the fiche fixes for this kind of producer, with the steps the
+    configuration gives them, and checked and drawn as the fiche asks, all of it as the revision
+    of the DTR writes the template of the declaration."""
     section = _read_ini(CONFIGURATION)[f"F16.{generator_type}"]
-    levels = [
-        (level, *(value.strip() for value in section[level].split(",")))
-        for level in section
-        if level != "label"
-    ]
+    template = _as_the_revision_writes_it(
+        Path("PCS", "model", generator_type, "PCS_RTE-F16z3", "F16Description.ini"), revision
+    )
+    levels = []
+    for level in _names_in(template.get("PCS-OperatingConditions", _F16_TEMPLATE_BENCHMARK)):
+        if level not in section:
+            raise SystemExit(
+                f"{CONFIGURATION}: [F16.{generator_type}] gives no step to the level {level} the"
+                f" DTR revision {revision} fixes."
+            )
+        pdr_p = template.get(f"{_F16_TEMPLATE_BENCHMARK}.{level}.Model", "pdr_P")
+        levels.append((level, pdr_p, section[level].strip()))
     names = [benchmark[0] for benchmark in _F16_BENCHMARKS]
     both = ",".join(f"PCS_RTE-F16z3.{name}" for name in names)
 
@@ -174,12 +216,12 @@ def f16_declaration(generator_type: str) -> str:
         "\n# The compliance tests, each one listing the benchmarks it applies to\n"
         "[Model-Validations]\n"
     )
-    lines.extend(f"{check} = {both}\n" for check in _F16_CHECKS)
+    lines.extend(f"{check} = {both}\n" for check in _listed(template, "Model-Validations"))
     lines.append(
         "\n# The figures of the report, each one listing the benchmarks it is drawn for\n"
         "[ReportCurves]\n"
     )
-    lines.extend(f"{figure} = {both}\n" for figure in _F16_FIGURES)
+    lines.extend(f"{figure} = {both}\n" for figure in _listed(template, "ReportCurves"))
     return "".join(lines)
 
 
@@ -235,10 +277,25 @@ def declare_field_measurements(declaration: Path, producer_path: Path) -> int:
     return corrected
 
 
-def declare_imax(producer_path: Path, kind: str) -> int:
+def _declares(kind: str, test: str, revision: str) -> bool:
+    """Whether the performance PCS of a kind of producer declare a test, as the revision of the
+    DTR writes them."""
+    pcs, benchmark, condition = test.split(".")
+    description = _as_the_revision_writes_it(
+        Path("PCS", "performance", kind, pcs, "PCSDescription.ini"), revision
+    )
+    return benchmark in _names_in(
+        description.get("PCS-Benchmarks", pcs, fallback="")
+    ) and condition in _names_in(
+        description.get("PCS-OperatingConditions", f"{pcs}.{benchmark}", fallback="")
+    )
+
+
+def declare_imax(producer_path: Path, kind: str, revision: str) -> int:
     """Writes into the dictionary of each test that reads it the maximum injected current of the
     generator. The anonymizer cannot: no curve carries it, and it is a value of the producer.
-    Returns how many dictionaries it wrote it into."""
+    A test the revision of the DTR does not declare has not run, and has no record to write it
+    into. Returns how many dictionaries it wrote it into."""
     configuration = _read_ini(CONFIGURATION)
     if not configuration.has_section(f"Imax.{kind}"):
         return 0
@@ -246,7 +303,9 @@ def declare_imax(producer_path: Path, kind: str) -> int:
     section = configuration[f"Imax.{kind}"]
     declaration = f"{section['generator']}_GEN_MaxInjectedCurrentPu = {section['value']}"
     written = 0
-    for test in filter(None, (value.strip() for value in section["tests"].split(","))):
+    for test in _names_in(section["tests"]):
+        if not _declares(kind, test, revision):
+            continue
         dictionary = producer_path / f"{test}.dict"
         if not dictionary.is_file():
             raise SystemExit(
@@ -277,6 +336,7 @@ def main() -> None:
     f16 = subparsers.add_parser("f16", help="write an example's F16Description.ini")
     f16.add_argument("--type", required=True, choices=("PPM", "BESS"))
     f16.add_argument("--output", type=Path, required=True)
+    f16.add_argument("--dtr", default="", help="the revision of the DTR (default: release.ini's)")
 
     announce = subparsers.add_parser(
         "announce", help="announce the delivery of the records: write its index"
@@ -296,16 +356,24 @@ def main() -> None:
     )
     imax.add_argument("--producer", type=Path, required=True, help="the directory of the records")
     imax.add_argument("--type", required=True, choices=("SM", "PPM", "BESS"))
+    imax.add_argument("--dtr", default="", help="the revision of the DTR (default: release.ini's)")
+
+    revision = subparsers.add_parser(
+        "revision", help="print the revision of the DTR the regeneration follows"
+    )
+    revision.add_argument("--dtr", default="", help="the one asked for (default: release.ini's)")
 
     arguments = parser.parse_args()
+    if arguments.what == "revision":
+        print(dtr_revision(arguments.dtr))
+        return
     if arguments.what == "field-measurements":
         corrected = declare_field_measurements(arguments.declaration, arguments.producer)
         print(f"  {corrected} records said to be measured on site")
         return
     if arguments.what == "imax":
-        print(
-            f"  {declare_imax(arguments.producer, arguments.type)} tests given a maximum current"
-        )
+        written = declare_imax(arguments.producer, arguments.type, dtr_revision(arguments.dtr))
+        print(f"  {written} tests given a maximum current")
         return
     if arguments.what == "announce":
         if announce_delivery(arguments.reference, arguments.model, arguments.type):
@@ -316,7 +384,7 @@ def main() -> None:
     if arguments.what == "producer":
         content = producer_declaration(arguments.model, arguments.type, arguments.zone)
     else:
-        content = f16_declaration(arguments.type)
+        content = f16_declaration(arguments.type, dtr_revision(arguments.dtr))
     arguments.output.write_text(content, encoding="utf-8")
 
 
