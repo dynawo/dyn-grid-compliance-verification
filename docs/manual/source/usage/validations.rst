@@ -37,7 +37,8 @@ to the DTR's PCS structure. The following tests are currently implemented:
 * **Electrical performance (Power Park Modules)**: PCSs I2, I5, I6, I7, and I10.
 
 * **Electrical performance (Battery Energy Storage Systems)**: PCSs I2, I5, I6,
-  I7, and I10.
+  I7, and I10. From the revision of the DTR of 20260723, PCS I5 applies to a
+  storage installation of type B alone (see :ref:`pcs-i5`).
 
 * **Electrical performance (Synchronous Machines)**: PCSs I2, I3, I4, I6, I7,
   I8, and I10.
@@ -582,11 +583,19 @@ setpoint of the voltage control.
    algorithms.
 
 
+.. _pcs-i5:
+
 PCS I5
 ^^^^^^^
 
 .. note::
    The DTR specifies that this PCS applies to PPM classes: B, C, D, and Offshore.
+   For a storage installation it applies to types B, C and D up to the revision
+   of the DTR of 20251013, and to type B alone from the revision of 20260723. The
+   tool computes the category as the DTR does, from the connection voltage and
+   the maximum power at injection of the INI of the producer, and under that
+   revision leaves PCS I5 out of the verification of a storage installation of
+   type C or D, which the log says.
 
 Checks for compliant behavior under a symmetric three-phase fault at one of
 the four transmission lines (at 1% distance from the PDR). The PPM should

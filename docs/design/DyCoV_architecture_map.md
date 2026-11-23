@@ -103,7 +103,12 @@ I16.2 for types C and D, a version `Type<categories>.ini` in the directory of th
 `reports/`); the base revision has none, I18 not existing. `Pcs` picks it by the category of the
 installation (`ModelProducer.get_installation_category`: `get_generator_category` on the Zone 3 INI,
 whatever zone runs; `_version_for_category`), and `load_pcs_config` reads it into the delta layer
-after the delta, which it patches key by key. Zone 1 of TypeCD runs the setpoint steps on SCR 2 and
+after the delta, which it patches key by key. A version may withdraw a fiche instead: the
+revision asks the Fiche I5 of storage of type B alone (#743), so the `TypeCD.ini` of the
+performance `PCS_RTE-I5` of BESS lists its benchmarks as `none`, a performance verification reads
+the category of each producer from the INI of its name
+(`ModelProducer.get_installation_category`), and `Pcs.why_no_test` gives the log the reason.
+Zone 1 of TypeCD runs the setpoint steps on SCR 2 and
 the tests of the Fiche I18 under their scenario names (`S_VolAngStep*`, `S_VolAmpStep*`,
 `S_SCRup1/down1`, `S_Rocof*`, `S_Fault4-6`), whose shared settings are the `I18*` aliases of the
 `config_aliases.ini` of the delta, and compares the curves of InternalNode1 alone, where the fiche
