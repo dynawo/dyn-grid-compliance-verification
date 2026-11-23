@@ -7,6 +7,53 @@ the issue each one points at holds the explanation.
 
 ## Unreleased
 
+### Storage installations of types C and D are validated against the Fiche I16.2
+
+The revision of the DTR of 20260723 gives a storage installation of type C or D its own version of
+the Fiche I16, the Fiche I16.2. Its Zone 1 runs the setpoint steps on a grid of short-circuit
+ratio 2 and simulates the tests of the Fiche I18 (Grid Forming); its Zone 3 has neither the fault
+of the Fiche I5 nor the ramp of the grid frequency; both filter the curves at 30 Hz, on a common
+sampling interval of 1 ms.
+
+DyCoV applies it to the installations the DTR puts in category C or D, which the tool computes
+from the connection voltage and the maximum power at injection of the INI file of `Zone3/`, so
+nothing has to be declared for it. A run that follows an earlier revision gives them the Fiche I16
+of that revision, which has no Fiche I18 to repeat.
+
+The fiche observes the references of Zone 1, the results of the Fiche I18, at the output of the
+unit after its transformer, so Zone 1 compares the curves of InternalNode1 alone, and its
+reference dictionaries declare them: `InternalNode1_BUS_Voltage`,
+`InternalNode1_BUS_ActivePower`, `InternalNode1_BUS_ReactivePower`,
+`InternalNode1_BUS_ActiveCurrent` and `InternalNode1_BUS_ReactiveCurrent`.
+
+The fiche asks for every test of the Fiche I18 at its operating conditions OC2 and OC3, and at the
+others only when they drive the unit into current limitation, which the tool does not check on a
+model: it runs them at OC1, OC4 and OC5, and at OC6 and OC7 of the grid voltage steps, only when
+`run_OC1`, `run_OC4`, `run_OC5`, `run_OC6` or `run_OC7` is set to true in the `[PCS_RTE-I16z1]`
+section of `config.ini` or of a description of your own of the PCS. As RTE reads the fiches, the
+unbalanced faults of the Fiche I18 are left out, and so is its `S_Fault7`, which no profile
+defines; `S_VolAngStep12` jumps the other way from `S_VolAngStep11`; the phase jumps and the
+voltage steps are sized with the effective reactance of the ideal converter of the fiche, 0.27 pu,
+whatever the unit's, so its events are those its tables print; and the active power of the
+operating points is in pu of Pn, the maximum active power of Zone 1. The tests of the Fiche I18
+that are not faults are tracking tests of the active current, or of the reactive one for a step of
+the grid voltage: besides their tracking errors, relative to the change of the reference or to
+the peak of a transient, and their final error, a step of the grid voltage checks the
+rise and settling times and the overshoot of the reactive current and reports its reaction time
+without a verdict, and the other tests, transients the active current returns from, its settling
+time and overshoot against the peak of the reference. The unit runs as delivered, as RTE asked,
+and a ramp of the frequency starts from the power the unit settles at after the frequency reaches
+its starting value. The jumps of the short-circuit ratio leave OC1 out, since at no power they
+move no current and leave nothing to validate, and the recovery of the active power after a fault
+is not timed at OC1, where there is no power to recover. The reference curves of the GFM examples
+cover OC2 and OC3 only.
+
+Two of the Grid Forming converters of Dynawo, the droop one and the EPRI one, can be the Zone 1
+unit: the examples `BESS/GridFormingDroop` and `BESS/GridFormingEpri` are such installations, of
+type C, with a WECC plant of 40 MW at 225 kV in Zone 3. The `BESS/WECC` example, whose plant had
+that same size and so was of type C too, is now of 15 MW, a type B: under this revision a
+storage installation of type C has to be Grid Forming, and its unit is not.
+
 ### The revision of the DTR is set in the configuration
 
 The configuration the tool ships no longer names a revision of the DTR, and `--dtr` is gone from
@@ -74,6 +121,12 @@ again from the package, or write `\ProducerFiles.circuit_z1_fault.tikz` and
 
 ### Fixed
 
+- The summary table of the PDF report lists every test, page after page: it was cut at the end of
+  its first page, so a run of more than about 56 tests, as every one of the Fiche I16.2 is, lost
+  the rows after it, those of Zone 3 and of the failed tests among them.
+- The report of a PCS of many tests no longer holds the curves of all of them in memory, which
+  made the full report of the Zone 1 of a storage installation of type C or D exceed 6 GB: the
+  curves of each test wait on disk until the report draws them.
 - The IEC wind power plants of zone 3 are measured at Node2 itself, as the turbines of zone 1
   are since 1.3.0. With the low-voltage transformer inside the converter model
   (`WPP_ConverterLVControl = false`), their voltage and powers there were read on its grid side,

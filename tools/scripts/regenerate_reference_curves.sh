@@ -64,7 +64,7 @@ if [ "$reuse" = false ]; then
 fi
 mkdir -p "$working_path"
 
-declare -a examples=("${MODEL_EXAMPLES_IEC[@]}" "${MODEL_EXAMPLES_WECC[@]}")
+declare -a examples=("${MODEL_EXAMPLES_IEC[@]}" "${MODEL_EXAMPLES_WECC[@]}" "${MODEL_EXAMPLES_GFM[@]}")
 declare -a options=(-l "$launcher" -o "$working_path")
 [ "$reuse" = true ] && options+=(--reuse)
 
@@ -73,7 +73,7 @@ failures="$working_path/failed_examples.txt"
 :>| "$failures"
 
 # Every example reports where it is, and with a console in front of us that is what is shown:
-# the whole list at once, redrawn in place, instead of sixteen conversations interleaved.
+# the whole list at once, redrawn in place, instead of a conversation per example interleaved.
 DYCOV_STATE_DIR="$working_path/state"
 export DYCOV_STATE_DIR
 rm -rf "${DYCOV_STATE_DIR:?}"

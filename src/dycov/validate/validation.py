@@ -91,14 +91,19 @@ def _validate_pcs(pcs_args) -> tuple:
             )
             return pcs.get_producer_name(), pcs.get_name(), summary_list, {}
 
-        report_name, success, pcs_results = pcs.validate(summary_list)
-        pcs_results["pcs"] = pcs
-        pcs_results["sim_type"] = parameters.get_sim_type()
-        pcs_results["success"] = success
-        pcs_results["report_name"] = report_name
-        if not parameters.is_curves_only():
-            _prepare_report_pcs(pcs_results, parameters, path_latex_files)
-        return pcs.get_producer_name(), pcs.get_name(), summary_list, pcs_results
+        try:
+            report_name, success, pcs_results = pcs.validate(summary_list)
+            pcs_results["pcs"] = pcs
+            pcs_results["sim_type"] = parameters.get_sim_type()
+            pcs_results["success"] = success
+            pcs_results["report_name"] = report_name
+            if not parameters.is_curves_only():
+                _prepare_report_pcs(pcs_results, parameters, path_latex_files)
+            return pcs.get_producer_name(), pcs.get_name(), summary_list, pcs_results
+        finally:
+            manage_files.discard_curves_set_aside(
+                parameters.get_working_dir() / pcs.get_producer_name() / pcs.get_name()
+            )
     except (FileNotFoundError, IOError, ValueError) as e:
         if dycov_logging.get_logger("Validation").getEffectiveLevel() == logging.DEBUG:
             dycov_logging.get_logger("Validation").exception(

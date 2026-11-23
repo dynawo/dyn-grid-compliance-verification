@@ -42,7 +42,8 @@ def _connect_generator_to_ramp(
     dyd_root: etree.Element, ns: str, generator: GenParams, grp: str
 ) -> None:
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
-    _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", "ramp_y")
+    if variable:
+        _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", "ramp_y")
 
 
 def _connect_generator_to_dynmodelomegaref(
@@ -73,9 +74,10 @@ def _connect_generator_to_infinitebus(
     dyd_root: etree.Element, ns: str, generator: GenParams
 ) -> None:
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
-    _connect_generator(
-        dyd_root, ns, generator.id, variable, "InfiniteBus", "infiniteBus_omegaRefPu"
-    )
+    if variable:
+        _connect_generator(
+            dyd_root, ns, generator.id, variable, "InfiniteBus", "infiniteBus_omegaRefPu"
+        )
 
 
 def _connect_generator(
