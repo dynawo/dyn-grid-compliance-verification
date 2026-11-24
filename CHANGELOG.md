@@ -198,6 +198,9 @@ again from the package, or write `\ProducerFiles.circuit_z1_fault.tikz` and
   verification, such as the one of a model validation given to `performance`, is told this way;
   a Zone 1 unit without its DYD is not a unit of the model, and the count of units tells it
   (#637).
+- Every test of a parallel run gets its interactive HTML page: when the reports of several PCS
+  were prepared at the same time, one could fail to create the HTML folder another had just
+  created, and the page of its test was left out (#815).
 
 ## 1.3.0 — 2026-10-29
 
