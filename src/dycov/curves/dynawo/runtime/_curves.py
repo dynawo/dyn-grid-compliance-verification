@@ -279,6 +279,63 @@ def convert_columns(df_curves: pd.DataFrame, curves_dict: dict) -> None:
             curves_dict[col] = df_curves[col].tolist()
 
 
+_UNIT_BASE_POWERS = (
+    "ActivePowerNode2",
+    "ReactivePowerNode2",
+    "ActivePowerControlledNode",
+    "ReactivePowerControlledNode",
+)
+
+
+def _join_node2_voltage(generators: list, df_curves: pd.DataFrame) -> None:
+    """Join into a complex curve the voltage at Node2 of a unit whose model gives its two axes as
+    plain variables, such as the d and q axes of its converter, whose modulus is the same.
+
+    Parameters
+    ----------
+    generators : list
+        A list of generator objects, which contain information about the generator IDs.
+    df_curves : pd.DataFrame
+        The DataFrame containing the translated curves; it gains the complex voltage at Node2 and
+        loses its two axes.
+    """
+    for generator in generators:
+        voltage_col = f"{generator.id}_GEN_VoltageNode2"
+        real_col, imag_col = f"{voltage_col}Re", f"{voltage_col}Im"
+        if voltage_col in df_curves.columns or not {real_col, imag_col} <= set(df_curves.columns):
+            continue
+
+        df_curves[voltage_col] = df_curves[real_col].to_numpy(dtype=float) + 1j * df_curves[
+            imag_col
+        ].to_numpy(dtype=float)
+        _drop_columns(df_curves, [real_col, imag_col])
+
+
+def _rebase_unit_powers(generators: list, df_curves: pd.DataFrame, snref: float) -> None:
+    """Bring to base SnRef, the one Dynawo gives the rest in, the powers a model gives at Node2
+    and at its controlled node in the base of its unit.
+
+    Parameters
+    ----------
+    generators : list
+        A list of generator objects, with their IDs, their nominal apparent power and whether
+        their model gives those powers in its base.
+    df_curves : pd.DataFrame
+        The DataFrame containing the translated curves, whose powers are rebased in place.
+    snref : float
+        The reference apparent power of the simulation.
+    """
+    for generator in generators:
+        if not generator.powers_in_unit_base:
+            continue
+        for name in _UNIT_BASE_POWERS:
+            column = f"{generator.id}_GEN_{name}"
+            if column in df_curves.columns:
+                df_curves[column] = np.multiply(
+                    df_curves[column].to_numpy(dtype=float), generator.s_nom / snref
+                )
+
+
 def _get_node2_powers(generators: list, df_curves: pd.DataFrame) -> None:
     """Derive the powers at Node2 of a unit whose model gives the voltage and the current there,
     but not the powers, as the IEC turbines do.
@@ -320,11 +377,11 @@ def _get_node2_curves(
     computes, and it carries its own name: the dictionary declares what Dynawo provides, this
     function emits what the criteria compare.
 
-    Node2 sits behind the unit's own impedance, so its voltage is never exactly zero and the
-    division always has an answer, however small the voltage gets: the power vanishes with it
-    and the quotient is the current all the same. Zero is guarded
-    against because nothing forbids it, not because it is expected — unlike the connection
-    point, which a bolted fault does take to zero.
+    Node2 sits behind the transformer of the unit, so a bolted fault at the connection point
+    does not take its voltage to zero, and the division has an answer however small that voltage
+    gets: the power vanishes with it and the quotient is the current all the same. A unit
+    without a transformer, whose Node2 is the connection point itself, has no such margin. Zero
+    is guarded against because nothing forbids it, not because it is expected.
 
     Parameters
     ----------
@@ -600,6 +657,8 @@ def build_output_curves(
     ).tolist()
 
     _get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
+    _join_node2_voltage(generators, df_curves)
+    _rebase_unit_powers(generators, df_curves, s_nref)
     _get_node2_powers(generators, df_curves)
     _get_node2_curves(s_nref, s_nom, generators, df_curves, curves_dict)
     _get_controlled_point_curves(s_nref, s_nom, generators, df_curves, curves_dict)
