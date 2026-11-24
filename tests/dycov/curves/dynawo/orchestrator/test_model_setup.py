@@ -1019,6 +1019,14 @@ class TestCompleteModel:
 
         assert event_params["start_time"] == 2.0
 
+    def test_the_omega_model_applies_the_event_where_the_reference_curves_put_it(self):
+        """#816: the ramp of the grid frequency is the Omega model's own event, so it starts
+        where the test does, at the instant the reference curves give."""
+        _, _, mocks = self._run(reference_event_start_time=2.0, event_params={"start_time": 5.0})
+
+        omega_event = mocks["of"].complete_omega.call_args[0][4]
+        assert omega_event["start_time"] == 2.0
+
     def test_matching_reference_start_time_is_kept(self):
         _, (_, event_params), _ = self._run(
             reference_event_start_time=5.0, event_params={"start_time": 5.0}

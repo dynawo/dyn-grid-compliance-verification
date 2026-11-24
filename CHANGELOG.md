@@ -205,6 +205,11 @@ again from the package, or write `\ProducerFiles.circuit_z1_fault.tikz` and
 - Every test of a parallel run gets its interactive HTML page: when the reports of several PCS
   were prepared at the same time, one could fail to create the HTML folder another had just
   created, and the page of its test was left out (#815).
+- The ramp of the grid frequency of the Fiche I16 in Zone 3 is the one its PCS description declares:
+  the simulation applied the start, the duration and the height written in the grid model, so a
+  description of your own, a revision or a declaration of the Fiche F16 that changed them moved
+  only the checks and the report, and so did reference curves that put the event at another
+  instant (#816).
 
 ## 1.3.0 — 2026-10-29
 

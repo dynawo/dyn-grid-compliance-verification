@@ -930,6 +930,7 @@ class ModelSetup:
             "Omega.dyd",
             "Omega.par",
             producer.generators + tso_generators,
+            event_params,
         )
         tso_file.complete_setpoint(
             working_oc_dir,
