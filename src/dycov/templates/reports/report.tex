@@ -26,7 +26,7 @@
 \usepackage{amstext}
 \usepackage{ifthen}
 \usepackage{tabularx}
-\usepackage{longtable}  % for summary tables longer than a page
+\usepackage{longtable}
 \usepackage{draftwatermark}
 
 %% Watermark defaults
@@ -132,10 +132,11 @@
         Producer & Pcs & Benchmark & Operating Condition & Overall Result \\
         \midrule
         \endhead
+        \bottomrule
+        \endlastfoot
         \BLOCK{for row in summaryReport}
         {{row[0]}} & {{row[1]}} & {{row[2]}} & {{row[3]}} & {{row[4]}} \\
         \BLOCK{endfor}
-        \bottomrule
     \end{longtable}
     }
 

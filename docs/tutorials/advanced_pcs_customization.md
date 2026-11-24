@@ -122,7 +122,10 @@ lowest:
 
 1. your `templates/PCS/.../PCSDescription.ini`
 2. your `config.ini`
-3. what the selected DTR revision writes differently for the PCS
+3. what the selected DTR revision writes differently for the PCS: the delta of
+   its description and, for some categories of installation, the version of the
+   fiche the revision gives them (`TypeCD.ini` of the Fiche I16, for a storage
+   installation of type C or D)
 4. the `PCSDescription.ini` shipped with the tool
 5. what the selected DTR revision writes differently outside any PCS
 6. the packaged defaults

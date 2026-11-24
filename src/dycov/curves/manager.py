@@ -81,6 +81,12 @@ class CurvesManager:
         )
         self._reference_curves_generator = curves_factory.get_reference(producer)
 
+    def release_curves(self) -> None:
+        """Lets the curves of the last test go, once the benchmark has validated all of its
+        tests."""
+        self._before_filters_curves = {"calculated": pd.DataFrame(), "reference": pd.DataFrame()}
+        self._curves = {"calculated": pd.DataFrame(), "reference": pd.DataFrame()}
+
     def __copy_curves_to_before_filters(self):
         self._before_filters_curves["calculated"] = self._curves["calculated"].copy()
         self._before_filters_curves["reference"] = self._curves["reference"].copy()
@@ -244,6 +250,17 @@ class CurvesManager:
             Solver parameters.
         """
         return self._producer_curves_generator.get_solver()
+
+    def get_simulation_conditions(self) -> dict:
+        """Get the conditions the simulation of the last test ran with, once its definitions
+        are resolved.
+
+        Returns
+        -------
+        dict
+            The conditions, empty when nothing was simulated.
+        """
+        return self._producer_curves_generator.get_simulation_conditions()
 
     def has_required_curves(
         self,

@@ -21,6 +21,7 @@ set -o nounset -o noclobber
 set -o errexit -o pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$script_dir/models.sh"
 source "$script_dir/curves_common.sh"
 
 usage() {
@@ -31,8 +32,11 @@ usage() {
     echo "  -o, --output:   working path for the runs and the anonymized curves"
     echo "                  (default: ../RegeneratedCurves)"
     echo "  -j, --jobs:     max parallel runs (default: 4)"
+    echo "      --dtr:      revision of the DTR the curves follow, as YYYYMMDD (default: the one"
+    echo "                  release.ini names)"
     echo "      --reuse:    anonymize the runs already in the working path instead of running"
-    echo "                  the examples again, for a change that only touches the anonymizer"
+    echo "                  the examples again, for a change that only touches the anonymizer;"
+    echo "                  without --dtr, the curves follow the revision those runs followed"
     echo "  -y, --yes:      replace a working path that holds a previous run without asking,"
     echo "                  which is what a release pipeline needs"
     echo "  -h, --help:     display this help"
@@ -45,11 +49,14 @@ usage() {
     echo "      regenerate_producer_curves.sh, regenerate_f16.sh"
     echo "  • Nothing it writes is versioned: the curve directories of the examples are ignored"
     echo "    whole, and they travel as the asset of the release."
+    echo "  • One regeneration writes the set of one revision of the DTR: a test that revision"
+    echo "    does not run leaves no curve."
 }
 
 launcher="dynawo.sh"
 working_path="../RegeneratedCurves"
 jobs=4
+dtr=""
 reuse=false
 assume_yes=false
 
@@ -58,6 +65,7 @@ while (($#)); do
         -l | --launcher)    launcher=$2;     shift 2 ;;
         -o | --output)      working_path=$2; shift 2 ;;
         -j | --jobs)        jobs=$2;         shift 2 ;;
+        --dtr)              dtr=$2;          shift 2 ;;
         --reuse)            reuse=true;      shift ;;
         -y | --yes)         assume_yes=true; shift ;;
         -h | --help)        usage; exit 0 ;;
@@ -66,29 +74,40 @@ while (($#)); do
 done
 
 require_repo_root
+if [ "$reuse" = true ]; then
+    declare -a runs=()
+    for example in "${MODEL_EXAMPLES_IEC[@]}" "${MODEL_EXAMPLES_WECC[@]}" \
+        "${MODEL_EXAMPLES_GFM[@]}"; do
+        runs+=("$working_path/Results/Model/$example.log")
+    done
+    revision=$(revision_to_reuse "$dtr" "${runs[@]}")
+else
+    revision=$(dtr_revision "$dtr")
+fi
 
 declare -a reuse_option=()
 [ "$reuse" = true ] && reuse_option=(--reuse)
 declare -a yes_option=()
 [ "$assume_yes" = true ] && yes_option=(-y)
 
-log_msg "1/4 — the declared tests of the DTR Fiche F16"
-"$script_dir/regenerate_f16.sh"
+log_msg "1/4 — the declared tests of the DTR Fiche F16, revision $revision"
+"$script_dir/regenerate_f16.sh" --dtr "$revision"
 
 log_msg "2/4 — the producer each curve directory declares"
 "$script_dir/regenerate_producer_inis.sh"
 
 log_msg "3/4 — the reference curves of the Model examples"
 "$script_dir/regenerate_reference_curves.sh" -l "$launcher" -o "$working_path" -j "$jobs" \
-    "${reuse_option[@]}" "${yes_option[@]}"
+    --dtr "$revision" "${reuse_option[@]}" "${yes_option[@]}"
 
 log_msg "4/4 — the curves a producer delivers instead of a model"
 "$script_dir/regenerate_producer_curves.sh" -l "$launcher" -o "$working_path" \
-    "${reuse_option[@]}"
+    --dtr "$revision" "${reuse_option[@]}"
 
 # Where these curves come from. They are not versioned, so nothing else records it, and a test
 # that asserts anything of them is asserting it of this particular set.
-echo "the working tree at $(git rev-parse --short HEAD)" >| "./examples/.curves-release"
+echo "the working tree at $(git rev-parse --short HEAD), DTR revision $revision" \
+    >| "./examples/.curves-release"
 
 log_msg "Done. The curve directories are written whole and none of them is versioned: what ships
 them is the dycov_examples.zip asset that installers/prepare_release.sh packs."

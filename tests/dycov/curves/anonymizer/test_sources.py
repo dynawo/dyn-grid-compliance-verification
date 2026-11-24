@@ -278,3 +278,21 @@ def test_the_simulation_record_is_copied_whatever_the_results_call_it(tmp_path, 
 
     assert (curves / "PCS.BM.OC.csv").exists()
     assert (curves / "PCS.BM.OC.log").read_text().startswith("[Simulation]")
+
+
+def test_the_conditions_a_test_ran_with_leave_the_metadata_of_its_event_alone(tmp_path):
+    curves = tmp_path / "curves"
+    curves.mkdir()
+    (curves / "curveA.log").write_text(
+        "[Simulation]\nsim_t_event_start = 1.0\nfault_duration = 2.0\n"
+        "frequency_sampling = 50.0\n\n[Conditions]\npdr_P = 0.5\nline_XPu = 0.4\n"
+        "fault_XPu = 0.05\ngrid_frequency0 = 49.5\nsetpoint_step_value = 0.1\n"
+        "voltage_dip = 0.7\n",
+        encoding="utf-8",
+    )
+
+    metadata = extract_metadata_from_logs(curves)
+
+    assert metadata["curveA"]["sim_t_event_start"] == 1.0
+    assert metadata["curveA"]["fault_duration"] == 2.0
+    assert metadata["curveA"]["frequency_sampling"] == 50.0

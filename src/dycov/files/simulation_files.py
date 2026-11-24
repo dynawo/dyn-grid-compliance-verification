@@ -150,3 +150,63 @@ def find_output_dir(results_case_dir: Path, filename: str) -> str:
     for model_output in root.xpath("//ns:outputs", namespaces=nsmap):
         output_dir = model_output.get("directory")
     return output_dir
+
+
+_GRID_LINE_SET = "Line"
+_SWITCHED_LINE_SET = "SwitchedLine"
+# The parameters of a fault, by the element of the TSO model that carries it: a fault at a node,
+# or one along a line.
+_FAULT_PARAMETERS = (("fault_RPu", "fault_XPu"), ("line_RFaultPu", "line_XFaultPu"))
+
+
+def _numeric_parameters(parameter_set: etree._Element) -> dict:
+    """The parameters of a set of a PAR file that hold a number, by name."""
+    values = {}
+    for parameter in parameter_set:
+        try:
+            values[parameter.get("name")] = float(parameter.get("value"))
+        except (TypeError, ValueError):
+            continue
+    return values
+
+
+def grid_impedances(par_path: Path) -> dict:
+    """The impedances the grid of a test ran with, as the PAR file of its TSO model holds them
+    once the test is set up and its fault searched, in pu of SnRef.
+
+    Parameters
+    ----------
+    par_path : Path
+        The PAR file of the TSO model of the test.
+
+    Returns
+    -------
+    dict
+        ``line_RPu`` and ``line_XPu``, those of each line of the grid, which are alike, and
+        ``grid_lines``, how many there are; ``switched_line_RPu`` and ``switched_line_XPu``,
+        those of the line a jump of the short-circuit ratio switches; and ``fault_RPu`` and
+        ``fault_XPu``, those of the fault. Each only when the TSO model has the element.
+    """
+    if not par_path.is_file():
+        return {}
+
+    impedances = {}
+    grid_lines = 0
+    root = etree.parse(par_path).getroot()
+    for parameter_set in root.iter(f"{{{etree.QName(root).namespace}}}set"):
+        values = _numeric_parameters(parameter_set)
+        if parameter_set.get("id") == _SWITCHED_LINE_SET:
+            impedances["switched_line_RPu"] = values.get("line_RPu")
+            impedances["switched_line_XPu"] = values.get("line_XPu")
+            continue
+        if parameter_set.get("id", "").startswith(_GRID_LINE_SET) and "line_XPu" in values:
+            grid_lines += 1
+            impedances.setdefault("line_RPu", values.get("line_RPu"))
+            impedances.setdefault("line_XPu", values["line_XPu"])
+        for resistance, reactance in _FAULT_PARAMETERS:
+            if reactance in values:
+                impedances["fault_RPu"] = values.get(resistance)
+                impedances["fault_XPu"] = values[reactance]
+    if grid_lines:
+        impedances["grid_lines"] = grid_lines
+    return {name: value for name, value in impedances.items() if value is not None}

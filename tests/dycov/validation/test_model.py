@@ -9,10 +9,13 @@
 #
 """Unit tests for the model validation (ModelValidator) compliance criteria."""
 
+import inspect
+
 import pandas as pd
 import pytest
 
 from dycov.model.parameters import ExclusionWindows
+from dycov.validation import common, model
 from dycov.validation.common import get_measurement_name
 from dycov.validation.model import ModelValidator, _get_column_name
 
@@ -47,6 +50,9 @@ class DummyConfig:
         return None if value == "none" else value
 
     def get_value(self, section: str, key: str, default=None):
+        return self._values.get(key, default)
+
+    def get_boolean(self, section: str, key: str, default: bool = False) -> bool:
         return self._values.get(key, default)
 
 
@@ -230,6 +236,8 @@ def dummy_config(monkeypatch):
         ("ReactivePowerSetpointPu", "Q"),
         ("VoltageSetpointPu", "V"),
         ("NetworkFrequencyPu", "$\\omega"),
+        ("active_current", "$I_p$"),
+        ("reactive_current", "$I_q$"),
         ("", "Q"),
     ],
 )
@@ -445,6 +453,119 @@ def test_compare_event_times_computes_reaction_and_rise_times():
     assert results["calc_rise_target"] == {"BusPDR_BUS_ActivePower": pytest.approx(0.9)}
 
 
+def test_a_transient_without_a_setpoint_is_measured_against_the_peak_of_the_reference():
+    time = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+    name = "BusPDR_BUS_ActiveCurrent"
+    reference = pd.DataFrame({"time": time, name: [0.5, 0.5, 0.8, 0.55, 0.5, 0.5]})
+    calculated = pd.DataFrame({"time": time, name: [0.5, 0.5, 0.7, 0.52, 0.5, 0.5]})
+    validator = _make_validator(
+        validations=["settling_time", "overshoot"],
+        curves_manager=DummyCurvesManager(calculated=calculated, reference=reference),
+    )
+    results = {}
+    step = validator._ModelValidator__response_step(name, 1.0, transient=True)
+
+    validator._ModelValidator__compare_event_times(
+        measurement_name=name,
+        start_event=1.0,
+        setpoint_variation=step,
+        results=results,
+        transient=True,
+    )
+
+    band = common.get_ss_tolerance() * 0.3
+    assert results["calc_settling_tube"][name] == pytest.approx([0.5 - band, 0.5 + band])
+    assert results["overshoot_tolerance"] == pytest.approx(band)
+    assert results["ref_overshoot"] == pytest.approx(0.3)
+    assert results["calc_overshoot"] == pytest.approx(0.2)
+
+
+@pytest.mark.parametrize(
+    "setpoint_variation, tracks_response, transient, step",
+    [
+        (0.0, True, True, 0.3),
+        (0.0, True, False, 0.0),
+        (0.2, True, True, 0.2),
+        (0.0, False, True, 0.0),
+    ],
+)
+def test_the_tracking_errors_are_relative_to_the_step_of_the_test(
+    monkeypatch, setpoint_variation, tracks_response, transient, step
+):
+    time = [0.0, 1.0, 2.0, 3.0, 4.0, 5.0]
+    name = "BusPDR_BUS_ActiveCurrent"
+    reference = pd.DataFrame({"time": time, name: [0.5, 0.5, 0.8, 0.55, 0.5, 0.5]})
+    calculated = pd.DataFrame({"time": time, name: [0.5, 0.5, 0.7, 0.52, 0.5, 0.5]})
+    windows = {window: (calculated, reference) for window in ("before", "during", "after")}
+    validator = _make_validator(
+        curves_manager=DummyCurvesManager(
+            calculated=calculated, reference=reference, windows=windows
+        )
+    )
+    magnitudes = []
+
+    def errors(curves, step_magnitude, zone):
+        magnitudes.append(step_magnitude)
+        raise StopIteration
+
+    monkeypatch.setattr(model, "calculate_errors", errors)
+
+    with pytest.raises(StopIteration):
+        validator._ModelValidator__calculate(
+            zone=3,
+            start_event=1.0,
+            duration_event=0.0,
+            freq0=1.0,
+            freq_peak=0.0,
+            modified_setpoint="active_current",
+            setpoint_variation=setpoint_variation,
+            tracks_response=tracks_response,
+            transient=transient,
+        )
+
+    # A test whose reference does not move is measured in pu, as one that steps nothing
+    assert magnitudes == [pytest.approx(step or 1.0)]
+
+
+_MEASURED_AS = ("modified_setpoint", "tracks_response", "transient")
+
+
+@pytest.mark.parametrize(
+    "tracked, transient", [(None, False), ("reactive_current", False), ("active_current", True)]
+)
+def test_validate_measures_a_tracked_magnitude_as_its_test_declares_it(
+    monkeypatch, dummy_config, tmp_path, tracked, transient
+):
+    dummy_config._values.update(tracked_magnitude=tracked, transient_response=transient)
+    signature = inspect.signature(ModelValidator._ModelValidator__calculate)
+    calls = []
+
+    def calculate(*args, **kwargs):
+        arguments = signature.bind(*args, **kwargs).arguments
+        calls.append({key: arguments[key] for key in _MEASURED_AS})
+        raise StopIteration
+
+    monkeypatch.setattr(ModelValidator, "_ModelValidator__calculate", calculate)
+    validator = _make_validator(curves_manager=_make_zone1_manager())
+    event_params = {
+        "start_time": 1.0,
+        "duration_time": 0.0,
+        "connect_to": "grid_phase_jump",
+        "step_value": 0.1,
+    }
+
+    with pytest.raises(StopIteration):
+        validator.validate("OC2", tmp_path, "outputs", event_params)
+
+    assert calls == [
+        {
+            "modified_setpoint": tracked or "grid_phase_jump",
+            "tracks_response": tracked is not None,
+            "transient": transient,
+        }
+    ]
+
+
 def test_compare_event_times_computes_response_and_settling_times():
     validator = _make_validator(
         validations=["response_time", "settling_time"], curves_manager=_make_step_manager()
@@ -504,9 +625,20 @@ def test_compare_event_times_without_validations_only_stores_the_event_start():
     assert results == {"t_event_start": 1.0}
 
 
+def _make_fault_manager(zone=3, power_before=1.0):
+    """The active power drops to zero with a fault at t = 0 and comes back to what it was 2 s
+    later in the calculated curve, 3 s later in the reference one."""
+    time = [-1.0, 0.0, 1.0, 2.0, 3.0, 4.0]
+    name = "BusPDR_BUS_ActivePower" if zone == 3 else "WT_GEN_ActivePowerControlledNode"
+    p = power_before
+    calculated = pd.DataFrame({"time": time, name: [p, 0.0, 0.0, p, p, p]})
+    reference = pd.DataFrame({"time": time, name: [p, 0.0, 0.0, 0.0, p, p]})
+    return DummyCurvesManager(calculated=calculated, reference=reference)
+
+
 def test_active_power_recovery_error_compares_the_p90_instants():
     validator = _make_validator(
-        zone=3, validations=["active_power_recovery"], curves_manager=_make_step_manager()
+        zone=3, validations=["active_power_recovery"], curves_manager=_make_fault_manager()
     )
     results = {}
 
@@ -524,7 +656,7 @@ def test_active_power_recovery_error_compares_the_p90_instants():
 
 def test_active_power_recovery_error_in_zone1_reads_the_controlled_point():
     validator = _make_validator(
-        validations=["active_power_recovery"], curves_manager=_make_step_manager(zone=1)
+        validations=["active_power_recovery"], curves_manager=_make_fault_manager(zone=1)
     )
     results = {}
 
@@ -537,6 +669,24 @@ def test_active_power_recovery_error_in_zone1_reads_the_controlled_point():
 
     assert results["t_P90_ref"] == pytest.approx(2.0)
     assert results["t_P90_error"] == pytest.approx(1.0)
+
+
+def test_active_power_recovery_does_not_apply_without_power_before_the_fault():
+    validator = _make_validator(
+        zone=3,
+        validations=["active_power_recovery"],
+        curves_manager=_make_fault_manager(power_before=0.0),
+    )
+    results = {}
+
+    validator._ModelValidator__active_power_recovery_error(
+        zone=3,
+        start_event=0.0,
+        duration_event=3.0,
+        results=results,
+    )
+
+    assert results == {"t_P90_not_applicable": True}
 
 
 def test_active_power_recovery_error_skipped_without_the_active_power_curve():
@@ -1133,6 +1283,19 @@ def test_check_active_power_recovery_above_the_threshold_fails():
     assert check_results["compliance"] is False
 
 
+def test_check_active_power_recovery_that_does_not_apply_leaves_the_compliance_alone():
+    validator = _make_validator(validations=["active_power_recovery"])
+    compliance_values = _make_compliance_values(t_P90_not_applicable=True)
+
+    check_results = validator._ModelValidator__check(
+        compliance_values, modified_setpoint="ActivePowerSetpointPu"
+    )
+
+    assert check_results["t_P90_check"] == "N/A"
+    assert "t_P90_error" not in check_results
+    assert check_results["compliance"] is True
+
+
 def test_check_active_power_recovery_without_a_reference_instant_is_compliant():
     validator = _make_validator(validations=["active_power_recovery"])
     compliance_values = _make_compliance_values(t_P90_error=0.5, t_P90_ref=0.0)
@@ -1479,3 +1642,17 @@ def test_get_measurement_names_in_zone3_includes_the_network_frequency():
         "BusPDR_BUS_ReactiveCurrent",
         "NetworkFrequencyPu",
     ]
+
+
+def test_a_test_names_the_magnitude_it_tracks_in_its_own_section(monkeypatch):
+    sections = {"PCS_RTE-I16z3.GridFreqRamp.Ramp": {"tracked_magnitude": "active_current"}}
+
+    class _Config:
+        def get_value(self, section, key, default=None):
+            return sections.get(section, {}).get(key, default)
+
+    monkeypatch.setattr(f"{MODEL_MODULE}.config", _Config())
+    validator = _make_validator()
+
+    assert validator._ModelValidator__tracked_magnitude("Ramp") == "active_current"
+    assert validator._ModelValidator__tracked_magnitude("Other") is None

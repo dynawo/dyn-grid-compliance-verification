@@ -78,7 +78,8 @@ For Power Park Modules, the following PCSs are defined:
 For Battery Energy Storage Systems, the following PCSs are defined:
 
 - **PCS‑I2** — Dynamic behavior of voltage regulation and small‑signal stability
-- **PCS‑I5** — Reactive current injection during faults
+- **PCS‑I5** — Reactive current injection during faults; from the DTR revision of 20260723,
+  for an installation of type B alone, so a type C or D one skips it
 - **PCS‑I6** — Voltage dip ride‑through
 - **PCS‑I7** — Overvoltage ride‑through
 - **PCS‑I10** — Islanded network operation

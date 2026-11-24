@@ -45,6 +45,11 @@
 }
 %End snippet for the simulation section header
 
+% A unit whose model has no Plant-level voltage regulation draws no figure of its magnitude
+\newcommand{\IfUstatorDrawnZthree}[1]{%
+    \IfFileExists{\Producer_fig_Ustator_\PCSname.\DTRPcs.\OCname.pdf}{#1}{}%
+}
+
 %Snippet for the base figure descriptions (6 standard figures)
 \newcommand{\GridCurvesDescriptionZthree}{
     \item Voltage at connection point.
@@ -52,7 +57,7 @@
     \item Reactive power supplied at the connection point.
     \item Active current supplied at the connection point.
     \item Reactive current supplied at the connection point.
-    \item Magnitude controlled by the Plant-level voltage regulation: modulus of the voltage at the REPC.
+    \IfUstatorDrawnZthree{\item Magnitude controlled by the Plant-level voltage regulation: modulus of the voltage at the REPC.}
     All BESS units are plotted on the same graph.
 }
 %End snippet for the base figure descriptions
@@ -77,6 +82,7 @@
 %     The vertical dashed line marks the rise time $T_{85U}$.
         \end{minipage}
     \end{minipage}
+    \IfUstatorDrawnZthree{%
     \hfill
     \begin{minipage}[t]{0.48\textwidth}
         \centering
@@ -87,6 +93,7 @@
             The gray dotted line shows the Plant-level voltage regulation setpoint.
         \end{minipage}
     \end{minipage}
+    }%
 %
     \vspace{0.5cm}
     \begin{minipage}[t]{0.48\textwidth}

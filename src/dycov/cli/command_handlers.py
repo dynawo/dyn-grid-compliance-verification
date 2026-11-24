@@ -550,7 +550,7 @@ def _run_verification(
             gfm_envelopes=gfm_envelopes,
             curves_only=curves_only,
         )
-    except ValueError as e:
+    except (ValueError, FileNotFoundError) as e:
         dycov_logging.get_logger("CommandHandlers").error(f"{e}")
         return 1
 

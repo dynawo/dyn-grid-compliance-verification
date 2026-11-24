@@ -22,6 +22,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable
 
+from dycov.configuration.cfg import config
+
 _GENERATOR_SELECTOR = "_GEN_"
 
 
@@ -62,6 +64,16 @@ _ZONE_1 = (
     ComparedCurve("_GEN_ReactivePowerControlledNode", "reactive_power", "Q", "Q"),
     ComparedCurve("_GEN_ActiveCurrentNode2", "active_current", "$I_p$", "Ip"),
     ComparedCurve("_GEN_ReactiveCurrentNode2", "reactive_current", "$I_q$", "Iq"),
+)
+
+# Zone 1 of a fiche whose references are observed at InternalNode1, the terminals of the unit
+# after its transformer: the Fiche I16.2, whose references are the results of the Fiche I18.
+_ZONE_1_AT_NODE1 = (
+    ComparedCurve("BusPDR_BUS_Voltage", "voltage", "V", None),
+    ComparedCurve("BusPDR_BUS_ActivePower", "active_power", "P", "P"),
+    ComparedCurve("BusPDR_BUS_ReactivePower", "reactive_power", "Q", "Q"),
+    ComparedCurve("BusPDR_BUS_ActiveCurrent", "active_current", "$I_p$", "Ip"),
+    ComparedCurve("BusPDR_BUS_ReactiveCurrent", "reactive_current", "$I_q$", "Iq"),
 )
 
 _ZONE_3 = (
@@ -143,7 +155,13 @@ _DRAWN_SETPOINTS_BY_ZONE = {1: _ZONE_1_SETPOINTS}
 
 
 def for_zone(zone: int) -> tuple[ComparedCurve, ...]:
-    """The curves a zone compares, in report order."""
+    """The curves a zone compares, in report order.
+
+    Zone 1 compares the curves of InternalNode1 alone when the PCS in preparation observes its
+    references there, which it says with ``zone1_compared_at_node1`` in ``[GridCode]``.
+    """
+    if zone == 1 and config.get_boolean("GridCode", "zone1_compared_at_node1", False):
+        return _ZONE_1_AT_NODE1
     return _BY_ZONE.get(zone, _ZONE_3)
 
 
@@ -196,7 +214,10 @@ def column_of(zone: int, label: str, columns: Iterable[str]) -> str | None:
 
 def setpoint_label(modified_setpoint: str) -> str:
     """The label of the magnitude a setpoint drives, the reactive power for an unknown one, as
-    the tool has always done."""
+    the tool has always done. A test whose event drives no setpoint names the magnitude it
+    tracks by its label instead, which is then its own."""
+    if by_label(modified_setpoint) is not None:
+        return modified_setpoint
     return _SETPOINT_LABELS.get(modified_setpoint, "reactive_power")
 
 
