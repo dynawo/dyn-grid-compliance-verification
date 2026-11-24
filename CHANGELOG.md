@@ -198,6 +198,10 @@ again from the package, or write `\ProducerFiles.circuit_z1_fault.tikz` and
   verification, such as the one of a model validation given to `performance`, is told this way;
   a Zone 1 unit without its DYD is not a unit of the model, and the count of units tells it
   (#637).
+- The dip a permanent bolted fault or a voltage table makes is measured to its real depth: the
+  first measured none, and the second was measured from inside the smoothed step of the table, at
+  about half its depth. The report draws the target of reactive current from it in the tests that
+  check `imax_reac` (#814).
 - Every test of a parallel run gets its interactive HTML page: when the reports of several PCS
   were prepared at the same time, one could fail to create the HTML folder another had just
   created, and the page of its test was left out (#815).
