@@ -9,10 +9,13 @@
 #
 """Tests for the omega DYD/PAR completion helpers."""
 
+import shutil
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 from lxml import etree
 
+import dycov
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.files.omega_file import (
     _add_generator_weight,
@@ -24,6 +27,8 @@ from dycov.files.omega_file import (
     _connect_generator_to_setpoint,
     complete_omega,
 )
+
+_EVENT = {"start_time": 25.0, "duration_time": 0.5, "step_value": -0.02}
 
 
 def _make_root():
@@ -217,6 +222,33 @@ def test_complete_omega_executes(tmp_path):
     generators = [_make_generator()]
 
     with patch("dycov.files.omega_file._connect_generator_by_lib") as f:
-        complete_omega(tmp_path, "file.dyd", "file.par", generators)
+        complete_omega(tmp_path, "file.dyd", "file.par", generators, _EVENT)
 
     f.assert_called()
+
+
+def _omega_template(tmp_path, model: str) -> dict:
+    """The parameters an Omega model of the package is given for the event of the test."""
+    template = Path(dycov.__file__).parent / "model_lib" / "Omega" / model
+    for name in ("Omega.dyd", "Omega.par"):
+        shutil.copy(template / name, tmp_path / name)
+
+    complete_omega(tmp_path, "Omega.dyd", "Omega.par", [], _EVENT)
+
+    par = etree.parse(str(tmp_path / "Omega.par"))
+    return {node.get("name"): node.get("value") for node in par.iter("{*}par")}
+
+
+def test_the_ramp_of_the_grid_frequency_is_the_event_of_the_test(tmp_path):
+    """#816: the ramp starts, lasts and rises as the PCS description of the test declares, not
+    as values written in the template."""
+    parameters = _omega_template(tmp_path, "Ramp")
+
+    assert float(parameters["ramp_startTime"]) == 25.0
+    assert float(parameters["ramp_duration"]) == 0.5
+    assert float(parameters["ramp_height"]) == -0.02
+    assert float(parameters["ramp_offset"]) == 1.0
+
+
+def test_an_omega_model_that_applies_no_event_keeps_its_parameters(tmp_path):
+    assert _omega_template(tmp_path, "SetPoint") == {"setPoint_Value0": "1"}
