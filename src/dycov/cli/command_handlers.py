@@ -539,7 +539,7 @@ def _run_verification(
             producer_workbook=producer_workbook,
             curves_only=curves_only,
         )
-    except ValueError as e:
+    except (ValueError, FileNotFoundError) as e:
         dycov_logging.get_logger("CommandHandlers").error(f"{e}")
         return 1
 

@@ -39,6 +39,10 @@ from dycov.sanity_checks import parameter_checks
 _CURVES_CSV = "curves/curves.csv"
 _TSO_JOBS = "TSOModel.jobs"
 _SIMULATION_SECTION = "Simulation"
+_CONDITIONS_SECTION = "Conditions"
+# Conditions the simulation inputs already hold, among them the event, which the anonymizer reads
+# from the lines of the record that name it.
+_RECORDED_AS_SIMULATION_INPUTS = ("sim_t_event_start", "fault_duration", "connect_event_to")
 _NOT_CONFIGURED = "not set"
 
 SimulateOutcome = namedtuple(
@@ -118,6 +122,7 @@ class DynawoCurves(ProducerCurves):
         parameter_checks.check_fault_search()
 
         self._voltage_dip = None
+        self._conditions_ran_with: dict = {}
 
         # Collaborators (created once; ModelSetup state is refreshed per OC)
         self._setup = ModelSetup(self, pcs_name, self.get_snref())
@@ -422,6 +427,11 @@ class DynawoCurves(ProducerCurves):
                 curves_metadata | self.__initial_state() | simulation_inputs
             ).items()
         }
+        record[_CONDITIONS_SECTION] = {
+            name: str(value)
+            for name, value in self._conditions_ran_with.items()
+            if name not in _RECORDED_AS_SIMULATION_INPUTS
+        }
         with open(working_oc_dir / SIMULATION_INPUTS_FILE, "w") as record_file:
             record.write(record_file)
 
@@ -466,6 +476,7 @@ class DynawoCurves(ProducerCurves):
             ``SimulationResult``; anything else ends the test as invalid.
         """
         self.__reset_solver()
+        self._conditions_ran_with = {}
         output_dir, jobs_output_dir = self.__prepare_oc_validation(working_oc_dir, bm_name)
         event_params: dict = {}
         outcome = SimulateOutcome(
@@ -550,6 +561,10 @@ class DynawoCurves(ProducerCurves):
             error_message = e.error
 
         if event_params:
+            if error_message is None:
+                self._conditions_ran_with = self._setup.conditions_ran_with(
+                    working_oc_dir, event_params
+                )
             self.__record_simulation_inputs(working_oc_dir, event_params)
 
         simulation_result = SimulationResult(
@@ -620,6 +635,12 @@ class DynawoCurves(ProducerCurves):
     def get_voltage_dip(self) -> float | None:
         """Returns the measured voltage dip, or None if not yet computed."""
         return self._voltage_dip
+
+    def get_simulation_conditions(self) -> dict:
+        """Returns the conditions the simulation of the last test ran with, once its
+        definitions are resolved (``ModelSetup.conditions_ran_with``), empty when the test did
+        not reach its simulation."""
+        return self._conditions_ran_with
 
     def get_simulation_start(self) -> float:
         """Returns the simulation start time."""

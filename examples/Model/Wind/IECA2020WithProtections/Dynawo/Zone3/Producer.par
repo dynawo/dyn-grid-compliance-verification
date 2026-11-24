@@ -136,6 +136,38 @@
     <par type="BOOL" name="WPP_Mqpri" value="true"/>
     <!-- Base unit: Un2 -->
     <par type="DOUBLE" name="WPP_UpquMaxPu" value="1.1"/>
+    <!-- Tables IqMax(U). Limites de courant r&#233;actif en fonction de la tension mesur&#233;e (au point de contr&#244;le du convertisseur). -->
+    <par type="DOUBLE" name="WPP_TableIqMaxUwt11" value="0"/>
+    <par type="DOUBLE" name="WPP_TableIqMaxUwt12" value="0"/>
+    <par type="DOUBLE" name="WPP_TableIqMaxUwt21" value="0.1"/>
+    <par type="DOUBLE" name="WPP_TableIqMaxUwt22" value="0"/>
+    <par type="DOUBLE" name="WPP_TableIqMaxUwt31" value="0.15"/>
+    <par type="DOUBLE" name="WPP_TableIqMaxUwt32" value="1"/>
+    <par type="DOUBLE" name="WPP_TableIqMaxUwt41" value="0.9"/>
+    <par type="DOUBLE" name="WPP_TableIqMaxUwt42" value="1"/>
+    <par type="DOUBLE" name="WPP_TableIqMaxUwt51" value="0.925"/>
+    <par type="DOUBLE" name="WPP_TableIqMaxUwt52" value="0.33"/>
+    <par type="DOUBLE" name="WPP_TableIqMaxUwt61" value="1.075"/>
+    <par type="DOUBLE" name="WPP_TableIqMaxUwt62" value="0.33"/>
+    <par type="DOUBLE" name="WPP_TableIqMaxUwt71" value="1.1"/>
+    <par type="DOUBLE" name="WPP_TableIqMaxUwt72" value="1"/>
+    <par type="DOUBLE" name="WPP_TableIqMaxUwt81" value="1.1001"/>
+    <par type="DOUBLE" name="WPP_TableIqMaxUwt82" value="1"/>
+    <!-- Tables IpMax(U). Limites de courant actif en fonction de la tension mesur&#233;e (au point du contr&#244;le du convertisseur). -->
+    <par type="DOUBLE" name="WPP_TableIpMaxUwt11" value="0"/>
+    <par type="DOUBLE" name="WPP_TableIpMaxUwt12" value="0"/>
+    <par type="DOUBLE" name="WPP_TableIpMaxUwt21" value="0.1"/>
+    <par type="DOUBLE" name="WPP_TableIpMaxUwt22" value="0"/>
+    <par type="DOUBLE" name="WPP_TableIpMaxUwt31" value="0.15"/>
+    <par type="DOUBLE" name="WPP_TableIpMaxUwt32" value="1"/>
+    <par type="DOUBLE" name="WPP_TableIpMaxUwt41" value="0.9"/>
+    <par type="DOUBLE" name="WPP_TableIpMaxUwt42" value="1"/>
+    <par type="DOUBLE" name="WPP_TableIpMaxUwt51" value="0.925"/>
+    <par type="DOUBLE" name="WPP_TableIpMaxUwt52" value="1"/>
+    <par type="DOUBLE" name="WPP_TableIpMaxUwt61" value="1"/>
+    <par type="DOUBLE" name="WPP_TableIpMaxUwt62" value="1.1"/>
+    <par type="DOUBLE" name="WPP_TableIpMaxUwt71" value="1.1"/>
+    <par type="DOUBLE" name="WPP_TableIpMaxUwt72" value="1.1"/>
     <!-- QLimiter_2020 -->
     <!-- Si QlConst = False, remplir les tables de limitations ci-dessous. -->
     <par type="BOOL" name="WPP_QlConst" value="true"/>

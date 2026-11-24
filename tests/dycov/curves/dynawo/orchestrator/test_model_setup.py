@@ -33,11 +33,13 @@ def _make_gen(
     voltage_droop: float = 0.0,
     s_nom: float = 100.0,
     ppc_local: bool = True,
+    reference_impedance: complex = 0j,
 ) -> MagicMock:
     terminal = MagicMock()
     terminal.p0 = p0
     terminal.q0 = q0
     terminal.u0 = u0
+    terminal.u_phase0 = 0.0
     terminal.connected_equipment = "XFMR1"
     gen = MagicMock()
     gen.terminals = [terminal]
@@ -45,6 +47,7 @@ def _make_gen(
     gen.voltage_droop = voltage_droop
     gen.s_nom = s_nom
     gen.ppc_local = ppc_local
+    gen.reference_impedance = reference_impedance
     return gen
 
 
@@ -316,6 +319,30 @@ class TestGetEventParameters:
         # pre_value = -(-0.8) * (100/100) = 0.8
         assert result["pre_value"] == [pytest.approx(0.8)]
         assert result["connect_to"] == "ActivePowerSetpointPu"
+
+    @pytest.mark.parametrize(
+        "connect_to, expected",
+        [
+            ("ActivePowerSetpointPu", 0.9 + 0.01 * 0.81),
+            ("ReactivePowerSetpointPu", 0.2 * 0.81),
+            ("VoltageSetpointPu", abs(1.0 + (0.01 + 0.2j) * 0.9)),
+        ],
+    )
+    @patch(f"{_MS}.generator_variables")
+    @patch(f"{_MS}.config")
+    def test_a_unit_with_its_references_behind_its_transformer_starts_them_there(
+        self, mock_config, mock_gv, connect_to, expected
+    ):
+        gen = _make_gen(p0=-0.9, q0=0.0, s_nom=100.0, reference_impedance=0.01 + 0.2j)
+        owner = _make_owner(_make_producer(s_nom=100.0, generators=[gen]))
+        setup = _make_setup(owner, s_nref=100.0)
+        self._setup_config(mock_config, connect_to=connect_to)
+
+        result = setup._get_event_parameters(
+            "PCS1", "BM1", "OC1", pdr=PdrParams(1.0, 0.0, complex(-0.9, 0.0), -0.9, 0.0)
+        )
+
+        assert result["pre_value"] == [pytest.approx(expected)]
 
     @patch(f"{_MS}.generator_variables")
     @patch(f"{_MS}.config")
@@ -605,6 +632,37 @@ class TestGetLine:
         assert rpu == 0.0
 
     @patch(f"{_MS}.config")
+    def test_the_grid_reactance_of_a_scr_is_its_inverse(self, mock_config):
+        mock_config.has_option.side_effect = lambda section, key: key == "SCR"
+        mock_config.get_float.side_effect = lambda s, k, d=None: {
+            "SCR": 10.0,
+            "SCR_r_factor": 10.0,
+        }.get(k, d)
+        setup = _make_setup()
+
+        setup._get_line("PCS1", "BM1", "OC1")
+
+        _, x_grid = setup._owner.complete_unit_characteristics.call_args.args
+        assert x_grid == pytest.approx(0.1)
+        assert setup.switched_line is None
+
+    @patch(f"{_MS}.config")
+    def test_the_switched_line_brings_the_grid_to_its_short_circuit_ratio(self, mock_config):
+        mock_config.has_option.side_effect = lambda section, key: key in ("SCR", "switched_SCR")
+        mock_config.get_float.side_effect = lambda s, k, d=None: {
+            "SCR": 2.0,
+            "switched_SCR": 20.0,
+            "SCR_r_factor": 10.0,
+        }.get(k, d)
+        setup = _make_setup()
+
+        line_rpu, line_xpu = setup._get_line("PCS1", "BM1", "OC1")
+
+        line = complex(line_rpu, line_xpu)
+        both = line * setup.switched_line / (line + setup.switched_line)
+        assert abs(both) == pytest.approx(1 / 20.0)
+
+    @patch(f"{_MS}.config")
     def test_complete_unit_characteristics_called(self, mock_config):
         def has_option(section, key):
             return key == "line_XPu"
@@ -613,7 +671,39 @@ class TestGetLine:
         mock_config.get_value.return_value = "0.2"
         setup = _make_setup()
         setup._get_line("PCS1", "BM1", "OC1")
-        setup._owner.complete_unit_characteristics.assert_called_once_with(pytest.approx(0.2))
+        setup._owner.complete_unit_characteristics.assert_called_once_with(
+            pytest.approx(0.2), pytest.approx(0.2 * 100.0 / 100.0), x_eff=None
+        )
+
+    @patch(f"{_MS}.config")
+    def test_the_effective_reactance_the_pcs_fixes_reaches_the_characteristics(self, mock_config):
+        mock_config.has_option.side_effect = lambda section, key: key in ("SCR", "Xeff")
+        mock_config.get_float.side_effect = lambda s, k, d=None: {
+            "SCR": 10.0,
+            "SCR_r_factor": 10.0,
+            "Xeff": 0.27,
+        }.get(k, d)
+        setup = _make_setup()
+
+        setup._get_line("PCS1", "BM1", "OC1")
+
+        assert setup._owner.complete_unit_characteristics.call_args.kwargs == {
+            "x_eff": pytest.approx(0.27)
+        }
+
+    @patch(f"{_MS}.config")
+    def test_an_empty_effective_reactance_leaves_it_to_the_producer(self, mock_config):
+        mock_config.has_option.side_effect = lambda section, key: key in ("SCR", "Xeff")
+        mock_config.get_value.side_effect = lambda s, k, d=None: "" if k == "Xeff" else d
+        mock_config.get_float.side_effect = lambda s, k, d=None: {
+            "SCR": 10.0,
+            "SCR_r_factor": 10.0,
+        }.get(k, d)
+        setup = _make_setup()
+
+        setup._get_line("PCS1", "BM1", "OC1")
+
+        assert setup._owner.complete_unit_characteristics.call_args.kwargs == {"x_eff": None}
 
 
 # ---------------------------------------------------------------------------
@@ -928,6 +1018,14 @@ class TestCompleteModel:
         )
 
         assert event_params["start_time"] == 2.0
+
+    def test_the_omega_model_applies_the_event_where_the_reference_curves_put_it(self):
+        """#816: the ramp of the grid frequency is the Omega model's own event, so it starts
+        where the test does, at the instant the reference curves give."""
+        _, _, mocks = self._run(reference_event_start_time=2.0, event_params={"start_time": 5.0})
+
+        omega_event = mocks["of"].complete_omega.call_args[0][4]
+        assert omega_event["start_time"] == 2.0
 
     def test_matching_reference_start_time_is_kept(self):
         _, (_, event_params), _ = self._run(
@@ -1253,3 +1351,192 @@ class TestApplyReferenceEventStartTime:
         setup._apply_reference_event_start_time(event_params, 30.0)
 
         assert event_params["start_time"] == 30.0
+
+
+# ---------------------------------------------------------------------------
+# conditions_ran_with
+# ---------------------------------------------------------------------------
+
+
+class TestConditionsRanWith:
+    _PAR = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<parametersSet xmlns="http://www.rte-france.com/dynawo">'
+        '<set id="Line"><par type="DOUBLE" name="line_RPu" value="0.8"/>'
+        '<par type="DOUBLE" name="line_XPu" value="8.0"/></set>'
+        '<set id="NodeFault"><par type="DOUBLE" name="fault_RPu" value="0.25"/>'
+        '<par type="DOUBLE" name="fault_XPu" value="2.5"/></set>'
+        "</parametersSet>"
+    )
+
+    def _setup(self, tmp_path):
+        (tmp_path / "TSOModel.par").write_text(self._PAR)
+        setup = _make_setup()
+        setup.pdr = PdrParams(1.02, 0.0, complex(-0.6, 0.1), -0.6, 0.1)
+        setup._oc_section = "PCS1.BM1.OC1"
+        setup._model_section = "PCS1.BM1.OC1.Model"
+        return setup
+
+    @staticmethod
+    def _table(grid_events=None, voltage_profile=None, steps_grid_voltage=False):
+        return MagicMock(
+            grid_events=grid_events or {},
+            voltage_profile=voltage_profile or {},
+            steps_grid_voltage=steps_grid_voltage,
+        )
+
+    @patch(f"{_MS}.config")
+    def test_a_fault_runs_with_the_operating_point_and_the_impedances_of_its_par(
+        self, mock_config, tmp_path
+    ):
+        mock_config.has_option.side_effect = lambda section, key: key == "SCR"
+        mock_config.get_float.return_value = 3.0
+        mock_config.get_boolean.return_value = False
+        setup = self._setup(tmp_path)
+
+        conditions = setup.conditions_ran_with(
+            tmp_path, {"start_time": 30.0, "duration_time": 0.5, "connect_to": None}
+        )
+
+        assert conditions == {
+            "pdr_P": pytest.approx(0.6),
+            "pdr_Q": pytest.approx(-0.1),
+            "pdr_U": pytest.approx(1.02),
+            "SCR": 3.0,
+            "line_RPu": 0.8,
+            "line_XPu": 8.0,
+            "grid_lines": 1,
+            "fault_RPu": 0.25,
+            "fault_XPu": 2.5,
+            "sim_t_event_start": 30.0,
+            "fault_duration": 0.5,
+        }
+
+    @patch(f"{_MS}.config")
+    def test_a_step_runs_with_its_setpoint_its_step_at_the_bus_and_the_events_of_the_grid(
+        self, mock_config, tmp_path
+    ):
+        mock_config.has_option.return_value = False
+        mock_config.get_boolean.return_value = False
+        setup = self._setup(tmp_path)
+        setup.step_value = 0.16
+        setup._table_file = self._table(grid_events={"grid_phase_jump": 0.1})
+
+        conditions = setup.conditions_ran_with(
+            tmp_path,
+            {"start_time": 20.0, "duration_time": 0.0, "connect_to": "ActivePowerSetpointPu"},
+        )
+
+        assert "fault_duration" not in conditions
+        assert conditions["connect_event_to"] == "ActivePowerSetpointPu"
+        assert conditions["setpoint_step_value"] == 0.16
+        assert conditions["grid_phase_jump"] == 0.1
+
+    @patch(f"{_MS}.generator_variables")
+    @patch(f"{_MS}.config")
+    def test_the_step_is_kept_at_the_bus_before_it_is_shared_among_the_units(
+        self, mock_config, mock_gv
+    ):
+        gen = _make_gen(s_nom=50.0)
+        owner = _make_owner(_make_producer(s_nom=50.0, generators=[gen]))
+        owner.obtain_value.side_effect = lambda v, origin=None: 0.1
+        setup = _make_setup(owner, s_nref=100.0)
+        TestGetEventParameters()._setup_config(
+            mock_config, connect_to="ActivePowerSetpointPu", has_step_value=True, step_value=0.1
+        )
+
+        result = setup._get_event_parameters(
+            "PCS1", "BM1", "OC1", pdr=PdrParams(1.0, 0.0, complex(0.5, 0.2), 0.5, 0.2)
+        )
+
+        assert result["step_value"] == [pytest.approx(0.2)]
+        assert setup.step_value == pytest.approx(0.1)
+
+    @patch(f"{_MS}.config")
+    def test_a_grid_given_by_the_reactance_of_its_line_shows_no_short_circuit_ratio(
+        self, mock_config, tmp_path
+    ):
+        mock_config.has_option.side_effect = lambda section, key: key in ("SCR", "line_XPu")
+        mock_config.get_boolean.return_value = False
+        setup = self._setup(tmp_path)
+
+        conditions = setup.conditions_ran_with(
+            tmp_path, {"start_time": 30.0, "duration_time": 0.1, "connect_to": None}
+        )
+
+        assert "SCR" not in conditions
+
+    @patch(f"{_MS}.config")
+    def test_a_dip_runs_with_the_short_circuit_impedance_and_the_voltages_of_its_profile(
+        self, mock_config, tmp_path
+    ):
+        mock_config.has_option.side_effect = lambda section, key: key == "Zcc"
+        mock_config.get_boolean.return_value = False
+        setup = self._setup(tmp_path)
+        setup.zcc = 0.0476
+        setup._table_file = self._table(voltage_profile={"u_fault": 0.05, "u_rec2": 0.85})
+
+        conditions = setup.conditions_ran_with(
+            tmp_path, {"start_time": 30.0, "duration_time": 0.15, "connect_to": None}
+        )
+
+        assert conditions["Zcc"] == 0.0476
+        assert conditions["u_fault"] == 0.05
+        assert conditions["u_rec2"] == 0.85
+
+    @patch(f"{_MS}.config")
+    def test_a_high_impedance_fault_runs_with_the_dip_its_search_aims_at(
+        self, mock_config, tmp_path
+    ):
+        mock_config.has_option.return_value = False
+        mock_config.get_boolean.side_effect = lambda section, key, default=False: (
+            key == "hiz_fault"
+        )
+        setup = self._setup(tmp_path)
+        setup.step_value = -0.7
+
+        conditions = setup.conditions_ran_with(
+            tmp_path, {"start_time": 30.0, "duration_time": 0.5, "connect_to": "None"}
+        )
+
+        assert conditions["hiz_dip"] == pytest.approx(0.7)
+        assert "setpoint_step_value" not in conditions
+        assert "connect_event_to" not in conditions
+
+    @patch(f"{_MS}.config")
+    def test_a_step_the_table_of_the_grid_takes_is_a_step_of_the_grid_voltage(
+        self, mock_config, tmp_path
+    ):
+        mock_config.has_option.return_value = False
+        mock_config.get_boolean.return_value = False
+        setup = self._setup(tmp_path)
+        setup.step_value = -0.1
+        setup._table_file = self._table(
+            grid_events={"grid_voltage_step": -0.1}, steps_grid_voltage=True
+        )
+
+        conditions = setup.conditions_ran_with(
+            tmp_path, {"start_time": 30.0, "duration_time": 0.0, "connect_to": "VoltageSetpointPu"}
+        )
+
+        assert conditions["grid_voltage_step"] == -0.1
+        assert "setpoint_step_value" not in conditions
+        assert "connect_event_to" not in conditions
+
+    @patch(f"{_MS}.config")
+    def test_a_ramp_of_the_frequency_runs_as_a_step_of_the_grid_frequency(
+        self, mock_config, tmp_path
+    ):
+        mock_config.has_option.return_value = False
+        mock_config.get_boolean.return_value = False
+        setup = self._setup(tmp_path)
+        setup.step_value = 0.01
+
+        conditions = setup.conditions_ran_with(
+            tmp_path,
+            {"start_time": 20.0, "duration_time": 0.25, "connect_to": "NetworkFrequencyPu"},
+        )
+
+        assert conditions["grid_frequency_step"] == 0.01
+        assert "setpoint_step_value" not in conditions
+        assert "connect_event_to" not in conditions

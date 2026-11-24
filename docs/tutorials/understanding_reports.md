@@ -138,6 +138,8 @@ reserved for the real connection point of the complete installation, used in
 Zone 3. The Node2 figures (the currents Ip and Iq and the voltage
 at the converter output) are measured at **InternalNode2** (*Node2* in the
 DTR). Both nodes are labeled in the network schema included in each report.
+The version Type C/D of the Fiche I16 compares the curves of InternalNode1
+alone.
 
 ---
 
@@ -164,6 +166,10 @@ This section provides information about the numerical setup:
 - solver type,
 - solver parameters,
 - numerical tolerances.
+
+When the test was simulated, a second table gives the conditions the simulation ran with, once
+the definitions of the test are resolved: the operating point, the impedances of the grid and of
+the fault (the one the search settled on, for a high-impedance or bolted fault), and the event.
 
 It ensures **traceability and reproducibility** of the results.
 

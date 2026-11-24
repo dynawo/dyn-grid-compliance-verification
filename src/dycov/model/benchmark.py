@@ -11,6 +11,7 @@ import logging
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
+from typing import Optional
 
 from dycov.configuration.cfg import config
 from dycov.configuration.dump import dump_effective_pcs_description
@@ -180,18 +181,65 @@ class Benchmark:
             for oc_name in oc_names
         ]
 
+    @staticmethod
+    def __optional_operating_point(pcs_bm_oc_name: str) -> Optional[str]:
+        """The operating point of the DTR an operating condition is, when the DTR asks for it
+        only under a condition the tool does not check on a model."""
+        return config.get_value(pcs_bm_oc_name, "optional_operating_point") or None
+
+    def __is_run(self, pcs_bm_oc_name: str) -> bool:
+        """An optional operating condition is run when the ``run_<point>`` key of the PCS says
+        so for its operating point, and every other one always."""
+        point = self.__optional_operating_point(pcs_bm_oc_name)
+        return point is None or config.get_boolean(self._pcs_name, f"run_{point}", False)
+
+    def __report_left_out(self, pcs_benchmark_name: str, oc_names: list) -> None:
+        if not oc_names:
+            return
+        condition = config.get_value(
+            self._pcs_name,
+            "optional_operating_point_condition",
+            "a condition the tool does not check",
+        )
+        points = sorted(
+            {
+                self.__optional_operating_point(pcs_benchmark_name + CASE_SEPARATOR + oc_name)
+                for oc_name in oc_names
+            }
+        )
+        keys = [f"run_{point}" for point in points]
+        settings = keys[0] if len(keys) == 1 else f"{', '.join(keys[:-1])} and {keys[-1]}"
+        reason = (
+            f"the DTR asks for {'it' if len(oc_names) == 1 else 'them'} only under {condition}; "
+            f"set {settings} to true in the [{self._pcs_name}] section of the configuration "
+            f"to run {'it' if len(oc_names) == 1 else 'them'}"
+        )
+        dycov_logging.set_test_context(
+            pcs=self._pcs_name, benchmark=self._name, oc=None, producer=self._producer_name
+        )
+        dycov_logging.get_logger("Benchmark").info(f"{', '.join(oc_names)} not run: {reason}")
+        dycov_logging.clear_test_context()
+
     def __create_operating_condition_working_paths(self, oc_names: list):
         for oc_name in oc_names:
-            working_oc_dir = (
-                self._working_dir / self._producer_name / self._pcs_name / self._name / oc_name
-            )
-            manage_files.create_dir(working_oc_dir)
+            manage_files.create_dir(self.__working_oc_dir(oc_name))
+
+    def __working_oc_dir(self, oc_name: str) -> Path:
+        return self._working_dir / self._producer_name / self._pcs_name / self._name / oc_name
 
     def __prepare_benchmark_validation(
         self, parameters: Parameters, producer: Producer, thr_ss_tol: float
     ) -> tuple[list, CurvesManager | None, Validator | None]:
         pcs_benchmark_name = self._pcs_name + CASE_SEPARATOR + self._name
-        oc_names = config.get_list("PCS-OperatingConditions", pcs_benchmark_name)
+        declared = config.get_list("PCS-OperatingConditions", pcs_benchmark_name)
+        oc_names = [
+            oc_name
+            for oc_name in declared
+            if self.__is_run(pcs_benchmark_name + CASE_SEPARATOR + oc_name)
+        ]
+        self.__report_left_out(
+            pcs_benchmark_name, [oc_name for oc_name in declared if oc_name not in oc_names]
+        )
         self.__create_operating_condition_working_paths(oc_names)
         if parameters.get_producer().is_gfm():
             return oc_names, None, None
@@ -849,6 +897,7 @@ class Benchmark:
                 sim.has_simulated_curves,
             )
             results["solver"] = self._curves_manager.get_solver()
+            results["ran_with"] = self._curves_manager.get_simulation_conditions()
         elif curves_result.availability == CurvesAvailability.NO_REFERENCE:
             op_cond_success, results, compliance = self.__validate(
                 op_cond,
@@ -862,6 +911,7 @@ class Benchmark:
             if compliance.show_report():
                 compliance = _compliance_for_missing_curves(curves_result.availability)
             results["solver"] = self._curves_manager.get_solver()
+            results["ran_with"] = self._curves_manager.get_simulation_conditions()
         else:
             compliance = _compliance_for_missing_curves(curves_result.availability)
             results = {**_FAILED_RESULTS}
@@ -950,8 +1000,10 @@ class Benchmark:
             )
             pcs_results[
                 self._pcs_name + CASE_SEPARATOR + self._name + CASE_SEPARATOR + op_cond.get_name()
-            ] = results
+            ] = manage_files.set_curves_aside(results, self.__working_oc_dir(op_cond.get_name()))
 
+        if self._curves_manager is not None:
+            self._curves_manager.release_curves()
         return success
 
     def generate(self) -> None:

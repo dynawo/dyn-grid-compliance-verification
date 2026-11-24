@@ -92,6 +92,124 @@ def _make_benchmark(
     )
 
 
+def _run_operating_conditions(
+    monkeypatch, optional: dict, asked: set, condition: str = None
+) -> list:
+    """Builds a benchmark of OC1, OC2 and OC3 whose sections in ``optional`` are optional
+    operating points of the DTR, the PCS asking to run the points in ``asked``."""
+    lists = {"PCS-OperatingConditions": {_PCS_BENCHMARK: ["OC1", "OC2", "OC3"]}}
+    monkeypatch.setattr(
+        Config, "get_list", lambda self, section, key: lists.get(section, {}).get(key, [])
+    )
+    monkeypatch.setattr(
+        Config,
+        "get_boolean",
+        lambda self, section, key, default=False: (
+            section == "PCS" and key.removeprefix("run_") in asked
+        ),
+    )
+    get_value = Config.get_value
+
+    def _value(self, section, key, default=None):
+        if key == "optional_operating_point":
+            return optional.get(section, default)
+        if (section, key) == ("PCS", "optional_operating_point_condition") and condition:
+            return condition
+        return get_value(self, section, key, default)
+
+    monkeypatch.setattr(Config, "get_value", _value)
+    monkeypatch.setattr(benchmark.manage_files, "create_dir", lambda path: None)
+    bm = Benchmark(
+        pcs_name="PCS",
+        pcs_id=1,
+        pcs_zone=1,
+        producer_name="Prod",
+        report_name="Report",
+        benchmark_name="Bench",
+        parameters=DummyParams(DummyProducer()),
+        producer=DummyProducer(),
+    )
+    return [oc.get_name() for oc in bm._oc_list]
+
+
+def _told_not_run(monkeypatch) -> list:
+    told = []
+
+    class _Logger:
+        def info(self, message):
+            if "not run" in message:
+                told.append(message)
+
+        def __getattr__(self, name):
+            return lambda *args, **kwargs: None
+
+    monkeypatch.setattr(benchmark.dycov_logging, "get_logger", lambda name: _Logger())
+    return told
+
+
+def test_an_optional_operating_point_runs_when_its_pcs_asks_for_it(monkeypatch):
+    optional = {f"{_PCS_BENCHMARK}.OC1": "OC1", f"{_PCS_BENCHMARK}.OC3": "OC3"}
+
+    names = _run_operating_conditions(monkeypatch, optional, asked={"OC3"})
+
+    assert names == ["OC2", "OC3"]
+
+
+def test_an_optional_operating_point_is_not_run_unless_its_pcs_asks_for_it(monkeypatch):
+    names = _run_operating_conditions(monkeypatch, {f"{_PCS_BENCHMARK}.OC1": "OC1"}, asked=set())
+
+    assert names == ["OC2", "OC3"]
+
+
+def test_operating_conditions_of_one_point_run_together(monkeypatch):
+    optional = {f"{_PCS_BENCHMARK}.OC1": "OC1", f"{_PCS_BENCHMARK}.OC3": "OC1"}
+
+    assert _run_operating_conditions(monkeypatch, optional, asked={"OC1"}) == ["OC1", "OC2", "OC3"]
+    assert _run_operating_conditions(monkeypatch, optional, asked=set()) == ["OC2"]
+
+
+@pytest.mark.parametrize(
+    "optional, message",
+    [
+        (
+            {f"{_PCS_BENCHMARK}.OC1": "OC1"},
+            "OC1 not run: the DTR asks for it only under a condition the tool does not check; "
+            "set run_OC1 to true in the [PCS] section of the configuration to run it",
+        ),
+        (
+            {f"{_PCS_BENCHMARK}.OC1": "OC1", f"{_PCS_BENCHMARK}.OC3": "OC4"},
+            "OC1, OC3 not run: the DTR asks for them only under a condition the tool does not "
+            "check; set run_OC1 and run_OC4 to true in the [PCS] section of the configuration "
+            "to run them",
+        ),
+    ],
+)
+def test_the_operating_points_left_out_say_so_once_and_how_to_run_them(
+    monkeypatch, optional, message
+):
+    told = _told_not_run(monkeypatch)
+
+    _run_operating_conditions(monkeypatch, optional, asked=set())
+
+    assert told == [message]
+
+
+def test_an_operating_point_left_out_names_the_condition_its_pcs_gives(monkeypatch):
+    told = _told_not_run(monkeypatch)
+
+    _run_operating_conditions(
+        monkeypatch,
+        {f"{_PCS_BENCHMARK}.OC1": "OC1"},
+        asked=set(),
+        condition="current limitation",
+    )
+
+    assert told == [
+        "OC1 not run: the DTR asks for it only under current limitation; set run_OC1 to true "
+        "in the [PCS] section of the configuration to run it"
+    ]
+
+
 def _internal_node1_figures(bm: Benchmark) -> list:
     return [
         (figure.name, figure.variables, figure.in_pdf)

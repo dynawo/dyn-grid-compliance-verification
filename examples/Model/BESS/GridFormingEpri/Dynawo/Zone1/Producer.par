@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<parametersSet xmlns="http://www.rte-france.com/dynawo">
+  <set id="Bess">
+    <!-- The parameters of the EPRI Grid Forming example of Dynawo, on a rating of 5 MVA -->
+    <par type="DOUBLE" name="gfm_SNom" value="5.0"/>
+    <par type="DOUBLE" name="gfm_DD" value="0.11"/>
+    <par type="DOUBLE" name="gfm_DeltaOmegaMaxPu" value="0.238739456"/>
+    <par type="DOUBLE" name="gfm_DeltaOmegaMinPu" value="-0.238739456"/>
+    <par type="DOUBLE" name="gfm_IMaxPu" value="1.05"/>
+    <par type="DOUBLE" name="gfm_K1" value="0.05"/>
+    <par type="DOUBLE" name="gfm_K2" value="0.2"/>
+    <par type="DOUBLE" name="gfm_K2Dvoc" value="1e-5"/>
+    <par type="DOUBLE" name="gfm_KD" value="0"/>
+    <par type="DOUBLE" name="gfm_KIPll" value="700"/>
+    <par type="DOUBLE" name="gfm_KIi" value="5"/>
+    <par type="DOUBLE" name="gfm_KIp" value="10"/>
+    <par type="DOUBLE" name="gfm_KIv" value="10"/>
+    <par type="DOUBLE" name="gfm_KPPll" value="20"/>
+    <par type="DOUBLE" name="gfm_KPi" value="0.5"/>
+    <par type="DOUBLE" name="gfm_KPp" value="2"/>
+    <par type="DOUBLE" name="gfm_KPv" value="2"/>
+    <par type="DOUBLE" name="gfm_MF" value="0.15"/>
+    <par type="DOUBLE" name="gfm_OmegaDroopPu" value="0.05"/>
+    <par type="INT" name="gfm_OmegaFlag" value="1"/>
+    <par type="DOUBLE" name="gfm_OmegaMaxPu" value="1.5"/>
+    <par type="DOUBLE" name="gfm_OmegaMinPu" value="0.5"/>
+    <par type="BOOL" name="gfm_PQFlag" value="true"/>
+    <par type="DOUBLE" name="gfm_QDroopPu" value="0.2"/>
+    <par type="DOUBLE" name="gfm_RSourcePu" value="0.00015"/>
+    <par type="DOUBLE" name="gfm_UDipPu" value="0.8"/>
+    <par type="DOUBLE" name="gfm_XSourcePu" value="0.15"/>
+    <par type="DOUBLE" name="gfm_tE" value="0.01"/>
+    <par type="DOUBLE" name="gfm_tF" value="1e-5"/>
+    <par type="DOUBLE" name="gfm_tR" value="0.005"/>
+    <par type="DOUBLE" name="gfm_tV" value="1e-5"/>
+  </set>
+</parametersSet>

@@ -13,6 +13,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from dycov.cli.command_handlers import (
+    _run_verification,
     handle_excel2inputs_command,
     handle_performance_command,
     handle_validate_command,
@@ -434,3 +435,18 @@ def test_performance_refuses_a_workbook_together_with_curves(mocker, tmp_path):
 
     parser.error.assert_called_once()
     generate.assert_not_called()
+
+
+def test_a_missing_producer_file_ends_the_verification_with_its_message(mocker, caplog):
+    mocker.patch(
+        "dycov.cli.command_handlers.ValidationParameters",
+        side_effect=FileNotFoundError("The producer has no Producer.ini in model"),
+    )
+
+    result = _run_verification(
+        _LAUNCHER, Path("out"), Path("model"), None, None, None, False, True, ELECTRIC_PERFORMANCE
+    )
+
+    assert result == 1
+    assert "The producer has no Producer.ini in model" in caplog.text
+    assert "Traceback" not in caplog.text

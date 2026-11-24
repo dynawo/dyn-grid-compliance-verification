@@ -44,6 +44,8 @@ All extend `FileVariables` (`io/file_variables.py`); fill template placeholders 
 - `SolversFile` (`io/solvers.py`) — solver tuning → `solvers.par`
 - `TableFile` (`io/table.py`)
 - `crv.create_curves_file()` (`io/crv.py`) — builds `TSOModel.crv` + returns `curves_dict` (tool var ↔ Dynawo curve id)
+- `omega_file.complete_omega()` (`files/omega_file.py`) — connects the units to the Omega model and fills the event
+  it applies itself (the `Ramp` of the frequency test: `{{event_start}}`, `{{event_duration}}`, `{{event_step_value}}`)
 
 Templates live in `src/dycov/model_lib/`; DyCoV **copies templates and fills placeholders** — it does NOT
 build network structure dynamically.
@@ -72,9 +74,12 @@ copies the producer's table files into the working directory with its DYD and PA
 **Config value definitions** (any multiplier-based `PCSDescription.ini` value): resolved data-driven,
 not per-key. `value_registry.unit_characteristics(producer, u_dim)` is the single registry of base
 magnitudes (`Pmax`/`PmaxInjection`/`PmaxConsumption`/`Qmax`/`Qmin`/`Snom`/`Udim`/`Unom=1.0`/`line_XPu`,
-powers in s_nref pu, voltage in Unom pu);
-`resolve_value_definition(defn, chars, sign, origin)` evaluates `[±mult*]Name`|numeric against it;
-`origin=(section, key)` makes a rejected definition name its config file+line
+powers in s_nref pu, voltage in Unom pu; plus `Xeff` (the PCS's own `Xeff`, which
+`ModelSetup._fixed_x_eff` hands `complete_unit_characteristics`, else `[GFM Parameters]` of the
+producer) and
+`Xgrid` (the `1/SCR` of the OC or its line's reactance), in the unit's Snom pu, only when known);
+`resolve_value_definition(defn, chars, sign, origin)` evaluates `[±mult*]Name`|`[±mult*](Name+Name)`
+|numeric against it; `origin=(section, key)` makes a rejected definition name its config file+line
 (`config.describe_option`). Every
 non-GFM value read pulls from that one registry: `_get_pdr` + `_complete_loads` (`model_setup.py`; loads
 resolve voltage against a kV variant then ÷u_nom), the voltage of `Zcc` (`_zcc_voltage`,
@@ -87,11 +92,61 @@ possibly signed registry name); anything else is a Dynawo parameter value passed
 A definition rejected while a test is simulated ends that test as `Invalid test`, since
 `obtain_simulated_curve` turns only `SimulationOutcomeError` (the bisection outcomes,
 `model/parameters.py`) into a failed `SimulationResult` and the rest reaches `Benchmark.validate`.
-Out of scope: GFM (own grammar `mult*(Xeff+Xgrid)`, `extract_defined_value` for p0/q0)
+Out of scope: GFM (own parsing of `mult*(Xeff+Xgrid)`, `extract_defined_value` for p0/q0)
 and `line_XPu` (DTR reactance-table base `a`/`b`). `line_XFaultPu` resolves against the registry
 plus `XFaultPu`, the reactance the DTR gives the impedant three-phase fault
 (`generator_variables.calculate_fault_xpu`, at the Pmax of the test); without it the fault of
 `Fault_4Lines_InfBus` is bolted.
+
+**Storage of types C and D (I16.2)**: the revision `20260723` splits the Fiche I16 of a storage
+installation into I16.1 for type B, the base fiche with what its delta writes (in Zone 3 alone), and
+I16.2 for types C and D, a version `Type<categories>.ini` in the directory of the delta of each PCS
+(`revisions/20260723/PCS/model/BESS/PCS_RTE-I16z{1,3}/TypeCD.ini`, its templates in the mirrored
+`reports/`); the base revision has none, I18 not existing. `Pcs` picks it by the category of the
+installation (`ModelProducer.get_installation_category`: `get_generator_category` on the Zone 3 INI,
+whatever zone runs; `_version_for_category`), and `load_pcs_config` reads it into the delta layer
+after the delta, which it patches key by key. A version may withdraw a fiche instead: the
+revision asks the Fiche I5 of storage of type B alone (#743), so the `TypeCD.ini` of the
+performance `PCS_RTE-I5` of BESS lists its benchmarks as `none`, a performance verification reads
+the category of each producer from the INI of its name
+(`ModelProducer.get_installation_category`), and `Pcs.why_no_test` gives the log the reason.
+Zone 1 of TypeCD runs the setpoint steps on SCR 2 and
+the tests of the Fiche I18 under their scenario names (`S_VolAngStep*`, `S_VolAmpStep*`,
+`S_SCRup1/down1`, `S_Rocof*`, `S_Fault4-6`), whose shared settings are the `I18*` aliases of the
+`config_aliases.ini` of the delta, and compares the curves of InternalNode1 alone, where the fiche
+observes the results of I18 (`[GridCode] zone1_compared_at_node1`, which turns
+`compared_curves.for_zone(1)` into V, P, Q, Ip and Iq of `BusPDR`). Their events: the default
+`TableInfiniteBus.txt` of `GridVWDisturbance_1Line_InfBusFromTab` (`TableFile`: `grid_phase_jump`,
+`grid_voltage_step`, `grid_frequency0`/`grid_rocof` on the `OmegaRefPu` of the bus, which the
+`InfiniteBus` Omega model hands the units, after a pre-event ramp to the initial frequency), and
+`SCRStepUp/Down_2Lines_InfBus`, a parallel line sized by `switched_SCR`
+(`ModelSetup._get_switched_line`) that a `BooleanTable` (`TableSwitchedLine.txt`) holds open until
+it closes (`line_SwitchOffSignal20 = true`, skipped by `get_line_values`) or an event opens. An OC
+that names its `optional_operating_point` (every I18 test but OC2/OC3) runs only when the
+`run_<point>` key of its PCS is true, shipped empty so that setting it is no norm option
+(`Benchmark.__is_run`). Criterion 5 tracks the `tracked_magnitude` an OC names
+(`ModelValidator.__tracked_magnitude`,
+`compared_curves.setpoint_label` taking a label) when its event steps no setpoint, and both its
+tracking errors and its step-response indicators are measured against the step of the reference
+response (`ModelValidator.__response_step`, `common.get_response_step`: its change, or the peak of
+a transient an OC marks `transient_response`, whose overshoot `get_overshoot` takes towards that
+peak). Every page of the TypeCD Zone 1 report is the shared
+`report.I16z1.TypeCD.Test.tex`, which prints the conditions of the test from its description
+(`report/tables/conditions.py`). The Grid Forming converters of Dynawo the tool supports
+(`GridFormingConverterDroopControl`, `GridFormingEpri`, family `GFM` in `Storage.ini`) state in the
+dictionary flags no parameter holds (`ConverterLVControl = false`,
+`SetpointsBehindTransformer = true` for the droop one, `translator.get_stated_flag`): the start
+value of a stepped setpoint is then the one behind its transformer (`GenParams.reference_impedance`,
+`ModelSetup._reference_operating_point`). The droop one keeps that transformer inside and gives the
+power on its converter side in the base of the unit, so its Node2 curves are read at its terminal,
+as those of the IEC plants of zone 3. The EPRI one has no `NetworkFrequencyReference`, which
+`omega_file` then leaves unconnected: for a unit without it, `TableFile` turns the `TableUPhase` of
+the infinite bus with the frequency of `TableOmegaRefPu` (the I16.2 RoCoF), while the Omega-model
+events (Zone 3 frequency ramp, islanding) do not reach it. The active power of the I18 OCs is in
+pu of Pn, the maximum active power of Zone 1 (`Pmax`). The examples `BESS/GridFormingDroop` and
+`BESS/GridFormingEpri` are type C installations: a Dynawo GFM converter in Zone 1 and a WECC plant
+of 40 MW at 225 kV in Zone 3, because neither GFM model rides through every test of Zone 3 (the
+droop one loses synchronism in the dips); `BESS/WECC`, of 15 MW, is a type B one.
 
 **Declared tests (F16)**: the DTR Fiche F16 fixes no test and applies to Zone 3 only, so
 `PCS_RTE-F16z3` ships with an empty `[PCS-Benchmarks]` and, next to it, the `F16Description.ini`
@@ -182,7 +237,18 @@ working_oc_dir/outputs/  logs/ (dynawo.log)  curves/ (curves.csv)  timeLine/  co
 
 `simulation_inputs.ini` (`files/simulation_files.SIMULATION_INPUTS_FILE`) is written next to the curves
 of each test after it runs, by `DynawoCurves.__record_simulation_inputs`: a `[Simulation]` section with the
-event, the initial operating point and the solver the run ended with. `dycov anonymize` rebuilds the
+event, the initial operating point and the solver the run ended with, and a `[Conditions]` section with
+what `ModelSetup.conditions_ran_with` resolved (operating point at the bus, `SCR` or `Zcc` as
+`_get_line` took them, the setpoint step at the bus, the dip a HiZ search aims at or the step of the
+grid frequency, `TableFile.grid_events` and the `u_*` stages of a dip or swell table, and the line,
+switched-line and fault impedances the TSO PAR holds once the fault search wrote it,
+`simulation_files.grid_impedances`). Each key is the PCS option that defines the value, where one
+does. A test whose fault search ends in error records none. `Benchmark` puts the same dict
+in the results as `ran_with`, which every test page prints next to its solver
+(`report/tables/ran_with.py`) and the shared I16.2 page as a value column of its definitions
+(`conditions.py`). The anonymizer reads the event from lines naming `sim_t_event_start`/
+`fault_duration`, so `[Conditions]` leaves those out, and `connect_event_to`, which `[Simulation]`
+holds as `event_connected_to`. `dycov anonymize` rebuilds the
 `[Curves-Metadata]` of the dictionaries it generates from it (`curves/anonymizer/sources.py`, which also
 accepts the `dycov.log` older results carry); without it every generated curve set declares its event at
 t = 0.
@@ -192,7 +258,12 @@ The Results tree (`-o` output dir: `<Results>/…/Producer/<PCS>/<benchmark>/<oc
 the `-o` (`Parameters`: `<temporal_path>_<user>_*` in its parent, the current dir without one), so that
 move is a rename within one filesystem. Alongside the inputs
 it holds the post-processed `curves_calculated.csv`, `curves_reference.csv` and `results.json`, and at its
-root the `dycov_run.log` of the execution.
+root the `dycov_run.log` of the execution. Between the validation of a test and its report, the
+curves the report draws (the filtered ones, not those CSVs) wait in its `curves_set_aside.pkl`
+(`manage_files.set_curves_aside`, called by `Benchmark.validate`, which also has the curves
+manager let go of its last test), so a PCS holds the curves of no test in memory; the report takes
+each back as it draws it (`take_curves_back`), and `_validate_pcs` discards the rest
+(`discard_curves_set_aside`) before the tree moves to the `-o`.
 
 `--curves-only` (`validate`, `performance`; `Parameters.is_curves_only`) stops each test once
 `has_required_curves` has written its curves: `Benchmark` gives it the outcome of the simulation

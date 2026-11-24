@@ -33,6 +33,7 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_PPM,
     REPORT_NAME,
 )
+from dycov.curves import naming
 from dycov.files import manage_files, value_registry
 from dycov.logging import dycov_logging
 from dycov.report import figure, html
@@ -42,6 +43,8 @@ from dycov.report.tables import (
     active_power_recovery,
     characteristics_response,
     compliance,
+    conditions,
+    ran_with,
     results,
     signal_error,
     solver,
@@ -270,6 +273,7 @@ def _pcs_replace(
     )
 
     _render_zone1_circuits(working_path, producer, pcs_results["pcs"].get_zone(), producer_name)
+    operating_point_bus = "InternalNode1" if pcs_results["pcs"].get_zone() == 1 else "the PDR"
 
     subst_dict = {
         "producercommand": f"\\renewcommand{{\\Producer}}{{{pcs_results['producer']}}}"
@@ -305,6 +309,7 @@ def _pcs_replace(
 
         oc_maps = {
             "solver": solver_map,
+            "ranwith": ran_with.create_map(oc_results, operating_point_bus),
             "rm": results_map,
             "cm": compliance_map,
             "thm": thresholds_map,
@@ -343,6 +348,12 @@ def _pcs_replace(
                 "benchmark": benchmark,
                 "operatingcondition": oc_name,
                 "link": latex_link,
+                "conditions": conditions.create_map(
+                    operating_condition, oc_results.get("ran_with")
+                ),
+                "trackedmagnitude": config.get_value(
+                    operating_condition, "tracked_magnitude", ""
+                ).replace("_", " "),
             }
 
             oc_template = _get_template(working_path, f"{producer_name}.{oc_report}")
@@ -409,6 +420,13 @@ def _render_zone1_circuits(
             tikz_template.stream(hasgroupxfmr=has_group_xfmr).dump(
                 str(working_path / f"{prefix}.{tikz_name}")
             )
+    switched_line = working_path / "circuit_z1_switched_line.tikz"
+    if switched_line.exists():
+        tikz_template = _get_template(working_path, switched_line.name)
+        for action, closes in (("closes", True), ("opens", False)):
+            tikz_template.stream(hasgroupxfmr=has_group_xfmr, closes=closes).dump(
+                str(working_path / f"{prefix}.circuit_z1_switched_line_{action}.tikz")
+            )
 
 
 def _get_iq_last_val(plot_curves: list) -> float | None:
@@ -470,8 +488,19 @@ def _with_stepped_setpoint(
         return figure_description
     return replace(
         figure_description,
-        variables=[*figure_description.variables, {"type": "generator", "variable": stepped}],
+        variables=[
+            *_as_typed_variables(figure_description.variables),
+            {"type": "generator", "variable": stepped},
+        ],
     )
+
+
+def _as_typed_variables(variables: str | list) -> list:
+    """The variables of a figure as a list of typed ones, which is what a figure that draws
+    more than one curve takes: a curve of the bus named in full becomes the bus variable."""
+    if isinstance(variables, str):
+        return [{"type": "bus", "variable": variables.removeprefix(naming.INTERNAL_BUS_PREFIX)}]
+    return variables
 
 
 def _generate_figures(
@@ -574,6 +603,7 @@ def _create_full_tex(
     for operating_condition, oc_results in pcs_results.items():
         if not isinstance(oc_results, dict):
             continue
+        oc_results = manage_files.take_curves_back(oc_results)
 
         figure_key = operating_condition.rsplit(".", 1)[0]
         if figure_key not in figures_description:
