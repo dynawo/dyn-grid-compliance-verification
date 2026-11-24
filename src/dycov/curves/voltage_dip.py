@@ -190,10 +190,23 @@ def classify_residual_voltage(
     return VoltDipResult.DIP_CORRECT
 
 
+def _pre_event_margin() -> float:
+    """How long before the event the voltage may already have left its value before it: the
+    instant Dynawo records the event, and half the width over which the steps of a table of the
+    grid are smoothed, which starts before them."""
+    if not config.get_boolean("Dynawo", "transition_enabled", False):
+        return TIME_EPSILON
+    return TIME_EPSILON + config.get_float("Dynawo", "transition_half_width", 0.01)
+
+
+def _last_index_before_event(time, fault_start: float) -> int:
+    return max(int(np.searchsorted(time, fault_start - _pre_event_margin())) - 1, 0)
+
+
 def _is_flat_after_event(time, voltage, fault_start):
     thr_ss_tol = config.get_float("GridCode", "thr_ss_tol", 0.002)
 
-    idx = np.argmin(abs(np.array(time) - fault_start)) - 1
+    idx = _last_index_before_event(time, fault_start)
     v_init = voltage[idx]
 
     v_max_diff = max(abs(np.array(voltage[idx:]) - v_init))
@@ -286,12 +299,10 @@ def _trim_curves(
     fault_start: float,
     fault_duration: float,
 ) -> TrimmedCurves:
-    pre_idx = 0
+    pre_idx = _last_index_before_event(time_values, fault_start)
     start_idx = 0
     end_idx = -1
     for i, t in enumerate(time_values):
-        if t - fault_start < -TIME_EPSILON:
-            pre_idx = i
         if fault_start - t > TIME_EPSILON:
             start_idx = i
         if t - (fault_start + fault_duration) < -TIME_EPSILON:
