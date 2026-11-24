@@ -9,6 +9,7 @@
 #
 """Tests for the figures and the page of the HTML report."""
 
+import threading
 from pathlib import Path
 
 import pandas as pd
@@ -148,6 +149,107 @@ def test_create_html_success(html_templates, tmp_path):
 
     output_html = output_path / "HTML" / "producer.test_condition.html"
     assert output_html.read_text() == "2 figures rendered"
+
+
+def test_create_html_writes_its_page_when_another_report_creates_the_folder_meanwhile(
+    html_templates, tmp_path, monkeypatch
+):
+    """#815: a report of another PCS may create the HTML folder after this one found it missing."""
+    html_templates.write_text("page")
+    output_path = tmp_path / "output"
+    html_dir = output_path / "HTML"
+    html_dir.mkdir(parents=True)
+    exists = Path.exists
+    monkeypatch.setattr(
+        Path, "exists", lambda self, *args, **kwargs: self != html_dir and exists(self)
+    )
+
+    html.create_html("producer", [], "test_condition", output_path)
+
+    assert (html_dir / "producer.test_condition.html").read_text() == "page"
+
+
+def test_create_html_moves_each_script_into_place_once_it_is_whole(
+    html_templates, tmp_path, monkeypatch
+):
+    """#815: a script copied by two reports at once is written aside and then moved, so a page
+    never loads it half written."""
+    html_templates.write_text("page")
+    output_path = tmp_path / "output"
+    output_path.mkdir()
+    destinations = []
+    copy = html.shutil.copy
+
+    def recording_copy(source, destination):
+        destinations.append(Path(destination))
+        return copy(source, destination)
+
+    monkeypatch.setattr(html.shutil, "copy", recording_copy)
+
+    html.create_html("producer", [], "test_condition", output_path)
+
+    html_dir = output_path / "HTML"
+    assert len(destinations) == 2
+    assert all(destination.parent == html_dir for destination in destinations)
+    assert not {destination.name for destination in destinations} & {
+        "plotly.min.js",
+        "sync_charts.js",
+    }
+    assert sorted(path.name for path in html_dir.iterdir()) == [
+        "plotly.min.js",
+        "producer.test_condition.html",
+        "sync_charts.js",
+    ]
+
+
+def test_a_script_that_fails_to_copy_leaves_nothing_behind(html_templates, tmp_path, monkeypatch):
+    html_templates.write_text("page")
+    output_path = tmp_path / "output"
+    output_path.mkdir()
+
+    def failing_copy(source, destination):
+        Path(destination).write_text("half")
+        raise OSError("No space left on device")
+
+    monkeypatch.setattr(html.shutil, "copy", failing_copy)
+
+    with pytest.raises(OSError, match="No space left"):
+        html.create_html("producer", [], "test_condition", output_path)
+
+    assert list((output_path / "HTML").iterdir()) == []
+
+
+def test_create_html_writes_every_page_of_reports_prepared_at_the_same_time(
+    html_templates, tmp_path
+):
+    """#815: every test gets its page, whatever order the reports run in."""
+    html_templates.write_text("page")
+    output_path = tmp_path / "output"
+    output_path.mkdir()
+    conditions = [f"PCS_{n}.Benchmark.OC" for n in range(8)]
+    start = threading.Barrier(len(conditions))
+    errors = []
+
+    def prepare(condition):
+        start.wait()
+        try:
+            html.create_html("producer", [], condition, output_path)
+        except Exception as error:
+            errors.append(error)
+
+    threads = [threading.Thread(target=prepare, args=(condition,)) for condition in conditions]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    html_dir = output_path / "HTML"
+    assert errors == []
+    assert sorted(path.name for path in html_dir.iterdir()) == sorted(
+        [f"producer.{condition}.html" for condition in conditions]
+        + ["plotly.min.js", "sync_charts.js"]
+    )
+    assert (html_dir / "sync_charts.js").read_text() == "// sync charts js dummy"
 
 
 def test_plotly_figures_missing_reference_curves():

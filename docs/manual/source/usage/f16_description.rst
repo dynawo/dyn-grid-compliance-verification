@@ -454,11 +454,10 @@ Grid frequency ramp
 ^^^^^^^^^^^^^^^^^^^
 
 The frequency reference of the units follows a ramp, the grid being an
-infinite bus behind a line. The ramp DyCoV simulates is fixed by its
-``Ramp`` frequency model: +0.01 pu (0.5 Hz) over 0.25 s, starting at 20 s.
-A record can only be declared as this kind of test if it shows that
-excursion, and the event keys below describe that same ramp to the
-compliance tests.
+infinite bus behind a line. The event keys below are the ramp DyCoV
+simulates and checks: ``sim_t_event_start`` its start, ``fault_duration``
+its duration and ``setpoint_step_value`` its height, in pu of the nominal
+frequency, so they declare the excursion the record shows.
 
 .. code-block:: ini
 
