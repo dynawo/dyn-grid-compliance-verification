@@ -199,8 +199,7 @@ the unit has no transformer, as the EPRI Grid Forming converter of Dynawo, whose
 Node2 is InternalNode1 itself; samples where it is not available are discarded
 rather than turned into a current.
 
-Zone 1 compares six curves in every one of its benchmarks, in the version
-Type C/D of the Fiche I16 described below as in the others: the voltage at
+Zone 1 compares six curves in every one of its benchmarks: the voltage at
 InternalNode1, the voltage at InternalNode2, the active and reactive power at
 the point controlled by the converter, and the currents Ip and Iq at
 InternalNode2. The two voltages carry no DTR threshold, so no compliance
@@ -494,7 +493,7 @@ its reaction time reported without a verdict; the other tests are transients
 the active current returns from, which have neither a reaction nor a rise time,
 and are checked for their settling time and overshoot against the peak of the
 reference response, with ``transient_response``. The faults are checked with the criteria of the faults
-of type B, on the same curves.
+of type B.
 
 Dynawo initialises a model at the nominal frequency, so a ramp of the frequency
 starting at 49.5 or 50.5 Hz reaches that frequency with a slow ramp over the

@@ -91,7 +91,7 @@ compared curves are the voltage, the active and reactive power and the
 active and reactive current at the PDR, and the network frequency; in Zone 1
 they are the voltage at InternalNode1 and InternalNode2, the active and
 reactive power at the point the converter controls, and the currents Ip and
-Iq at InternalNode2, in the version Type C/D of the Fiche I16 as in the others.
+Iq at InternalNode2.
 
 Step-response characteristics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

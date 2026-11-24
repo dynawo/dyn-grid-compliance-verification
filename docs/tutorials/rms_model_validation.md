@@ -113,7 +113,7 @@ versions, by the category the DTR gives the installation, which DyCoV computes
 from the connection voltage and the maximum power at injection of its Zone 3:
 the Fiche I16.1 for type B, and the Fiche I16.2 for types C and D, the storage
 units the Fiche I18 asks to be Grid Forming. The Fiche I16.2 simulates the tests
-of the Fiche I18 in Zone 1, and compares them on the same curves as the Fiche I16.1.
+of the Fiche I18 in Zone 1.
 The examples `BESS/GridFormingDroop` and `BESS/GridFormingEpri` are storage
 installations of type C, and `BESS/WECC` one of type B.
 
@@ -296,8 +296,7 @@ Each zone compares a fixed set of curves:
 
 - **Zone 1**: the voltage at InternalNode1, the voltage at InternalNode2, the
   active and reactive power at the point controlled by the converter, and the
-  currents Ip and Iq at InternalNode2 (six curves), in the Fiche I16.2 of a
-  storage installation of type C or D as in the others.
+  currents Ip and Iq at InternalNode2 (six curves).
 - **Zone 3**: the voltage, active and reactive power, and currents Ip and Iq
   at the PDR bus, plus the network frequency (six curves).
 

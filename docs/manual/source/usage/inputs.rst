@@ -106,9 +106,6 @@ and only a description of the user may change it.
    ``*_GEN_ActivePowerSetpointPu``, ``*_GEN_ReactivePowerSetpointPu`` and
    ``*_GEN_VoltageSetpointPu``, which are not compared: in a setpoint step,
    the report draws the one the step moves over the magnitude it drives.
-   The Zone 1 of a storage installation of type C or D declares the same
-   signals, for its setpoint steps and for the tests of the Fiche I18 it
-   repeats.
 
 For information on the DYD and PAR file formats, refer to the
 `Dynawo documentation <https://dynawo.github.io/>`_.
