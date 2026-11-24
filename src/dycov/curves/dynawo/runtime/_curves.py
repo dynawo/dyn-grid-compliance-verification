@@ -214,37 +214,30 @@ def convert_columns(df_curves: pd.DataFrame, curves_dict: dict) -> None:
             curves_dict[col] = df_curves[col].tolist()
 
 
-_UNIT_BASE_POWERS = (
-    "ActivePowerNode2",
-    "ReactivePowerNode2",
-    "ActivePowerControlledNode",
-    "ReactivePowerControlledNode",
-)
-
-
-def _rebase_unit_powers(generators: list, df_curves: pd.DataFrame, snref: float) -> None:
-    """Bring to base SnRef, the one Dynawo gives the rest in, the powers a model gives at Node2
-    and at its controlled node in the base of its unit.
+def _rebase(values, from_base: float, to_base: float) -> np.ndarray:
+    """Bring per-unit powers from the base they come in to another one.
 
     Parameters
     ----------
-    generators : list
-        A list of generator objects, with their IDs, their nominal apparent power and whether
-        their model gives those powers in its base.
-    df_curves : pd.DataFrame
-        The DataFrame containing the translated curves, whose powers are rebased in place.
-    snref : float
-        The reference apparent power of the simulation.
+    values : array-like
+        The powers, in pu of from_base.
+    from_base : float
+        The apparent power they come in pu of.
+    to_base : float
+        The apparent power they are wanted in pu of.
+
+    Returns
+    -------
+    np.ndarray
+        The powers in pu of to_base.
     """
-    for generator in generators:
-        if not generator.powers_in_unit_base:
-            continue
-        for name in _UNIT_BASE_POWERS:
-            column = f"{generator.id}_GEN_{name}"
-            if column in df_curves.columns:
-                df_curves[column] = np.multiply(
-                    df_curves[column].to_numpy(dtype=float), generator.s_nom / snref
-                )
+    return np.multiply(np.asarray(values, dtype=float), from_base / to_base)
+
+
+def _unit_power_base(generator, snref: float) -> float:
+    """The base Dynawo gives the powers of a unit at Node2 and at its controlled node in: that of
+    the unit when its model states it gives them so, SnRef otherwise."""
+    return generator.s_nom if generator.powers_in_unit_base else snref
 
 
 def _get_node2_powers(generators: list, df_curves: pd.DataFrame) -> None:
@@ -325,10 +318,9 @@ def _get_node2_curves(
         if not has_all_columns:
             continue
 
-        active_power = np.multiply(df_curves[active_power_col].to_numpy(dtype=float), snref / snom)
-        reactive_power = np.multiply(
-            df_curves[reactive_power_col].to_numpy(dtype=float), snref / snom
-        )
+        power_base = _unit_power_base(generator, snref)
+        active_power = _rebase(df_curves[active_power_col], power_base, snom)
+        reactive_power = _rebase(df_curves[reactive_power_col], power_base, snom)
         voltage = _get_modulus(df_curves[voltage_col].tolist())
         voltage_array = np.array(voltage, dtype=float)
 
@@ -346,16 +338,15 @@ def _get_node2_curves(
     _drop_columns(df_curves, columns_to_remove)
 
 
-def _extract_and_scale_power_columns(
+def _extract_and_rebase_power_columns(
     df_curves: pd.DataFrame,
     curves_dict: dict,
     columns: dict[str, str],
-    scale: float,
+    from_base: float,
+    to_base: float,
 ) -> None:
     for raw_col, canonical_col in columns.items():
-        curves_dict[canonical_col] = np.multiply(
-            df_curves[raw_col].to_numpy(dtype=float), scale
-        ).tolist()
+        curves_dict[canonical_col] = _rebase(df_curves[raw_col], from_base, to_base).tolist()
     _drop_columns(df_curves, list(columns.keys()))
 
 
@@ -368,7 +359,8 @@ def _get_controlled_point_curves(
 ) -> None:
     """Rebase the power the converter injects at the point its control measures.
 
-    Dynawo reports it in s_nref pu and the criteria compare powers in SNom pu.
+    Dynawo reports it in s_nref pu, or in the base of the unit when its model says so, and the
+    criteria compare powers in SNom pu.
 
     Parameters
     ----------
@@ -390,11 +382,12 @@ def _get_controlled_point_curves(
         if not all(col in df_curves.columns for col in (active_power_col, reactive_power_col)):
             continue
 
-        _extract_and_scale_power_columns(
+        _extract_and_rebase_power_columns(
             df_curves,
             curves_dict,
             {active_power_col: active_power_col, reactive_power_col: reactive_power_col},
-            snref / snom,
+            _unit_power_base(generator, snref),
+            snom,
         )
 
 
@@ -415,14 +408,15 @@ def _get_tso_synchronous_condenser_curves(
     curves_dict["SyncCompensator_GEN_TSO_FrequencyHz"] = (
         df_curves[frequency_col_raw].to_numpy(dtype=float).tolist()
     )
-    _extract_and_scale_power_columns(
+    _extract_and_rebase_power_columns(
         df_curves,
         curves_dict,
         {
             active_power_col_raw: "SyncCompensator_GEN_TSO_ActivePower",
             reactive_power_col_raw: "SyncCompensator_GEN_TSO_ReactivePower",
         },
-        snref / snom,
+        snref,
+        snom,
     )
 
 
@@ -439,14 +433,15 @@ def _get_tso_load_curves(
     if not all(col in df_curves.columns for col in required):
         return
 
-    _extract_and_scale_power_columns(
+    _extract_and_rebase_power_columns(
         df_curves,
         curves_dict,
         {
             active_power_col_raw: "Main_load_LOAD_TSO_ActivePower",
             reactive_power_col_raw: "Main_load_LOAD_TSO_ReactivePower",
         },
-        snref / snom,
+        snref,
+        snom,
     )
 
 
@@ -538,13 +533,10 @@ def build_output_curves(
     """
     voltage_pu = df_curves["Measurements_BUS_Voltage"].to_numpy(dtype=float)
 
-    active_power_pu = df_curves["Measurements_BUS_ActivePower"].to_numpy(dtype=float)
-    reactive_power_pu = df_curves["Measurements_BUS_ReactivePower"].to_numpy(dtype=float)
+    active_power_pu = _rebase(df_curves["Measurements_BUS_ActivePower"], s_nref, s_nom)
+    reactive_power_pu = _rebase(df_curves["Measurements_BUS_ReactivePower"], s_nref, s_nom)
 
     abs_tol = ABS_TOLERANCE_FACTOR * VOLTAGE_DIP_THRESHOLD
-    power_base_factor = s_nref / s_nom
-    active_power_pu = active_power_pu * power_base_factor
-    reactive_power_pu = reactive_power_pu * power_base_factor
 
     curves_dict = {
         "time": df_curves_imported["time"].tolist(),
@@ -568,7 +560,6 @@ def build_output_curves(
     ).tolist()
 
     _get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
-    _rebase_unit_powers(generators, df_curves, s_nref)
     _get_node2_powers(generators, df_curves)
     _get_node2_curves(s_nref, s_nom, generators, df_curves, curves_dict)
     _get_controlled_point_curves(s_nref, s_nom, generators, df_curves, curves_dict)

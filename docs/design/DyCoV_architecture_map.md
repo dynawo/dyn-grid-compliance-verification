@@ -141,8 +141,9 @@ value of a stepped setpoint is then the one behind its transformer (`GenParams.r
 (`GenParams.controls_internal_node2`, which `ModelProducer.controls_internal_node2` reads, while
 `ConverterLVControl` alone tells the topology checks whether an external transformer is expected).
 The droop one keeps that transformer inside, so its Node2 and controlled-node curves are read at
-its filter capacitor: powers in the base of the unit (`PowersInUnitBase = true`, rebased to SnRef
-by `_rebase_unit_powers`) and the voltage on the d/q axes of the converter (`VoltageNode2Re/Im`,
+its filter capacitor: powers in the base of the unit (`PowersInUnitBase = true`, which
+`_unit_power_base` reads, so `_rebase` takes them from there to SNom in one step) and the
+voltage on the d/q axes of the converter (`VoltageNode2Re/Im`,
 a complex pair as any other, whose modulus is that of Node2). The EPRI one has no `NetworkFrequencyReference`, which
 `omega_file` then leaves unconnected: for a unit without it, `TableFile` turns the `TableUPhase` of
 the infinite bus with the frequency of `TableOmegaRefPu` (the I16.2 RoCoF), while the Omega-model
