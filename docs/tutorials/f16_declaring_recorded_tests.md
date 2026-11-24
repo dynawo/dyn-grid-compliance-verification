@@ -355,10 +355,10 @@ sim_t_event_start = 20
 fault_duration = 0.05
 ```
 
-**Frequency ramp.** The ramp DyCoV simulates is fixed by its `Ramp` frequency
-model: +0.01 pu (0.5 Hz) over 0.25 s, starting at 20 s. A record can be
-declared as this kind only if it shows that excursion, and the event keys
-describe that same ramp to the tests.
+**Frequency ramp.** The event keys are the ramp DyCoV simulates and checks:
+`sim_t_event_start` its start, `fault_duration` its duration and
+`setpoint_step_value` its height, in pu of the nominal frequency, so they
+declare the excursion the record shows.
 
 ```ini
 [PCS_RTE-F16z3.GridFreqRamp.Pmax]
@@ -617,7 +617,7 @@ in your configuration directory.
   parameters of the model against the mode of the test.
 - **Large errors right after the event**: `sim_t_event_start` of the
   declaration and of the record's `.dict` differ, so the two curves are
-  compared out of phase. A frequency ramp always starts at 20 s.
+  compared out of phase.
 - **Errors far larger than expected everywhere**: `setpoint_step_value` does
   not match the step actually applied; the errors of the controlled magnitude
   are expressed in pu of that value.

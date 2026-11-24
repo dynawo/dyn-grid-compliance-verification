@@ -44,6 +44,8 @@ All extend `FileVariables` (`io/file_variables.py`); fill template placeholders 
 - `SolversFile` (`io/solvers.py`) — solver tuning → `solvers.par`
 - `TableFile` (`io/table.py`)
 - `crv.create_curves_file()` (`io/crv.py`) — builds `TSOModel.crv` + returns `curves_dict` (tool var ↔ Dynawo curve id)
+- `omega_file.complete_omega()` (`files/omega_file.py`) — connects the units to the Omega model and fills the event
+  it applies itself (the `Ramp` of the frequency test: `{{event_start}}`, `{{event_duration}}`, `{{event_step_value}}`)
 
 Templates live in `src/dycov/model_lib/`; DyCoV **copies templates and fills placeholders** — it does NOT
 build network structure dynamically.

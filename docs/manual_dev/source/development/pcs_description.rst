@@ -240,7 +240,8 @@ kind of event it applies.
 ``Omega_model``
   Frequency reference of the units, a directory of
   ``src/dycov/model_lib/Omega/``: ``SetPoint`` (constant, 1 pu), ``Ramp``
-  (the fixed ramp of the frequency test: from 20 s, 0.25 s long, +0.01 pu),
+  (the ramp of the frequency test, which starts, lasts and rises as the
+  ``.Event`` section of the test says),
   ``InfiniteBus`` (the frequency of the voltage table, for the ``*FromTab``
   models) and ``DYNModelOmegaRef`` (the centre of inertia of the island).
 
@@ -737,9 +738,9 @@ Compliance tests: the step-response characteristics,
 Grid frequency ramp (Zone 3)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The frequency reference of the units follows the fixed ramp of the ``Ramp``
-Omega model: +0.01 pu over 0.25 s from 20 s. Canonical: ``PCS_RTE-I16z3``
-``GridFreqRamp.W500mHz250ms``.
+The frequency reference of the units follows the ramp of the ``Ramp`` Omega
+model, +0.01 pu over 0.25 s from 20 s in the shipped description. Canonical:
+``PCS_RTE-I16z3`` ``GridFreqRamp.W500mHz250ms``.
 
 .. code-block:: ini
 
@@ -766,8 +767,9 @@ Omega model: +0.01 pu over 0.25 s from 20 s. Canonical: ``PCS_RTE-I16z3``
    fault_duration = 0.250
    setpoint_step_value = 0.01
 
-The event keys describe the ramp to the compliance tests; the simulated
-ramp is the one of the Omega model, so they must match it.
+The event keys are the ramp, for the simulation and for the compliance tests
+alike: ``sim_t_event_start`` is its start, ``fault_duration`` its duration and
+``setpoint_step_value`` its height, in pu of the nominal frequency.
 
 Compliance tests: ``ramp_time_lag``, ``ramp_error``, ``settling_time``,
 ``overshoot``, the four ``voltage_dips_*`` and the three

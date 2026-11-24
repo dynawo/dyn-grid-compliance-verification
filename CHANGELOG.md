@@ -198,6 +198,11 @@ again from the package, or write `\ProducerFiles.circuit_z1_fault.tikz` and
   verification, such as the one of a model validation given to `performance`, is told this way;
   a Zone 1 unit without its DYD is not a unit of the model, and the count of units tells it
   (#637).
+- The ramp of the grid frequency of the Fiche I16 in Zone 3 is the one its PCS description declares:
+  the simulation applied the start, the duration and the height written in the grid model, so a
+  description of your own, a revision or a declaration of the Fiche F16 that changed them moved
+  only the checks and the report, and so did reference curves that put the event at another
+  instant (#816).
 
 ## 1.3.0 — 2026-10-29
 
