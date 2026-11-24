@@ -143,7 +143,7 @@ value of a stepped setpoint is then the one behind its transformer (`GenParams.r
 The droop one keeps that transformer inside, so its Node2 and controlled-node curves are read at
 its filter capacitor: powers in the base of the unit (`PowersInUnitBase = true`, rebased to SnRef
 by `_rebase_unit_powers`) and the voltage on the d/q axes of the converter (`VoltageNode2Re/Im`,
-joined by `_join_node2_voltage`, whose modulus is that of Node2). The EPRI one has no `NetworkFrequencyReference`, which
+a complex pair as any other, whose modulus is that of Node2). The EPRI one has no `NetworkFrequencyReference`, which
 `omega_file` then leaves unconnected: for a unit without it, `TableFile` turns the `TableUPhase` of
 the infinite bus with the frequency of `TableOmegaRefPu` (the I16.2 RoCoF), while the Omega-model
 events (Zone 3 frequency ramp, islanding) do not reach it. The active power of the I18 OCs is in
@@ -217,7 +217,8 @@ names.
 ## Curve post-processing (`runtime/_curves.py`)
 
 `create_curves(variable_translations, input_file, generators, s_nom, s_nref)`: reads `;`-separated
-`curves.csv` (`time` first col), combines complex `_re`/`_im` pairs, applies sign conventions + unit scaling.
+`curves.csv` (`time` first col), applies sign conventions, joins the tool curves `<name>Re`/`<name>Im`
+into the complex `<name>` (`_join_complex_parts`, whatever Dynawo variables feed them) + unit scaling.
 Frequencies stay in pu of `f_nom`, the unit producer curves arrive in and the checks (`freq_1`, the
 I16 ramp) are written in; only a figure declared `in_hz` (`fig_W`, `fig_WRef`) draws them in Hz.
 The network frequency is `NetworkFrequencyPu` on both sides: `create_curves` and `ImportedCurves`

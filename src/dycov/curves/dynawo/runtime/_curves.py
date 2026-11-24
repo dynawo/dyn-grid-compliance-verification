@@ -105,86 +105,6 @@ def report_unserved_requests(
     )
 
 
-def prepare_complex_column(
-    column_name: str,
-    column_size: int,
-    df_curves: pd.DataFrame,
-    translated_column: str,
-    variable_translations: dict,
-) -> list:
-    """Prepare a complex column by combining its real and imaginary parts, applying the appropriate
-    sign conventions.
-
-    Parameters
-    ----------
-    column_name : str
-        The base name of the complex variable (without the "_re" or "_im" suffix).
-    column_size : int
-        The number of rows in the curves DataFrame, used to initialize the complex array.
-    df_curves : pd.DataFrame
-        The DataFrame containing the raw curves, which includes the real and imaginary parts of the
-        complex variable.
-    translated_column : str
-        The translated column name corresponding to the complex variable, used to look up sign
-        conventions in the variable_translations dictionary.
-    variable_translations : dict
-        A dictionary mapping translated column names to their corresponding sign conventions. The
-        function will look for entries with keys "{translated_column}Re" and
-        "{translated_column}Im" to determine the signs for the real and imaginary parts,
-        respectively.
-
-    Returns
-    -------
-    list
-        A list of complex numbers representing the combined real and imaginary parts with the
-        appropriate sign conventions applied.
-
-    """
-    real_sign = f"{translated_column}Re"
-    sign_real = variable_translations.get(real_sign, 1)
-    imaginary_sign = f"{translated_column}Im"
-    sign_imag = variable_translations.get(imaginary_sign, 1)
-
-    complex_column_array = np.zeros(column_size, dtype=np.complex128)
-    complex_column_array.real = np.multiply(df_curves[f"{column_name}re"], sign_real)
-    complex_column_array.imag = np.multiply(df_curves[f"{column_name}im"], sign_imag)
-    return complex_column_array.tolist()
-
-
-def translate_complex_columns(
-    variable_translations: dict,
-    df_curves_imported: pd.DataFrame,
-    curves_translation: dict,
-    column: str,
-    column_size: int,
-) -> None:
-    """Translate complex columns by preparing them using the real and imaginary parts, applying the
-    appropriate sign conventions.
-
-    Parameters
-    ----------
-    variable_translations : dict
-        A dictionary mapping translated column names to their corresponding sign conventions.
-    df_curves_imported : pd.DataFrame
-        The DataFrame containing the raw curves.
-    curves_translation : dict
-        A dictionary to store the translated curve data.
-    column : str
-        The base name of the complex variable (without the "_re" or "_im" suffix).
-    column_size : int
-        The number of rows in the curves DataFrame.
-
-    """
-    for translated_column in variable_translations[column]:
-        curves_translation[translated_column[:-2]] = prepare_complex_column(
-            column[:-2],
-            column_size,
-            df_curves_imported,
-            translated_column[:-2],
-            variable_translations,
-        )
-
-
 def apply_sign_convention(
     variable_translations: dict,
     df_curves_imported: pd.DataFrame,
@@ -215,8 +135,8 @@ def apply_sign_convention(
 def translate_curves(
     variable_translations: dict, df_curves_imported: pd.DataFrame
 ) -> pd.DataFrame:
-    """Translate the raw curves by applying the appropriate sign conventions and combining real and
-    imaginary parts for complex variables.
+    """Translate the raw curves by applying the appropriate sign conventions and joining into one
+    complex curve the real and imaginary parts of a variable.
 
     Parameters
     ----------
@@ -232,29 +152,44 @@ def translate_curves(
         A DataFrame containing the translated curves, with the appropriate sign conventions applied
         and complex variables combined into single columns.
     """
-    column_size = len(df_curves_imported["time"])
     curves_translation: dict = {"time": df_curves_imported["time"].tolist()}
 
     for column in variable_translations:
-        if column not in df_curves_imported.columns:
-            continue
-        if column.endswith("_im"):
-            continue
-        if column.endswith("_re"):
-            translate_complex_columns(
-                variable_translations,
-                df_curves_imported,
-                curves_translation,
-                column,
-                column_size,
-            )
-        else:
+        if column in df_curves_imported.columns:
             apply_sign_convention(
                 variable_translations, df_curves_imported, curves_translation, column
             )
 
+    curves_translation = _join_complex_parts(curves_translation)
     naming.get_network_frequency_curve(curves_translation)
     return pd.DataFrame(curves_translation)
+
+
+def _join_complex_parts(curves: dict) -> dict:
+    """Join each pair of curves `<name>Re` and `<name>Im` into the complex curve `<name>`, in the
+    place of its real part, whatever the Dynawo variables they come from, such as the `_re` and
+    `_im` of a terminal or the d and q axes of a converter.
+
+    Parameters
+    ----------
+    curves : dict
+        The translated curves, by their names in the tool.
+
+    Returns
+    -------
+    dict
+        The same curves, each complex variable in a single curve.
+    """
+    joined = {}
+    for name, values in curves.items():
+        base, part = name[:-2], name[-2:]
+        if part == "Re" and f"{base}Im" in curves:
+            joined[base] = (
+                np.asarray(values, dtype=float) + 1j * np.asarray(curves[f"{base}Im"], dtype=float)
+            ).tolist()
+        elif part != "Im" or f"{base}Re" not in curves:
+            joined[name] = values
+    return joined
 
 
 def convert_columns(df_curves: pd.DataFrame, curves_dict: dict) -> None:
@@ -285,30 +220,6 @@ _UNIT_BASE_POWERS = (
     "ActivePowerControlledNode",
     "ReactivePowerControlledNode",
 )
-
-
-def _join_node2_voltage(generators: list, df_curves: pd.DataFrame) -> None:
-    """Join into a complex curve the voltage at Node2 of a unit whose model gives its two axes as
-    plain variables, such as the d and q axes of its converter, whose modulus is the same.
-
-    Parameters
-    ----------
-    generators : list
-        A list of generator objects, which contain information about the generator IDs.
-    df_curves : pd.DataFrame
-        The DataFrame containing the translated curves; it gains the complex voltage at Node2 and
-        loses its two axes.
-    """
-    for generator in generators:
-        voltage_col = f"{generator.id}_GEN_VoltageNode2"
-        real_col, imag_col = f"{voltage_col}Re", f"{voltage_col}Im"
-        if voltage_col in df_curves.columns or not {real_col, imag_col} <= set(df_curves.columns):
-            continue
-
-        df_curves[voltage_col] = df_curves[real_col].to_numpy(dtype=float) + 1j * df_curves[
-            imag_col
-        ].to_numpy(dtype=float)
-        _drop_columns(df_curves, [real_col, imag_col])
 
 
 def _rebase_unit_powers(generators: list, df_curves: pd.DataFrame, snref: float) -> None:
@@ -657,7 +568,6 @@ def build_output_curves(
     ).tolist()
 
     _get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
-    _join_node2_voltage(generators, df_curves)
     _rebase_unit_powers(generators, df_curves, s_nref)
     _get_node2_powers(generators, df_curves)
     _get_node2_curves(s_nref, s_nom, generators, df_curves, curves_dict)

@@ -26,7 +26,6 @@ from dycov.curves.dynawo.runtime._curves import (
     build_output_curves,
     convert_columns,
     create_curves,
-    prepare_complex_column,
     report_unserved_requests,
     translate_curves,
 )
@@ -163,25 +162,47 @@ def test_convert_columns_keeps_the_frequency_in_per_unit():
 # ---------------------------------------------------------------------------
 
 
-def test_prepare_complex_column_applies_sign_conventions():
-    df_curves = pd.DataFrame(
-        {
-            "test_columnre": [1.0, 2.0, 3.0],
-            "test_columnim": [4.0, 5.0, 6.0],
-        }
+def test_translate_curves_applies_the_sign_of_each_part_of_a_complex_curve():
+    df_curves_imported = pd.DataFrame(
+        {"time": [0.0, 1.0, 2.0], "x_re": [1.0, 2.0, 3.0], "x_im": [4.0, 5.0, 6.0]}
     )
     variable_translations = {
+        "x_re": ["translated_testRe"],
         "translated_testRe": -1,
+        "x_im": ["translated_testIm"],
         "translated_testIm": 2,
     }
 
-    result = prepare_complex_column(
-        "test_column", 3, df_curves, "translated_test", variable_translations
-    )
+    result = translate_curves(variable_translations, df_curves_imported)["translated_test"]
 
-    complex_result = np.array(result, dtype=np.complex128)
+    complex_result = np.array(result.tolist(), dtype=np.complex128)
     assert complex_result.real == pytest.approx([-1.0, -2.0, -3.0])
     assert complex_result.imag == pytest.approx([8.0, 10.0, 12.0])
+
+
+def test_translate_curves_joins_two_parts_whatever_the_dynawo_variables_they_come_from():
+    """#813: the droop converter gives the voltage at Node2 on the d and q axes of its converter,
+    which are no `_re` and `_im` variables."""
+    df_curves_imported = pd.DataFrame(
+        {
+            "time": [0.0, 1.0],
+            "Bess_converter_udFilterPu": [0.6, 0.3],
+            "Bess_converter_uqFilterPu": [0.8, 0.4],
+        }
+    )
+    variable_translations = {
+        "Bess_converter_udFilterPu": ["Bess_GEN_VoltageNode2Re"],
+        "Bess_GEN_VoltageNode2Re": 1,
+        "Bess_converter_uqFilterPu": ["Bess_GEN_VoltageNode2Im"],
+        "Bess_GEN_VoltageNode2Im": 1,
+    }
+
+    result_df = translate_curves(variable_translations, df_curves_imported)
+
+    assert list(result_df.columns) == ["time", "Bess_GEN_VoltageNode2"]
+    assert result_df["Bess_GEN_VoltageNode2"].tolist() == pytest.approx(
+        [complex(0.6, 0.8), complex(0.3, 0.4)]
+    )
 
 
 def test_translate_curves_skips_the_columns_dynawo_did_not_write():
