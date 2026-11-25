@@ -127,10 +127,18 @@ class GenParams(Equipment):
     # Between its terminal and the point where the model takes its references (pu, base UNom,
     # SNom): zero when it takes them at its terminal
     reference_impedance: complex = 0j
+    # Its model gives the powers at InternalNode2 and at its controlled node in base SNom
+    powers_in_unit_base: bool = False
     p_min: Optional[float] = None
     p_max: Optional[float] = None
     q_min: Optional[float] = None
     q_max: Optional[float] = None
+
+    @property
+    def controls_internal_node2(self) -> bool:
+        """Whether the unit takes its references at InternalNode2, the low-voltage side of its
+        transformer: an external one, as ConverterLVControl says, or one inside its model."""
+        return self.converter_lv_control or self.reference_impedance != 0
 
 
 # ---------------------------------------------------------------------------

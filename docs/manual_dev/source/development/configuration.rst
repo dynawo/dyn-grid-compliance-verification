@@ -461,15 +461,6 @@ Signal processing parameters:
   inside it until the end of the simulation; the band never narrows below
   ``thr_ss_tol`` of the nominal 1 pu magnitude.
 
-Compared curves:
-
-* ``zone1_compared_at_node1`` — ``true`` (default ``false``) when a fiche
-  observes the references of Zone 1 at InternalNode1 alone, the output of the
-  unit after its transformer: Zone 1 then compares the voltage, the active and
-  reactive power and the active and reactive current there, instead of the six
-  curves every other Zone 1 compares. The version Type C/D of the Fiche I16
-  (Fiche I16.2) sets it, since its references are the results of the Fiche I18.
-
 Step-response time characteristic thresholds:
 
 * ``thr_reaction_time`` — maximum deviation of the reaction time from the

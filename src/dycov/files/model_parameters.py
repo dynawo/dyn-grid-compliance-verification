@@ -276,6 +276,7 @@ def append_generator(
 
     converter_lv_control = _get_generator_converter_lv_control(parset, nsmap, lib)
     reference_impedance = _get_generator_reference_impedance(parset, nsmap, lib)
+    powers_in_unit_base = bool(dynawo_translator.get_stated_flag(lib, "PowersInUnitBase"))
 
     generators.append(
         GenParams(
@@ -296,6 +297,7 @@ def append_generator(
             ppc_local=ppc_local,
             converter_lv_control=converter_lv_control,
             reference_impedance=reference_impedance,
+            powers_in_unit_base=powers_in_unit_base,
         )
     )
 

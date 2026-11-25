@@ -105,93 +105,13 @@ def report_unserved_requests(
     )
 
 
-def prepare_complex_column(
-    column_name: str,
-    column_size: int,
-    df_curves: pd.DataFrame,
-    translated_column: str,
-    variable_translations: dict,
-) -> list:
-    """Prepare a complex column by combining its real and imaginary parts, applying the appropriate
-    sign conventions.
-
-    Parameters
-    ----------
-    column_name : str
-        The base name of the complex variable (without the "_re" or "_im" suffix).
-    column_size : int
-        The number of rows in the curves DataFrame, used to initialize the complex array.
-    df_curves : pd.DataFrame
-        The DataFrame containing the raw curves, which includes the real and imaginary parts of the
-        complex variable.
-    translated_column : str
-        The translated column name corresponding to the complex variable, used to look up sign
-        conventions in the variable_translations dictionary.
-    variable_translations : dict
-        A dictionary mapping translated column names to their corresponding sign conventions. The
-        function will look for entries with keys "{translated_column}Re" and
-        "{translated_column}Im" to determine the signs for the real and imaginary parts,
-        respectively.
-
-    Returns
-    -------
-    list
-        A list of complex numbers representing the combined real and imaginary parts with the
-        appropriate sign conventions applied.
-
-    """
-    real_sign = f"{translated_column}Re"
-    sign_real = variable_translations.get(real_sign, 1)
-    imaginary_sign = f"{translated_column}Im"
-    sign_imag = variable_translations.get(imaginary_sign, 1)
-
-    complex_column_array = np.zeros(column_size, dtype=np.complex128)
-    complex_column_array.real = np.multiply(df_curves[f"{column_name}re"], sign_real)
-    complex_column_array.imag = np.multiply(df_curves[f"{column_name}im"], sign_imag)
-    return complex_column_array.tolist()
-
-
-def translate_complex_columns(
-    variable_translations: dict,
-    df_curves_imported: pd.DataFrame,
-    curves_translation: dict,
-    column: str,
-    column_size: int,
-) -> None:
-    """Translate complex columns by preparing them using the real and imaginary parts, applying the
-    appropriate sign conventions.
-
-    Parameters
-    ----------
-    variable_translations : dict
-        A dictionary mapping translated column names to their corresponding sign conventions.
-    df_curves_imported : pd.DataFrame
-        The DataFrame containing the raw curves.
-    curves_translation : dict
-        A dictionary to store the translated curve data.
-    column : str
-        The base name of the complex variable (without the "_re" or "_im" suffix).
-    column_size : int
-        The number of rows in the curves DataFrame.
-
-    """
-    for translated_column in variable_translations[column]:
-        curves_translation[translated_column[:-2]] = prepare_complex_column(
-            column[:-2],
-            column_size,
-            df_curves_imported,
-            translated_column[:-2],
-            variable_translations,
-        )
-
-
 def apply_sign_convention(
     variable_translations: dict,
     df_curves_imported: pd.DataFrame,
     curves_translation: dict,
     column: str,
 ) -> None:
-    """Apply the sign convention to a non-complex column and store the translated curve data.
+    """Apply the sign convention to a column and store the translated curve data.
 
     Parameters
     ----------
@@ -215,8 +135,8 @@ def apply_sign_convention(
 def translate_curves(
     variable_translations: dict, df_curves_imported: pd.DataFrame
 ) -> pd.DataFrame:
-    """Translate the raw curves by applying the appropriate sign conventions and combining real and
-    imaginary parts for complex variables.
+    """Translate the raw curves by applying the appropriate sign conventions and joining into one
+    complex curve the real and imaginary parts of a variable.
 
     Parameters
     ----------
@@ -232,29 +152,44 @@ def translate_curves(
         A DataFrame containing the translated curves, with the appropriate sign conventions applied
         and complex variables combined into single columns.
     """
-    column_size = len(df_curves_imported["time"])
     curves_translation: dict = {"time": df_curves_imported["time"].tolist()}
 
     for column in variable_translations:
-        if column not in df_curves_imported.columns:
-            continue
-        if column.endswith("_im"):
-            continue
-        if column.endswith("_re"):
-            translate_complex_columns(
-                variable_translations,
-                df_curves_imported,
-                curves_translation,
-                column,
-                column_size,
-            )
-        else:
+        if column in df_curves_imported.columns:
             apply_sign_convention(
                 variable_translations, df_curves_imported, curves_translation, column
             )
 
+    curves_translation = _join_complex_parts(curves_translation)
     naming.get_network_frequency_curve(curves_translation)
     return pd.DataFrame(curves_translation)
+
+
+def _join_complex_parts(curves: dict) -> dict:
+    """Join each pair of curves `<name>Re` and `<name>Im` into the complex curve `<name>`, in the
+    place of its real part, whatever the Dynawo variables they come from, such as the `_re` and
+    `_im` of a terminal or the d and q axes of a converter.
+
+    Parameters
+    ----------
+    curves : dict
+        The translated curves, by their names in the tool.
+
+    Returns
+    -------
+    dict
+        The same curves, each complex variable in a single curve.
+    """
+    joined = {}
+    for name, values in curves.items():
+        base, part = name[:-2], name[-2:]
+        if part == "Re" and f"{base}Im" in curves:
+            joined[base] = (
+                np.asarray(values, dtype=float) + 1j * np.asarray(curves[f"{base}Im"], dtype=float)
+            ).tolist()
+        elif part != "Im" or f"{base}Re" not in curves:
+            joined[name] = values
+    return joined
 
 
 def convert_columns(df_curves: pd.DataFrame, curves_dict: dict) -> None:
@@ -277,6 +212,53 @@ def convert_columns(df_curves: pd.DataFrame, curves_dict: dict) -> None:
             curves_dict[col] = _get_modulus(df_curves[col].tolist())
         else:
             curves_dict[col] = df_curves[col].tolist()
+
+
+def _rebase(values, from_base: float, to_base: float) -> np.ndarray:
+    """Bring per-unit powers from the base they come in to another one.
+
+    Parameters
+    ----------
+    values : array-like
+        The powers, in pu of from_base.
+    from_base : float
+        The apparent power they come in pu of.
+    to_base : float
+        The apparent power they are wanted in pu of.
+
+    Returns
+    -------
+    np.ndarray
+        The powers in pu of to_base.
+    """
+    return np.multiply(np.asarray(values, dtype=float), from_base / to_base)
+
+
+def _current(power: np.ndarray, voltage: np.ndarray, valid: np.ndarray) -> list:
+    """The current a power gives at a voltage, both in pu, and zero where the voltage is not
+    valid.
+
+    Parameters
+    ----------
+    power : np.ndarray
+        The active or reactive power.
+    voltage : np.ndarray
+        The voltage magnitude at the same node.
+    valid : np.ndarray
+        Where the voltage can divide the power.
+
+    Returns
+    -------
+    list
+        The active or reactive current.
+    """
+    return np.divide(power, voltage, out=np.zeros_like(power), where=valid).tolist()
+
+
+def _unit_power_base(generator, snref: float) -> float:
+    """The base Dynawo gives the powers of a unit at Node2 and at its controlled node in: that of
+    the unit when its model states it gives them so, SnRef otherwise."""
+    return generator.s_nom if generator.powers_in_unit_base else snref
 
 
 def _get_node2_powers(generators: list, df_curves: pd.DataFrame) -> None:
@@ -320,11 +302,11 @@ def _get_node2_curves(
     computes, and it carries its own name: the dictionary declares what Dynawo provides, this
     function emits what the criteria compare.
 
-    Node2 sits behind the unit's own impedance, so its voltage is never exactly zero and the
-    division always has an answer, however small the voltage gets: the power vanishes with it
-    and the quotient is the current all the same. Zero is guarded
-    against because nothing forbids it, not because it is expected — unlike the connection
-    point, which a bolted fault does take to zero.
+    Node2 sits behind the transformer of the unit, so a bolted fault at the connection point
+    does not take its voltage to zero, and the division has an answer however small that voltage
+    gets: the power vanishes with it and the quotient is the current all the same. A unit
+    without a transformer, whose Node2 is the connection point itself, has no such margin. Zero
+    is guarded against because nothing forbids it, not because it is expected.
 
     Parameters
     ----------
@@ -357,37 +339,35 @@ def _get_node2_curves(
         if not has_all_columns:
             continue
 
-        active_power = np.multiply(df_curves[active_power_col].to_numpy(dtype=float), snref / snom)
-        reactive_power = np.multiply(
-            df_curves[reactive_power_col].to_numpy(dtype=float), snref / snom
-        )
+        power_base = _unit_power_base(generator, snref)
+        active_power = _rebase(df_curves[active_power_col], power_base, snom)
+        reactive_power = _rebase(df_curves[reactive_power_col], power_base, snom)
         voltage = _get_modulus(df_curves[voltage_col].tolist())
         voltage_array = np.array(voltage, dtype=float)
 
         curves_dict[voltage_col] = voltage
         valid_mask = np.isfinite(voltage_array) & (voltage_array != 0.0)
-        curves_dict[f"{generator.id}_GEN_ActiveCurrentNode2"] = np.divide(
-            active_power, voltage_array, out=np.zeros_like(active_power), where=valid_mask
-        ).tolist()
-        curves_dict[f"{generator.id}_GEN_ReactiveCurrentNode2"] = np.divide(
-            reactive_power, voltage_array, out=np.zeros_like(reactive_power), where=valid_mask
-        ).tolist()
+        curves_dict[f"{generator.id}_GEN_ActiveCurrentNode2"] = _current(
+            active_power, voltage_array, valid_mask
+        )
+        curves_dict[f"{generator.id}_GEN_ReactiveCurrentNode2"] = _current(
+            reactive_power, voltage_array, valid_mask
+        )
 
         columns_to_remove.extend([voltage_col, active_power_col, reactive_power_col])
 
     _drop_columns(df_curves, columns_to_remove)
 
 
-def _extract_and_scale_power_columns(
+def _extract_and_rebase_power_columns(
     df_curves: pd.DataFrame,
     curves_dict: dict,
     columns: dict[str, str],
-    scale: float,
+    from_base: float,
+    to_base: float,
 ) -> None:
     for raw_col, canonical_col in columns.items():
-        curves_dict[canonical_col] = np.multiply(
-            df_curves[raw_col].to_numpy(dtype=float), scale
-        ).tolist()
+        curves_dict[canonical_col] = _rebase(df_curves[raw_col], from_base, to_base).tolist()
     _drop_columns(df_curves, list(columns.keys()))
 
 
@@ -400,7 +380,8 @@ def _get_controlled_point_curves(
 ) -> None:
     """Rebase the power the converter injects at the point its control measures.
 
-    Dynawo reports it in s_nref pu and the criteria compare powers in SNom pu.
+    Dynawo reports it in s_nref pu, or in the base of the unit when its model says so, and the
+    criteria compare powers in SNom pu.
 
     Parameters
     ----------
@@ -422,11 +403,12 @@ def _get_controlled_point_curves(
         if not all(col in df_curves.columns for col in (active_power_col, reactive_power_col)):
             continue
 
-        _extract_and_scale_power_columns(
+        _extract_and_rebase_power_columns(
             df_curves,
             curves_dict,
             {active_power_col: active_power_col, reactive_power_col: reactive_power_col},
-            snref / snom,
+            _unit_power_base(generator, snref),
+            snom,
         )
 
 
@@ -447,14 +429,15 @@ def _get_tso_synchronous_condenser_curves(
     curves_dict["SyncCompensator_GEN_TSO_FrequencyHz"] = (
         df_curves[frequency_col_raw].to_numpy(dtype=float).tolist()
     )
-    _extract_and_scale_power_columns(
+    _extract_and_rebase_power_columns(
         df_curves,
         curves_dict,
         {
             active_power_col_raw: "SyncCompensator_GEN_TSO_ActivePower",
             reactive_power_col_raw: "SyncCompensator_GEN_TSO_ReactivePower",
         },
-        snref / snom,
+        snref,
+        snom,
     )
 
 
@@ -471,14 +454,15 @@ def _get_tso_load_curves(
     if not all(col in df_curves.columns for col in required):
         return
 
-    _extract_and_scale_power_columns(
+    _extract_and_rebase_power_columns(
         df_curves,
         curves_dict,
         {
             active_power_col_raw: "Main_load_LOAD_TSO_ActivePower",
             reactive_power_col_raw: "Main_load_LOAD_TSO_ReactivePower",
         },
-        snref / snom,
+        snref,
+        snom,
     )
 
 
@@ -570,13 +554,10 @@ def build_output_curves(
     """
     voltage_pu = df_curves["Measurements_BUS_Voltage"].to_numpy(dtype=float)
 
-    active_power_pu = df_curves["Measurements_BUS_ActivePower"].to_numpy(dtype=float)
-    reactive_power_pu = df_curves["Measurements_BUS_ReactivePower"].to_numpy(dtype=float)
+    active_power_pu = _rebase(df_curves["Measurements_BUS_ActivePower"], s_nref, s_nom)
+    reactive_power_pu = _rebase(df_curves["Measurements_BUS_ReactivePower"], s_nref, s_nom)
 
     abs_tol = ABS_TOLERANCE_FACTOR * VOLTAGE_DIP_THRESHOLD
-    power_base_factor = s_nref / s_nom
-    active_power_pu = active_power_pu * power_base_factor
-    reactive_power_pu = reactive_power_pu * power_base_factor
 
     curves_dict = {
         "time": df_curves_imported["time"].tolist(),
@@ -585,19 +566,11 @@ def build_output_curves(
         "BusPDR_BUS_ReactivePower": reactive_power_pu.tolist(),
     }
 
-    curves_dict["BusPDR_BUS_ActiveCurrent"] = np.divide(
-        active_power_pu,
-        voltage_pu,
-        out=np.zeros_like(active_power_pu),
-        where=np.abs(voltage_pu) > abs_tol,
-    ).tolist()
-
-    curves_dict["BusPDR_BUS_ReactiveCurrent"] = np.divide(
-        reactive_power_pu,
-        voltage_pu,
-        out=np.zeros_like(reactive_power_pu),
-        where=np.abs(voltage_pu) > abs_tol,
-    ).tolist()
+    voltage_valid = np.abs(voltage_pu) > abs_tol
+    curves_dict["BusPDR_BUS_ActiveCurrent"] = _current(active_power_pu, voltage_pu, voltage_valid)
+    curves_dict["BusPDR_BUS_ReactiveCurrent"] = _current(
+        reactive_power_pu, voltage_pu, voltage_valid
+    )
 
     _get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
     _get_node2_powers(generators, df_curves)

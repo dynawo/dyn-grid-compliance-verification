@@ -158,3 +158,35 @@ def test_an_iec_model_is_measured_at_node2_on_the_converter_side_of_its_transfor
 
     assert set(node2) == {"VoltageNode2Re", "VoltageNode2Im", "CurrentNode2Re", "CurrentNode2Im"}
     assert all("_wT4Injector_genSystem_terminal_" in value for value in node2.values())
+
+
+def test_the_droop_grid_forming_converter_is_measured_at_its_filter_capacitor():
+    """#813: its transformer is inside the model, so Node2 and the node it controls are its filter
+    capacitor, where it gives the powers in the base of the unit and the voltage on the axes of
+    the converter, and not its terminal, which is InternalNode1."""
+    entries = dict(
+        _read_dictionary(_DICTIONARIES / "Storage.ini").items("GridFormingConverterDroopControl")
+    )
+
+    assert {
+        key: entries.get(key)
+        for key in (
+            "ActivePowerNode2",
+            "ReactivePowerNode2",
+            "ActivePowerControlledNode",
+            "ReactivePowerControlledNode",
+            "VoltageNode2Re",
+            "VoltageNode2Im",
+            "VoltageNode2",
+            "PowersInUnitBase",
+        )
+    } == {
+        "ActivePowerNode2": "converter_PFilterPu",
+        "ReactivePowerNode2": "converter_QFilterPu",
+        "ActivePowerControlledNode": "converter_PFilterPu",
+        "ReactivePowerControlledNode": "converter_QFilterPu",
+        "VoltageNode2Re": "converter_udFilterPu",
+        "VoltageNode2Im": "converter_uqFilterPu",
+        "VoltageNode2": None,
+        "PowersInUnitBase": "true",
+    }
