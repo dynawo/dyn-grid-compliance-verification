@@ -213,6 +213,9 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   description of your own, a revision or a declaration of the Fiche F16 that changed them moved
   only the checks and the report, and so did reference curves that put the event at another
   instant (#816).
+- The page of a test without reference curves no longer lists the curves missing from the record
+  of the test before it in the same benchmark, which could also turn a test whose fault dip was
+  out of reach into an invalid one (#823).
 
 ## 1.3.0 — 2026-10-29
 
