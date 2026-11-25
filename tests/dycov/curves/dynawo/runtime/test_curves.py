@@ -23,9 +23,9 @@ from dycov.curves.dynawo.runtime._curves import (
     _get_modulus,
     _get_node2_curves,
     _get_node2_powers,
+    build_output_curves,
     convert_columns,
     create_curves,
-    prepare_complex_column,
     report_unserved_requests,
     translate_curves,
 )
@@ -57,10 +57,14 @@ _TERMINAL_COMPONENTS_REQUEST = {
 
 
 class DummyGenerator:
-    def __init__(self, id_, use_voltage_droop=False, voltage_droop=0.0):
+    def __init__(
+        self, id_, use_voltage_droop=False, voltage_droop=0.0, s_nom=100.0, unit_base=False
+    ):
         self.id = id_
         self.use_voltage_droop = use_voltage_droop
         self.voltage_droop = voltage_droop
+        self.s_nom = s_nom
+        self.powers_in_unit_base = unit_base
 
 
 class RecordingLogger:
@@ -158,25 +162,47 @@ def test_convert_columns_keeps_the_frequency_in_per_unit():
 # ---------------------------------------------------------------------------
 
 
-def test_prepare_complex_column_applies_sign_conventions():
-    df_curves = pd.DataFrame(
-        {
-            "test_columnre": [1.0, 2.0, 3.0],
-            "test_columnim": [4.0, 5.0, 6.0],
-        }
+def test_translate_curves_applies_the_sign_of_each_part_of_a_complex_curve():
+    df_curves_imported = pd.DataFrame(
+        {"time": [0.0, 1.0, 2.0], "x_re": [1.0, 2.0, 3.0], "x_im": [4.0, 5.0, 6.0]}
     )
     variable_translations = {
+        "x_re": ["translated_testRe"],
         "translated_testRe": -1,
+        "x_im": ["translated_testIm"],
         "translated_testIm": 2,
     }
 
-    result = prepare_complex_column(
-        "test_column", 3, df_curves, "translated_test", variable_translations
-    )
+    result = translate_curves(variable_translations, df_curves_imported)["translated_test"]
 
-    complex_result = np.array(result, dtype=np.complex128)
+    complex_result = np.array(result.tolist(), dtype=np.complex128)
     assert complex_result.real == pytest.approx([-1.0, -2.0, -3.0])
     assert complex_result.imag == pytest.approx([8.0, 10.0, 12.0])
+
+
+def test_translate_curves_joins_two_parts_whatever_the_dynawo_variables_they_come_from():
+    """#813: the droop converter gives the voltage at Node2 on the d and q axes of its converter,
+    which are no `_re` and `_im` variables."""
+    df_curves_imported = pd.DataFrame(
+        {
+            "time": [0.0, 1.0],
+            "Bess_converter_udFilterPu": [0.6, 0.3],
+            "Bess_converter_uqFilterPu": [0.8, 0.4],
+        }
+    )
+    variable_translations = {
+        "Bess_converter_udFilterPu": ["Bess_GEN_VoltageNode2Re"],
+        "Bess_GEN_VoltageNode2Re": 1,
+        "Bess_converter_uqFilterPu": ["Bess_GEN_VoltageNode2Im"],
+        "Bess_GEN_VoltageNode2Im": 1,
+    }
+
+    result_df = translate_curves(variable_translations, df_curves_imported)
+
+    assert list(result_df.columns) == ["time", "Bess_GEN_VoltageNode2"]
+    assert result_df["Bess_GEN_VoltageNode2"].tolist() == pytest.approx(
+        [complex(0.6, 0.8), complex(0.3, 0.4)]
+    )
 
 
 def test_translate_curves_skips_the_columns_dynawo_did_not_write():
@@ -407,6 +433,93 @@ def test_the_injector_curves_are_the_same_from_the_amplitude_or_from_the_compone
     assert pd.DataFrame(from_components).to_numpy() == pytest.approx(
         pd.DataFrame(from_amplitude).to_numpy()
     )
+
+
+_FILTER_CAPACITOR_REQUEST = {
+    "Bess_converter_PFilterPu": [
+        "Bess_GEN_ActivePowerNode2",
+        "Bess_GEN_ActivePowerControlledNode",
+    ],
+    "Bess_GEN_ActivePowerNode2": 1,
+    "Bess_GEN_ActivePowerControlledNode": 1,
+    "Bess_converter_QFilterPu": [
+        "Bess_GEN_ReactivePowerNode2",
+        "Bess_GEN_ReactivePowerControlledNode",
+    ],
+    "Bess_GEN_ReactivePowerNode2": 1,
+    "Bess_GEN_ReactivePowerControlledNode": 1,
+    "Bess_converter_udFilterPu": ["Bess_GEN_VoltageNode2Re"],
+    "Bess_GEN_VoltageNode2Re": 1,
+    "Bess_converter_uqFilterPu": ["Bess_GEN_VoltageNode2Im"],
+    "Bess_GEN_VoltageNode2Im": 1,
+}
+
+
+def _filter_capacitor_curves(unit_base: bool) -> pd.DataFrame:
+    """The curves of a unit of 50 MVA whose model, as the droop Grid Forming converter of Dynawo,
+    gives Node2 at its filter capacitor: the powers in the base of the unit and the voltage on
+    the d and q axes of the converter."""
+    df_curves_imported = pd.DataFrame(
+        {
+            "time": [0.0, 1.0],
+            "Measurements_measurements_UPu": [1.0, 1e-4],
+            "Measurements_measurements_PPu": [0.25, 0.0],
+            "Measurements_measurements_QPu": [0.0, 5e-5],
+            "Bess_converter_PFilterPu": [0.5, 0.1],
+            "Bess_converter_QFilterPu": [0.1, 0.5],
+            "Bess_converter_udFilterPu": [0.6, 0.3],
+            "Bess_converter_uqFilterPu": [0.8, 0.4],
+        }
+    )
+    df_curves = translate_curves(
+        {
+            "Measurements_measurements_UPu": ["Measurements_BUS_Voltage"],
+            "Measurements_BUS_Voltage": 1,
+            "Measurements_measurements_PPu": ["Measurements_BUS_ActivePower"],
+            "Measurements_BUS_ActivePower": 1,
+            "Measurements_measurements_QPu": ["Measurements_BUS_ReactivePower"],
+            "Measurements_BUS_ReactivePower": 1,
+            **_FILTER_CAPACITOR_REQUEST,
+        },
+        df_curves_imported,
+    )
+    generators = [DummyGenerator("Bess", s_nom=50.0, unit_base=unit_base)]
+    return build_output_curves(df_curves, df_curves_imported, generators, 50.0, 100.0)
+
+
+def test_the_voltage_a_model_gives_on_two_axes_is_their_modulus_at_node2():
+    """#813: the d and q axes of the converter are not those of the grid, but their modulus is
+    the voltage at Node2 all the same."""
+    curves = _filter_capacitor_curves(unit_base=True)
+
+    assert list(curves["Bess_GEN_VoltageNode2"]) == pytest.approx([1.0, 0.5])
+    assert not any(column.startswith("Bess_GEN_VoltageNode2R") for column in curves.columns)
+
+
+def test_the_powers_a_model_gives_in_the_base_of_its_unit_are_not_rebased_twice():
+    """#813: the curves of Zone 1 are in the base of the unit, which these powers already are."""
+    curves = _filter_capacitor_curves(unit_base=True)
+
+    assert list(curves["Bess_GEN_ActivePowerControlledNode"]) == pytest.approx([0.5, 0.1])
+    assert list(curves["Bess_GEN_ReactivePowerControlledNode"]) == pytest.approx([0.1, 0.5])
+    assert list(curves["Bess_GEN_ActiveCurrentNode2"]) == pytest.approx([0.5, 0.2])
+    assert list(curves["Bess_GEN_ReactiveCurrentNode2"]) == pytest.approx([0.1, 1.0])
+
+
+def test_the_powers_a_model_gives_in_snref_are_rebased_to_the_unit():
+    curves = _filter_capacitor_curves(unit_base=False)
+
+    assert list(curves["Bess_GEN_ActivePowerControlledNode"]) == pytest.approx([1.0, 0.2])
+    assert list(curves["Bess_GEN_ActiveCurrentNode2"]) == pytest.approx([1.0, 0.4])
+
+
+def test_the_currents_at_node2_still_show_the_unit_when_internal_node1_drops_to_zero():
+    """#813: a bolted fault at InternalNode1 takes its voltage to about zero, where its currents
+    say nothing, while those of Node2, behind the transformer, still show what the unit gives."""
+    curves = _filter_capacitor_curves(unit_base=True)
+
+    assert curves["BusPDR_BUS_ReactiveCurrent"].iloc[1] == 0.0
+    assert curves["Bess_GEN_ReactiveCurrentNode2"].iloc[1] == pytest.approx(1.0)
 
 
 def test_voltage_guard_matches_documented_value():

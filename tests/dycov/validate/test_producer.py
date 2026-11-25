@@ -50,7 +50,7 @@ def _producer_reading(
     return producer
 
 
-def _make_generator(converter_lv_control: bool) -> GenParams:
+def _make_generator(converter_lv_control: bool, reference_impedance: complex = 0j) -> GenParams:
     return GenParams(
         id="PV_Array",
         lib="",
@@ -63,6 +63,7 @@ def _make_generator(converter_lv_control: bool) -> GenParams:
         voltage_droop=0.0,
         use_voltage_droop=False,
         converter_lv_control=converter_lv_control,
+        reference_impedance=reference_impedance,
     )
 
 
@@ -370,6 +371,14 @@ def test_the_controlled_node_is_internal_node1_when_a_unit_controls_it():
     producer = _producer_with_model(_make_generator(True), _make_generator(False))
 
     assert producer.controls_internal_node2() is False
+
+
+def test_a_unit_that_takes_its_references_behind_its_own_transformer_controls_internal_node2():
+    """#813: the droop Grid Forming converter of Dynawo keeps its transformer inside, so it needs
+    no external one (ConverterLVControl false), and controls the filter capacitor before it."""
+    producer = _producer_with_model(_make_generator(False, complex(0.003, 0.15)))
+
+    assert producer.controls_internal_node2() is True
 
 
 def test_the_controlled_node_keeps_the_flag_default_for_curves_without_a_model():

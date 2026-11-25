@@ -453,6 +453,21 @@ def test_a_model_that_takes_its_references_at_its_terminal_has_no_reference_impe
     assert impedance == 0j
 
 
+def test_append_generator_takes_the_base_of_the_powers_its_dictionary_states():
+    """#813: the droop Grid Forming converter gives the powers at its filter capacitor in the base
+    of the unit, and a WECC one, in SnRef as Dynawo gives the rest."""
+    generators = []
+    for lib in ("GridFormingConverterDroopControl", "BESSWeccCurrentSource"):
+        dyd_root = _make_root()
+        model_parameter = _add_bbmodel(dyd_root, "Bess", lib, "parGen")
+        _add_connect(dyd_root, "Bess", "converter_terminal", "BusPDR", "bus_terminal")
+        par_root = _make_root()
+        _add_parset(par_root, "parGen", {})
+        model_parameters.append_generator(dyd_root, par_root, model_parameter, generators)
+
+    assert [generator.powers_in_unit_base for generator in generators] == [True, False]
+
+
 def testappend_generator_takes_ppc_local_from_the_par_file():
     dyd_root = _make_root()
     model_parameter = _add_bbmodel(dyd_root, "Wind_Turbine", "WTG4BWeccCurrentSource", "parGen")

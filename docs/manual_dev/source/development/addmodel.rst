@@ -213,7 +213,12 @@ own, which no parameter switches off (``ConverterLVControl = false``). The
 droop converter takes its references at its filter capacitor, behind that
 impedance (``SetpointsBehindTransformer = true``): the initial value of a
 stepped setpoint is then computed there, through ``TransformerResistance`` and
-``TransformerReactance``, and not at the terminal. The EPRI converter takes
+``TransformerReactance``, and not at the terminal. That capacitor is Node2, the
+point the converter controls, so its curves of Node2 and of the controlled node
+are read there: the model gives the powers in the base of the unit, which the
+dictionary states (``PowersInUnitBase = true``), and the voltage on the d and q
+axes of the converter (``VoltageNode2Re`` and ``VoltageNode2Im``), whose
+modulus is the one of Node2. The EPRI converter takes
 them at its terminal, and has no input for the frequency reference of the
 network (``NetworkFrequencyReference``): it sees the frequency of the grid only
 through the phase of its voltage. The tests of the Fiche I16.2 drive the

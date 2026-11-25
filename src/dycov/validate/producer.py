@@ -693,12 +693,12 @@ class ModelProducer(Producer):
         Returns
         -------
         bool
-            The ConverterLVControl flag of the model's generating units, or its default, True,
-            for curves supplied without a model, which do not state it
+            Whether every generating unit of the model takes its references there, or True for
+            curves supplied without a model, which do not state it
         """
         if not self.is_dynawo_model():
             return True
-        return all(gen.converter_lv_control for gen in self.generators)
+        return all(gen.controls_internal_node2 for gen in self.generators)
 
     def is_user_curves(self) -> bool:
         """Check if the producer has a curves directory.

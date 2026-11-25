@@ -34,8 +34,7 @@
     \BLOCK{ elif benchmark.startswith('S_SCR') }
     Checks for compliant behavior of the generating unit under the jump of the short-circuit
     ratio of this test of the Fiche I18 (Grid Forming), which the version Type C/D of the Fiche I16
-    simulates. The response is tracked on the {{ trackedmagnitude }}, the magnitude the Fiche I18
-    bounds with envelopes.
+    simulates. The response is tracked on the {{ trackedmagnitude }} injected at InternalNode2.
     \BLOCK{ if benchmark == 'S_SCRup1' }
     \GridCircuitZoneSwitchedLine{, out of service before the event, closes at it}{%
 \ProducerFiles.circuit_z1_switched_line_closes.tikz}
@@ -46,8 +45,7 @@
     \BLOCK{ else }
     Checks for compliant behavior of the generating unit under the event of the grid of this
     test of the Fiche I18 (Grid Forming), which the version Type C/D of the Fiche I16 simulates.
-    The response is tracked on the {{ trackedmagnitude }}, the magnitude the Fiche I18 bounds with
-    envelopes.
+    The response is tracked on the {{ trackedmagnitude }} injected at InternalNode2.
     \GridCircuitZoneSetPoint
     \BLOCK{ endif }
 
@@ -101,9 +99,9 @@
     \BLOCK{ endif }
 
     \GridSimulationHeaderZone{
-        \GridCurvesDescriptionNodeOne
+        \GridCurvesDescriptionZone
     }
-    \GridCurvesNodeOne
+    \GridCurvesZone
     \\[2\baselineskip]
     Go to  {{ link }}
 
