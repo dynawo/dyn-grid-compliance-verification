@@ -308,7 +308,9 @@ as the worker starts to wait, for a task or for the lock of the queue, leaves th
 handler pending, so a thread `signal.set_wakeup_fd` wakes delivers it again until the handler runs.
 
 Every record names the test it belongs to — `set_test_context(pcs, benchmark, oc, producer)`
-(`logging/test_context.py`, thread-local) and the `_ContextAdapter` that prefixes it.
+(`logging/test_context.py`, thread-local) and the `_ContextAdapter` that prefixes it — and only
+while the test runs: `Benchmark.validate` clears it as each test ends, and `Pcs.validate` once its
+tests are over, aborted or not, so the report, the next PCS and the summary log without one.
 `warn_once(logger, message)` reports something that holds for the whole test however many times the
 check that spots it runs, forgetting it when the context changes. `Benchmark.validate` opens each
 operating condition with `Start (n/N)` and closes it with `Done in Xs -> <compliance>`; in between,
