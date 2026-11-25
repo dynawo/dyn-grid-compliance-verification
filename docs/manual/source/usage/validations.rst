@@ -197,11 +197,12 @@ the node between the unit and its transformer (the node called *Node2* in the
 DTR). Both nodes are labeled in the network schema of each report. These
 curves are read from the unit model itself at the converter terminal — the LV
 side of the unit's transformer, whether the model holds that transformer or not
-— where the voltage never reaches zero during a fault; samples where it is not
-available are discarded rather than turned into a current.
+— where the voltage does not reach zero during a fault at InternalNode1, unless
+the unit has no transformer, as the EPRI Grid Forming converter of Dynawo, whose
+Node2 is InternalNode1 itself; samples where it is not available are discarded
+rather than turned into a current.
 
-Zone 1 compares six curves in every one of its benchmarks, except in the
-version Type C/D of the Fiche I16 described below: the voltage at
+Zone 1 compares six curves in every one of its benchmarks: the voltage at
 InternalNode1, the voltage at InternalNode2, the active and reactive power at
 the point controlled by the converter, and the currents Ip and Iq at
 InternalNode2. The two voltages carry no DTR threshold, so no compliance
@@ -214,7 +215,9 @@ should lie on top of each other; when they do not, the reference curves were
 obtained with a different setpoint from the one the test applies. The active
 and reactive power setpoints drive the power at the point the converter
 controls, and the voltage setpoint the voltage there: at InternalNode2 when
-``ConverterLVControl`` is true, at InternalNode1 otherwise.
+``ConverterLVControl`` is true or the unit takes its references behind a
+transformer of its own, as the droop Grid Forming converter of Dynawo does, at
+InternalNode1 otherwise.
 
 Reference curves are always required. The producer response can come from
 Dynawo simulations or from producer-provided curves.
@@ -379,10 +382,6 @@ differs from the Fiche I16.1 in that:
 * Zone 1 runs the setpoint steps on a grid of short-circuit ratio 2, has
   neither the faults nor the steps of the grid voltage of type B, and simulates
   the tests of the Fiche I18 (Grid Forming), described below;
-* Zone 1 compares the curves of InternalNode1, the voltage, the active and
-  reactive power and the active and reactive current there, because the fiche
-  observes the results of the Fiche I18 at the output of the unit, after its
-  transformer;
 * Zone 3 repeats the step of the voltage setpoint of the Fiche I2, with the
   steps of the active and reactive power setpoints in its conditions, and the
   Fiches I6, I7 and I10, so it has no fault of the Fiche I5; nor does it run
@@ -484,7 +483,7 @@ The response of a test of the Fiche I18 is checked with the setpoint tracking
 criterion of the Fiche I16.2, the errors before, during (for a ramp of the
 frequency) and after the event, with 20 ms excluded after each change, and the
 steady-state error after it. The tracked magnitude is the active current at
-InternalNode1, or the reactive current there for a step of the grid voltage,
+InternalNode2, or the reactive current there for a step of the grid voltage,
 which each test names with ``tracked_magnitude``; since the event steps no
 setpoint, the errors before, during and after the event are relative to the
 step of the reference response, the same against which its step-response
@@ -497,7 +496,7 @@ its reaction time reported without a verdict; the other tests are transients
 the active current returns from, which have neither a reaction nor a rise time,
 and are checked for their settling time and overshoot against the peak of the
 reference response, with ``transient_response``. The faults are checked with the criteria of the faults
-of type B, on the curves of InternalNode1.
+of type B.
 
 Dynawo initialises a model at the nominal frequency, so a ramp of the frequency
 starting at 49.5 or 50.5 Hz reaches that frequency with a slow ramp over the

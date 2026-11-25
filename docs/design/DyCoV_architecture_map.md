@@ -113,9 +113,9 @@ the category of each producer from the INI of its name
 Zone 1 of TypeCD runs the setpoint steps on SCR 2 and
 the tests of the Fiche I18 under their scenario names (`S_VolAngStep*`, `S_VolAmpStep*`,
 `S_SCRup1/down1`, `S_Rocof*`, `S_Fault4-6`), whose shared settings are the `I18*` aliases of the
-`config_aliases.ini` of the delta, and compares the curves of InternalNode1 alone, where the fiche
-observes the results of I18 (`[GridCode] zone1_compared_at_node1`, which turns
-`compared_curves.for_zone(1)` into V, P, Q, Ip and Iq of `BusPDR`). Their events: the default
+`config_aliases.ini` of the delta, and compares the curves of I16.1, those of #340 (P and Q at
+the controlled node, Ip and Iq at Node2, #813), whose figures its shared page draws with the
+`commonz1.tex` macros. Their events: the default
 `TableInfiniteBus.txt` of `GridVWDisturbance_1Line_InfBusFromTab` (`TableFile`: `grid_phase_jump`,
 `grid_voltage_step`, `grid_frequency0`/`grid_rocof` on the `OmegaRefPu` of the bus, which the
 `InfiniteBus` Omega model hands the units, after a pre-event ramp to the initial frequency), and
@@ -137,9 +137,14 @@ peak). Every page of the TypeCD Zone 1 report is the shared
 dictionary flags no parameter holds (`ConverterLVControl = false`,
 `SetpointsBehindTransformer = true` for the droop one, `translator.get_stated_flag`): the start
 value of a stepped setpoint is then the one behind its transformer (`GenParams.reference_impedance`,
-`ModelSetup._reference_operating_point`). The droop one keeps that transformer inside and gives the
-power on its converter side in the base of the unit, so its Node2 curves are read at its terminal,
-as those of the IEC plants of zone 3. The EPRI one has no `NetworkFrequencyReference`, which
+`ModelSetup._reference_operating_point`), and that point is the node it controls
+(`GenParams.controls_internal_node2`, which `ModelProducer.controls_internal_node2` reads, while
+`ConverterLVControl` alone tells the topology checks whether an external transformer is expected).
+The droop one keeps that transformer inside, so its Node2 and controlled-node curves are read at
+its filter capacitor: powers in the base of the unit (`PowersInUnitBase = true`, which
+`_unit_power_base` reads, so `_rebase` takes them from there to SNom in one step) and the
+voltage on the d/q axes of the converter (`VoltageNode2Re/Im`,
+a complex pair as any other, whose modulus is that of Node2). The EPRI one has no `NetworkFrequencyReference`, which
 `omega_file` then leaves unconnected: for a unit without it, `TableFile` turns the `TableUPhase` of
 the infinite bus with the frequency of `TableOmegaRefPu` (the I16.2 RoCoF), while the Omega-model
 events (Zone 3 frequency ramp, islanding) do not reach it. The active power of the I18 OCs is in
@@ -213,7 +218,8 @@ names.
 ## Curve post-processing (`runtime/_curves.py`)
 
 `create_curves(variable_translations, input_file, generators, s_nom, s_nref)`: reads `;`-separated
-`curves.csv` (`time` first col), combines complex `_re`/`_im` pairs, applies sign conventions + unit scaling.
+`curves.csv` (`time` first col), applies sign conventions, joins the tool curves `<name>Re`/`<name>Im`
+into the complex `<name>` (`_join_complex_parts`, whatever Dynawo variables feed them) + unit scaling.
 Frequencies stay in pu of `f_nom`, the unit producer curves arrive in and the checks (`freq_1`, the
 I16 ramp) are written in; only a figure declared `in_hz` (`fig_W`, `fig_WRef`) draws them in Hz.
 The network frequency is `NetworkFrequencyPu` on both sides: `create_curves` and `ImportedCurves`

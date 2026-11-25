@@ -20,11 +20,10 @@ from the connection voltage and the maximum power at injection of the INI file o
 nothing has to be declared for it. A run that follows an earlier revision gives them the Fiche I16
 of that revision, which has no Fiche I18 to repeat.
 
-The fiche observes the references of Zone 1, the results of the Fiche I18, at the output of the
-unit after its transformer, so Zone 1 compares the curves of InternalNode1 alone, and its
-reference dictionaries declare them: `InternalNode1_BUS_Voltage`,
-`InternalNode1_BUS_ActivePower`, `InternalNode1_BUS_ReactivePower`,
-`InternalNode1_BUS_ActiveCurrent` and `InternalNode1_BUS_ReactiveCurrent`.
+Zone 1 compares the curves the Fiche I16.1 compares, in every test: the active and reactive
+power at the point the converter controls and the currents Ip and Iq at InternalNode2, with the
+voltages at InternalNode1 and InternalNode2. The reference curves of the tests of the Fiche I18
+declare them too, besides the curves that fiche asks for at the output of the unit.
 
 The fiche asks for every test of the Fiche I18 at its operating conditions OC2 and OC3, and at the
 others only when they drive the unit into current limitation, which the tool does not check on a
@@ -36,10 +35,10 @@ defines; `S_VolAngStep12` jumps the other way from `S_VolAngStep11`; the phase j
 voltage steps are sized with the effective reactance of the ideal converter of the fiche, 0.27 pu,
 whatever the unit's, so its events are those its tables print; and the active power of the
 operating points is in pu of Pn, the maximum active power of Zone 1. The tests of the Fiche I18
-that are not faults are tracking tests of the active current, or of the reactive one for a step of
-the grid voltage: besides their tracking errors, relative to the change of the reference or to
-the peak of a transient, and their final error, a step of the grid voltage checks the
-rise and settling times and the overshoot of the reactive current and reports its reaction time
+that are not faults are tracking tests of the active current at InternalNode2, or of the reactive
+one for a step of the grid voltage: besides their tracking errors, relative to the change of the
+reference or to the peak of a transient, and their final error, a step of the grid voltage checks
+the rise and settling times and the overshoot of the reactive current and reports its reaction time
 without a verdict, and the other tests, transients the active current returns from, its settling
 time and overshoot against the peak of the reference. The unit runs as delivered, as RTE asked,
 and a ramp of the frequency starts from the power the unit settles at after the frequency reaches
@@ -50,9 +49,11 @@ cover OC2 and OC3 only.
 
 Two of the Grid Forming converters of Dynawo, the droop one and the EPRI one, can be the Zone 1
 unit: the examples `BESS/GridFormingDroop` and `BESS/GridFormingEpri` are such installations, of
-type C, with a WECC plant of 40 MW at 225 kV in Zone 3. The `BESS/WECC` example, whose plant had
-that same size and so was of type C too, is now of 15 MW, a type B: under this revision a
-storage installation of type C has to be Grid Forming, and its unit is not.
+type C, with a WECC plant of 40 MW at 225 kV in Zone 3. The droop one keeps its transformer
+inside, so its InternalNode2 is its filter capacitor, where it takes its references. The
+`BESS/WECC` example, whose plant had that same size and so was of type C too, is now of 15 MW, a
+type B: under this revision a storage installation of type C has to be Grid Forming, and its unit
+is not.
 
 ### Fiche I5 applies to storage installations of type B alone from the DTR revision 20260723
 
@@ -174,7 +175,9 @@ The report of each Zone 1 unit draws its own schematic, which `commonz1.tex` nam
 `\ProducerFiles`. A copy of `commonz1.tex` among your report templates made on an earlier release
 still names the shared template, and its report draws both circuits one over the other: copy it
 again from the package, or write `\ProducerFiles.circuit_z1_fault.tikz` and
-`\ProducerFiles.circuit_z1_setpoint.tikz` where it names the schematics (#793).
+`\ProducerFiles.circuit_z1_setpoint.tikz` where it names the schematics (#793). Such a copy also
+lacks the figure of the frequency of the converter that the RoCoF tests of the Fiche I16.2 draw
+(#813).
 
 ### Fixed
 

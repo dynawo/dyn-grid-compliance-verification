@@ -207,19 +207,52 @@ def test_a_jump_of_the_short_circuit_ratio_switches_a_line_between_2_and_20(vers
         assert config.get_float(model, "switched_SCR", 0) == 20
 
 
-def test_zone1_of_types_c_and_d_compares_the_curves_of_internal_node1(version):
-    """The references are the results of the Fiche I18, which the fiche observes at the output
-    of the unit, after its transformer."""
+def test_zone1_of_types_c_and_d_compares_the_curves_of_the_fiche_i16_1(version):
+    """The powers where the converter controls them and the currents at InternalNode2, as RTE
+    asked for the Fiche I16 in #340 and for its version Type C/D in #813: the currents differ
+    from those of InternalNode1, whose voltage has another angle."""
     version("PCS_RTE-I16z1", "C")
 
     assert [curve.selector for curve in compared_curves.for_zone(1)] == [
         "BusPDR_BUS_Voltage",
-        "BusPDR_BUS_ActivePower",
-        "BusPDR_BUS_ReactivePower",
-        "BusPDR_BUS_ActiveCurrent",
-        "BusPDR_BUS_ReactiveCurrent",
+        "_GEN_VoltageNode2",
+        "_GEN_ActivePowerControlledNode",
+        "_GEN_ReactivePowerControlledNode",
+        "_GEN_ActiveCurrentNode2",
+        "_GEN_ReactiveCurrentNode2",
     ]
-    assert config.get_list("ReportCurves", "fig_InternalNode1P") == []
+
+
+def test_zone1_of_types_c_and_d_draws_what_the_fiche_i16_1_draws(version):
+    """The voltage at InternalNode2 and the powers at InternalNode1 of every test, and the
+    currents of a fault on one figure, as the version Type B does."""
+    version("PCS_RTE-I16z1", "C")
+    every_test = [
+        f"PCS_RTE-I16z1.{benchmark}"
+        for benchmark in config.get_list("PCS-Benchmarks", "PCS_RTE-I16z1")
+    ]
+
+    for figure in ("fig_V", "fig_UIt", "fig_InternalNode1P", "fig_InternalNode1Q"):
+        assert config.get_list("ReportCurves", figure) == every_test, figure
+    assert config.get_list("ReportCurves", "fig_I") == [
+        f"PCS_RTE-I16z1.S_Fault{n}" for n in (4, 5, 6)
+    ]
+
+
+def test_the_page_of_a_test_of_types_c_and_d_lays_out_the_figures_of_the_fiche_i16_1():
+    """#813: the shared page draws the figures of Zone 1 with the macros of commonz1.tex, which
+    also hold the frequency of the converter the RoCoF tests draw."""
+    page = (
+        _DELTA / "reports" / "model" / "BESS" / "PCS_RTE-I16z1" / "report.I16z1.TypeCD.Test.tex"
+    ).read_text()
+    common = (
+        TEMPLATES / "reports" / "model" / "BESS" / "PCS_RTE-I16z1" / "commonz1.tex"
+    ).read_text()
+
+    assert "\\GridCurvesDescriptionZone" in page and "\\GridCurvesZone" in page
+    assert "NodeOne" not in page
+    assert "\\GridCurveZone{fig_WRef}" in common
+    assert "\\GridCurveDescriptionZone{fig_WRef}" in common
 
 
 def test_a_ramp_of_the_frequency_draws_the_frequency_the_unit_gives(version):
@@ -278,7 +311,6 @@ def test_type_b_keeps_the_fiche_the_revision_writes_for_it(version, pcs):
     assert _version_for_category(_DELTA / "PCS" / "model" / "BESS" / pcs, "B") is None
     assert "ThreePhaseFault" in config.get_list("PCS-Benchmarks", pcs)
     assert config.get_float("GridCode", "cutoff", 0) == 15.0
-    assert not config.get_boolean("GridCode", "zone1_compared_at_node1", False)
 
 
 @pytest.mark.parametrize("pcs", ["PCS_RTE-I16z1", "PCS_RTE-I16z3"])

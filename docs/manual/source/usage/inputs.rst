@@ -106,17 +106,6 @@ and only a description of the user may change it.
    ``*_GEN_ActivePowerSetpointPu``, ``*_GEN_ReactivePowerSetpointPu`` and
    ``*_GEN_VoltageSetpointPu``, which are not compared: in a setpoint step,
    the report draws the one the step moves over the magnitude it drives.
-   The Zone 1 of a storage installation of type C or D observes its references
-   at InternalNode1 alone, where the Fiche I16.2 takes the results of the
-   Fiche I18: its dictionary declares instead the voltage, the active and
-   reactive power and the active and reactive current there, and the same
-   setpoints:
-
-   * ``InternalNode1_BUS_Voltage``
-   * ``InternalNode1_BUS_ActivePower``
-   * ``InternalNode1_BUS_ReactivePower``
-   * ``InternalNode1_BUS_ActiveCurrent``
-   * ``InternalNode1_BUS_ReactiveCurrent``
 
 For information on the DYD and PAR file formats, refer to the
 `Dynawo documentation <https://dynawo.github.io/>`_.
