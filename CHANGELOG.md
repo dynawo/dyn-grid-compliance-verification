@@ -219,6 +219,10 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
 - The lines the log writes once a test is over, while the report of its PCS is prepared, the
   next PCS is loaded or the summary of the run is written, no longer carry the label of that
   test (#825).
+- A `reference_step_size` the tool rejects no longer ends the run without summary or report: the
+  log names the file and line that define it, and the figures of its test show their default
+  time range. A PCS whose report cannot be prepared leaves the PDF without its pages, where it
+  ended the whole run, summary included, with `Error during verification: 'producer'` (#824).
 
 ## 1.3.0 — 2026-10-29
 

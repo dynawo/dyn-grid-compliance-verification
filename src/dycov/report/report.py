@@ -177,9 +177,19 @@ def _get_reports(
     working_path: Path,
 ) -> list:
     reports = []
+    aborted = set()
     for pcs in sorted_summary:
         key = f"{pcs.producer_name}_{pcs.pcs}"
-        pcs_results = report_results[key]
+        pcs_results = report_results.get(key)
+        if not pcs_results:
+            if key not in aborted:
+                aborted.add(key)
+                dycov_logging.get_logger("Report").warning(
+                    f"{pcs.producer_name} {pcs.pcs}: its execution was aborted, so the report "
+                    "has no page of its tests"
+                )
+            continue
+
         report_name = f"{pcs_results['producer'].replace('_', '')}.{pcs_results['report_name']}"
         if any(report_name.replace(".tex", "") in report for report in reports):
             continue

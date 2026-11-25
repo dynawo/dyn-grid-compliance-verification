@@ -92,6 +92,9 @@ possibly signed registry name); anything else is a Dynawo parameter value passed
 A definition rejected while a test is simulated ends that test as `Invalid test`, since
 `obtain_simulated_curve` turns only `SimulationOutcomeError` (the bisection outcomes,
 `model/parameters.py`) into a failed `SimulationResult` and the rest reaches `Benchmark.validate`.
+`reference_step_size` is read by the report alone, and a rejected one leaves the figures of its
+test at their default time range (`figure._graph_scale`). A PCS whose execution
+aborts returns no results, and `report._get_reports` leaves its pages out of the PDF.
 Out of scope: GFM (own parsing of `mult*(Xeff+Xgrid)`, `extract_defined_value` for p0/q0)
 and `line_XPu` (DTR reactance-table base `a`/`b`). `line_XFaultPu` resolves against the registry
 plus `XFaultPu`, the reactance the DTR gives the impedant three-phase fault
