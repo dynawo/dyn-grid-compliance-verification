@@ -139,6 +139,35 @@ def test_has_required_curves_performance_does_not_require_reference(monkeypatch,
     assert cm.get_missed_curves("reference") == []
 
 
+def test_a_test_without_reference_lists_no_missing_curve_of_the_test_before(monkeypatch, tmp_path):
+    cm = _manager_for_required_curves(
+        monkeypatch, tmp_path, MODEL_VALIDATION_PPM, pd.DataFrame({"b": [1]})
+    )
+    cm.has_required_curves(["a"], "bm", "oc1")
+    assert cm.get_missed_curves("reference") == ["a"]
+
+    cm._curves["reference"] = pd.DataFrame()
+    res = cm.has_required_curves(["a"], "bm", "oc2")
+
+    assert res.availability == CurvesAvailability.NO_REFERENCE
+    assert cm.get_missed_curves("reference") == []
+
+
+def test_a_test_whose_reference_is_not_checked_lists_no_missing_curve_of_the_test_before(
+    monkeypatch, tmp_path
+):
+    cm = _manager_for_required_curves(
+        monkeypatch, tmp_path, MODEL_VALIDATION_PPM, pd.DataFrame({"b": [1]})
+    )
+    cm.has_required_curves(["a"], "bm", "oc1")
+    assert cm.get_missed_curves("reference") == ["a"]
+
+    monkeypatch.setattr(cm, "_CurvesManager__has_reference_curves", lambda: False)
+    cm.has_required_curves(["a"], "bm", "oc2")
+
+    assert cm.get_missed_curves("reference") == []
+
+
 def _manager_for_obtain_curve(tmp_path, sim_type, reference):
     cm = CurvesManager.__new__(CurvesManager)
     cm._working_dir = tmp_path

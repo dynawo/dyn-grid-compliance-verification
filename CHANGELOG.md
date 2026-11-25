@@ -213,6 +213,12 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   description of your own, a revision or a declaration of the Fiche F16 that changed them moved
   only the checks and the report, and so did reference curves that put the event at another
   instant (#816).
+- The page of a test without reference curves no longer lists the curves missing from the record
+  of the test before it in the same benchmark, which could also turn a test whose fault dip was
+  out of reach into an invalid one (#823).
+- The lines the log writes once a test is over, while the report of its PCS is prepared, the
+  next PCS is loaded or the summary of the run is written, no longer carry the label of that
+  test (#825).
 - A `reference_step_size` the tool rejects no longer ends the run without summary or report: the
   log names the file and line that define it, and the figures of its test show their default
   time range. A PCS whose report cannot be prepared leaves the PDF without its pages, where it

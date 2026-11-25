@@ -1001,6 +1001,7 @@ class Benchmark:
             pcs_results[
                 self._pcs_name + CASE_SEPARATOR + self._name + CASE_SEPARATOR + op_cond.get_name()
             ] = manage_files.set_curves_aside(results, self.__working_oc_dir(op_cond.get_name()))
+            dycov_logging.clear_test_context()
 
         if self._curves_manager is not None:
             self._curves_manager.release_curves()
