@@ -717,6 +717,41 @@ def test_the_report_of_a_unit_names_the_files_of_the_unit(tmp_path):
     assert "\\renewcommand{\\ProducerFiles}{UnitB}" in (latex_dir / "report.tex").read_text()
 
 
+def _test_of(pcs: str, operating_condition: str = "OC") -> Summary:
+    return Summary(
+        producer_name="Producer",
+        id=1,
+        zone=3,
+        pcs=pcs,
+        benchmark="Benchmark",
+        operating_condition=operating_condition,
+        compliance=Compliance.Compliant,
+        report_name="report.tex",
+    )
+
+
+def test_a_pcs_whose_execution_was_aborted_leaves_the_others_in_the_report(tmp_path, caplog):
+    (tmp_path / "Producer.report.RTE-I16z3.tex").write_text("")
+    tests = [
+        _test_of("PCS_RTE-I16z1", "First"),
+        _test_of("PCS_RTE-I16z1", "Second"),
+        _test_of("PCS_RTE-I16z3"),
+    ]
+    report_results = {
+        "Producer_PCS_RTE-I16z1": {},
+        "Producer_PCS_RTE-I16z3": {"producer": "Producer", "report_name": "report.RTE-I16z3.tex"},
+    }
+
+    with caplog.at_level(logging.WARNING, logger="DyCoV"):
+        reports = report._get_reports(tests, report_results, tmp_path)
+
+    assert reports == ["\\input{Producer.report.RTE-I16z3}"]
+    [warning] = [r.getMessage() for r in caplog.records if r.name == "DyCoV.Report"]
+    assert warning.endswith(
+        "Producer PCS_RTE-I16z1: its execution was aborted, so the report has no page of its tests"
+    )
+
+
 def test_the_summary_table_breaks_across_pages_with_its_header_on_each():
     template = (
         Path(report.__file__).resolve().parent.parent / "templates/reports/report.tex"
