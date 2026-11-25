@@ -184,14 +184,17 @@ class Pcs:
         """
         pcs_results = {"id": self._id, "zone": self._zone, "producer": self._producer_name}
         success = False
-        for bm in self._bm_list:
-            success |= bm.validate(
-                summary_list,
-                pcs_results,
-            )
-            self._figures_description[self._name + CASE_SEPARATOR + bm.get_name()] = (
-                bm.get_figures_description()
-            )
+        try:
+            for bm in self._bm_list:
+                success |= bm.validate(
+                    summary_list,
+                    pcs_results,
+                )
+                self._figures_description[self._name + CASE_SEPARATOR + bm.get_name()] = (
+                    bm.get_figures_description()
+                )
+        finally:
+            dycov_logging.clear_test_context()
 
         return self._report_name, success, pcs_results
 
