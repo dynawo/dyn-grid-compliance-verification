@@ -111,7 +111,7 @@ def apply_sign_convention(
     curves_translation: dict,
     column: str,
 ) -> None:
-    """Apply the sign convention to a non-complex column and store the translated curve data.
+    """Apply the sign convention to a column and store the translated curve data.
 
     Parameters
     ----------
@@ -234,6 +234,27 @@ def _rebase(values, from_base: float, to_base: float) -> np.ndarray:
     return np.multiply(np.asarray(values, dtype=float), from_base / to_base)
 
 
+def _current(power: np.ndarray, voltage: np.ndarray, valid: np.ndarray) -> list:
+    """The current a power gives at a voltage, both in pu, and zero where the voltage is not
+    valid.
+
+    Parameters
+    ----------
+    power : np.ndarray
+        The active or reactive power.
+    voltage : np.ndarray
+        The voltage magnitude at the same node.
+    valid : np.ndarray
+        Where the voltage can divide the power.
+
+    Returns
+    -------
+    list
+        The active or reactive current.
+    """
+    return np.divide(power, voltage, out=np.zeros_like(power), where=valid).tolist()
+
+
 def _unit_power_base(generator, snref: float) -> float:
     """The base Dynawo gives the powers of a unit at Node2 and at its controlled node in: that of
     the unit when its model states it gives them so, SnRef otherwise."""
@@ -326,12 +347,12 @@ def _get_node2_curves(
 
         curves_dict[voltage_col] = voltage
         valid_mask = np.isfinite(voltage_array) & (voltage_array != 0.0)
-        curves_dict[f"{generator.id}_GEN_ActiveCurrentNode2"] = np.divide(
-            active_power, voltage_array, out=np.zeros_like(active_power), where=valid_mask
-        ).tolist()
-        curves_dict[f"{generator.id}_GEN_ReactiveCurrentNode2"] = np.divide(
-            reactive_power, voltage_array, out=np.zeros_like(reactive_power), where=valid_mask
-        ).tolist()
+        curves_dict[f"{generator.id}_GEN_ActiveCurrentNode2"] = _current(
+            active_power, voltage_array, valid_mask
+        )
+        curves_dict[f"{generator.id}_GEN_ReactiveCurrentNode2"] = _current(
+            reactive_power, voltage_array, valid_mask
+        )
 
         columns_to_remove.extend([voltage_col, active_power_col, reactive_power_col])
 
@@ -545,19 +566,11 @@ def build_output_curves(
         "BusPDR_BUS_ReactivePower": reactive_power_pu.tolist(),
     }
 
-    curves_dict["BusPDR_BUS_ActiveCurrent"] = np.divide(
-        active_power_pu,
-        voltage_pu,
-        out=np.zeros_like(active_power_pu),
-        where=np.abs(voltage_pu) > abs_tol,
-    ).tolist()
-
-    curves_dict["BusPDR_BUS_ReactiveCurrent"] = np.divide(
-        reactive_power_pu,
-        voltage_pu,
-        out=np.zeros_like(reactive_power_pu),
-        where=np.abs(voltage_pu) > abs_tol,
-    ).tolist()
+    voltage_valid = np.abs(voltage_pu) > abs_tol
+    curves_dict["BusPDR_BUS_ActiveCurrent"] = _current(active_power_pu, voltage_pu, voltage_valid)
+    curves_dict["BusPDR_BUS_ReactiveCurrent"] = _current(
+        reactive_power_pu, voltage_pu, voltage_valid
+    )
 
     _get_magnitude_controlled_by_avr(generators, df_curves, curves_dict)
     _get_node2_powers(generators, df_curves)
