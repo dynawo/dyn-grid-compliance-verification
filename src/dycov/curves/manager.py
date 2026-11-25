@@ -174,6 +174,7 @@ class CurvesManager:
         curves_name: str,
         review_curves_set: bool,
     ) -> bool:
+        self._missed_curves[curves_name] = []
         if not review_curves_set:
             return True
 
@@ -183,7 +184,6 @@ class CurvesManager:
             )
             return False
 
-        self._missed_curves[curves_name] = []
         missed_curves = [
             name
             for name in measurement_names
