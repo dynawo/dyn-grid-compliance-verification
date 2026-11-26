@@ -183,6 +183,10 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   nominal frequency of the configuration, where they took 50 Hz (#770).
 - The Epsilon of the GFM SCR jump figures is that of the producer's D and H, not that of one of
   their variations, and a hybrid run leaves it out as it does D and H (#771).
+- A run whose process group is told to end, as a closed terminal does, ends within 15 s of the
+  signal even when its pool waits for a worker it can no longer start, the signal having also ended
+  the process that starts them. Such a run says on its error output that its shutdown did not end
+  (#850).
 - The GFM envelopes scale the base angular frequency `Wb` of the PCS, given for 50 Hz, to the
   nominal frequency of the configuration (#779).
 - The SCR jump envelopes keep their shape outside the 30 ms hold after the event when the
