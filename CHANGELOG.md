@@ -172,6 +172,12 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   its steps of b from `HTB1_reactance_b_PPM` and the powers between them from `HTB1_p_max_PPM`,
   so a configuration that changed them through `HTB1_reactance_b_low`, `_b_high` or
   `HTB1_p_max` now changes those two keys instead (#744).
+- `anonymize` writes under its output directory one folder per producer of the curves it is
+  given, each with its index `CurvesFiles.ini`, where a tree of producer folders stopped it with
+  "Cannot save file into a non-existent directory". It leaves the curves it is given as they were:
+  it wrote their index into them, rewrote their dictionaries and deleted their simulation records,
+  and gave the output no index. The index it writes names only the files it anonymized and none
+  of the columns of the producer's files (#864).
 - The SCR jump no longer marks its envelopes as inconsistent when the variations of D and H fall
   on both sides of critical damping: each takes the response of its own regime, as in the RoCoF
   (#761).
