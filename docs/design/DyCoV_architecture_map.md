@@ -107,12 +107,16 @@ I16.2 for types C and D, a version `Type<categories>.ini` in the directory of th
 (`revisions/20260723/PCS/model/BESS/PCS_RTE-I16z{1,3}/TypeCD.ini`, its templates in the mirrored
 `reports/`); the base revision has none, I18 not existing. `Pcs` picks it by the category of the
 installation (`ModelProducer.get_installation_category`: `get_generator_category` on the Zone 3 INI,
-whatever zone runs; `_version_for_category`), and `load_pcs_config` reads it into the delta layer
-after the delta, which it patches key by key. A version may withdraw a fiche instead: the
-revision asks the Fiche I5 of storage of type B alone (#743), so the `TypeCD.ini` of the
+whatever zone runs; `pcs_layers.version_for_category`), and `load_pcs_config` reads it into the
+delta layer after the delta, which it patches key by key. A version may withdraw a fiche instead:
+the revision asks the Fiche I5 of storage of type B alone (#743), so the `TypeCD.ini` of the
 performance `PCS_RTE-I5` of BESS lists its benchmarks as `none`, a performance verification reads
 the category of each producer from the INI of its name
 (`ModelProducer.get_installation_category`), and `Pcs.why_no_test` gives the log the reason.
+The layers of a PCS are found by `model/pcs_layers.py`, which `Pcs` prepares them with and which
+lists the tests a PCS runs for a category without preparing it (`tests_it_runs`, which puts back
+the layers loaded before): the `CurvesFiles.ini` generated for empty reference curves asks for
+those, the Fiche I16.2 for a storage of type C or D.
 Zone 1 of TypeCD runs the setpoint steps on SCR 2 and
 the tests of the Fiche I18 under their scenario names (`S_VolAngStep*`, `S_VolAmpStep*`,
 `S_SCRup1/down1`, `S_Rocof*`, `S_Fault4-6`), whose shared settings are the `I18*` aliases of the
@@ -161,8 +165,8 @@ droop one loses synchronism in the dips); `BESS/WECC`, of 15 MW, is a type B one
 template of the declaration, which `core/initialization.py` copies under that same name into the
 user's templates (`_copy_pcs_to_declare`, never over a copy already there); a PCS that declares no benchmark is skipped by `_validate_pcs`. The producer declares
 the recorded tests in `<ReferenceCurves>/F16Description.ini`, which `Pcs` takes as the user PCS
-description of the PCS the file names in its `[PCS-Benchmarks]` (`_description_declaring`, in place
-of the one in the configuration directory), so `cfg.py` keeps its six layers. Every
+description of the PCS the file names in its `[PCS-Benchmarks]` (`pcs_layers.description_declaring`,
+in place of the one in the configuration directory), so `cfg.py` keeps its six layers. Every
 declared test is rendered with the shared `report.F16z3.DeclaredTest.tex`: `_pcs_replace` writes
 one `report.<pcs>.<bm>.<oc>.tex` per operating condition and hands the template its maps without the
 `PCS…` suffix (`rm`, `thm`, `tem`…) plus `benchmark`/`operatingcondition`. The F16 error

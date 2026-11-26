@@ -195,6 +195,10 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   listed after a space was looked for with that space in its name, and the run stopped with an
   error that said nothing about the cause. The voltage figure of the swell of fiche I16 zone 3
   for storage units, left out by such a space in the shipped description, is back (#792).
+- The index DyCoV generates in an empty directory of reference curves lists the tests of the
+  Fiche I16 the installation runs, as the description of its PCS gives them for the selected
+  revision of the DTR and its category: a storage of type C or D gets those of the Fiche I16.2,
+  where every model got the tests of the base revision of I16 (#835).
 - A producer model without its `Producer.ini`, its DYD or its PAR file ends the run with a single
   error that names the file and the directory it was looked for in, where it ended in a
   `TypeError` and a stack trace, or named no directory. A model directory of the other
