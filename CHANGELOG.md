@@ -191,6 +191,9 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   schematic, where every unit got that of the unit rendered last (#793).
 - `generate_gfm_envelopes` stops, naming each value, when the producer's D, H or Xeff cannot give
   envelopes (#782).
+- `dycov anonymize` asks for its output directory, `-o`, without which it ended with a TypeError,
+  and for the curves to anonymize, `--curves` or `--results`. It refuses an output directory that is
+  or holds the `--curves` one, which it emptied, deleting the curves it was given (#836).
 - A list of the configuration may have spaces around its commas, or a comma at its end: a PCS
   listed after a space was looked for with that space in its name, and the run stopped with an
   error that said nothing about the cause. The voltage figure of the swell of fiche I16 zone 3
