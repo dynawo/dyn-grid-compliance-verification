@@ -223,6 +223,11 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   log names the file and line that define it, and the figures of its test show their default
   time range. A PCS whose report cannot be prepared leaves the PDF without its pages, where it
   ended the whole run, summary included, with `Error during verification: 'producer'` (#824).
+- A boolean of the producer's PAR is read as Dynawo reads it, true only when written exactly
+  `true`: the control flags of the WECC models, `ConverterLVControl`, `PPCLocal` and the
+  switch-off signals of a line, written `TRUE` or `True`, or a switch-off signal with spaces, ran
+  as false in Dynawo while DyCoV took them as true, and chose a control mode, a voltage droop or a
+  topology the simulation did not have. The log names any such value and its set (#837).
 
 ## 1.3.0 — 2026-10-29
 
