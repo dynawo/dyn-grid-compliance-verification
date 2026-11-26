@@ -522,6 +522,13 @@ performance`` take the workbook directly and do the conversion themselves:
    dycov validate --excel Producer.xlsx
    dycov performance --excel Producer.xlsx
 
+Both routes take the ``.csv`` files from the folder the ``Signaux`` sheets
+name, and the conversion reports any it does not find there along with that
+folder. Put them in it and convert again: a file copied next to the ``.dict``
+files of the written tree is read by a run on that tree, but not by
+``--excel``, which converts the workbook again and leaves its test without
+reference curves.
+
 Performance is a zone-3 workflow and needs no reference curves, so of
 everything the conversion writes it uses only ``Dynawo/Zone3``. In both
 commands the workbook replaces the other inputs: giving a model, curves or a

@@ -343,8 +343,11 @@ would otherwise run without a reference and nothing would say why.
 
 - **`CurvesFiles.ini`** — the `.csv` of every described test, and one curve dictionary per zone.
 - **One `.dict` per test** — its zone's dictionary, plus the `[Curves-Metadata]` keys.
-- **The `.csv` files** — copied from the folder the sheet names; the ones not found are reported so
-  the user can drop them in.
+- **The `.csv` files** — copied from the folder the sheet names; the ones not found are reported
+  with that folder, where the user drops them in before converting again: `--excel` converts the
+  workbook again in a temporary directory and also takes the curves from the folder the sheet
+  names, so a file put next to the `.dict` files would reach a run on the written tree only. A
+  sheet whose folder cell is empty names no folder.
 
 **The metadata comes from the workbook, not from the model.** `sim_t_event_start`,
 `fault_duration`, `frequency_sampling` and `is_field_measurements` describe the user's own files,
