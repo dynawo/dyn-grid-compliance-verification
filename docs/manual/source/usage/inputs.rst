@@ -315,9 +315,12 @@ Accepted curve file formats:
   required but does not need to be the first column.
 
 Regardless of the format, **a companion DICT file is always mandatory**. It
-must have the same filename as the curve file but with the ``.dict``
-extension. This file provides two types of information that cannot be inferred
-from the curve file itself:
+has the same filename as the curve file but with the ``.dict`` extension or,
+when the index gives the test a curve file of another name and there is no
+DICT file of that name, the name of the test next to ``CurvesFiles.ini``, as
+the workbook writes it: several tests may then share one recording, each with
+its own DICT file. This file provides two
+types of information that cannot be inferred from the curve file itself:
 
 * the mapping between curve columns and the signal names expected by DyCoV,
 * simulation parameters used to obtain the curves (event timing, etc.).
