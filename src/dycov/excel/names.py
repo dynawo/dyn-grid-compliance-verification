@@ -35,12 +35,17 @@ PACKAGE_NAMES_FILE = Path(__file__).resolve().parent / "dictionary" / NAMES_FILE
 GENERATOR_PLACEHOLDER = "{gen}"
 
 
+_LIGATURES = str.maketrans({"œ": "oe", "æ": "ae"})
+
+
 def normalize(text) -> str:
-    """Lower-case *text* and strip its accents, the form every name is matched in."""
+    """Lower-case *text* and strip its accents, the form every name is matched in. A ligature
+    reads as its letters, so ``nœud`` and ``noeud`` are the same word."""
     if not isinstance(text, str):
         return ""
     stripped = unicodedata.normalize("NFKD", text)
-    return "".join(c for c in stripped if not unicodedata.combining(c)).strip().lower()
+    folded = "".join(c for c in stripped if not unicodedata.combining(c)).strip().lower()
+    return folded.translate(_LIGATURES)
 
 
 def user_names_file() -> Path:
@@ -175,6 +180,14 @@ def metadata_booleans() -> tuple:
 def metadata_true_values() -> set:
     """The cell values meaning ``True`` for a boolean metadata key, normalized."""
     return {normalize(value) for value in _option("Metadata-Values", "true").split(",")}
+
+
+def boolean_values() -> tuple[set, set]:
+    """The cell values a boolean parameter may hold, normalized: ``(true ones, false ones)``."""
+    return tuple(
+        {normalize(value) for value in _option("Boolean-Values", key).split(",")}
+        for key in ("true", "false")
+    )
 
 
 def test_suffixes() -> tuple:
