@@ -206,9 +206,16 @@ names.
   Each step of the HiZ and bolted searches is the `simulate_fn` `DynawoCurves` hands them,
   `__simulate_fault_search_step`: in its copy it switches the JOBS to `[Dynawo]
   fault_search_solver_lib` (SIM) and stops it `fault_search_time_after_clearing` after the fault
-  ends (after it starts, for a permanent one), then runs the retry strategy as any simulation.
-  Only the copy's JOBS changes, so the test's own simulation runs to its full length, and
-  `reset_solver_fn` puts back the configured solver parameters after each step.
+  ends (after it starts, for a permanent one), then runs the retry strategy as any simulation. A
+  step that solver cannot simulate is simulated again on the solver of the test, `solver_lib`,
+  with a retry strategy of its own. Only the copy's JOBS changes, so the test's own simulation
+  runs to its full length, and `reset_solver_fn` puts back the configured solver parameters after
+  each step. HiZ: once a step has given a dip, a step that fails moves neither bound, since it
+  says nothing of the dip; the next one is tried beside it, on either side in turn (`_hiz_step`),
+  and five failures in a row end the search. Those retries run without the switch of solver that
+  ends the usual ones, which the repeat on `solver_lib` makes needless. A HiZ search that ends without its dip on SIM is run again on `solver_lib`
+  (`DynawoCurves.__find_hiz_fault`): SIM may give the dip of a model in jumps the target falls
+  between, as WECC4B's permanent fault does.
   `parameter_checks.check_fault_search` rejects both keys at start-up, as `check_solver` does
   `solver_lib`.
   Bolted: searches by bisection for a "sufficient" fault impedance X — one that both converges and
