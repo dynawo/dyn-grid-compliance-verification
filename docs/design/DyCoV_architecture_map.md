@@ -7,13 +7,13 @@ Kept dense-but-short so it can be `@`-imported from `CLAUDE.md` without bloating
 
 ```
 DynawoCurves.obtain_simulated_curve()          orchestrator/curves.py
-  └─ ModelSetup.complete_model()               orchestrator/model_setup.py:545   (writes .jobs/.par/.dyd/.crv/solvers.par)
+  └─ ModelSetup.complete_model()               orchestrator/model_setup.py       (writes .jobs/.par/.dyd/.crv/solvers.par)
   └─ [bisection, optional]                      orchestrator/bisection.py         (HIZ / bolted / CCT)
   └─ DynawoCurves.__execute_simulation()        orchestrator/curves.py
        └─ SolverRetryStrategy.run()             runtime/retry_strategy.py         (up to 4 retries; reads the curves of each attempt)
             └─ DynawoSimulator.run_base()       runtime/dynawo_simulator.py       ← THE backend seam
-            │    └─ run_dynawo_process()        runtime/_process.py:60           subprocess: [launcher, "jobs", "TSOModel.jobs"]
-            └─ read_simulated_curves()          runtime/_curves.py:723            post-process outputs/curves/curves.csv
+            │    └─ run_dynawo_process()        runtime/_process.py              subprocess: [launcher, "jobs", "TSOModel.jobs"]
+            └─ read_simulated_curves()          runtime/_curves.py                post-process outputs/curves/curves.csv
 ```
 
 The seam only runs Dynawo and reports what it did:
