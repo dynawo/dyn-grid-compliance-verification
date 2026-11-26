@@ -205,6 +205,11 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   first measured none, and the second was measured from inside the smoothed step of the table, at
   about half its depth. The report draws the target of reactive current from it in the tests that
   check `imax_reac` (#814).
+- A Zone 1 test of a power park module that ends without curves, a fault whose dip is out of
+  reach for instance, no longer leaves the run without its PDF: its page says the test produced
+  no curve, as the pages of storage already did, and a fault whose dip is out of reach says it
+  was not simulated for that reason. A copy of the `commonz1.tex` of the power park modules in
+  your report templates still stops the PDF on such a page: copy it again (#831).
 - Every test of a parallel run gets its interactive HTML page: when the reports of several PCS
   were prepared at the same time, one could fail to create the HTML folder another had just
   created, and the page of its test was left out (#815).
