@@ -3,7 +3,7 @@
 # Quick script to automate all steps for building & installing DyCoV from sources.
 # Requirements: It just needs 'uv' to be previously installed.
 #   * it uses a venv named "dycov_venv"
-#   * it also pip-updates all dependencies to their latest version
+#   * it installs the dependencies at the versions uv.lock pins
 #   * it can install in editable mode and with developer dependencies
 # Assumes uv are installed.
 # Python 3.13 is installed for the virtual environment.
@@ -114,8 +114,12 @@ if [ ${#extras[@]} -gt 0 ]; then
     install_extras="[$(IFS=,; echo "${extras[*]}")]"
 fi
 
-# Install with uv, ensuring proper quoting
-uv pip install --upgrade "$install_target$install_extras"
+# Install with uv, at the versions uv.lock pins, which the release is tested with
+constraints="$(mktemp)"
+trap 'rm -f "$constraints"' EXIT
+uv export --locked --no-hashes --no-emit-project --all-extras --format requirements-txt \
+    --quiet --output-file "$constraints"
+uv pip install --upgrade --constraint "$constraints" "$install_target$install_extras"
 colormsg "OK."
 
 colormsg "Step 3: Installing the bash completion of the 'dycov' command..."
