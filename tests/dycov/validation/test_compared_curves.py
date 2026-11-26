@@ -306,3 +306,26 @@ def test_curve_names_names_the_curves_of_every_generating_unit():
 )
 def test_threshold_of(column, expected):
     assert compared_curves.threshold_of(column) == expected
+
+
+@pytest.mark.parametrize(
+    "zone, setpoint, controls_internal_node2, tracked",
+    [
+        (1, "VoltageSetpointPu", False, "VoltageSetpointPu"),
+        (1, "VoltageSetpointPu", True, "injector_voltage"),
+        (1, "ActivePowerSetpointPu", True, "ActivePowerSetpointPu"),
+        (1, "ReactivePowerSetpointPu", True, "ReactivePowerSetpointPu"),
+        (3, "VoltageSetpointPu", True, "VoltageSetpointPu"),
+    ],
+)
+def test_a_setpoint_is_tracked_on_the_curve_the_zone_draws_it_over(
+    zone, setpoint, controls_internal_node2, tracked
+):
+    assert compared_curves.tracked_on(zone, setpoint, controls_internal_node2) == tracked
+
+
+def test_a_voltage_step_at_node_2_is_tracked_on_the_voltage_of_node_2():
+    tracked = compared_curves.tracked_on(1, "VoltageSetpointPu", True)
+    columns = ["BusPDR_BUS_Voltage", "Bess_GEN_VoltageNode2"]
+
+    assert compared_curves.for_setpoint(1, tracked, columns) == "Bess_GEN_VoltageNode2"
