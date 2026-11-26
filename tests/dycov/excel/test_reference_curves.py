@@ -48,7 +48,9 @@ METADATA_KEYS = [
 ]
 
 
-def _sheet(rows: list, tests: list, folder: str | None = "/curves") -> list:
+def _sheet(
+    rows: list, tests: list, folder: str | None = "/curves", case_header: str = "Cas"
+) -> list:
     """A signal sheet: the signals table, the folder cell and the tests table.
 
     A test is ``(case, file)``, or ``(case, file, {metadata key: cell})`` to fill the metadata
@@ -59,7 +61,7 @@ def _sheet(rows: list, tests: list, folder: str | None = "/curves") -> list:
     grid += [[None], [None, None, None, None, None, None, "Dossier de résultats"]]
     grid += [[None, None, None, None, None, None, folder]]
     grid += [[None], [None, None, None, None, None, None, "Fichier de résultats .csv"]]
-    grid += [["Cas", "Evènement à simuler", None, None, None, None, None] + METADATA_HEADERS]
+    grid += [[case_header, "Evènement à simuler", None, None, None, None, None] + METADATA_HEADERS]
     for test in tests:
         case, file = test[0], test[1]
         metadata = test[2] if len(test) > 2 else {}
@@ -71,7 +73,7 @@ def _sheet(rows: list, tests: list, folder: str | None = "/curves") -> list:
 def _workbook(zone1=(ZONE1_ROWS, ZONE1_TESTS), zone3=(ZONE3_ROWS, ZONE3_TESTS), folder="/curves"):
     return {
         names.sheet("signals_zone1"): _sheet(list(zone1[0]), list(zone1[1]), folder),
-        names.sheet("signals_zone3"): _sheet(list(zone3[0]), list(zone3[1]), folder),
+        names.sheet("signals_zone3"): _sheet(list(zone3[0]), list(zone3[1]), folder, "Fiche"),
     }
 
 
@@ -103,6 +105,116 @@ def test_a_case_is_mapped_to_the_operating_condition_it_runs_as():
     assert [(t.name, t.curves_file) for t in parsed.tests] == [
         ("PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3", "bolted_scr3.csv")
     ]
+
+
+@pytest.mark.parametrize(
+    "folder",
+    [
+        "/home/user/Fiches/",
+        "/data/test_cases/curves/",
+        "../cas/",
+        "Cas/",
+        "CAS-2026/",
+        "Cas d'étude/",
+        "Fiche/",
+        "Fiche I16",
+        "fiche",
+    ],
+)
+def test_a_folder_that_holds_a_header_word_leaves_the_tests_table_alone(folder):
+    """#861: the cases of the tests table are found by their header, not by the first cell that
+    holds its word, which the folder the user writes above the table may well do."""
+    expected = sig.parse_signals(_workbook(folder="/curves"), GEN)
+
+    parsed = sig.parse_signals(_workbook(folder=folder), GEN)
+
+    for zone in ("Zone1", "Zone3"):
+        assert parsed[zone].tests == expected[zone].tests
+        assert parsed[zone].tests
+        assert parsed[zone].folder == folder
+
+
+@pytest.mark.parametrize("cell", ["cas.csv", "Cas I2.csv", "Fiche I2.csv", "Cas à revoir"])
+def test_a_row_of_the_tests_table_that_starts_with_a_header_word_is_a_row(cell):
+    """#861: in Zone 3 the case header is looked for before the one of the sheet, so a file or
+    a note of a row that started with it took the column of the cases."""
+    grid = _sheet(list(ZONE3_ROWS), ZONE3_TESTS, case_header="Fiche")
+    grid[-2][6] = cell
+    grid[-1].append(cell)
+
+    zone3 = sig.parse_zone_signals({names.sheet("signals_zone3"): grid}, "Zone3", GEN)
+
+    assert [(t.name, t.curves_file) for t in zone3.tests] == [
+        ("PCS_RTE-I16z3.USetPointStep.AReactance", cell),
+        ("PCS_RTE-I16z3.USetPointStep.BReactance", "u_step_b.csv"),
+    ]
+
+
+def _zone3_grid() -> tuple[list, int]:
+    """A Zone 3 sheet and the row of the header of its cases."""
+    grid = _sheet(list(ZONE3_ROWS), ZONE3_TESTS, case_header="Fiche")
+    return grid, next(r for r, row in enumerate(grid) if row and row[0] == "Fiche")
+
+
+def _zone3_tests(grid) -> list:
+    zone3 = sig.parse_zone_signals({names.sheet("signals_zone3"): grid}, "Zone3", GEN)
+    return [(t.curves_file, t.metadata) for t in zone3.tests]
+
+
+@pytest.mark.parametrize(
+    "column, cell, files",
+    [
+        (None, None, ["u_step_a.csv", "u_step_b.csv"]),
+        (6, "Cas I2.csv", ["Cas I2.csv", "u_step_b.csv"]),
+        (12, "Cas à revoir", ["u_step_a.csv", "u_step_b.csv"]),
+    ],
+)
+def test_the_results_file_header_may_share_the_row_of_the_cases(column, cell, files):
+    """The first row of the table, whose row above then holds the header of the results file,
+    may start a cell with the word of the cases."""
+    grid, header_row = _zone3_grid()
+    grid[header_row][6] = grid[header_row - 1][6]
+    grid[header_row - 1] = [None]
+    if column is not None:
+        first_row = grid[header_row + 1]
+        first_row += [None] * (column + 1 - len(first_row))
+        first_row[column] = cell
+
+    assert [file for file, _ in _zone3_tests(grid)] == files
+
+
+@pytest.mark.parametrize("group_row", [True, False])
+def test_a_header_cell_that_starts_with_the_word_of_the_cases_is_not_the_cases(group_row):
+    grid, header_row = _zone3_grid()
+    row = header_row - 1 if group_row else header_row
+    grid[row] += [None] * (13 - len(grid[row])) + ["Cas non applicables : voir note"]
+
+    assert [file for file, _ in _zone3_tests(grid)] == ["u_step_a.csv", "u_step_b.csv"]
+
+
+def test_a_case_header_merged_over_both_header_rows_reads_the_metadata():
+    filled = {"sim_t_event_start": "1", "fault_duration": "0.15"}
+    grid = _sheet(list(ZONE3_ROWS), [("I2", "u_step_a.csv", filled)], case_header="Fiche")
+    header_row = next(r for r, row in enumerate(grid) if row and row[0] == "Fiche")
+    grid[header_row - 1][0], grid[header_row][0] = "Fiche", None
+
+    assert _zone3_tests(grid) == [("u_step_a.csv", filled)]
+
+
+def test_a_header_that_ends_in_punctuation_heads_its_cell():
+    assert sig._heads("Cas (DTR)", "cas (dtr)")
+    assert sig._heads("N°", "n°")
+    assert not sig._heads("Cases", "cas")
+
+
+def test_a_sheet_whose_files_reach_no_test_says_so(caplog):
+    grid = _sheet(list(ZONE3_ROWS), [("Unknown", "dip.csv")])
+
+    with caplog.at_level("WARNING"):
+        zone3 = sig.parse_zone_signals({names.sheet("signals_zone3"): grid}, "Zone3", GEN)
+
+    assert zone3.tests == []
+    assert "names .csv files but no test of its tests table was recognised" in caplog.text
 
 
 def test_repeated_sheets_are_told_apart_by_their_position():
