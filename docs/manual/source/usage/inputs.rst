@@ -94,11 +94,14 @@ and only a description of the user may change it.
    called *Node2* in the DTR); the signals named after it
    (``*_GEN_ActiveCurrentNode2``, ``*_GEN_ReactiveCurrentNode2``,
    ``*_GEN_VoltageNode2``)
-   are measured there. A Zone 1 reference-curve dictionary declares six
+   are measured there. A Zone 1 reference-curve dictionary declares eight
    signals: those three, ``InternalNode1_BUS_Voltage`` (or its
-   ``BusPDR_BUS_Voltage`` alias), and the active and reactive power at the
+   ``BusPDR_BUS_Voltage`` alias), the active and reactive power at the
    node the converter controls,
-   ``*_GEN_ActivePowerControlledNode`` and ``*_GEN_ReactivePowerControlledNode``.
+   ``*_GEN_ActivePowerControlledNode`` and ``*_GEN_ReactivePowerControlledNode``,
+   and those at InternalNode1, ``InternalNode1_BUS_ActivePower`` and
+   ``InternalNode1_BUS_ReactivePower``, which the report draws without
+   comparing them.
    Dictionaries written before these signals were named after the nodes —
    ``InjTerminal`` for ``Node2``, ``ControlledPu`` for ``ControlledNode`` — are
    still accepted.
@@ -502,6 +505,13 @@ turbine is bound by ``IMaxPu`` and ``IMaxDipPu`` and also by ``TableIpMaxUwt``
 and ``TableIqMaxUwt``: left to Dynawo's defaults, the reactive current stays
 under 0.33 pu between 0.925 and 1.075 pu of voltage, whatever ``IMaxPu`` says,
 so give both. The IEC examples fill those two tables with Dynawo's defaults.
+A boolean parameter takes ``True`` or ``False`` from the list of its cell;
+``vrai``/``faux``, ``oui``/``non`` and ``1``/``0`` are read as well, and any
+other value stops the conversion, naming the sheet and the parameter, since
+Dynawo would read it as false. The ``Signaux zone 1`` sheet asks for the active
+and reactive power at node 1 besides those at the point the converter controls:
+the report draws them, without comparing them, and the PDF does so when that
+point is node 2.
 The command writes two trees next to the workbook — or under ``--output``, if
 you give one:
 

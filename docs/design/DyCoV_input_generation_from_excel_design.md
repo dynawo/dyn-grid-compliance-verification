@@ -88,9 +88,10 @@ arrives fully commented out, so uncommenting a name is what overrides it:
 | `[Zone1-Rows]`, `[Zone3-Rows]` | Row name of every electrical concept (`main_impedance = Z_cc_TP`). |
 | `[Zone1-Curves]`, `[Zone3-Curves]` | Row label → DyCoV curve, `{gen}` standing for the generator block. |
 | `[Zone1-Tests]`, `[Zone3-Tests]` | DTR case → `PCS.Benchmark.OperatingCondition` (§8); `[Zone3-Tests.<revision>]`, what a revision of the DTR changes. |
+| `[Boolean-Values]` | The values a boolean cell may hold, true and false. |
 
-Names are matched without accents and case-insensitively, and headers by substring, so
-`Paramètres (Dynawo)` still reads as `Paramètres`.
+Names are matched without accents and case-insensitively, a ligature as its letters (`nœud` as
+`noeud`), and headers by substring, so `Paramètres (Dynawo)` still reads as `Paramètres`.
 
 **Layout.** Nothing is addressed by a fixed column. In a control sheet, the header row is the first
 one naming parameters, values and types — requiring all three keeps the zone sheets' `Paramètres |
@@ -229,6 +230,13 @@ compiled composite whose descriptor flattens every parameter to `<prefix>_<Param
 name, so the tool **prepends the resolved prefix** to every converter parameter — in both the PAR
 (`photovoltaics_Kqp`) and the DYD (`photovoltaics_terminal`). Beyond the name, the Excel supplies
 only the type, mapped to the Dynawo convention (`double → DOUBLE`), and the value.
+
+**A boolean is written as Dynawo reads it.** Dynawo takes a `BOOL` as true only when it reads
+`true`, and anything else as false without a word, so a cell holding `TRUE`, `1` or `VRAI` would
+turn its parameter off. The templates give every boolean cell a `True`/`False` list, and the PAR
+writes `true` or `false` from any of the values `[Boolean-Values]` lists; any other value stops
+the conversion, naming its sheet and parameter. `ConverterLVControl`, the boolean of the zone
+sheets, is held to the same values.
 
 **Resolution is unambiguous (injective).** The variant selection determines one model, so no
 separate model field is needed and technology (PV/BESS/Wind) is derived from the resolved `lib`,
