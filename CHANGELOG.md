@@ -181,6 +181,8 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   and the installer checks for them before it starts (#768).
 - The figures of the GFM RoCoF tests give their initial frequency and RoCoF in Hz with the
   nominal frequency of the configuration, where they took 50 Hz (#770).
+- The continuous integration runs on pushes to master as well, builds the wheel and runs the tests
+  once, against the installed package, on current versions of its actions (#844).
 - The Epsilon of the GFM SCR jump figures is that of the producer's D and H, not that of one of
   their variations, and a hybrid run leaves it out as it does D and H (#771).
 - The GFM envelopes scale the base angular frequency `Wb` of the PCS, given for 50 Hz, to the
