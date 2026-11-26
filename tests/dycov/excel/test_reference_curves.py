@@ -284,6 +284,7 @@ def test_write_reference_curves_copies_the_files_it_finds(tmp_path):
     assert written["target"] == target
     assert written["tests"] == 2
     assert (written["copied"], written["missing"]) == (1, ["scr10.csv"])
+    assert written["missing_from"] == [(folder, ["scr10.csv"])]
     assert (target / "CurvesFiles.ini").is_file()
     assert (target / "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3.dict").is_file()
     assert (target / "bolted_scr3.csv").is_file()
@@ -297,6 +298,7 @@ def test_write_reference_curves_writes_nothing_when_no_test_is_described(tmp_pat
         "tests": 0,
         "copied": 0,
         "missing": [],
+        "missing_from": [],
         "unfilled": [],
         "without_row": [],
     }
@@ -467,3 +469,17 @@ def test_a_revision_section_of_the_user_copy_is_read_and_not_reported_as_unknown
     names._report_unknown(names._read(names.PACKAGE_NAMES_FILE), user_copy)
 
     assert "does not read" not in caplog.text
+
+
+def test_a_sheet_whose_folder_cell_is_empty_names_no_folder():
+    """#839: the header of the tests table also mentions the folder of the results, and is no
+    label of it."""
+    grid = _sheet(ZONE1_ROWS, [("6", "bolted_scr3.csv")], folder=None)
+    grid[-2] = grid[-2][:6] + [
+        "Fichier de résultats .csv dans le dossier de résultats",
+        "Métadonnées",
+    ]
+
+    zone1 = sig.parse_zone_signals({names.sheet("signals_zone1"): grid}, "Zone1", GEN)
+
+    assert zone1.folder is None

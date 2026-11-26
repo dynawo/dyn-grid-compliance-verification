@@ -65,7 +65,9 @@ def write_reference_curves(
     -------
     dict
         ``target`` directory (None when nothing was described), how many ``tests`` were written,
-        how many ``.csv`` were ``copied``, which ones are still ``missing``, the tests whose
+        how many ``.csv`` were ``copied``, which ones are still ``missing`` and, in
+        ``missing_from``, each folder a sheet names (None when it names none) with the files
+        missing from it, the tests whose
         metadata the workbook left ``unfilled`` — DyCoV refuses to run those — and the tests of
         the revision of the DTR the workbook has no row for, ``without_row``.
     """
@@ -76,6 +78,7 @@ def write_reference_curves(
             "tests": 0,
             "copied": 0,
             "missing": [],
+            "missing_from": [],
             "unfilled": [],
             "without_row": [],
         }
@@ -84,7 +87,7 @@ def write_reference_curves(
     target.mkdir(parents=True, exist_ok=True)
     (target / "CurvesFiles.ini").write_text(curves_files.text(described), encoding="utf-8")
 
-    tests, copied, missing, unfilled = 0, 0, [], []
+    tests, copied, missing, missing_from, unfilled = 0, 0, [], [], []
     for signals in described.values():
         for test in signals.tests:
             (target / ("%s.dict" % test.name)).write_text(
@@ -96,11 +99,14 @@ def write_reference_curves(
         zone_copied, zone_missing = _copy_curves(signals, target, base)
         copied += zone_copied
         missing += zone_missing
+        if zone_missing:
+            missing_from.append((_curves_folder(signals, base), zone_missing))
     return {
         "target": target,
         "tests": tests,
         "copied": copied,
         "missing": missing,
+        "missing_from": missing_from,
         "unfilled": unfilled,
         "without_row": [name for signals in described.values() for name in signals.without_row],
     }
