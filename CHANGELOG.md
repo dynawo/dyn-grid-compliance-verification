@@ -219,6 +219,8 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
 - The lines the log writes once a test is over, while the report of its PCS is prepared, the
   next PCS is loaded or the summary of the run is written, no longer carry the label of that
   test (#825).
+- The shared page of the Fiche I16.2 gives the value of the step of the high-impedance faults,
+  the dip their search aims at, which its column left empty (#833).
 - A `reference_step_size` the tool rejects no longer ends the run without summary or report: the
   log names the file and line that define it, and the figures of its test show their default
   time range. A PCS whose report cannot be prepared leaves the PDF without its pages, where it
