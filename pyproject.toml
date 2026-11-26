@@ -45,7 +45,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "Operating System :: OS Independent"
+    "Operating System :: POSIX :: Linux"
 ]
 
 # Required packages: here we declare only the direct dependencies.
@@ -74,9 +74,6 @@ dev = [
     "ruff==0.15.22",
     "sphinx",
 ]
-dynawo-pypowsybl = [
-    "pypowsybl>=1.7,<2.0"
-]
 
 
 [tool.setuptools]
@@ -95,8 +92,7 @@ exclude = [
     "report/templates/*",
     "templates/**/*",
     "model_lib/**/*",
-    "**/*.ini",
-    "curves/dynawo/tooling/Vsx64.cmd"
+    "**/*.ini"
 ]
 "dycov.templates.reports" = ["*.py", "*.json", "*.pdf"]
 
@@ -145,7 +141,7 @@ quote-style = "double"
 
 [project.urls]
 "Code repo" = "https://github.com/dynawo/dyn-grid-compliance-verification"
-"Bug tracker" = "https://github.com/dynawo/dyn-grid-compliance-verification"
+"Bug tracker" = "https://github.com/dynawo/dyn-grid-compliance-verification/issues"
 
 [tool.setuptools_scm]
 write_to = "src/dycov/_build_info.py"

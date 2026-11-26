@@ -33,7 +33,6 @@ Usage: $0 [OPTIONS]
   Options:
     -e | --editable   Install the tool as an editable package (for developers)
     -d | --devel      Install additional Python packages for developers (ruff, etc.)
-    -p | --pypowsybl  Install the PyPowsybl Dynawo execution backend
     -h | --help       Show this help message
 EOF
 }
@@ -51,20 +50,18 @@ if [[ $? -ne 4 ]]; then
 fi
 set -e
 
-OPTIONS=edph
-LONGOPTS=editable,devel,pypowsybl,help
+OPTIONS=edh
+LONGOPTS=editable,devel,help
 PARSED=$(getopt --options=$OPTIONS --longoptions=$LONGOPTS --name "$0" -- "$@")
 eval set -- "$PARSED"
 
 EDITABLE=n
 DEVELOPER=n
-PYPWSBL=n
 HELP=n
 while true; do
     case "$1" in
         -e|--editable) EDITABLE=y; shift ;;
         -d|--devel) DEVELOPER=y; shift ;;
-        -p|--pypowsybl) PYPWSBL=y; shift ;;
         -h|--help) HELP=y; shift ;;
         --) shift; break ;;
         *) echo "Programming error"; exit 3 ;;
@@ -98,10 +95,6 @@ extras=()
 
 if [ "$DEVELOPER" = "y" ]; then
     extras+=("dev" "test")
-fi
-
-if [ "$PYPWSBL" = "y" ]; then
-    extras+=("dynawo-pypowsybl")
 fi
 
 install_target="."
