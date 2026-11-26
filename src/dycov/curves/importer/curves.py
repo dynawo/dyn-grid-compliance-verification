@@ -16,6 +16,7 @@ import pandas as pd
 from dycov.configuration.cfg import config
 from dycov.curves import naming
 from dycov.curves.curves import ProducerCurves, get_cfg_oc_name
+from dycov.curves.importer.event_span import curves_reach_past_the_event
 from dycov.curves.importer.importer import CurvesImporter
 from dycov.curves.voltage_dip import measure_voltage_dip
 from dycov.files import manage_files
@@ -118,14 +119,22 @@ class ImportedCurves(ProducerCurves):
         if df_imported_curves.empty:
             return has_imported_curves, sim_t_event_start, fault_duration, df_imported_curves
 
+        sim_t_event_start = importer.metadata.get_float("sim_t_event_start")
+        fault_duration = importer.metadata.get_float("fault_duration")
+        if not curves_reach_past_the_event(
+            get_cfg_oc_name(pcs_name, bm_name, oc_name),
+            "reference" if is_reference else "producer",
+            sim_t_event_start,
+            fault_duration,
+            df_imported_curves,
+        ):
+            return False, 0.0, 0.0, pd.DataFrame()
+
         has_imported_curves = True
         naming.get_network_frequency_curve(df_imported_curves)
         if not is_reference:
             self._generators = self.__get_generators(df_imported_curves)
             self._gens = _get_generators_ini(self._generators, df_imported_curves)
-
-        sim_t_event_start = importer.metadata.get_float("sim_t_event_start")
-        fault_duration = importer.metadata.get_float("fault_duration")
 
         self._is_field_measurements = importer.metadata.get_boolean(
             "is_field_measurements", self._is_field_measurements
