@@ -537,8 +537,9 @@ the reference curves.
 
 The run reports what it could not complete rather than failing silently: the
 blocks of ``Général`` whose parameter sheet contributed nothing, the ``.csv``
-files named in the sheets that were not found in the results folder, the
-tests whose curve metadata is still blank, and the tests the revision of the
+files named in the sheets that were not found in the results folder, a
+signal sheet that names ``.csv`` files but whose tests table describes no test,
+the tests whose curve metadata is still blank, and the tests the revision of the
 DTR being validated runs that the workbook has no row for. The rows of the
 signal sheets are read as the tests of that revision: the template has a row
 for the tests of every revision, and a revision leaves out the rows it does not

@@ -90,7 +90,11 @@ arrives fully commented out, so uncommenting a name is what overrides it:
 | `[Zone1-Tests]`, `[Zone3-Tests]` | DTR case → `PCS.Benchmark.OperatingCondition` (§8); `[Zone3-Tests.<revision>]`, what a revision of the DTR changes. |
 
 Names are matched without accents and case-insensitively, and headers by substring, so
-`Paramètres (Dynawo)` still reads as `Paramètres`.
+`Paramètres (Dynawo)` still reads as `Paramètres`. The signal sheets are the exception: a cell
+heads one of their tables when its text starts with the header as a whole word, and the tests
+table is the case header (`Cas`, else `Fiche`) with the header of the results file on its row or
+the row above, the two rows its header spans, where its metadata headers are looked for too. A
+folder or a file the user writes elsewhere in the sheet may hold those words.
 
 **Layout.** Nothing is addressed by a fixed column. In a control sheet, the header row is the first
 one naming parameters, values and types — requiring all three keeps the zone sheets' `Paramètres |
@@ -370,7 +374,8 @@ both sheets, and only zone 3 runs it: its zone-1 row carries the note that marks
 applicable there, and no results file.
 
 The signal sheets are optional as a whole: an untouched one describes no test, and the model inputs
-are generated all the same.
+are generated all the same. A sheet that names `.csv` files but whose tests table describes no test
+says so, since its curves would otherwise be left out without a word.
 
 ---
 
