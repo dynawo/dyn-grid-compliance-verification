@@ -156,6 +156,11 @@ pu of Pn, the maximum active power of Zone 1 (`Pmax`). The examples `BESS/GridFo
 of 40 MW at 225 kV in Zone 3, because neither GFM model rides through every test of Zone 3 (the
 droop one loses synchronism in the dips); `BESS/WECC`, of 15 MW, is a type B one.
 
+**Voltage setpoint steps of Zone 1** are tracked at the node the unit controls, the curve their
+figure draws the setpoint over: the voltage at InternalNode2 for a unit that controls it
+(`compared_curves.tracked_on`, from `ModelValidator`), the one at InternalNode1 otherwise, in
+I16.1 and I16.2 alike; their errors stay relative to the step of the setpoint.
+
 **Declared tests (F16)**: the DTR Fiche F16 fixes no test and applies to Zone 3 only, so
 `PCS_RTE-F16z3` ships with an empty `[PCS-Benchmarks]` and, next to it, the `F16Description.ini`
 template of the declaration, which `core/initialization.py` copies under that same name into the

@@ -201,6 +201,9 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   verification, such as the one of a model validation given to `performance`, is told this way;
   a Zone 1 unit without its DYD is not a unit of the model, and the count of units tells it
   (#637).
+- The voltage setpoint step of a Zone 1 unit that controls the voltage at InternalNode2 is checked
+  on the voltage there, which its figure draws the setpoint over, where its tracking errors and
+  step-response indicators were measured on the voltage at InternalNode1 (#834).
 - The dip a permanent bolted fault or a voltage table makes is measured to its real depth: the
   first measured none, and the second was measured from inside the smoothed step of the table, at
   about half its depth. The report draws the target of reactive current from it in the tests that
