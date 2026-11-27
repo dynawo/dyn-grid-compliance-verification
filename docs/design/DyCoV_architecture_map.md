@@ -7,13 +7,13 @@ Kept dense-but-short so it can be `@`-imported from `CLAUDE.md` without bloating
 
 ```
 DynawoCurves.obtain_simulated_curve()          orchestrator/curves.py
-  └─ ModelSetup.complete_model()               orchestrator/model_setup.py:545   (writes .jobs/.par/.dyd/.crv/solvers.par)
+  └─ ModelSetup.complete_model()               orchestrator/model_setup.py       (writes .jobs/.par/.dyd/.crv/solvers.par)
   └─ [bisection, optional]                      orchestrator/bisection.py         (HIZ / bolted / CCT)
   └─ DynawoCurves.__execute_simulation()        orchestrator/curves.py
        └─ SolverRetryStrategy.run()             runtime/retry_strategy.py         (up to 4 retries; reads the curves of each attempt)
             └─ DynawoSimulator.run_base()       runtime/dynawo_simulator.py       ← THE backend seam
-            │    └─ run_dynawo_process()        runtime/_process.py:60           subprocess: [launcher, "jobs", "TSOModel.jobs"]
-            └─ read_simulated_curves()          runtime/_curves.py:723            post-process outputs/curves/curves.csv
+            │    └─ run_dynawo_process()        runtime/_process.py              subprocess: [launcher, "jobs", "TSOModel.jobs"]
+            └─ read_simulated_curves()          runtime/_curves.py                post-process outputs/curves/curves.csv
 ```
 
 The seam only runs Dynawo and reports what it did:
@@ -107,12 +107,16 @@ I16.2 for types C and D, a version `Type<categories>.ini` in the directory of th
 (`revisions/20260723/PCS/model/BESS/PCS_RTE-I16z{1,3}/TypeCD.ini`, its templates in the mirrored
 `reports/`); the base revision has none, I18 not existing. `Pcs` picks it by the category of the
 installation (`ModelProducer.get_installation_category`: `get_generator_category` on the Zone 3 INI,
-whatever zone runs; `_version_for_category`), and `load_pcs_config` reads it into the delta layer
-after the delta, which it patches key by key. A version may withdraw a fiche instead: the
-revision asks the Fiche I5 of storage of type B alone (#743), so the `TypeCD.ini` of the
+whatever zone runs; `pcs_layers.version_for_category`), and `load_pcs_config` reads it into the
+delta layer after the delta, which it patches key by key. A version may withdraw a fiche instead:
+the revision asks the Fiche I5 of storage of type B alone (#743), so the `TypeCD.ini` of the
 performance `PCS_RTE-I5` of BESS lists its benchmarks as `none`, a performance verification reads
 the category of each producer from the INI of its name
 (`ModelProducer.get_installation_category`), and `Pcs.why_no_test` gives the log the reason.
+The layers of a PCS are found by `model/pcs_layers.py`, which `Pcs` prepares them with and which
+lists the tests a PCS runs for a category without preparing it (`tests_it_runs`, which puts back
+the layers loaded before): the `CurvesFiles.ini` generated for empty reference curves asks for
+those, the Fiche I16.2 for a storage of type C or D.
 Zone 1 of TypeCD runs the setpoint steps on SCR 2 and
 the tests of the Fiche I18 under their scenario names (`S_VolAngStep*`, `S_VolAmpStep*`,
 `S_SCRup1/down1`, `S_Rocof*`, `S_Fault4-6`), whose shared settings are the `I18*` aliases of the
@@ -156,13 +160,18 @@ pu of Pn, the maximum active power of Zone 1 (`Pmax`). The examples `BESS/GridFo
 of 40 MW at 225 kV in Zone 3, because neither GFM model rides through every test of Zone 3 (the
 droop one loses synchronism in the dips); `BESS/WECC`, of 15 MW, is a type B one.
 
+**Voltage setpoint steps of Zone 1** are tracked at the node the unit controls, the curve their
+figure draws the setpoint over: the voltage at InternalNode2 for a unit that controls it
+(`compared_curves.tracked_on`, from `ModelValidator`), the one at InternalNode1 otherwise, in
+I16.1 and I16.2 alike; their errors stay relative to the step of the setpoint.
+
 **Declared tests (F16)**: the DTR Fiche F16 fixes no test and applies to Zone 3 only, so
 `PCS_RTE-F16z3` ships with an empty `[PCS-Benchmarks]` and, next to it, the `F16Description.ini`
 template of the declaration, which `core/initialization.py` copies under that same name into the
 user's templates (`_copy_pcs_to_declare`, never over a copy already there); a PCS that declares no benchmark is skipped by `_validate_pcs`. The producer declares
 the recorded tests in `<ReferenceCurves>/F16Description.ini`, which `Pcs` takes as the user PCS
-description of the PCS the file names in its `[PCS-Benchmarks]` (`_description_declaring`, in place
-of the one in the configuration directory), so `cfg.py` keeps its six layers. Every
+description of the PCS the file names in its `[PCS-Benchmarks]` (`pcs_layers.description_declaring`,
+in place of the one in the configuration directory), so `cfg.py` keeps its six layers. Every
 declared test is rendered with the shared `report.F16z3.DeclaredTest.tex`: `_pcs_replace` writes
 one `report.<pcs>.<bm>.<oc>.tex` per operating condition and hands the template its maps without the
 `PCS…` suffix (`rm`, `thm`, `tem`…) plus `benchmark`/`operatingcondition`. The F16 error
@@ -206,9 +215,16 @@ names.
   Each step of the HiZ and bolted searches is the `simulate_fn` `DynawoCurves` hands them,
   `__simulate_fault_search_step`: in its copy it switches the JOBS to `[Dynawo]
   fault_search_solver_lib` (SIM) and stops it `fault_search_time_after_clearing` after the fault
-  ends (after it starts, for a permanent one), then runs the retry strategy as any simulation.
-  Only the copy's JOBS changes, so the test's own simulation runs to its full length, and
-  `reset_solver_fn` puts back the configured solver parameters after each step.
+  ends (after it starts, for a permanent one), then runs the retry strategy as any simulation. A
+  step that solver cannot simulate is simulated again on the solver of the test, `solver_lib`,
+  with a retry strategy of its own. Only the copy's JOBS changes, so the test's own simulation
+  runs to its full length, and `reset_solver_fn` puts back the configured solver parameters after
+  each step. HiZ: once a step has given a dip, a step that fails moves neither bound, since it
+  says nothing of the dip; the next one is tried beside it, on either side in turn (`_hiz_step`),
+  and five failures in a row end the search. Those retries run without the switch of solver that
+  ends the usual ones, which the repeat on `solver_lib` makes needless. A HiZ search that ends without its dip on SIM is run again on `solver_lib`
+  (`DynawoCurves.__find_hiz_fault`): SIM may give the dip of a model in jumps the target falls
+  between, as WECC4B's permanent fault does.
   `parameter_checks.check_fault_search` rejects both keys at start-up, as `check_solver` does
   `solver_lib`.
   Bolted: searches by bisection for a "sufficient" fault impedance X — one that both converges and

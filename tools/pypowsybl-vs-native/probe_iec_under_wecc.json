@@ -1,7 +1,0 @@
-{
-  "WECC": {
-    "libs": [
-      {"lib": "IECWT4BCurrentSource2020", "internalModelPrefix": "IECWT4B", "properties": ["SYNCHRONIZED"]}
-    ]
-  }
-}

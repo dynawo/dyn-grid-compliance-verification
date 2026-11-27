@@ -11,8 +11,7 @@
 
 Standard library only: ``.xlsx`` files are plain ZIP archives of XML. This module holds the
 workbook reader, the variant-table parser and the ``Général`` configuration parser — everything
-that is template-format machinery rather than model semantics. It lives in ``dycov.excel``;
-the legacy ``tools/dynawo_par`` imports it from here until that tool is retired.
+that is template-format machinery rather than model semantics.
 """
 
 from __future__ import annotations
@@ -131,9 +130,6 @@ class Config:
     # Zones each block declares, e.g. {"REEC": ["Zone1", "Zone3"]}; empty when
     # the sheet has no ``Zone`` column.
     zones: dict[str, list[str]] = field(default_factory=dict)
-    sn_zone1: str | None = None
-    sn_zone3: str | None = None
-    n_converters: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -572,12 +568,11 @@ def _parse_parameters(
 
 
 def parse_config(workbook: dict[str, Grid]) -> Config:
-    """Parse the ``Général`` sheet for block selections and global parameters."""
+    """Parse the ``Général`` sheet for its block selections."""
     for sheet_name, grid in workbook.items():
         if _strip_accents(sheet_name).startswith(_CONFIG_SHEET):
             config = Config()
             config.selections, config.zones = _parse_block_selection(grid)
-            _parse_globals(grid, config)
             return config
     raise ValueError("Configuration sheet 'Général' not found in the workbook.")
 
@@ -645,37 +640,6 @@ def _parse_block_selection(
                     zones[block] = [z.strip() for z in declared.split(";") if z.strip()]
             return selections, zones
     raise ValueError("Block-selection table ('Type de bloc' | 'Choix') not found in 'Général'.")
-
-
-def _parse_globals(grid: Grid, config: Config) -> None:
-    """Read SnZone1, SnZone3 and the converter count from the globals table."""
-    for row_idx, row in enumerate(grid):
-        normalized = [_strip_accents(c) for c in row if isinstance(c, str)]
-        if "grandeur" in normalized and "valeur" in normalized:
-            name_col = next(
-                c
-                for c, v in enumerate(row)
-                if isinstance(v, str) and _strip_accents(v) == "grandeur"
-            )
-            value_col = next(
-                c
-                for c, v in enumerate(row)
-                if isinstance(v, str) and _strip_accents(v) == "valeur"
-            )
-            for r in range(row_idx + 1, len(grid)):
-                name = _cell(grid, r, name_col)
-                if not name:
-                    break
-                value = _cell(grid, r, value_col)
-                key = _strip_accents(name)
-                if key == "snzone1":
-                    config.sn_zone1 = value
-                elif key == "snzone3":
-                    config.sn_zone3 = value
-                elif "convertisseur" in key or "converter" in key:
-                    config.n_converters = value
-            return
-    # The globals table is optional; absence simply leaves the fields as None.
 
 
 # ---------------------------------------------------------------------------

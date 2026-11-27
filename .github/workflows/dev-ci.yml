@@ -3,10 +3,12 @@ name: Dev CI
 
 on:
   pull_request:
+  push:
+    branches: [master]
 
 concurrency:
   group: dev-ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -23,60 +25,44 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      # Install uv and enable its cache
       - name: Install uv
-        uses: astral-sh/setup-uv@v2
+        uses: astral-sh/setup-uv@v10.4.0
 
-      # Install Python with uv
       - name: Set up Python ${{ matrix.python-version }}
         run: uv python install ${{ matrix.python-version }}
 
-      # Create venv (uv will use it with `uv run`)
       - name: Create venv
         run: uv venv --python ${{ matrix.python-version }}
 
-      - name: Show the interpreter under test
-        run: uv run python -VV
-
-      # Ensure pip exists in venv (cross-platform)
-      - name: Ensure pip exists in venv
-        run: |
-          uv run python -m ensurepip --upgrade || true
-          uv run python -m pip install --upgrade pip setuptools wheel
-
-      # Install dev & test deps from your pyproject extras
-      - name: Install dev & test dependencies
-        run: uv pip install -e ".[dev,test]"
-
-      # Ensure packaging toolchain (fix for `python -m build`)
-      - name: Install build toolchain
-        run: uv pip install --upgrade build setuptools wheel
-
-      # Lint with Ruff (consistent with your pyproject.toml)
-      - name: Lint with Ruff
-        run: |
-          uv run ruff --version
-          uv run ruff check src tests --output-format=github
-
-      # Check formatting with Ruff (consistent with your pyproject.toml)
-      - name: Check format with Ruff
-        run: uv run ruff format --check src tests
-
-      # Build the wheel
+      # The tests run against the package as it is installed, so a file the wheel leaves out
+      # fails them: build it, then install it with the extras the tests and the lint need, at
+      # the versions uv.lock pins.
       - name: Build package (wheel)
-        run: uv run python -m build --wheel
+        run: uv build --wheel
 
-      # Install the wheel (bash expands the glob)
       - name: Install wheel
         shell: bash
-        run: uv pip install dist/*.whl
+        run: |
+          uv export --locked --no-hashes --no-emit-project --all-extras --format requirements-txt \
+            --quiet --output-file "$RUNNER_TEMP/constraints.txt"
+          uv pip install --constraint "$RUNNER_TEMP/constraints.txt" "$(ls dist/*.whl)[dev,test]"
 
-      # Run tests
+      - name: Show the interpreter and the package under test
+        run: |
+          uv run --no-sync python -VV
+          uv run --no-sync python -c "import dycov; print(dycov.__file__)"
+
+      - name: Lint with Ruff
+        run: |
+          uv run --no-sync ruff --version
+          uv run --no-sync ruff check src tests --output-format=github
+
+      - name: Check format with Ruff
+        run: uv run --no-sync ruff format --check src tests
+
+      # pytest.ini puts src on the path for local runs; here the tests import the installed
+      # package instead, and measure its coverage in the same run.
       - name: Test
-        run: uv run pytest -q --color=yes
-
-           # Coverage (XML)
-      - name: Coverage (XML)
-        run: uv run pytest --cov=src --cov-report=xml
+        run: uv run --no-sync pytest -q --color=yes -o pythonpath=. --cov=dycov --cov-report=xml

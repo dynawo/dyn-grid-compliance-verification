@@ -715,40 +715,136 @@ class TestFindHizFault:
             "The fault search stops: Dynawo rejected the inputs of the model"
         )
 
+    def _steps(self, engine, mock_cvd, simulate_outcomes, classifications):
+        """The impedance of each step of find_hiz_fault, and how the search ended."""
+        mock_cvd.side_effect = classifications
+        simulate_fn = MagicMock(side_effect=simulate_outcomes)
+        ended = None
+        with _fake_isolated_copy(engine):
+            with patch.object(engine, "_modify_fault") as modify:
+                try:
+                    engine.find_hiz_fault(
+                        Path("/work"),
+                        Path("/jobs"),
+                        1.0,
+                        0.15,
+                        0.2,
+                        "BM",
+                        "OC",
+                        simulate_fn,
+                        MagicMock(),
+                    )
+                except ValueError as error:
+                    ended = str(error)
+        steps = [c.args[3] for c in modify.call_args_list if c.args[0] == Path("/tmp/work")]
+        return steps, ended
+
     @patch("dycov.curves.dynawo.orchestrator.bisection.classify_voltage_dip")
     @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")
     @patch("dycov.curves.dynawo.orchestrator.bisection.config")
-    def test_failure_after_dip_too_large_narrows_from_above(self, mock_config, mock_mf, mock_cvd):
-        """A failed simulation reuses the last classification: after DIP_TOO_LARGE,
-        the failure moves max_val down instead of the no-classification default."""
+    def test_a_failed_step_after_a_small_dip_moves_no_bound(self, mock_config, mock_mf, mock_cvd):
+        """#830: the dip of the last step that succeeded says nothing of a failed one, so the
+        search tries beside the failure instead of giving up the impedances below it."""
         engine = self._engine_with_config(mock_config)
 
-        simulate_fn = self._run_until_correct(
-            engine,
-            mock_cvd,
-            [_succeed_outcome(), _fail_outcome(), _succeed_outcome()],
-            [VoltDipResult.DIP_TOO_LARGE, VoltDipResult.DIP_CORRECT],
-        )
-
-        assert simulate_fn.call_count == 3
-        # #707: a step runs in a copy removed once it ends, so its failure names no log
-        assert all(call.args[0] is None for call in simulate_fn.call_args_list)
-
-    @patch("dycov.curves.dynawo.orchestrator.bisection.classify_voltage_dip")
-    @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")
-    @patch("dycov.curves.dynawo.orchestrator.bisection.config")
-    def test_failure_after_dip_too_small_narrows_from_below(self, mock_config, mock_mf, mock_cvd):
-        """After a DIP_TOO_SMALL classification, a failed simulation moves min_val up."""
-        engine = self._engine_with_config(mock_config)
-
-        simulate_fn = self._run_until_correct(
+        steps, ended = self._steps(
             engine,
             mock_cvd,
             [_succeed_outcome(), _fail_outcome(), _succeed_outcome()],
             [VoltDipResult.DIP_TOO_SMALL, VoltDipResult.DIP_CORRECT],
         )
 
-        assert simulate_fn.call_count == 3
+        assert ended is None
+        assert steps == pytest.approx([5.0, 2.5, 2.25])
+
+    @patch("dycov.curves.dynawo.orchestrator.bisection.classify_voltage_dip")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.config")
+    def test_a_failed_step_after_a_large_dip_moves_no_bound(self, mock_config, mock_mf, mock_cvd):
+        engine = self._engine_with_config(mock_config)
+
+        steps, ended = self._steps(
+            engine,
+            mock_cvd,
+            [_succeed_outcome(), _fail_outcome(), _succeed_outcome()],
+            [VoltDipResult.DIP_TOO_LARGE, VoltDipResult.DIP_CORRECT],
+        )
+
+        assert ended is None
+        assert steps == pytest.approx([5.0, 7.5, 7.25])
+
+    @patch("dycov.curves.dynawo.orchestrator.bisection.classify_voltage_dip")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.config")
+    def test_failed_steps_are_tried_beside_on_either_side_further_each_time(
+        self, mock_config, mock_mf, mock_cvd
+    ):
+        engine = self._engine_with_config(mock_config)
+
+        steps, ended = self._steps(
+            engine,
+            mock_cvd,
+            [_succeed_outcome()] + [_fail_outcome()] * 5,
+            [VoltDipResult.DIP_TOO_LARGE],
+        )
+
+        assert steps == pytest.approx([5.0, 7.5, 7.25, 7.75, 7.0, 8.0])
+        assert ended == "Fault dip unachievable"
+
+    @patch("dycov.curves.dynawo.orchestrator.bisection.classify_voltage_dip")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.config")
+    def test_a_failure_before_any_dip_lowers_the_upper_bound(self, mock_config, mock_mf, mock_cvd):
+        engine = self._engine_with_config(mock_config)
+
+        steps, ended = self._steps(
+            engine,
+            mock_cvd,
+            [_fail_outcome(), _succeed_outcome()],
+            [VoltDipResult.DIP_CORRECT],
+        )
+
+        assert ended is None
+        assert steps == pytest.approx([5.0, 2.5])
+
+    @patch("dycov.curves.dynawo.orchestrator.bisection.classify_voltage_dip")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.config")
+    def test_a_search_that_keeps_failing_beside_a_step_ends_without_its_dip(
+        self, mock_config, mock_mf, mock_cvd
+    ):
+        engine = self._engine_with_config(mock_config)
+
+        steps, ended = self._steps(
+            engine,
+            mock_cvd,
+            [_succeed_outcome()] + [_fail_outcome()] * 5,
+            [VoltDipResult.DIP_TOO_SMALL],
+        )
+
+        assert len(steps) == 6
+        assert ended == "Fault dip unachievable"
+
+    @patch("dycov.curves.dynawo.orchestrator.bisection.classify_voltage_dip")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")
+    @patch("dycov.curves.dynawo.orchestrator.bisection.config")
+    def test_a_step_that_succeeds_beside_a_failure_resets_the_count(
+        self, mock_config, mock_mf, mock_cvd
+    ):
+        engine = self._engine_with_config(mock_config)
+
+        steps, ended = self._steps(
+            engine,
+            mock_cvd,
+            [_fail_outcome()] * 4
+            + [_succeed_outcome()]
+            + [_fail_outcome()] * 4
+            + [_succeed_outcome()],
+            [VoltDipResult.DIP_TOO_SMALL, VoltDipResult.DIP_CORRECT],
+        )
+
+        assert ended is None
+        assert len(steps) == 10
 
     @patch("dycov.curves.dynawo.orchestrator.bisection.classify_voltage_dip")
     @patch("dycov.curves.dynawo.orchestrator.bisection.manage_files")
