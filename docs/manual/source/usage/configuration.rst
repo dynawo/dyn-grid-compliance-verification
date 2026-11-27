@@ -11,7 +11,10 @@ tool runs.
 
 ``--user-config <file>`` reads another configuration file on top of
 ``config.ini`` for one execution: its options take precedence, and those it
-does not set keep the value ``config.ini`` gives them. A file that does not
+does not set keep the value ``config.ini`` gives them. Like ``--debug`` and
+``--diagnostic``, it goes before the command or after it: ``dycov --user-config
+my.ini validate ...`` and ``dycov validate ... --user-config my.ini`` are the
+same. The short ``-d`` of ``--debug`` goes before the command only. A file that does not
 exist or cannot be read stops the run with an error, and a value definition of
 that file DyCoV cannot use is reported with its line in it.
 

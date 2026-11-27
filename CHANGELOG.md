@@ -200,6 +200,8 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   it wrote their index into them, rewrote their dictionaries and deleted their simulation records,
   and gave the output no index. The index it writes names only the files it anonymized and none
   of the columns of the producer's files (#864).
+- `--user-config`, `--debug` and `--diagnostic` go before the command or after it, where after it
+  they stopped the run with "unrecognized arguments" (#854).
 - The SCR jump no longer marks its envelopes as inconsistent when the variations of D and H fall
   on both sides of critical damping: each takes the response of its own regime, as in the RoCoF
   (#761).
