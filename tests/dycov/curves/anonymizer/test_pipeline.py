@@ -9,6 +9,8 @@
 #
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 import pytest
 from tests.dycov.curves.anonymizer.conftest import (
@@ -16,7 +18,8 @@ from tests.dycov.curves.anonymizer.conftest import (
     create_nonflat_csv_and_log,
 )
 
-from dycov.curves.anonymizer import anonymize
+from dycov.curves.anonymizer import anonymize, pipeline
+from dycov.curves.anonymizer.pipeline import _anonymized_index
 
 
 def test_anonymize_creates_output_files(tmp_dirs):
@@ -149,3 +152,128 @@ def test_a_curve_the_set_does_not_carry_stays_declared_and_empty(tmp_dirs):
     for line in written.splitlines():
         if line.startswith("_GEN_") or line.count("=") > 1:
             raise AssertionError(f"dictionary line damaged: {line}")
+
+
+def _snapshot(folder: Path) -> dict:
+    return {
+        path.relative_to(folder): path.read_bytes() for path in folder.rglob("*") if path.is_file()
+    }
+
+
+def _producer_tree(curves: Path) -> None:
+    for producer in ("ProducerA", "ProducerB"):
+        (curves / producer).mkdir()
+        create_nonflat_csv_and_log(curves / producer, f"{producer}_curve")
+
+
+def test_a_tree_of_one_folder_per_producer_comes_out_as_the_same_tree(tmp_dirs):
+    """#864: only the output directory was created, and writing the first producer failed."""
+    curves, out = tmp_dirs
+    _producer_tree(curves)
+
+    anonymize(out, noisestd=0.0, frequency=10.0, curves_folder=curves)
+
+    for producer in ("ProducerA", "ProducerB"):
+        assert (out / producer / f"{producer}_curve.csv").is_file()
+        assert (out / producer / f"{producer}_curve.dict").is_file()
+        assert (
+            f"{producer}_curve = {producer}_curve.csv"
+            in (out / producer / "CurvesFiles.ini").read_text()
+        )
+    assert sorted(path.name for path in out.iterdir()) == ["ProducerA", "ProducerB"]
+
+
+@pytest.mark.parametrize("tree", [False, True])
+def test_the_source_of_the_curves_is_left_as_it_was(tmp_dirs, tree):
+    curves, out = tmp_dirs
+    if tree:
+        _producer_tree(curves)
+    else:
+        create_nonflat_csv_and_log(curves, "curve1")
+        (curves / "curve1.dict").write_text(
+            "[Curves-Metadata]\nsim_t_event_start = 1.0\nfault_duration = 2.0\n"
+            "[Curves-Dictionary]\ntime = time\nsignal1 = signal1  # mine\n"
+        )
+    before = _snapshot(curves)
+
+    anonymize(out, noisestd=0.01, frequency=10.0, curves_folder=curves)
+
+    assert _snapshot(curves) == before
+
+
+def test_the_index_of_a_flat_set_is_written_next_to_its_curves(tmp_dirs):
+    curves, out = tmp_dirs
+    create_nonflat_csv_and_log(curves, "curve1")
+
+    anonymize(out, noisestd=0.0, frequency=10.0, curves_folder=curves)
+
+    assert "curve1 = curve1.csv" in (out / "CurvesFiles.ini").read_text()
+    assert not (curves / "CurvesFiles.ini").exists()
+
+
+def test_the_index_names_the_csv_each_curve_file_became(tmp_path):
+    """An entry whose file was not anonymized, as one in a subfolder or elsewhere on the disk,
+    would lead the validation to the producer's own file, and the dictionaries of the index
+    would carry the names of the producer's columns."""
+    index = tmp_path / "CurvesFiles.ini"
+    index.write_text(
+        "[Curves-Files]\n"
+        "# a comment = kept\n"
+        "PCS.Bm.Exp = PCS.Bm.Exp.EXP\n"
+        "PCS.Bm.Csv = Rise_noFRT.csv\n"
+        "PCS.Bm.Sub = sub/PCS.Bm.Sub.csv\n"
+        "PCS.Bm.Abs = /elsewhere/PCS.Bm.Abs.csv\n"
+        "\n"
+        "[Curves-Dictionary]\n"
+        "# a comment\n"
+        "InternalNode1_BUS_Voltage = Vpcc_of_the_producer\n"
+    )
+    out = tmp_path / "out"
+    out.mkdir()
+    for name in ("PCS.Bm.Exp.csv", "Rise_noFRT.csv"):
+        (out / name).write_text("time;x\n")
+
+    assert _anonymized_index(index, out) == (
+        "[Curves-Files]\n"
+        "# a comment = kept\n"
+        "PCS.Bm.Exp = PCS.Bm.Exp.csv\n"
+        "PCS.Bm.Csv = Rise_noFRT.csv\n"
+        "\n"
+        "[Curves-Dictionary]\n"
+        "# a comment\n"
+    )
+
+
+def test_the_curves_are_prepared_outside_the_output(tmp_dirs, monkeypatch):
+    """A run ended by a signal Python does not unwind leaves the copy it prepares the curves in:
+    there, it would put the producer's own curves among the anonymized ones."""
+    curves, out = tmp_dirs
+    create_nonflat_csv_and_log(curves, "curve1")
+    staged_in = []
+    real_process_curves = pipeline._process_curves
+
+    def spy(curves_folder, output_folder, *args):
+        staged_in.append(curves_folder)
+        real_process_curves(curves_folder, output_folder, *args)
+
+    monkeypatch.setattr(pipeline, "_process_curves", spy)
+
+    anonymize(out, noisestd=0.0, frequency=10.0, curves_folder=curves)
+
+    assert out not in staged_in[0].parents
+    assert sorted(path.name for path in out.parent.iterdir()) == ["curves", "out"]
+
+
+def test_a_run_removes_the_copy_an_interrupted_run_into_the_same_output_left(tmp_dirs):
+    curves, out = tmp_dirs
+    create_nonflat_csv_and_log(curves, "curve1")
+    left = out.parent / ".out.staging.abc123"
+    left.mkdir()
+    (left / "curve1.csv").write_text("time;signal1\n")
+    other = out.parent / ".other.staging.abc123"
+    other.mkdir()
+
+    anonymize(out, noisestd=0.0, frequency=10.0, curves_folder=curves)
+
+    assert not left.exists()
+    assert other.exists()

@@ -8,7 +8,9 @@
 #     demiguelm@aia.es
 #
 import inspect
+import os
 import shutil
+import tempfile
 from pathlib import Path
 
 import pandas as pd
@@ -273,6 +275,27 @@ def plotly_all_curves(
     return figures
 
 
+def _leave_script(source: Path, html_output_dir: Path) -> None:
+    """Leave in the HTML folder a script every page loads, unless it is there already.
+
+    The reports of several PCS prepared in parallel may copy it at the same moment, so each one
+    writes a copy of its own and moves it into place, which a page never finds half written.
+    """
+    target = html_output_dir / source.name
+    if target.exists():
+        return
+    with tempfile.NamedTemporaryFile(
+        dir=html_output_dir, prefix=f".{source.name}.", delete=False
+    ) as copy:
+        copy_path = Path(copy.name)
+    try:
+        shutil.copy(source, copy_path)
+        os.replace(copy_path, target)
+    except BaseException:
+        copy_path.unlink(missing_ok=True)
+        raise
+
+
 def create_html(
     producer: str, figures_to_plot: list, operating_condition: str, output_path: Path
 ) -> None:
@@ -290,23 +313,15 @@ def create_html(
         Path to the output directory
     """
     html_output_dir = output_path / "HTML"
-    if not html_output_dir.exists():
-        html_output_dir.mkdir()
+    html_output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Leave a copy of plotly.min.js (common JavaScript library used by all HTML output files):
-    plotly_js_lib = html_output_dir / "plotly.min.js"
-    if not plotly_js_lib.exists():
-        shutil.copy(
-            Path(inspect.getfile(go)).resolve().parent.parent / "package_data/plotly.min.js",
-            html_output_dir,
-        )
-
-    sync_charts_js = html_output_dir / "sync_charts.js"
-    if not sync_charts_js.exists():
-        shutil.copy(
-            Path(__file__).resolve().parent / "templates" / "sync_charts.js",
-            html_output_dir,
-        )
+    _leave_script(
+        Path(inspect.getfile(go)).resolve().parent.parent / "package_data/plotly.min.js",
+        html_output_dir,
+    )
+    _leave_script(
+        Path(__file__).resolve().parent / "templates" / "sync_charts.js", html_output_dir
+    )
 
     # Instantiate the HTML file using Jinja
     chart_ids = [fig[0] for fig in figures_to_plot]

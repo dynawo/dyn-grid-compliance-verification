@@ -33,7 +33,7 @@ _CFG_OC_NAME = f"{_PCS}.{_BM}.{_OC}"
 
 _METADATA = (
     "[Curves-Metadata]\n"
-    "sim_t_event_start = 20.0\n"
+    "sim_t_event_start = 10.0\n"
     "fault_duration = 1.5\n"
     "is_field_measurements = False\n"
 )
@@ -129,7 +129,7 @@ def _write_curves(curves_dir: Path, metadata: str) -> None:
         f"{metadata}\n[Curves-Dictionary]\ntime = time\nBusPDR_BUS_Voltage = BusPDR_BUS_Voltage\n"
     )
     (producer_dir / f"{_CFG_OC_NAME}.csv").write_text(
-        "time;BusPDR_BUS_Voltage\n0.0;1.0\n10.0;1.0\n20.0;1.0\n"
+        "time;BusPDR_BUS_Voltage\n" + "".join(f"{second}.0;1.0\n" for second in range(21))
     )
 
 

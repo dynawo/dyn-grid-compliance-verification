@@ -26,6 +26,26 @@ MULTIPLIER_PATTERN = re.compile(
     r"^(?:(?P<mul>[+-]?(?:\d+(?:\.\d+)?|\.\d+))\s*\*\s*)?(?P<name>[A-Za-z_]\w*)$"
 )
 
+# Multiplier * a sum of names, in parentheses, as the DTR Fiche I18 writes its events:
+# "0.3*(Xeff+Xgrid)".
+SUM_PATTERN = re.compile(
+    r"^(?:(?P<mul>[+-]?(?:\d+(?:\.\d+)?|\.\d+))\s*\*\s*)?"
+    r"\(\s*(?P<names>[A-Za-z_]\w*(?:\s*\+\s*[A-Za-z_]\w*)+)\s*\)$"
+)
+
+_EXPECTED_FORMS = (
+    "a number, a base magnitude name, 'multiplier*Name' (e.g. '0.5*Snom') or "
+    "'multiplier*(Name+Name)' (e.g. '0.3*(Xeff+Xgrid)')"
+)
+
+_GIVEN_MAGNITUDES = {
+    "Xeff": (
+        "the effective reactance of a Grid Forming unit, which the INI file of Zone1/ of the "
+        "producer declares in its [GFM Parameters] section"
+    ),
+    "Xgrid": "the reactance of the grid of the test, which a test without a grid line lacks",
+}
+
 
 def extract_defined_value(
     value_definition: str, parameter: str, base_value: float, sign: int = 1
@@ -100,7 +120,9 @@ def extract_defined_value(
     raise ValueError(f"Invalid format for {parameter}: '{value_definition}'")
 
 
-def unit_characteristics(producer, u_dim: float, line_Xpu: float = 0.0) -> dict[str, float]:
+def unit_characteristics(
+    producer, u_dim: float, line_Xpu: float = 0.0, x_grid: Optional[float] = None
+) -> dict[str, float]:
     """Registry of base magnitudes that a value definition may reference.
 
     Every entry is already expressed in the per-unit Dynawo uses for the network —
@@ -109,22 +131,31 @@ def unit_characteristics(producer, u_dim: float, line_Xpu: float = 0.0) -> dict[
     elsewhere. Recognizing a new base is a matter of adding an entry here; no caller
     needs to change.
 
+    The exceptions are the two reactances the DTR Fiche I18 sizes its events with, ``Xeff``,
+    the effective reactance of a Grid Forming unit, and ``Xgrid``, that of the grid it is
+    tested against: they are in the base of the nominal apparent power of the unit, the one
+    the fiche adds them in. Each one is only there when it is known: ``Xeff`` when the
+    producer declares it, ``Xgrid`` once the grid of the test is.
+
     Parameters
     ----------
     producer :
         Producer model exposing ``p_max_pu``, ``p_min_pu``, ``q_max_pu``, ``q_min_pu``,
-        ``s_nom_pu`` and ``u_nom``.
+        ``s_nom_pu``, ``u_nom`` and ``x_eff``.
     u_dim : float
         Dimensioning voltage (kV) of the generator.
     line_Xpu : float
         Connection line reactance in pu.
+    x_grid : Optional[float]
+        Short-circuit reactance of the grid of the test, in pu of the nominal apparent power
+        of the unit.
 
     Returns
     -------
     dict[str, float]
         Base magnitude name to its per-unit value.
     """
-    return {
+    characteristics = {
         "Pmax": producer.p_max_pu,
         "PmaxInjection": producer.p_max_pu,
         "PmaxConsumption": producer.p_max_pu,
@@ -136,6 +167,11 @@ def unit_characteristics(producer, u_dim: float, line_Xpu: float = 0.0) -> dict[
         "Unom": 1.0,
         "line_XPu": line_Xpu,
     }
+    if producer.x_eff is not None:
+        characteristics["Xeff"] = producer.x_eff
+    if x_grid is not None:
+        characteristics["Xgrid"] = x_grid
+    return characteristics
 
 
 def resolve_value_definition(
@@ -151,6 +187,7 @@ def resolve_value_definition(
       - Pure numeric: ``"1.2"``, ``"-0.5"``, ``".75"``
       - Name only: ``"Snom"``, ``"-Unom"``
       - Multiplier * name: ``"0.5*Snom"``, ``"-0.05*Pmax"``
+      - Multiplier * sum of names: ``"0.3*(Xeff+Xgrid)"``, ``"-(Xeff+Xgrid)"``
 
     Parameters
     ----------
@@ -172,10 +209,7 @@ def resolve_value_definition(
     """
     location = _describe_config_option(origin)
     if value_definition is None or not value_definition.strip():
-        raise ValueError(
-            f"Empty value definition.{location} Expected a number, a base magnitude "
-            f"name, or 'multiplier*Name' (e.g. '0.5*Snom')."
-        )
+        raise ValueError(f"Empty value definition.{location} Expected {_EXPECTED_FORMS}.")
 
     s = value_definition.strip()
     explicit_sign = 1
@@ -187,22 +221,29 @@ def resolve_value_definition(
     if NUMERIC_PATTERN.fullmatch(num_candidate):
         return sign * float(num_candidate)
 
-    m = MULTIPLIER_PATTERN.fullmatch(s)
+    m = MULTIPLIER_PATTERN.fullmatch(s) or SUM_PATTERN.fullmatch(s)
     if m:
-        name = m.group("name")
-        if name not in characteristics:
-            raise ValueError(
-                f"Unknown magnitude '{name}' in value definition '{value_definition}'."
-                f"{location} Please check the spelling, the available magnitudes are "
-                f"(all case-sensitive): {_available_magnitudes(characteristics)}."
-            )
+        names = m.groupdict().get("name") or m.group("names")
+        magnitude = 0.0
+        for name in (name.strip() for name in names.split("+")):
+            if name not in characteristics and name in _GIVEN_MAGNITUDES:
+                raise ValueError(
+                    f"The value definition '{value_definition}' names '{name}', "
+                    f"{_GIVEN_MAGNITUDES[name]}, and none is given.{location}"
+                )
+            if name not in characteristics:
+                raise ValueError(
+                    f"Unknown magnitude '{name}' in value definition '{value_definition}'."
+                    f"{location} Please check the spelling, the available magnitudes are "
+                    f"(all case-sensitive): {_available_magnitudes(characteristics)}."
+                )
+            magnitude += characteristics[name]
         multiplier = float(m.group("mul")) if m.group("mul") is not None else 1.0
-        return sign * explicit_sign * multiplier * characteristics[name]
+        return sign * explicit_sign * multiplier * magnitude
 
     raise ValueError(
-        f"Invalid value definition '{value_definition}'.{location} Expected a number, "
-        f"a base magnitude name, or 'multiplier*Name' (e.g. '0.5*Snom'), where the "
-        f"magnitude is one of (all case-sensitive): "
+        f"Invalid value definition '{value_definition}'.{location} Expected "
+        f"{_EXPECTED_FORMS}, where the magnitude is one of (all case-sensitive): "
         f"{_available_magnitudes(characteristics)}."
     )
 

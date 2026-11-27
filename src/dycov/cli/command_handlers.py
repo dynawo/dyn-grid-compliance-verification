@@ -438,6 +438,21 @@ def handle_migrate_inputs_command(
     return 0
 
 
+def _anonymize_refusal(args: argparse.Namespace) -> str | None:
+    """Why the arguments of anonymize cannot run, if they cannot: the output directory is
+    emptied before the curves are read, so it can hold none of them."""
+    if not args.curves and not args.results:
+        return "anonymize needs the curves to anonymize: give --curves or --results."
+    if args.curves:
+        output, curves = Path(args.output).resolve(), Path(args.curves).resolve()
+        if output == curves or output in curves.parents:
+            return (
+                "The output directory would replace the curves it anonymizes: choose one that "
+                "neither is the --curves directory nor holds it."
+            )
+    return None
+
+
 def handle_anonymize_command(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
     """Handles the 'anonymize' command.
 
@@ -452,6 +467,10 @@ def handle_anonymize_command(parser: argparse.ArgumentParser, args: argparse.Nam
         Parsed command-line arguments.
     """
     dycov_logging.get_logger("CommandHandlers").info("Handling 'anonymize' command.")
+    refusal = _anonymize_refusal(args)
+    if refusal:
+        parser.error(refusal)
+        return 1
     try:
         anonymizer.anonymize(
             output_folder=Path(args.output),
@@ -539,7 +558,7 @@ def _run_verification(
             producer_workbook=producer_workbook,
             curves_only=curves_only,
         )
-    except ValueError as e:
+    except (ValueError, FileNotFoundError) as e:
         dycov_logging.get_logger("CommandHandlers").error(f"{e}")
         return 1
 

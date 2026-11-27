@@ -344,7 +344,7 @@ def _get_voltage_droop_parameters(generator, parset, nsmap, zone) -> dict:
     parameters = {}
     parameter_names = dynawo_translator.get_generator_parameters(generator, "VoltageDroop", zone)
     for name in parameter_names:
-        sign, value = par_access.get_parameter(parset, nsmap, generator.lib, name)
+        sign, value = par_access.get_parameter_as_read(parset, nsmap, generator.lib, name)
         if value is not None:
             parameters[name] = value
 
@@ -355,7 +355,7 @@ def _get_control_mode_parameters(generator, parset, nsmap, zone) -> dict:
     parameters = {}
     parameter_names = dynawo_translator.get_generator_parameters(generator, "ControlMode", zone)
     for name in parameter_names:
-        sign, value = par_access.get_parameter(parset, nsmap, generator.lib, name)
+        sign, value = par_access.get_parameter_as_read(parset, nsmap, generator.lib, name)
         if value is not None:
             parameters[name] = value
 

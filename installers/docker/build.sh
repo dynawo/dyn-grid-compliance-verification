@@ -139,6 +139,9 @@ echo " - tag           = $TAG"
 ########################################
 
 cp "$PKG" "$TEMP_DIR/"
+# The versions uv.lock pins, which the release is tested with, for the image to install
+uv export --locked --no-hashes --no-emit-project --all-extras --format requirements-txt \
+    --quiet --project "$ROOT_DIR" --output-file "$TEMP_DIR/constraints.txt"
 
 
 ########################################

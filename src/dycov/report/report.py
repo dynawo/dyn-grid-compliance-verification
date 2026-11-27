@@ -33,8 +33,10 @@ from dycov.core.global_variables import (
     MODEL_VALIDATION_PPM,
     REPORT_NAME,
 )
+from dycov.curves import naming
 from dycov.files import manage_files, value_registry
 from dycov.logging import dycov_logging
+from dycov.model.compliance import Compliance
 from dycov.report import figure, html
 from dycov.report.curve_classification import get_curve_style
 from dycov.report.LatexReportException import LatexReportException
@@ -42,6 +44,8 @@ from dycov.report.tables import (
     active_power_recovery,
     characteristics_response,
     compliance,
+    conditions,
+    ran_with,
     results,
     signal_error,
     solver,
@@ -174,9 +178,19 @@ def _get_reports(
     working_path: Path,
 ) -> list:
     reports = []
+    aborted = set()
     for pcs in sorted_summary:
         key = f"{pcs.producer_name}_{pcs.pcs}"
-        pcs_results = report_results[key]
+        pcs_results = report_results.get(key)
+        if not pcs_results:
+            if key not in aborted:
+                aborted.add(key)
+                dycov_logging.get_logger("Report").warning(
+                    f"{pcs.producer_name} {pcs.pcs}: its execution was aborted, so the report "
+                    "has no page of its tests"
+                )
+            continue
+
         report_name = f"{pcs_results['producer'].replace('_', '')}.{pcs_results['report_name']}"
         if any(report_name.replace(".tex", "") in report for report in reports):
             continue
@@ -244,8 +258,9 @@ def _build_notice_block(color: str, title: str, items: list) -> str:
 
 
 def _build_oc_notices(oc_results: dict) -> tuple[str, str]:
-    """Builds the notices block (missing curves and warnings) and the watermark command
-    of an operating-condition report page. Only missing curves invalidate the page."""
+    """Builds the notices block (missing curves, why a test has no curves, and warnings) and
+    the watermark command of an operating-condition report page. Only missing curves invalidate
+    the page."""
     notices = ""
     watermark = r"\SetWatermarkText{}"
     missing_curves = list(oc_results["missed_columns"])
@@ -256,6 +271,15 @@ def _build_oc_notices(oc_results: dict) -> tuple[str, str]:
     if missing_curves:
         notices += _build_notice_block("red", "Missing curves:", missing_curves)
         watermark = r"\SetWatermarkText{INVALID}"
+    if oc_results.get("summary") == Compliance.FaultDipUnachievable:
+        notices += _build_notice_block(
+            "orange",
+            "Not simulated:",
+            [
+                "the fault search found no impedance that gives the voltage dip the test "
+                "requires, so the test has no curves to compare"
+            ],
+        )
     return notices, watermark
 
 
@@ -270,6 +294,7 @@ def _pcs_replace(
     )
 
     _render_zone1_circuits(working_path, producer, pcs_results["pcs"].get_zone(), producer_name)
+    operating_point_bus = "InternalNode1" if pcs_results["pcs"].get_zone() == 1 else "the PDR"
 
     subst_dict = {
         "producercommand": f"\\renewcommand{{\\Producer}}{{{pcs_results['producer']}}}"
@@ -305,6 +330,7 @@ def _pcs_replace(
 
         oc_maps = {
             "solver": solver_map,
+            "ranwith": ran_with.create_map(oc_results, operating_point_bus),
             "rm": results_map,
             "cm": compliance_map,
             "thm": thresholds_map,
@@ -343,6 +369,12 @@ def _pcs_replace(
                 "benchmark": benchmark,
                 "operatingcondition": oc_name,
                 "link": latex_link,
+                "conditions": conditions.create_map(
+                    operating_condition, oc_results.get("ran_with")
+                ),
+                "trackedmagnitude": config.get_value(
+                    operating_condition, "tracked_magnitude", ""
+                ).replace("_", " "),
             }
 
             oc_template = _get_template(working_path, f"{producer_name}.{oc_report}")
@@ -409,6 +441,13 @@ def _render_zone1_circuits(
             tikz_template.stream(hasgroupxfmr=has_group_xfmr).dump(
                 str(working_path / f"{prefix}.{tikz_name}")
             )
+    switched_line = working_path / "circuit_z1_switched_line.tikz"
+    if switched_line.exists():
+        tikz_template = _get_template(working_path, switched_line.name)
+        for action, closes in (("closes", True), ("opens", False)):
+            tikz_template.stream(hasgroupxfmr=has_group_xfmr, closes=closes).dump(
+                str(working_path / f"{prefix}.circuit_z1_switched_line_{action}.tikz")
+            )
 
 
 def _get_iq_last_val(plot_curves: list) -> float | None:
@@ -470,8 +509,19 @@ def _with_stepped_setpoint(
         return figure_description
     return replace(
         figure_description,
-        variables=[*figure_description.variables, {"type": "generator", "variable": stepped}],
+        variables=[
+            *_as_typed_variables(figure_description.variables),
+            {"type": "generator", "variable": stepped},
+        ],
     )
+
+
+def _as_typed_variables(variables: str | list) -> list:
+    """The variables of a figure as a list of typed ones, which is what a figure that draws
+    more than one curve takes: a curve of the bus named in full becomes the bus variable."""
+    if isinstance(variables, str):
+        return [{"type": "bus", "variable": variables.removeprefix(naming.INTERNAL_BUS_PREFIX)}]
+    return variables
 
 
 def _generate_figures(
@@ -574,6 +624,7 @@ def _create_full_tex(
     for operating_condition, oc_results in pcs_results.items():
         if not isinstance(oc_results, dict):
             continue
+        oc_results = manage_files.take_curves_back(oc_results)
 
         figure_key = operating_condition.rsplit(".", 1)[0]
         if figure_key not in figures_description:
