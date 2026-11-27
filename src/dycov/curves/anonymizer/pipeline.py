@@ -63,8 +63,8 @@ def anonymize(
         Path of a verification results directory. If provided, 'curves_calculated.csv'
         and 'simulation_inputs.ini' files will be copied from here. Defaults to None.
     curves_folder: Optional[Path]
-        Path of a set of curves. If not provided, `output_folder` will be used
-        as the source for curves. Defaults to None.
+        Path of a set of curves. If not provided, the curves are those `results` copies into
+        `output_folder`, which is emptied first. Defaults to None.
     compression: Optional[float]
         Relative epsilon for curve simplification, as a fraction of each signal's range,
         which also holds the curve to a sampling rate. Zero keeps every sample.
