@@ -37,9 +37,9 @@ class VoltDipResult(IntEnum):
     """Result codes for voltage dip comparison."""
 
     COLUMN_MISSING = -2  # Error: BusPDR_BUS_Voltage column not found
-    DIP_TOO_SMALL = -1  # Actual dip < expected (need more impedance)
+    DIP_TOO_SMALL = -1  # Actual dip < expected (need less impedance)
     DIP_CORRECT = 0  # Actual dip ≈ expected (within tolerance)
-    DIP_TOO_LARGE = 1  # Actual dip > expected (need less impedance)
+    DIP_TOO_LARGE = 1  # Actual dip > expected (need more impedance)
 
 
 def measure_voltage_dip(
@@ -111,9 +111,9 @@ def classify_voltage_dip(
     VoltDipResult
         Classification of the voltage dip:
         - COLUMN_MISSING: Required column not found in curves
-        - DIP_TOO_SMALL: Increase fault impedance
+        - DIP_TOO_SMALL: Decrease fault impedance
         - DIP_CORRECT: Within tolerance
-        - DIP_TOO_LARGE: Decrease fault impedance
+        - DIP_TOO_LARGE: Increase fault impedance
     """
     if expected_dip == 0.0:
         return VoltDipResult.DIP_CORRECT

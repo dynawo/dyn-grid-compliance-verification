@@ -92,10 +92,12 @@ whose rows the next sections describe (#701).
 
 The searches for the impedance of the high-impedance and bolted faults run each of their
 simulations on the SIM solver and stop it 2 s after the fault is cleared, or 2 s after a permanent
-fault starts; a simulation that fails is retried as any other. The test is then simulated as
-before. The impedance they settle on may differ slightly from the one they found on IDA.
-`fault_search_solver_lib` and `fault_search_time_after_clearing`, in `[Dynawo]`, change both
-(#644).
+fault starts. A simulation that fails is retried as any other and, if SIM still cannot simulate it,
+simulated again on the solver of the test; a high-impedance search that ends without its dip on
+SIM, whose dip may jump past the target, is run again on the solver of the test. The test is then
+simulated as before. The impedance they settle on may differ slightly from the one they found on
+IDA. `fault_search_solver_lib` and `fault_search_time_after_clearing`, in `[Dynawo]`, change both
+(#644, #830).
 
 ### The IEC workbook carries the tables of the models
 
