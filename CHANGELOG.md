@@ -181,6 +181,10 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   envelopes of the PCS listed after it (#688).
 - The reports of fiche I16 zone 1 give the 500 ms high-impedance fault as a dip of 0.7 Un, where
   they said V = 0.7 Un: the voltage falls to 0.3 Un (#697).
+- A test whose curves file has a name of its own in `CurvesFiles.ini` takes the `.dict` named
+  after the test when there is none of the name of that file, as a workbook writes them, so a
+  `.csv` named freely in its tests table reaches its test, where the test ended as missing its
+  curves (#863).
 - The Zone 1 schematic of the report follows the Zone 1 model in a parallel validation too, where
   it drew the group transformer or left it out depending on which PCS prepared its report first
   (#740).
