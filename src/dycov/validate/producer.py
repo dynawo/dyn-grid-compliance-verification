@@ -668,6 +668,7 @@ class ModelProducer(Producer):
                     self._producer_model_path,
                     self._reference_curves_path / filename,
                     self.get_sim_type_str(),
+                    self.get_installation_category(filename),
                 )
             self.__init_model()
 
