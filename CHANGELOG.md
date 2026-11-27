@@ -265,6 +265,8 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
 - The page of a test without reference curves no longer lists the curves missing from the record
   of the test before it in the same benchmark, which could also turn a test whose fault dip was
   out of reach into an invalid one (#823).
+- `dycov excel2inputs` keeps the curves already in the folder it writes to when the workbook names
+  that same folder for them, where it stopped with a SameFileError (#838).
 - The lines the log writes once a test is over, while the report of its PCS is prepared, the
   next PCS is loaded or the summary of the run is written, no longer carry the label of that
   test (#825).

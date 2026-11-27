@@ -40,7 +40,9 @@ def _copy_curves(signals, target: Path, base: Path = None) -> tuple[int, list]:
     for test in signals.tests:
         source = folder / test.curves_file if folder else None
         if source is not None and source.is_file():
-            shutil.copy(source, target / test.curves_file)
+            destination = target / test.curves_file
+            if not (destination.is_file() and source.samefile(destination)):
+                shutil.copy(source, destination)
             copied += 1
         else:
             missing.append(test.curves_file)

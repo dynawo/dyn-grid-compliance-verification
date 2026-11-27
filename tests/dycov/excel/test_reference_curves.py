@@ -289,6 +289,42 @@ def test_write_reference_curves_copies_the_files_it_finds(tmp_path):
     assert (target / "bolted_scr3.csv").is_file()
 
 
+def test_curves_already_in_the_folder_written_to_are_kept(tmp_path):
+    target = tmp_path / "out" / "ReferenceCurves" / "Producer"
+    target.mkdir(parents=True)
+    (target / "bolted_scr3.csv").write_text("time\n0\n", encoding="utf-8")
+    book = _workbook(
+        zone1=(ZONE1_ROWS, [("6", "bolted_scr3.csv")]),
+        zone3=(ZONE3_ROWS, []),
+        folder=str(target),
+    )
+
+    written = rc.write_reference_curves(tmp_path / "out", "Producer", sig.parse_signals(book, GEN))
+
+    assert (written["copied"], written["missing"]) == (1, [])
+    assert (target / "bolted_scr3.csv").read_text(encoding="utf-8") == "time\n0\n"
+
+
+def test_curves_named_relative_to_the_workbook_in_the_folder_written_to_are_kept(tmp_path):
+    """The folder a workbook names is relative to the workbook, as in the examples."""
+    target = tmp_path / "ReferenceCurves" / "Producer"
+    target.mkdir(parents=True)
+    (target / "bolted_scr3.csv").write_text("time\n0\n", encoding="utf-8")
+    (tmp_path / "Excel").mkdir()
+    book = _workbook(
+        zone1=(ZONE1_ROWS, [("6", "bolted_scr3.csv")]),
+        zone3=(ZONE3_ROWS, []),
+        folder="../ReferenceCurves/Producer",
+    )
+
+    written = rc.write_reference_curves(
+        tmp_path, "Producer", sig.parse_signals(book, GEN), base=tmp_path / "Excel"
+    )
+
+    assert (written["copied"], written["missing"]) == (1, [])
+    assert (target / "bolted_scr3.csv").read_text(encoding="utf-8") == "time\n0\n"
+
+
 def test_write_reference_curves_writes_nothing_when_no_test_is_described(tmp_path):
     written = rc.write_reference_curves(tmp_path, "Producer", sig.parse_signals({}, GEN))
 
