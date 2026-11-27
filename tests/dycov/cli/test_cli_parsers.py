@@ -10,6 +10,7 @@
 
 import argparse
 import re
+from pathlib import Path
 
 import pytest
 import shtab
@@ -80,6 +81,54 @@ def test_positional_arguments_complete_paths(parser):
 def test_curves_only_is_off_unless_asked_for(parser, arguments):
     assert parser.parse_args(arguments).curves_only is False
     assert parser.parse_args([*arguments, "--curves-only"]).curves_only is True
+
+
+_COMMANDS = [
+    ["validate", "-e", "Producer.xlsx"],
+    ["performance", "-m", "Model"],
+    ["excel2inputs", "Producer.xlsx"],
+    ["anonymize", "-c", "curves", "-o", "out"],
+    ["generate_gfm_envelopes", "-i", "Producer.ini"],
+    ["migrate_inputs", "inputs"],
+]
+
+
+@pytest.mark.parametrize("command", _COMMANDS, ids=lambda command: command[0])
+@pytest.mark.parametrize("after_the_command", [False, True], ids=["before", "after"])
+def test_the_global_options_go_before_or_after_the_command(parser, command, after_the_command):
+    """#854: after the command, --user-config, and --debug and --diagnostic too, were refused."""
+    options = ["--user-config", "user.ini", "--debug", "--diagnostic"]
+    arguments = [*command, *options] if after_the_command else [*options, *command]
+
+    args = parser.parse_args(arguments)
+
+    assert args.user_config == Path("user.ini")
+    assert args.debug is True
+    assert args.diagnostic is True
+
+
+@pytest.mark.parametrize("command", _COMMANDS, ids=lambda command: command[0])
+def test_a_global_option_left_out_after_the_command_keeps_its_value(parser, command):
+    args = parser.parse_args(["--user-config", "user.ini", "-d", *command])
+
+    assert args.user_config == Path("user.ini")
+    assert args.debug is True
+    assert args.diagnostic is False
+    assert parser.parse_args(command).user_config is None
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["anonymize", "-c", "curves", "-o", "out", "-dr3"],
+        ["validate", "-e", "Producer.xlsx", "-dod"],
+        ["validate", "-e", "Producer.xlsx", "-d"],
+    ],
+)
+def test_a_short_debug_after_the_command_reads_no_glued_letters(parser, arguments):
+    """Only the long names follow the command: a -d there would read -dr3 as -d -r 3."""
+    with pytest.raises(SystemExit):
+        parser.parse_args(arguments)
 
 
 def test_anonymize_asks_for_its_output_directory(parser, capsys):
