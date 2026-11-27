@@ -64,3 +64,30 @@ def test_each_definition_comes_with_the_value_the_test_ran_with(described_test):
 
 def test_a_test_without_description_has_no_conditions():
     assert conditions.create_map("PCS.Undescribed.OC") == []
+
+
+@pytest.fixture
+def stepped_test(tmp_path):
+    pcs = tmp_path / "PCSDescription.ini"
+    pcs.write_text("[PCS.Bench.OC5.Event]\nsetpoint_step_value = -0.5\n")
+    config.load_pcs_config(pcs)
+    yield "PCS.Bench.OC5"
+    config.load_pcs_config(None)
+
+
+@pytest.mark.parametrize(
+    "ran_with, value",
+    [
+        ({"setpoint_step_value": 0.05}, "0.05"),
+        ({"hiz_dip": 0.5}, "0.5 pu"),
+        ({"grid_frequency_step": 0.01}, "0.5 Hz"),
+    ],
+)
+def test_the_step_of_a_test_is_the_value_of_the_event_that_applies_it(
+    stepped_test, ran_with, value
+):
+    """#833: a high-impedance fault records its step as the dip its search aims at."""
+    (row,) = conditions.create_map(stepped_test, ran_with)
+
+    assert row[0] == "Step (or depth of the voltage dip)"
+    assert row[2].startswith(value)
