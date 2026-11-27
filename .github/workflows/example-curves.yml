@@ -3,7 +3,7 @@ name: Example curves
 on:
   pull_request:
   push:
-    branches: ['**']
+    branches: [master]
 
 permissions:
   contents: read
@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
           filter: blob:none

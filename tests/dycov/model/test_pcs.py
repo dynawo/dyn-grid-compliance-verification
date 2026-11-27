@@ -249,13 +249,13 @@ def test_the_version_a_revision_writes_for_the_category_of_the_installation_patc
 
 
 def test_a_verification_that_gives_every_category_the_same_fiches_loads_no_version(tmp_path):
-    from dycov.model.pcs import _version_for_category
+    from dycov.model.pcs_layers import version_for_category
 
     (tmp_path / "TypeCD.ini").write_text("")
 
-    assert _version_for_category(tmp_path, None) is None
-    assert _version_for_category(tmp_path, "B") is None
-    assert _version_for_category(tmp_path, "D") == tmp_path / "TypeCD.ini"
+    assert version_for_category(tmp_path, None) is None
+    assert version_for_category(tmp_path, "B") is None
+    assert version_for_category(tmp_path, "D") == tmp_path / "TypeCD.ini"
 
 
 def test_prepare_pcs_config_loads_only_the_files_that_exist(monkeypatch, tmp_path):

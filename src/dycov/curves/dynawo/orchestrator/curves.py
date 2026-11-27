@@ -32,7 +32,12 @@ from dycov.files import manage_files, replace_placeholders, simulation_files
 from dycov.files.manage_files import ModelFiles, ProducerFiles
 from dycov.files.simulation_files import SIMULATION_INPUTS_FILE
 from dycov.logging import dycov_logging
-from dycov.model.parameters import DisconnectionModel, SimulationOutcomeError, SimulationResult
+from dycov.model.parameters import (
+    DisconnectionModel,
+    SimulationError,
+    SimulationOutcomeError,
+    SimulationResult,
+)
 from dycov.model.producer import Producer
 from dycov.sanity_checks import parameter_checks
 
@@ -165,11 +170,13 @@ class DynawoCurves(ProducerCurves):
         self._solver = self.__configured_solver()
         parameter_checks.check_solver(self._solver.solver_id, self._solver.solver_lib)
 
-    def __use_fault_search_solver(self, working_oc_dir: Path) -> None:
-        """Runs the simulation of working_oc_dir on the solver of the fault searches."""
-        self._solver = self.__solver_params(
-            config.get_value("Dynawo", "fault_search_solver_lib", "dynawo_SolverSIM")
-        )
+    @staticmethod
+    def __fault_search_solver_lib() -> str:
+        return config.get_value("Dynawo", "fault_search_solver_lib", "dynawo_SolverSIM")
+
+    def __use_fault_search_solver(self, working_oc_dir: Path, solver_lib: str) -> None:
+        """Runs the simulation of working_oc_dir on the solver of a fault search."""
+        self._solver = self.__solver_params(solver_lib)
         parameter_checks.check_solver(self._solver.solver_id, self._solver.solver_lib)
         replace_placeholders.modify_jobs_file(
             working_oc_dir, _TSO_JOBS, self._solver.solver_id, self._solver.solver_lib
@@ -193,10 +200,14 @@ class DynawoCurves(ProducerCurves):
         disable_retry_logs: bool = False,
         *,
         stop_time: float,
+        solver_lib: str | None = None,
     ) -> SimulateOutcome:
         """
         Simulates a step of a fault search: on the solver the configuration gives those
-        searches, retried as any simulation, and stopped shortly after the fault is cleared.
+        searches, retried as any simulation, and stopped shortly after the fault is cleared. A
+        step that solver cannot simulate is simulated again on the solver of the test, retried
+        from its own settings, which a single switch of solver at the end of the retries does not
+        reach.
 
         Parameters
         ----------
@@ -213,9 +224,34 @@ class DynawoCurves(ProducerCurves):
             Operating Condition name.
         stop_time : float
             Instant the step stops, in seconds.
+        solver_lib : str | None
+            Solver the step runs on, that of the fault searches when None.
         """
-        self.__use_fault_search_solver(working_oc_dir)
+        self.__use_fault_search_solver(
+            working_oc_dir, solver_lib or self.__fault_search_solver_lib()
+        )
         replace_placeholders.modify_stop_time(working_oc_dir, _TSO_JOBS, stop_time)
+        search_solver = self._solver.solver_lib
+        repeated = search_solver != self.__configured_solver().solver_lib
+        outcome = self.__simulate(
+            output_dir,
+            working_oc_dir,
+            jobs_output_dir,
+            bm_name,
+            oc_name,
+            disable_retry_logs=disable_retry_logs,
+            solver_flip=not repeated,
+        )
+        self.__reset_solver()
+        if outcome.succeeded or outcome.rejected_inputs or not repeated:
+            return outcome
+
+        dycov_logging.get_logger("ProducerCurves").debug(
+            f"The step fails on {search_solver}: simulated again on {self._solver.solver_lib}"
+        )
+        replace_placeholders.modify_jobs_file(
+            working_oc_dir, _TSO_JOBS, self._solver.solver_id, self._solver.solver_lib
+        )
         return self.__simulate(
             output_dir,
             working_oc_dir,
@@ -223,7 +259,48 @@ class DynawoCurves(ProducerCurves):
             bm_name,
             oc_name,
             disable_retry_logs=disable_retry_logs,
+            solver_flip=False,
         )
+
+    def __find_hiz_fault(
+        self,
+        working_oc_dir: Path,
+        jobs_output_dir: Path,
+        event_params: dict,
+        bm_name: str,
+        oc_name: str,
+        simulate_fault_search_step: partial,
+    ) -> None:
+        """
+        Searches the high-impedance fault on the solver of the fault searches, and again on the
+        solver of the test when that search ends without the dip: a simplified solver may give
+        the dip of a model in jumps the target falls between.
+        """
+        search_solver = self.__fault_search_solver_lib()
+        test_solver = self.__configured_solver().solver_lib
+        for solver_lib in dict.fromkeys((search_solver, test_solver)):
+            try:
+                self._bisection.find_hiz_fault(
+                    working_oc_dir,
+                    jobs_output_dir,
+                    event_params["start_time"],
+                    event_params["duration_time"],
+                    event_params["step_value"],
+                    bm_name,
+                    oc_name,
+                    simulate_fn=partial(simulate_fault_search_step, solver_lib=solver_lib),
+                    reset_solver_fn=self.__reset_solver,
+                )
+                return
+            except SimulationOutcomeError as error:
+                if error.error != SimulationError.FAULT_DIP_UNACHIEVABLE:
+                    raise
+                if solver_lib == test_solver:
+                    raise
+                dycov_logging.get_logger("ProducerCurves").info(
+                    f"The search on {solver_lib} ends without the dip: searched again on "
+                    f"{test_solver}"
+                )
 
     def _build_bisection_engine(self) -> BisectionEngine:
         return BisectionEngine(
@@ -286,6 +363,7 @@ class DynawoCurves(ProducerCurves):
         oc_name: str,
         max_sim_time: float | None = None,
         disable_retry_logs: bool = False,
+        solver_flip: bool = True,
     ) -> SimulationAttempt:
         """
         Runs Dynawo via SolverRetryStrategy and returns what its last attempt left.
@@ -305,12 +383,15 @@ class DynawoCurves(ProducerCurves):
             Operating Condition name.
         max_sim_time : float | None
             Simulation time limit override; defaults to config value.
+        solver_flip : bool
+            Whether the retries may end on the other solver, which a step of a fault search does
+            not need when the solver of the test simulates it again anyway.
         """
         if max_sim_time is None:
             max_sim_time = config.get_float("Dynawo", "simulation_limit", 30.0)
-        strategy = SolverRetryStrategy(
-            RetrySettings.from_config(disable_retry_logs=disable_retry_logs)
-        )
+        settings = RetrySettings.from_config(disable_retry_logs=disable_retry_logs)
+        settings.enable_solver_flip = settings.enable_solver_flip and solver_flip
+        strategy = SolverRetryStrategy(settings)
         attempt = strategy.run(
             run=self.__build_run_inputs(),
             solver=self._solver,
@@ -333,9 +414,12 @@ class DynawoCurves(ProducerCurves):
         bm_name: str,
         oc_name: str,
         disable_retry_logs: bool = False,
+        solver_flip: bool = True,
     ) -> SimulateOutcome:
         """
-        Runs the simulation and packages the result as a SimulateOutcome.
+        Runs the simulation and packages the result as a SimulateOutcome. A step of a fault
+        search, which runs without the logs of its retries, reports its failure at debug level:
+        the search goes on, and says itself whether it found its fault.
 
         Parameters
         ----------
@@ -358,13 +442,14 @@ class DynawoCurves(ProducerCurves):
             bm_name,
             oc_name,
             disable_retry_logs=disable_retry_logs,
+            solver_flip=solver_flip,
         )
+        log = dycov_logging.get_logger("ProducerCurves")
+        tell = log.debug if disable_retry_logs else log.warning
         if attempt.divergence:
-            dycov_logging.get_logger("ProducerCurves").warning(
-                f"Simulation diverged: {attempt.divergence}"
-            )
+            tell(f"Simulation diverged: {attempt.divergence}")
         elif not attempt.dynawo.succeeded:
-            dycov_logging.get_logger("ProducerCurves").warning(attempt.dynawo.log)
+            tell(attempt.dynawo.log)
         else:
             dycov_logging.get_logger("ProducerCurves").debug("Simulation successful")
         has_curves = (working_oc_dir / jobs_output_dir / _CURVES_CSV).exists() and attempt.usable
@@ -516,16 +601,13 @@ class DynawoCurves(ProducerCurves):
 
             pcs_bm_oc_name = get_cfg_oc_name(pcs_name, bm_name, oc_name)
             if config.get_boolean(pcs_bm_oc_name, "hiz_fault"):
-                self._bisection.find_hiz_fault(
+                self.__find_hiz_fault(
                     working_oc_dir,
                     jobs_output_dir,
-                    event_params["start_time"],
-                    event_params["duration_time"],
-                    event_params["step_value"],
+                    event_params,
                     bm_name,
                     oc_name,
-                    simulate_fn=simulate_fault_search_step,
-                    reset_solver_fn=self.__reset_solver,
+                    simulate_fault_search_step,
                 )
             elif config.get_boolean(pcs_bm_oc_name, "bolted_fault"):
                 self._bisection.find_bolted_fault(

@@ -59,8 +59,7 @@ importer.
 workflow: performance is zone 3 and needs no reference curves, so only `Dynawo/Zone3` is used and
 the metadata check does not apply. In both commands the workbook replaces the other inputs, so a
 model, curves or a reference directory given alongside it is refused.
-`.xlsx` is parsed with the tool's own standard-library engine (`workbook.py`), which the legacy
-`tools/dynawo_par` also imports until its retirement.
+`.xlsx` is parsed with the tool's own standard-library engine (`workbook.py`).
 
 **Sheets used**
 

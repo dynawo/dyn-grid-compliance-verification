@@ -45,19 +45,25 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
-    "Operating System :: OS Independent"
+    "Operating System :: POSIX :: Linux"
 ]
 
 # Required packages: here we declare only the direct dependencies.
+# The floors are the first releases with wheels for each Python version the tool supports.
 dependencies = [
     "comtrade>=0.0.10", # MIT License
     "Jinja2>=3.1.2", # BSD License
-    "lxml>=4.6.3", # BSD License
-    "matplotlib>=3.4.0", # Python Software Foundation License
-    "numpy>=1.21.0", # BSD License
-    "pandas>=1.3.0", # BSD License
+    "lxml>=5.3.0; python_version < '3.14'", # BSD License
+    "lxml>=6.0.1; python_version >= '3.14'",
+    "matplotlib>=3.9.2; python_version < '3.14'", # Python Software Foundation License
+    "matplotlib>=3.10.5; python_version >= '3.14'",
+    "numpy>=2.1.0; python_version < '3.14'", # BSD License
+    "numpy>=2.3.2; python_version >= '3.14'",
+    "pandas>=2.2.3; python_version < '3.14'", # BSD License
+    "pandas>=2.3.3; python_version >= '3.14'",
     "plotly>=5.20.0", # MIT License
-    "SciPy>=1.9.3", # BSD License
+    "SciPy>=1.14.1; python_version < '3.14'", # BSD License
+    "SciPy>=1.16.1; python_version >= '3.14'",
     "shtab>=1.7", # MPL-2.0 License
     "colorama>=0.4.6", # BSD License
 ]
@@ -73,9 +79,6 @@ test = [
 dev = [
     "ruff==0.15.22",
     "sphinx",
-]
-dynawo-pypowsybl = [
-    "pypowsybl>=1.7,<2.0"
 ]
 
 
@@ -95,8 +98,7 @@ exclude = [
     "report/templates/*",
     "templates/**/*",
     "model_lib/**/*",
-    "**/*.ini",
-    "curves/dynawo/tooling/Vsx64.cmd"
+    "**/*.ini"
 ]
 "dycov.templates.reports" = ["*.py", "*.json", "*.pdf"]
 
@@ -145,7 +147,7 @@ quote-style = "double"
 
 [project.urls]
 "Code repo" = "https://github.com/dynawo/dyn-grid-compliance-verification"
-"Bug tracker" = "https://github.com/dynawo/dyn-grid-compliance-verification"
+"Bug tracker" = "https://github.com/dynawo/dyn-grid-compliance-verification/issues"
 
 [tool.setuptools_scm]
 write_to = "src/dycov/_build_info.py"
