@@ -334,3 +334,63 @@ def test_zone_optional_number_is_none_for_an_empty_or_absent_or_not_applicable_r
     assert P.zone_optional_number(zone, "Tap_0") is None
     assert P.zone_optional_number(zone, "r_0") is None
     assert P.zone_optional_number(zone, "Un_PDR") is None
+
+
+def _control_with(value):
+    return {
+        "Général": _general(("REEC", "REEC_B")),
+        "REEC": [
+            ["Electrical Control"],
+            ["REEC_B"],
+            ["Parameter", "Type", "Value"],
+            ["QFlag", "boolean", value],
+        ],
+    }
+
+
+@pytest.mark.parametrize(
+    "cell, written",
+    [
+        ("True", "true"),
+        ("TRUE", "true"),
+        ("vrai", "true"),
+        ("1", "true"),
+        ("False", "false"),
+        ("FAUX", "false"),
+        ("0", "false"),
+    ],
+)
+def test_a_boolean_parameter_is_written_as_dynawo_reads_it(cell, written):
+    (param,) = P.parse_control_params(_control_with(cell))
+
+    assert param["value"] == written
+
+
+@pytest.mark.parametrize("cell", ["2", "Ja", "true false"])
+def test_a_boolean_parameter_that_states_no_truth_stops_the_conversion(cell):
+    with pytest.raises(ValueError, match="parameter 'QFlag' of sheet 'REEC' holds"):
+        P.parse_control_params(_control_with(cell))
+
+
+def _zone1(lv_control):
+    grid = [
+        ["Paramètres", "Descriptions", "Valeurs", "Unités"],
+        ["SnZone1", None, "1.1", "MVA"],
+        ["ConverterLVControl", None, lv_control, "-"],
+    ]
+    return P.parse_zone({"Zone1a": grid}, "Zone1a")
+
+
+def test_the_control_point_of_the_converter_reads_any_spelling_of_a_boolean():
+    assert not P.is_true(_zone1("Faux")["ConverterLVControl"])
+    assert P.is_true(_zone1("TRUE")["ConverterLVControl"])
+
+
+def test_a_control_point_that_states_no_boolean_is_refused_with_its_row():
+    with pytest.raises(ValueError, match="row 'ConverterLVControl' of sheet 'Zone1a' holds 'X'"):
+        _zone1("X")
+
+
+def test_an_empty_control_point_is_refused_with_its_row():
+    with pytest.raises(ValueError, match="'ConverterLVControl' of sheet 'Zone1a' has no value"):
+        _zone1(None)

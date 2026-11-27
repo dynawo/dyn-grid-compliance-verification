@@ -19,6 +19,10 @@ changed the template last, so a release that leaves it alone keeps the number. D
 workbook of another version, of none, or of a standard it does not know with a warning: copy
 its data into the template of the release.
 
+A boolean parameter takes `True` or `False` from the list of its cell. The tool also reads
+`vrai`/`faux`, `oui`/`non` and `1`/`0`, and stops at any other value, naming the sheet and the
+parameter, because Dynawo would read it as false.
+
 The row labels of the `Signaux zone 1` and `Signaux zone 3` sheets are what the tool matches
 to know which curve each row describes: a label it does not recognise is dropped, and the
 curve it names is then missing from the reference dictionary. The names it accepts are

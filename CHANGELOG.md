@@ -124,6 +124,17 @@ template into `workbooks/Producer_IEC.xlsx` or `workbooks/Producer_WECC.xlsx` an
 rows: a workbook without them is still read, and the conversion names the tests it has no row
 for (#679).
 
+### The workbooks offer True or False for every boolean parameter
+
+Every boolean parameter of both templates takes `True` or `False` from a list, and the conversion
+writes it as Dynawo reads it, `true` or `false`. A cell holding any other value, which Dynawo read
+as false without a word, now stops the conversion and names the sheet and the parameter;
+`vrai`/`faux`, `oui`/`non` and `1`/`0` are read too. The `Signaux zone 1` sheet gains two rows,
+the active and reactive power at node 1, which the report draws next to those at the point the
+converter controls. Copy the data of a workbook made on an earlier template into
+`workbooks/Producer_IEC.xlsx` or `workbooks/Producer_WECC.xlsx` to get both: a workbook without
+them is still read (#829).
+
 ### Your report templates replace the packaged ones
 
 A report template in `templates/reports` of the configuration directory replaces the packaged one
@@ -257,9 +268,15 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   description of your own, a revision or a declaration of the Fiche F16 that changed them moved
   only the checks and the report, and so did reference curves that put the event at another
   instant (#816).
+- The conversion of a workbook reports each missing `.csv` along with the folder its signal sheet
+  names, which `excel2inputs` and `--excel` both read; it advised putting the file next to the
+  `.dict` files, where `--excel`, converting the workbook again elsewhere, never sees it. A sheet
+  whose folder cell is empty names no folder, where it took the text of a header for one (#839).
 - The page of a test without reference curves no longer lists the curves missing from the record
   of the test before it in the same benchmark, which could also turn a test whose fault dip was
   out of reach into an invalid one (#823).
+- `dycov excel2inputs` keeps the curves already in the folder it writes to when the workbook names
+  that same folder for them, where it stopped with a SameFileError (#838).
 - The lines the log writes once a test is over, while the report of its PCS is prepared, the
   next PCS is loaded or the summary of the run is written, no longer carry the label of that
   test (#825).
@@ -269,6 +286,11 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   log names the file and line that define it, and the figures of its test show their default
   time range. A PCS whose report cannot be prepared leaves the PDF without its pages, where it
   ended the whole run, summary included, with `Error during verification: 'producer'` (#824).
+- A boolean of the producer's PAR is read as Dynawo reads it, true only when written exactly
+  `true`: the control flags of the WECC models, `ConverterLVControl`, `PPCLocal` and the
+  switch-off signals of a line, written `TRUE` or `True`, or a switch-off signal with spaces, ran
+  as false in Dynawo while DyCoV took them as true, and chose a control mode, a voltage droop or a
+  topology the simulation did not have. The log names any such value and its set (#837).
 
 ## 1.3.0 — 2026-10-29
 

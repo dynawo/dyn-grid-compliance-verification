@@ -116,17 +116,18 @@ def _tests_header(grid) -> _TestsHeader | None:
 
 
 def _labelled_value(grid, label: str) -> str | None:
-    """The value that follows a label cell: to its right, or in the cell just below it."""
+    """The value that follows the cell a label starts: to its right, or in the cell just below
+    it; None when both are empty, rather than the value of another cell that only mentions the
+    label, as the header of the tests table does."""
     for row_idx, row in enumerate(grid):
         for col, value in enumerate(row):
-            if label not in names.normalize(value):
+            if not names.normalize(value).startswith(label):
                 continue
             right = wb._cell(grid, row_idx, col + 1)
             if right:
                 return right.strip()
             below = wb._cell(grid, row_idx + 1, col)
-            if below:
-                return below.strip()
+            return below.strip() if below else None
     return None
 
 
