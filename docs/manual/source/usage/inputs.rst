@@ -328,7 +328,10 @@ from the curve file itself:
 The simulation parameters must be filled in. When a DICT file declares one of
 them without a value, DyCoV stops before simulating and names the file and the
 option: replacing the missing value with a default would validate the model
-against an event placed at another instant of time.
+against an event placed at another instant of time. The curves must also run
+far enough past the end of the event to leave the comparison a window after
+it: curves that end before are refused with a warning that gives the instant
+they must reach, and the test runs as if they were missing.
 
 For EUROSTAG and CSV files, the ``time`` entry of the ``[Curves-Dictionary]``
 section must name the column that holds the time steps. The shipped DICT

@@ -170,6 +170,11 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
 - The page of a model-validation test without reference curves gives the dynamic behaviour of
   the simulated curves, where it always said "unstable"; when it cannot be told, it says N/A
   (#685).
+- Reference or producer curves that end before the comparison can read them after their event
+  are refused with a warning that names the dictionary, the instant of the event, the end of the
+  curves and the instant they must reach, and the test runs as if they were missing: an event at
+  or after their end, a fault cleared after it or one cleared too close to it ended the test as
+  invalid, most often with a stack trace (#862).
 - `generate_gfm_envelopes` keeps the envelopes of every PCS when one it lists generates none,
   because it is not a valid PCS, its description cannot be read or its generation stopped before
   its first envelope: it reports that PCS and leaves it out, where it stopped there and lost the
