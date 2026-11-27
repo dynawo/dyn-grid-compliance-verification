@@ -22,6 +22,7 @@ from dycov.core.global_variables import (
     ELECTRIC_PERFORMANCE_SM,
     REPORT_NAME,
 )
+from dycov.files import manage_files
 from dycov.model.pcs import Pcs
 from dycov.validate.parameters import ValidationParameters
 from dycov.validate.validation import Validation, _open_document, _validate_pcs
@@ -334,7 +335,7 @@ def test_open_document_survives_a_failing_viewer(monkeypatch, recorded_logs):
     )
 
 
-def test_a_pcs_that_declares_no_test_is_not_validated(monkeypatch):
+def test_a_pcs_that_declares_no_test_is_not_validated(monkeypatch, recorded_logs):
     class UndeclaredPcs:
         def __init__(self, producer_name, pcs_name, parameters):
             self._producer_name = producer_name
@@ -346,6 +347,9 @@ def test_a_pcs_that_declares_no_test_is_not_validated(monkeypatch):
         def declares_tests(self):
             return False
 
+        def why_no_test(self):
+            return "the reason it has none"
+
         def get_producer_name(self):
             return self._producer_name
 
@@ -356,10 +360,18 @@ def test_a_pcs_that_declares_no_test_is_not_validated(monkeypatch):
             raise AssertionError("a PCS without tests must not be validated")
 
     monkeypatch.setattr("dycov.validate.validation.Pcs", UndeclaredPcs)
+    monkeypatch.setattr(
+        "dycov.validate.validation.dycov_logging.clear_test_context",
+        lambda: recorded_logs.append(("context", "cleared")),
+    )
 
     result = _validate_pcs((None, "PCS_RTE-F16z3", "Producer", Path("/tmp")))
 
     assert result == ("Producer", "PCS_RTE-F16z3", [], {})
+    assert recorded_logs[-2:] == [
+        ("context", "cleared"),
+        ("info", "Producer PCS_RTE-F16z3: the reason it has none"),
+    ]
 
 
 def test_an_invalid_pcs_adds_nothing_to_the_summary(monkeypatch):
@@ -510,3 +522,35 @@ def test_a_curves_only_pcs_prepares_no_report(monkeypatch):
 
     assert (producer_name, pcs_name, summary_list) == ("Producer", "PCS_RTE-I16z3", [])
     assert pcs_results["success"]
+
+
+def test_the_curves_set_aside_never_reach_the_results_when_a_pcs_aborts(monkeypatch):
+    parameters = DummyParameters()
+    test_dir = parameters.get_working_dir() / "Producer" / "PCS_RTE-I16z1" / "Bench" / "OC2"
+
+    class AbortingPcs:
+        def __init__(self, producer_name, pcs_name, parameters):
+            self._producer_name = producer_name
+            self._name = pcs_name
+
+        def is_valid(self):
+            return True
+
+        def declares_tests(self):
+            return True
+
+        def get_producer_name(self):
+            return self._producer_name
+
+        def get_name(self):
+            return self._name
+
+        def validate(self, summary_list):
+            test_dir.mkdir(parents=True)
+            (test_dir / manage_files.CURVES_SET_ASIDE_FILE).write_bytes(b"")
+            raise ValueError("a later benchmark cannot run")
+
+    monkeypatch.setattr("dycov.validate.validation.Pcs", AbortingPcs)
+
+    assert _validate_pcs((parameters, "PCS_RTE-I16z1", "Producer", Path("/tmp")))[3] == {}
+    assert not (test_dir / manage_files.CURVES_SET_ASIDE_FILE).exists()

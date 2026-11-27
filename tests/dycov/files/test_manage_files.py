@@ -28,6 +28,7 @@ from dycov.files.manage_files import (
     copy_latex_files,
     create_config_file,
     create_dir,
+    discard_curves_set_aside,
     get_dynawo_version,
     get_latex_version,
     get_uv_version,
@@ -36,7 +37,9 @@ from dycov.files.manage_files import (
     read_curves,
     remove_dir,
     rename_path,
+    set_curves_aside,
     should_copy,
+    take_curves_back,
 )
 
 # ---------------------------------------------------------------------------
@@ -428,6 +431,61 @@ def test_copy_base_curves_files_missing_dict(tmp_path, monkeypatch, caplog):
 
     assert res is False
     assert any("'MyCurves.dict'" in record.message for record in caplog.records)
+    assert any(f"'{CANONICAL_NAME}.dict'" in record.message for record in caplog.records)
+
+
+def _write_curves_named_freely(src: Path, mapping: str, csv_dir: Path) -> None:
+    """The layout a workbook writes: the dictionary named after the test next to
+    CurvesFiles.ini, the curves under the name the tests table gives them."""
+    _write_curves_ini(src, mapping)
+    csv_dir.mkdir(parents=True, exist_ok=True)
+    (csv_dir / "Rise_noFRT.csv").write_text("time;P\n0;1\n")
+    (src / f"{CANONICAL_NAME}.dict").write_text("[Curves-Dictionary]\n")
+
+
+@pytest.mark.parametrize("subdirectory", ["", "sub"])
+def test_a_curve_named_freely_takes_the_dictionary_of_its_test(tmp_path, subdirectory):
+    """#863: the Excel route names the dictionary after the test and the curves file as the
+    workbook does, and the test was left without its curves."""
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    dst.mkdir()
+    mapping = f"{subdirectory}/Rise_noFRT.csv" if subdirectory else "Rise_noFRT.csv"
+    _write_curves_named_freely(src, mapping, src / subdirectory)
+
+    res = copy_base_curves_files(src, dst, CANONICAL_NAME)
+
+    assert res is True
+    assert (dst / f"{CANONICAL_NAME}.csv").exists()
+    assert (dst / f"{CANONICAL_NAME}.dict").exists()
+
+
+def test_two_tests_share_one_recording_each_with_its_dictionary(tmp_path):
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "CurvesFiles.ini").write_text(
+        "[Curves-Files]\nPCS.Bm.Rise = shared.csv\nPCS.Bm.Drop = shared.csv\n"
+    )
+    (src / "shared.csv").write_text("time;P\n0;1\n")
+    for test in ("PCS.Bm.Rise", "PCS.Bm.Drop"):
+        (src / f"{test}.dict").write_text(f"[Curves-Metadata]\n# {test}\n")
+
+    for test in ("PCS.Bm.Rise", "PCS.Bm.Drop"):
+        dst = tmp_path / test
+        dst.mkdir()
+        assert copy_base_curves_files(src, dst, test) is True
+        assert f"# {test}" in (dst / f"{test}.dict").read_text()
+
+
+def test_the_dictionary_of_the_curve_wins_over_that_of_the_test(tmp_path):
+    src = tmp_path / "src"
+    dst = tmp_path / "dst"
+    dst.mkdir()
+    _write_curves_named_freely(src, "Rise_noFRT.csv", src)
+    (src / "Rise_noFRT.dict").write_text("[Curves-Dictionary]\n# of the curve\n")
+
+    assert copy_base_curves_files(src, dst, CANONICAL_NAME) is True
+    assert "# of the curve" in (dst / f"{CANONICAL_NAME}.dict").read_text()
 
 
 def _patch_dycov_logging(monkeypatch):
@@ -671,6 +729,53 @@ def test_the_base_revision_has_no_delta_directory(monkeypatch, tmp_path):
     assert (
         manage_files.dtr_delta_path(tmp_path / "templates" / "PCS" / "SM" / "PCS_RTE-I6") is None
     )
+
+
+def _results_with_curves() -> dict:
+    curves = pd.DataFrame({"time": [0.0, 0.001], "BusPDR_BUS_Voltage": [1.0, 0.99]})
+    return {
+        "compliance": True,
+        "curves": curves,
+        "reference_curves": curves * 2,
+        "curves_error": {"before": 0.0},
+    }
+
+
+def test_the_curves_of_a_test_wait_on_disk_until_its_report_takes_them_back(tmp_path):
+    results = _results_with_curves()
+
+    set_aside = set_curves_aside(results, tmp_path)
+
+    assert set(set_aside) == {"compliance", "curves_set_aside"}
+    assert set_aside["curves_set_aside"].exists()
+
+    taken_back = take_curves_back(set_aside)
+
+    assert not set_aside["curves_set_aside"].exists()
+    assert set(taken_back) == {"compliance", "curves", "reference_curves"}
+    pd.testing.assert_frame_equal(taken_back["curves"], results["curves"])
+    pd.testing.assert_frame_equal(taken_back["reference_curves"], results["reference_curves"])
+
+
+def test_a_test_without_curves_keeps_its_results_as_they_are(tmp_path):
+    failed = {"compliance": False, "curves": None}
+
+    assert set_curves_aside(failed, tmp_path) is failed
+    assert take_curves_back(failed) is failed
+    assert not list(tmp_path.iterdir())
+
+
+def test_the_curves_no_report_took_back_are_discarded(tmp_path):
+    first, second = tmp_path / "Bench" / "OC1", tmp_path / "Bench" / "OC2"
+    first.mkdir(parents=True)
+    second.mkdir()
+    take_curves_back(set_curves_aside(_results_with_curves(), first))
+    set_curves_aside(_results_with_curves(), second)
+
+    discard_curves_set_aside(tmp_path)
+
+    assert not list(first.iterdir())
+    assert not list(second.iterdir())
 
 
 def test_copy_latex_files_prefixes_the_templates_and_lets_the_source_replace_a_resource(

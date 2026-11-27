@@ -18,6 +18,7 @@ import pytest
 from lxml import etree
 from tests.dycov.utils import listed_in_order
 
+from dycov.configuration.cfg import config
 from dycov.files import producer_curves
 from dycov.sanity_checks import file_checks
 
@@ -125,7 +126,9 @@ def test_check_dynawo_model_files_rejects_a_model_without_one_file(tmp_path, mis
     with pytest.raises(FileNotFoundError) as not_found_error:
         file_checks.check_dynawo_model_files(model_path)
 
-    assert missing_extension in str(not_found_error.value)
+    assert str(not_found_error.value) == (
+        f"The producer has no .{missing_extension} file in {model_path}"
+    )
 
 
 def test_check_dynawo_model_files_rejects_files_with_different_names(tmp_path):
@@ -220,7 +223,9 @@ def test_check_curves_files_generates_the_configuration_from_the_model(tmp_path,
     monkeypatch.setattr(
         file_checks,
         "create_producer_curves",
-        lambda model_path, curves_path, template, delivery: created_curves.append(template),
+        lambda model_path, curves_path, template, delivery, category: created_curves.append(
+            template
+        ),
     )
     model_path = _write_model_files(tmp_path / "Dynawo")
 
@@ -237,7 +242,7 @@ def test_check_curves_files_generates_the_index_from_the_root_of_the_references(
     monkeypatch.setattr(
         file_checks,
         "create_producer_curves",
-        lambda model_path, curves_path, template, delivery: created_curves.append(
+        lambda model_path, curves_path, template, delivery, category: created_curves.append(
             (curves_path, template, delivery)
         ),
     )
@@ -693,7 +698,9 @@ def test_check_validation_model_demands_zone1_when_a_pcs_of_zone_1_runs(tmp_path
     with pytest.raises(FileNotFoundError) as not_found_error:
         file_checks.check_validation_model(model_path, reference_path, 2, ["Producer"], [])
 
-    assert "Zone1 model files not found" in str(not_found_error.value)
+    assert str(not_found_error.value) == (
+        f"The producer has no Zone1 model in {model_path / 'Zone1'}: the PCS of zone 1 need it."
+    )
 
 
 def test_check_validation_curves_accepts_zone3_alone_when_no_pcs_of_zone_1_runs(tmp_path):
@@ -706,3 +713,32 @@ def test_check_validation_curves_accepts_zone3_alone_when_no_pcs_of_zone_1_runs(
         file_checks.check_validation_curves(curves_path, reference_path, zone1_required=False)
         is None
     )
+
+
+@pytest.mark.parametrize(
+    "category, test, other",
+    [("C", "S_Fault4", "ThreePhaseFault"), ("B", "ThreePhaseFault", "S_Fault4")],
+)
+def test_a_storage_gets_the_index_of_the_fiche_its_category_runs(tmp_path, category, test, other):
+    """#835: under the revision 20260723 a storage of type C or D runs the Fiche I16.2 in Zone 1,
+    and its generated index has to ask for those tests, not the ones of the Fiche I16.1."""
+    selected = config.get_value("DTR", "current", "")
+    config.set_value("DTR", "current", "20260723")
+    config.load_dtr_delta_config("20260723")
+    references = tmp_path / "References"
+    references.mkdir()
+    try:
+        with pytest.raises(FileNotFoundError):
+            file_checks.check_curves_files(
+                _EXAMPLES / "BESS" / "GridFormingDroop" / "Dynawo",
+                references / "Producer",
+                "model/BESS",
+                category,
+            )
+    finally:
+        config.set_value("DTR", "current", selected)
+        config.load_dtr_delta_config(selected)
+
+    zone1 = _index(references / "Producer" / "CurvesFiles.ini")["Curves-Files"]
+    assert any(key.startswith(f"PCS_RTE-I16z1.{test}.") for key in zone1)
+    assert not any(key.startswith(f"PCS_RTE-I16z1.{other}.") for key in zone1)

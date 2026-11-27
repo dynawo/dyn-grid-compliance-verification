@@ -10,6 +10,8 @@
 """Tests for the ModelProducer helpers."""
 
 import configparser
+import re
+import shutil
 from pathlib import Path
 
 import pytest
@@ -48,7 +50,7 @@ def _producer_reading(
     return producer
 
 
-def _make_generator(converter_lv_control: bool) -> GenParams:
+def _make_generator(converter_lv_control: bool, reference_impedance: complex = 0j) -> GenParams:
     return GenParams(
         id="PV_Array",
         lib="",
@@ -61,6 +63,7 @@ def _make_generator(converter_lv_control: bool) -> GenParams:
         voltage_droop=0.0,
         use_voltage_droop=False,
         converter_lv_control=converter_lv_control,
+        reference_impedance=reference_impedance,
     )
 
 
@@ -163,18 +166,32 @@ def test_storage_must_declare_the_consumption_limit(monkeypatch):
         _producer_reading(monkeypatch, _PRODUCER_INI, MODEL_VALIDATION_BESS)
 
 
-def _performance_producer(monkeypatch, ini_text: str, model: bool, kinds: tuple) -> ModelProducer:
+def _performance_producer(
+    monkeypatch, ini_text: str, model: bool, kinds: tuple, others: dict = None
+) -> ModelProducer:
     """A producer whose kind of unit a performance verification is about to read, from its
-    model (the generators of its DYD) or from the INI beside its curves."""
+    model (the generators of its DYD) or from the INI beside its curves. The directory holds
+    the producer Producer, described by ini_text, and the others, each described by its text."""
     producer = ModelProducer.__new__(ModelProducer)
     producer._s_nref = 100.0
     producer._sim_type = None
+    producer._zone = 0
+    producer._filename = None
+    producer._installation_category = None
+    producer._installation_categories = {}
     producer._is_dynawo_model = model
     producer._producer_model_path = Path("Model") if model else None
     producer._producer_curves_path = None if model else Path("ProducerCurves")
-    producer_config = configparser.ConfigParser()
-    producer_config.read_string(ini_text)
-    monkeypatch.setattr(producer, "_ModelProducer__read_producer_ini", lambda: producer_config)
+    configs = {}
+    for name, text in {"Producer": ini_text, **(others or {})}.items():
+        configs[name] = configparser.ConfigParser()
+        configs[name].read_string(text)
+    monkeypatch.setattr(
+        producer,
+        "_ModelProducer__read_producer_ini",
+        lambda: configs[producer._filename or "Producer"],
+    )
+    monkeypatch.setattr(producer, "get_filenames", lambda zone=0: sorted(configs))
     monkeypatch.setattr(producer, "get_producer_dyd", lambda: Path("Producer.dyd"))
     monkeypatch.setattr(producer, "get_producer_par", lambda: Path("Producer.par"))
     monkeypatch.setattr(producer_module.file_checks, "check_performance_model", lambda path: None)
@@ -231,6 +248,93 @@ def test_storage_performance_runs_with_the_consumption_limit(monkeypatch, model)
 
 
 @pytest.mark.parametrize("model", [True, False], ids=["model", "curves"])
+@pytest.mark.parametrize("p_max_injection, category", [(15, "B"), (40, "C"), (60, "D")])
+def test_storage_performance_takes_the_category_the_dtr_gives_the_installation(
+    monkeypatch, model, p_max_injection, category
+):
+    """The fiches of a storage installation depend on its category, which a performance
+    verification reads from the INI of the installation: at 225 kV it is of type B below 18 MW,
+    C below 50 MW and D above."""
+    producer = _performance_producer(
+        monkeypatch,
+        _PRODUCER_INI.replace("= 80", f"= {p_max_injection}")
+        + "generator_type = BESS\np_max_consumption = 60\n",
+        model,
+        _STORAGE,
+    )
+
+    producer._ModelProducer__set_electric_performance_type()
+
+    assert producer.get_installation_category("Producer") == category
+
+
+@pytest.mark.parametrize("model", [True, False], ids=["model", "curves"])
+def test_each_producer_of_a_performance_directory_takes_the_category_of_its_installation(
+    monkeypatch, model
+):
+    """A directory may hold several producers, each an installation described by the INI of its
+    name, so each takes the category of its own."""
+    storage = "generator_type = BESS\np_max_consumption = 60\n"
+    producer = _performance_producer(
+        monkeypatch,
+        _PRODUCER_INI.replace("= 80", "= 15") + storage,
+        model,
+        _STORAGE,
+        others={"Other": _PRODUCER_INI.replace("= 80", "= 40") + storage},
+    )
+
+    producer._ModelProducer__set_electric_performance_type()
+
+    assert producer.get_installation_category("Producer") == "B"
+    assert producer.get_installation_category("Other") == "C"
+    assert producer._filename is None
+
+
+@pytest.mark.parametrize("model", [True, False], ids=["model", "curves"])
+def test_the_category_of_another_storage_producer_does_not_ask_for_its_consumption(
+    monkeypatch, model
+):
+    producer = _performance_producer(
+        monkeypatch,
+        _PRODUCER_INI + "generator_type = BESS\np_max_consumption = 60\n",
+        model,
+        _STORAGE,
+        others={"Other": _PRODUCER_INI.replace("= 80", "= 15") + "generator_type = BESS\n"},
+    )
+
+    producer._ModelProducer__set_electric_performance_type()
+
+    assert producer.get_installation_category("Other") == "B"
+
+
+def test_a_unit_of_a_model_validation_takes_the_category_of_the_installation():
+    """Zone 1 holds units, named apart from the installation their Zone 3 describes."""
+    producer = ModelProducer.__new__(ModelProducer)
+    producer._installation_category = "C"
+    producer._installation_categories = {}
+
+    assert producer.get_installation_category("Producer_G1") == "C"
+    assert producer.get_installation_category() == "C"
+
+
+@pytest.mark.parametrize("model", [True, False], ids=["model", "curves"])
+def test_a_performance_producer_whose_ini_lacks_the_magnitudes_of_its_category_stops(
+    monkeypatch, model
+):
+    storage = "generator_type = BESS\np_max_consumption = 60\n"
+    producer = _performance_producer(
+        monkeypatch,
+        _PRODUCER_INI + storage,
+        model,
+        _STORAGE,
+        others={"Other": _PRODUCER_INI.replace("u_nom = 225\n", "") + storage},
+    )
+
+    with pytest.raises(ValueError, match="must specify the u_nom"):
+        producer._ModelProducer__set_electric_performance_type()
+
+
+@pytest.mark.parametrize("model", [True, False], ids=["model", "curves"])
 def test_power_park_performance_needs_no_consumption_limit(monkeypatch, model):
     producer = _performance_producer(
         monkeypatch, _PRODUCER_INI + "generator_type = PPM\n", model, _POWER_PARK
@@ -267,6 +371,14 @@ def test_the_controlled_node_is_internal_node1_when_a_unit_controls_it():
     producer = _producer_with_model(_make_generator(True), _make_generator(False))
 
     assert producer.controls_internal_node2() is False
+
+
+def test_a_unit_that_takes_its_references_behind_its_own_transformer_controls_internal_node2():
+    """#813: the droop Grid Forming converter of Dynawo keeps its transformer inside, so it needs
+    no external one (ConverterLVControl false), and controls the filter capacitor before it."""
+    producer = _producer_with_model(_make_generator(False, complex(0.003, 0.15)))
+
+    assert producer.controls_internal_node2() is True
 
 
 def test_the_controlled_node_keeps_the_flag_default_for_curves_without_a_model():
@@ -342,6 +454,71 @@ def test_get_filenames_ignores_a_zone_name_above_the_curves_directory(tmp_path, 
     assert producer.get_filenames() == ["Producer"]
 
 
+_CONSUMPTION = "p_max_consumption = 80\n"
+
+
+def _producer_reading_its_zone3(tmp_path: Path, zone3_ini: str) -> ModelProducer:
+    curves_path = _curves_tree(tmp_path)
+    (curves_path / "Zone3" / "Producer.ini").write_text(zone3_ini)
+    producer = _producer_with_curves(curves_path)
+    producer._filename = None
+    producer._zone = 0
+    return producer
+
+
+@pytest.mark.parametrize("p_max_injection, category", [(15, "B"), (40, "C"), (60, "D")])
+def test_a_storage_installation_takes_the_category_the_dtr_gives_its_zone3(
+    tmp_path, p_max_injection, category
+):
+    """A storage installation at 225 kV is of type B below 18 MW, C below 50 MW and D above."""
+    zone3_ini = _PRODUCER_INI.replace("= 80", f"= {p_max_injection}") + _CONSUMPTION
+    producer = _producer_reading_its_zone3(tmp_path, zone3_ini)
+    producer._sim_type = MODEL_VALIDATION_BESS
+
+    assert producer._ModelProducer__read_installation_category(zone=3, filename=None) == category
+
+
+@pytest.mark.parametrize(
+    "zone3_ini, message",
+    [
+        (_PRODUCER_INI.replace("u_nom = 225\n", ""), "must specify the u_nom"),
+        (_PRODUCER_INI.replace("u_nom =", "u_nom_at_PDR ="), "dycov migrate_inputs"),
+    ],
+)
+def test_the_category_of_the_installation_asks_for_what_its_zone3_lacks(
+    tmp_path, zone3_ini, message
+):
+    """Curves delivered without a model reach the category before anything else reads their
+    Zone 3, so it is there that a missing or retired parameter is told."""
+    producer = _producer_reading_its_zone3(tmp_path, zone3_ini)
+    producer._sim_type = MODEL_VALIDATION_PPM
+
+    with pytest.raises(ValueError, match=message):
+        producer._ModelProducer__read_installation_category(zone=3, filename=None)
+
+
+def test_the_category_of_the_installation_ignores_the_zone_in_preparation(tmp_path):
+    """A unit of Zone 1 is smaller than its installation, and the fiche follows the latter."""
+    producer = _producer_reading_its_zone3(tmp_path, _PRODUCER_INI + _CONSUMPTION)
+    producer._sim_type = MODEL_VALIDATION_BESS
+    producer._zone = 1
+
+    assert producer._ModelProducer__read_installation_category(zone=3, filename=None) == "D"
+    assert producer._zone == 1
+
+
+def test_the_effective_reactance_of_a_grid_forming_unit_is_read_from_its_ini(monkeypatch):
+    producer = _producer_reading(monkeypatch, _PRODUCER_INI + "[GFM Parameters]\nXeff = 0.27\n")
+
+    assert producer.x_eff == pytest.approx(0.27)
+
+
+def test_a_unit_that_declares_no_effective_reactance_has_none(monkeypatch):
+    producer = _producer_reading(monkeypatch, _PRODUCER_INI)
+
+    assert producer.x_eff is None
+
+
 def test_get_filenames_skips_a_folder_of_the_curves_that_no_ini_describes(tmp_path, caplog):
     """#687: the Results a run leaves next to the INI is no producer, and stops nothing."""
     (tmp_path / "Producer").mkdir()
@@ -364,3 +541,89 @@ def test_get_filenames_of_the_curves_reads_the_ini_of_the_zone(tmp_path, caplog)
     assert producer.get_filenames(zone=1) == []
     assert producer.get_filenames(zone=3) == ["Producer"]
     assert "is skipped" not in caplog.text
+
+
+def test_a_missing_producer_ini_is_reported_by_its_name_and_directory(tmp_path):
+    (tmp_path / "Producer.dyd").write_text("")
+    producer = _model_in(tmp_path, 0)
+
+    with pytest.raises(FileNotFoundError) as error:
+        producer._ModelProducer__read_producer_ini()
+
+    assert str(error.value) == f"The producer has no Producer.ini in {tmp_path}"
+
+
+def test_a_missing_ini_of_a_unit_names_the_unit_and_its_zone(tmp_path):
+    zone1 = tmp_path / "Zone1"
+    zone1.mkdir()
+    (zone1 / "Producer_G2.ini").write_text("[DEFAULT]\n")
+    producer = _model_in(tmp_path, 1, "Producer_G1")
+
+    with pytest.raises(
+        FileNotFoundError, match=rf"no Producer_G1\.ini in {re.escape(str(zone1))}$"
+    ):
+        producer._ModelProducer__read_producer_ini()
+
+
+@pytest.mark.parametrize("extension", ["dyd", "par"])
+def test_a_missing_model_file_is_reported_by_its_extension(tmp_path, extension):
+    zone3 = tmp_path / "Zone3"
+    zone3.mkdir()
+    (zone3 / "Producer.ini").write_text("[DEFAULT]\n")
+    producer = _model_in(tmp_path, 3)
+
+    with pytest.raises(
+        FileNotFoundError, match=rf"no \.{extension} file in {re.escape(str(zone3))}$"
+    ):
+        getattr(producer, f"get_producer_{extension}")()
+
+
+def test_the_files_present_are_found_whatever_the_case_of_their_extension(tmp_path):
+    (tmp_path / "Producer.INI").write_text("[DEFAULT]\np_max_injection = 80\n")
+    (tmp_path / "Plant.Dyd").write_text("")
+    producer = _model_in(tmp_path, 0)
+
+    assert producer._ModelProducer__read_producer_ini().get("DEFAULT", "p_max_injection") == "80"
+    assert producer.get_producer_dyd() == tmp_path.resolve() / "Plant.Dyd"
+
+
+def test_a_unit_model_without_its_zone3_dyd_is_told_so_before_any_unit_file(tmp_path):
+    examples = Path(__file__).resolve().parents[3] / "examples"
+    model = shutil.copytree(examples / "Model" / "Wind" / "WECC4" / "Dynawo", tmp_path / "Dynawo")
+    (model / "Zone3" / "Producer.dyd").unlink()
+    producer = _model_in(model)
+    producer._s_nref = 100.0
+    producer._sim_type = MODEL_VALIDATION_PPM
+
+    with pytest.raises(FileNotFoundError) as error:
+        producer._ModelProducer__set_dynawo_model_validation_type()
+
+    assert str(error.value) == f"The producer has no .dyd file in {model / 'Zone3'}"
+
+
+@pytest.mark.parametrize("written", ["", "   "])
+def test_an_effective_reactance_left_empty_is_not_given(monkeypatch, written):
+    producer = _producer_reading(
+        monkeypatch, _PRODUCER_INI + f"[GFM Parameters]\nXeff ={written}\n"
+    )
+
+    assert producer.x_eff is None
+
+
+def test_the_optional_numbers_of_the_ini_left_empty_take_their_defaults(monkeypatch):
+    ini = _PRODUCER_INI.replace(
+        "[DEFAULT]\n", "[DEFAULT]\np_min_injection =\np_min_consumption =\np_max_consumption =\n"
+    )
+    producer = _producer_reading(monkeypatch, ini)
+
+    assert (
+        producer.p_min_injection_pu,
+        producer.p_min_consumption_pu,
+        producer.p_max_consumption_pu,
+    ) == (0.0, 0.0, 0.0)
+
+
+def test_a_nominal_power_left_empty_is_the_base_of_the_system(monkeypatch):
+    producer = _producer_reading(monkeypatch, _PRODUCER_INI + "s_nom =\n")
+
+    assert producer.s_nom == 100.0

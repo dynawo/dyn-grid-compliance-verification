@@ -345,7 +345,7 @@ def filter_curves(
             elif config.get_boolean("GridCode", "disable_window_filtering", False):
                 c_filt = lowpass_filter(c, f_cutoff, fs, filter_name)
             else:
-                c_filt = c
+                c_filt = c.copy()
 
                 t_from, t_to = windows["before"]
                 w_init, w_end = _get_time_positions(time_values, t_from, t_to)

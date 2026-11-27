@@ -32,6 +32,9 @@ _LATEX_ASSETS = [
     _PKG_ROOT / "templates/reports/TSO_logo.pdf",
     _PKG_ROOT / "templates/reports/fig_placeholder.pdf",
 ]
+CURVES_SET_ASIDE_FILE = "curves_set_aside.pkl"
+_CURVES_FOR_THE_REPORT = ("curves", "reference_curves")
+_CURVES_FOR_NO_ONE = ("curves_error",)
 
 
 def get_dynawo_version(launcher_dwo: Path) -> str:
@@ -420,32 +423,67 @@ def _copy_producer_tables(producer_path: Path, target_path: Path) -> None:
         copy_file(file, target_path / (file.stem + file.suffix.lower()))
 
 
-def _copy_curve_files_by_name(
-    source_path: Path, target_path: Path, base_name: str, target_stem: str
-) -> list[str]:
-    """Copy curve files by base name, renamed to target_stem, and return the copied names."""
+def _curve_files(source_path: Path, base_name: str) -> list[Path]:
+    """The files of a curve, which share its base name."""
     if not source_path.exists():
         return []
 
     supported_exts = {".csv", ".exp", ".cff", ".dat", ".cfg", ".dict"}
+    return [
+        file
+        for file in source_path.iterdir()
+        if file.is_file()
+        and file.stem.lower() == base_name.lower()
+        and file.suffix.lower() in supported_exts
+    ]
+
+
+def _curve_source(curves_dir: Path, prefix_name: str) -> tuple[Path, str]:
+    """The directory and the base name of the curve of a test, which the [Curves-Files]
+    section of CurvesFiles.ini may give another name and place (relative or absolute)."""
+    curves_cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
+    curves_cfg.read(curves_dir / "CurvesFiles.ini")
+    curves_filename = curves_cfg.get("Curves-Files", prefix_name, fallback=None)
+    if not curves_filename:
+        return curves_dir, prefix_name
+
+    main_file = Path(curves_filename)
+    if main_file.is_absolute():
+        return main_file.parent, main_file.stem
+    return curves_dir / main_file.parent, main_file.stem
+
+
+def _copy_curve_files_by_name(
+    source_path: Path, target_path: Path, base_name: str, target_stem: str
+) -> list[str]:
+    """Copy curve files by base name, renamed to target_stem, and return the copied names."""
     copied_files: list[str] = []
 
     try:
-        for file in source_path.iterdir():
-            if (
-                file.is_file()
-                and file.stem.lower() == base_name.lower()
-                and file.suffix.lower() in supported_exts
-            ):
-                target_name = f"{target_stem}{file.suffix.lower()}"
-                target_file = target_path / target_name
-
-                copy_file(file, target_file)
-                copied_files.append(target_name)
+        for file in _curve_files(source_path, base_name):
+            target_name = f"{target_stem}{file.suffix.lower()}"
+            copy_file(file, target_path / target_name)
+            copied_files.append(target_name)
 
         return copied_files
     except OSError:
         return []
+
+
+def _has_dictionary(copied_files: list[str]) -> bool:
+    return any(name.endswith(".dict") for name in copied_files)
+
+
+def _copy_test_dictionary(curves_dir: Path, target_path: Path, prefix_name: str) -> list[str]:
+    """The dictionary named after the test, which is how a workbook writes it whatever the name
+    of its curves file, so that several tests may share one recording."""
+    dictionaries = [
+        file for file in _curve_files(curves_dir, prefix_name) if file.suffix.lower() == ".dict"
+    ]
+    if not dictionaries:
+        return []
+    copy_file(dictionaries[0], target_path / f"{prefix_name}.dict")
+    return [f"{prefix_name}.dict"]
 
 
 def copy_base_curves_files(source_path: Path, target_path: Path, prefix_name: str) -> bool:
@@ -457,7 +495,9 @@ def copy_base_curves_files(source_path: Path, target_path: Path, prefix_name: st
         - The associated dictionary file (.dict) - Mandatory for all curve types
 
     A curve renamed through the [Curves-Files] section (relative or absolute path) is
-    copied under prefix_name, the canonical test name every downstream lookup uses.
+    copied under prefix_name, the canonical test name every downstream lookup uses. Its
+    dictionary is the one of its own name or, without one, the one of the test's name next
+    to CurvesFiles.ini.
 
     Parameters
     ----------
@@ -486,30 +526,23 @@ def copy_base_curves_files(source_path: Path, target_path: Path, prefix_name: st
 
         copy_file(ini_file, target_path)
 
-        curves_cfg = configparser.ConfigParser(inline_comment_prefixes=("#",))
-        curves_cfg.read(ini_file)
-        curves_filename = curves_cfg.get("Curves-Files", prefix_name, fallback=None)
-
-        base_name = prefix_name
-        base_source_path = curves_dir
-
-        if curves_filename:
-            main_file = Path(curves_filename)
-            base_name = main_file.stem
-            if main_file.is_absolute():
-                base_source_path = main_file.parent
-            elif main_file.parent != Path("."):
-                base_source_path = curves_dir / main_file.parent
-
+        base_source_path, base_name = _curve_source(curves_dir, prefix_name)
         copied_files = _copy_curve_files_by_name(
             base_source_path, target_path, base_name, prefix_name
         )
+        if copied_files and not _has_dictionary(copied_files):
+            copied_files += _copy_test_dictionary(curves_dir, target_path, prefix_name)
 
-        has_dict_file = any(f.endswith(".dict") for f in copied_files)
+        has_dict_file = _has_dictionary(copied_files)
         if copied_files and not has_dict_file:
+            test_dictionary = (
+                f" nor '{prefix_name}.dict' in '{curves_dir}'"
+                if (base_source_path, base_name.lower()) != (curves_dir, prefix_name.lower())
+                else ""
+            )
             dycov_logging.get_logger("Manage files").warning(
                 f"Expected curve dictionary '{base_name}.dict' not found in "
-                f"'{base_source_path}', the test runs as if it had no curves"
+                f"'{base_source_path}'{test_dictionary}, the test runs as if it had no curves"
             )
 
         return len(copied_files) >= 2 and has_dict_file
@@ -537,6 +570,66 @@ def _copy_pcs_delta_files(
     benchmark_path = delta_path / model_files.benchmark
     if benchmark_path.exists():
         copy_from_path(benchmark_path, target_path, extra_excludes=exclude_patterns)
+
+
+def set_curves_aside(results: dict, working_oc_dir: Path) -> dict:
+    """The results of a test without its curves, which wait in a file of its working directory
+    until the report draws them, so that a PCS of many tests holds the curves of none in memory.
+
+    Parameters
+    ----------
+    results: dict
+        Results of the test, its curves included.
+    working_oc_dir: Path
+        Working directory of the test.
+
+    Returns
+    -------
+    dict
+        The results without the curves, and the file that holds them.
+    """
+    if results.get("curves") is None:
+        return results
+    path = working_oc_dir / CURVES_SET_ASIDE_FILE
+    pd.to_pickle({key: results[key] for key in _CURVES_FOR_THE_REPORT if key in results}, path)
+    left_out = _CURVES_FOR_THE_REPORT + _CURVES_FOR_NO_ONE
+    return {key: value for key, value in results.items() if key not in left_out} | {
+        "curves_set_aside": path
+    }
+
+
+def take_curves_back(results: dict) -> dict:
+    """The results of a test with the curves set aside for its report, whose file goes.
+
+    Parameters
+    ----------
+    results: dict
+        Results of the test, as `set_curves_aside` left them.
+
+    Returns
+    -------
+    dict
+        The results with their curves.
+    """
+    path = results.get("curves_set_aside")
+    if path is None:
+        return results
+    curves = pd.read_pickle(path)
+    path.unlink()
+    return {key: value for key, value in results.items() if key != "curves_set_aside"} | curves
+
+
+def discard_curves_set_aside(pcs_working_dir: Path) -> None:
+    """Removes the curves set aside that no report took back, however the validation of the PCS
+    ended, so that none reaches the results.
+
+    Parameters
+    ----------
+    pcs_working_dir: Path
+        Working directory of the PCS, which holds those of its tests.
+    """
+    for path in pcs_working_dir.rglob(CURVES_SET_ASIDE_FILE):
+        path.unlink()
 
 
 def copy_latex_files(source: Path, target: Path, prefix_name: str) -> None:

@@ -118,6 +118,47 @@ def testget_line_values_applies_provided_impedances():
     assert lines[0].x == pytest.approx(0.35)
 
 
+def test_a_line_that_starts_open_is_not_in_service_when_the_simulation_starts():
+    dyd_root = _make_root()
+    _add_bbmodel(dyd_root, "Line", "Line", "parLine")
+    _add_bbmodel(dyd_root, "SwitchedLine", "Line", "parSwitched")
+    par_root = _make_root()
+    _add_parset(par_root, "parLine", {"line_RPu": "{{line_RPu}}", "line_XPu": "{{line_XPu}}"})
+    _add_parset(
+        par_root,
+        "parSwitched",
+        {
+            "line_RPu": "{{switched_line_RPu}}",
+            "line_XPu": "{{switched_line_XPu}}",
+            "line_SwitchOffSignal20": "true",
+        },
+    )
+
+    lines = model_parameters.get_line_values(dyd_root, par_root, 0.02, 0.35)
+
+    assert [line.id for line in lines] == ["Line"]
+
+
+def test_the_switched_line_in_service_takes_the_impedance_of_the_test():
+    dyd_root = _make_root()
+    _add_bbmodel(dyd_root, "Line", "Line", "parLine")
+    _add_bbmodel(dyd_root, "SwitchedLine", "Line", "parSwitched")
+    par_root = _make_root()
+    _add_parset(par_root, "parLine", {"line_RPu": "{{line_RPu}}", "line_XPu": "{{line_XPu}}"})
+    _add_parset(
+        par_root,
+        "parSwitched",
+        {"line_RPu": "{{switched_line_RPu}}", "line_XPu": "{{switched_line_XPu}}"},
+    )
+
+    lines = model_parameters.get_line_values(dyd_root, par_root, 0.02, 0.35, complex(0.004, 0.04))
+
+    assert [(line.r, line.x) for line in lines] == [
+        (pytest.approx(0.02), pytest.approx(0.35)),
+        (pytest.approx(0.004), pytest.approx(0.04)),
+    ]
+
+
 def test_get_transformer_values_missing_parset_raises():
     dyd_root = _make_root()
     _add_bbmodel(dyd_root, "StepUp_Xfmr", "TransformerFixedRatio", "missing")
@@ -377,6 +418,56 @@ def test_get_generator_converter_lv_control_defaults_to_true_when_absent():
     assert converter_lv_control is True
 
 
+def test_a_model_without_the_flag_has_the_converter_lv_control_its_dictionary_states():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {})
+
+    converter_lv_control = model_parameters._get_generator_converter_lv_control(
+        [parset], {"ns": _NS}, "GridFormingConverterDroopControl"
+    )
+
+    assert converter_lv_control is False
+
+
+def test_the_references_of_the_grid_forming_converter_are_behind_its_transformer():
+    par_root = _make_root()
+    parset = _add_parset(
+        par_root, "parGen", {"converter_RTransformer": "0.01", "converter_LTransformer": "0.2"}
+    )
+
+    impedance = model_parameters._get_generator_reference_impedance(
+        [parset], {"ns": _NS}, "GridFormingConverterDroopControl"
+    )
+
+    assert impedance == pytest.approx(complex(0.01, 0.2))
+
+
+def test_a_model_that_takes_its_references_at_its_terminal_has_no_reference_impedance():
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {"BESS_RLvTrPu": "0.01", "BESS_XLvTrPu": "0.1"})
+
+    impedance = model_parameters._get_generator_reference_impedance(
+        [parset], {"ns": _NS}, "BESSWeccCurrentSource"
+    )
+
+    assert impedance == 0j
+
+
+def test_append_generator_takes_the_base_of_the_powers_its_dictionary_states():
+    """#813: the droop Grid Forming converter gives the powers at its filter capacitor in the base
+    of the unit, and a WECC one, in SnRef as Dynawo gives the rest."""
+    generators = []
+    for lib in ("GridFormingConverterDroopControl", "BESSWeccCurrentSource"):
+        dyd_root = _make_root()
+        model_parameter = _add_bbmodel(dyd_root, "Bess", lib, "parGen")
+        _add_connect(dyd_root, "Bess", "converter_terminal", "BusPDR", "bus_terminal")
+        par_root = _make_root()
+        _add_parset(par_root, "parGen", {})
+        model_parameters.append_generator(dyd_root, par_root, model_parameter, generators)
+
+    assert [generator.powers_in_unit_base for generator in generators] == [True, False]
+
+
 def testappend_generator_takes_ppc_local_from_the_par_file():
     dyd_root = _make_root()
     model_parameter = _add_bbmodel(dyd_root, "Wind_Turbine", "WTG4BWeccCurrentSource", "parGen")
@@ -451,3 +542,52 @@ def test_classify_transformers_rejects_an_unknown_id():
 
     assert "Some_Xfmr" in str(excinfo.value)
     assert "Group_Xfmr" in str(excinfo.value)
+
+
+@pytest.mark.parametrize("written", ["TRUE", "True", "1", " true"])
+def test_a_boolean_dynawo_does_not_read_as_true_is_false_and_said(written, monkeypatch):
+    said = []
+    monkeypatch.setattr(par_access.dycov_logging, "warn_once", lambda _, m: said.append(m))
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {"WTG4B_ConverterLVControl": written})
+
+    converter_lv_control = model_parameters._get_generator_converter_lv_control(
+        [parset], {"ns": _NS}, "WTG4BWeccCurrentSource"
+    )
+
+    assert converter_lv_control is False
+    assert said == [
+        f"WTG4B_ConverterLVControl = {written!r} in the set parGen of the producer's PAR: Dynawo "
+        "reads it as false, write true or false."
+    ]
+
+
+@pytest.mark.parametrize("written, read", [("true", True), ("false", False)])
+def test_a_boolean_written_as_dynawo_reads_it_says_nothing(written, read, monkeypatch):
+    said = []
+    monkeypatch.setattr(par_access.dycov_logging, "warn_once", lambda _, m: said.append(m))
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {"WTG4B_PPCLocal": written})
+
+    ppc_local = model_parameters._get_generator_ppc_local(
+        [parset], {"ns": _NS}, "WTG4BWeccCurrentSource"
+    )
+
+    assert ppc_local is read
+    assert said == []
+
+
+def test_a_line_whose_switch_off_signal_dynawo_reads_as_false_is_in_service(monkeypatch):
+    monkeypatch.setattr(par_access.dycov_logging, "warn_once", lambda *_: None)
+    dyd_root = _make_root()
+    _add_bbmodel(dyd_root, "SwitchedLine", "Line", "parSwitched")
+    par_root = _make_root()
+    _add_parset(
+        par_root,
+        "parSwitched",
+        {"line_RPu": "0.02", "line_XPu": "0.35", "line_SwitchOffSignal20": "TRUE"},
+    )
+
+    lines = model_parameters.get_line_values(dyd_root, par_root, 0.02, 0.35)
+
+    assert [line.id for line in lines] == ["SwitchedLine"]

@@ -9,6 +9,8 @@
 #
 """Tests for the figures of the PDF report."""
 
+import logging
+
 import matplotlib
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -20,6 +22,7 @@ from dycov.report.figure import (
     _get_xrange,
     _get_xrange_for_curve,
     _get_yrange,
+    _graph_scale,
     create_plot,
     get_common_time_range,
     get_curves2plot,
@@ -179,6 +182,38 @@ def test_get_xrange_for_curve_falls_back_to_defaults_on_empty_values(set_user_op
     # Settling at t=1, defaults 15%/20% of the [t_event, t_SS] window (min 1s)
     assert xmin == pytest.approx(0.35)
     assert xmax == pytest.approx(1.2)
+
+
+def test_the_reference_step_size_scales_the_tolerance_of_the_time_range(set_user_option):
+    set_user_option("OC.Benchmark", "reference_step_size", "0.5*Pmax")
+
+    assert _graph_scale("OC.Benchmark", {"Pmax": 10.0}) == pytest.approx(5.0)
+
+
+def test_an_operating_condition_without_reference_step_size_keeps_the_tolerance():
+    assert _graph_scale("OC.Benchmark", {"Pmax": 10.0}) == 1.0
+
+
+def test_a_rejected_reference_step_size_leaves_the_default_time_range(set_user_option, caplog):
+    from dycov.logging import dycov_logging
+
+    dycov_logging.clear_test_context()
+    time_curve = [0, 1, 2, 3, 4]
+    curve = [0, 5, 5, 5, 5]
+    default_range = _get_xrange_for_curve("OC.Benchmark", {}, time_curve, curve, 0.5)
+    set_user_option("OC.Benchmark", "reference_step_size", "0.1*Pnom")
+
+    with caplog.at_level(logging.WARNING, logger="DyCoV"):
+        for _ in range(2):
+            assert (
+                _get_xrange_for_curve("OC.Benchmark", {"Pmax": 1.0}, time_curve, curve, 0.5)
+                == default_range
+            )
+
+    [warning] = [r.getMessage() for r in caplog.records if r.name == "DyCoV.Figures"]
+    assert "'Pnom'" in warning
+    assert "'reference_step_size' in section [OC.Benchmark]" in warning
+    assert "The figures of OC.Benchmark show their default time range." in warning
 
 
 def test_get_xrange_for_curve_honors_figures_overrides(set_user_option):

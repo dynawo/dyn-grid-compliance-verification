@@ -142,7 +142,8 @@ This installer will:
 *   clone the latest stable DyCoV release,
 *   download the examples of that release, curves included,
 *   create a Python virtual environment using **Python 3.13** via `uv`,
-*   install DyCoV and all its Python dependencies inside that environment.
+*   install DyCoV and all its Python dependencies inside that environment, at the versions the
+    release was tested with.
 
 The installation is performed under:
 

@@ -13,6 +13,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 from dycov.cli.command_handlers import (
+    _run_verification,
     handle_excel2inputs_command,
     handle_performance_command,
     handle_validate_command,
@@ -176,6 +177,43 @@ def test_performance_refuses_curves_only_without_a_model(mocker):
 
     parser.error.assert_called_once()
     run_verification.assert_not_called()
+
+
+def _anonymize_args(output, curves=None, results=None):
+    args = MagicMock()
+    args.output, args.curves, args.results = output, curves, results
+    return args
+
+
+def _anonymize(mocker, tmp_path, monkeypatch, output, curves=None, results=None):
+    """What anonymize does with its arguments: the parser error, or None when it runs."""
+    from dycov.cli.command_handlers import handle_anonymize_command
+
+    monkeypatch.chdir(tmp_path)
+    anonymize = mocker.patch("dycov.cli.command_handlers.anonymizer.anonymize")
+    parser = MagicMock()
+    handle_anonymize_command(parser, _anonymize_args(output, curves, results))
+    if parser.error.called:
+        anonymize.assert_not_called()
+        return parser.error.call_args.args[0]
+    anonymize.assert_called_once()
+    return None
+
+
+def test_anonymize_asks_for_the_curves_to_anonymize(mocker, tmp_path, monkeypatch):
+    assert "give --curves or --results" in _anonymize(mocker, tmp_path, monkeypatch, "out")
+
+
+def test_anonymize_refuses_an_output_that_would_empty_its_curves(mocker, tmp_path, monkeypatch):
+    """#836: anonymize empties its output directory before it reads the curves."""
+    for output in ("curves", "."):
+        refusal = _anonymize(mocker, tmp_path, monkeypatch, output, curves="curves")
+        assert "would replace the curves it anonymizes" in refusal
+
+
+def test_anonymize_runs_with_curves_or_results_written_elsewhere(mocker, tmp_path, monkeypatch):
+    assert _anonymize(mocker, tmp_path, monkeypatch, "out", curves="curves") is None
+    assert _anonymize(mocker, tmp_path, monkeypatch, "out", results="Results") is None
 
 
 def _excel2inputs_args(excel="Producer.xlsx", output="output_dir"):
@@ -434,3 +472,18 @@ def test_performance_refuses_a_workbook_together_with_curves(mocker, tmp_path):
 
     parser.error.assert_called_once()
     generate.assert_not_called()
+
+
+def test_a_missing_producer_file_ends_the_verification_with_its_message(mocker, caplog):
+    mocker.patch(
+        "dycov.cli.command_handlers.ValidationParameters",
+        side_effect=FileNotFoundError("The producer has no Producer.ini in model"),
+    )
+
+    result = _run_verification(
+        _LAUNCHER, Path("out"), Path("model"), None, None, None, False, True, ELECTRIC_PERFORMANCE
+    )
+
+    assert result == 1
+    assert "The producer has no Producer.ini in model" in caplog.text
+    assert "Traceback" not in caplog.text

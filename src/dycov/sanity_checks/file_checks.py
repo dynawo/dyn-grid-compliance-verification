@@ -48,6 +48,27 @@ def model_file_regex(extension: str, filename: Optional[str] = None) -> str:
     return rf"(?:.*[/\\])?{name}\.{suffix}$"
 
 
+def missing_model_file(directory: Path, extension: str, filename: Optional[str] = None) -> str:
+    """The message of a producer model that lacks a file in a directory.
+
+    Parameters
+    ----------
+    directory : Path
+        The directory the file was looked for in.
+    extension : str
+        The extension of the file, without its dot.
+    filename : Optional[str]
+        The name of the file, without its extension; any name when it is empty or None.
+
+    Returns
+    -------
+    str
+        The message, naming the file and the directory.
+    """
+    expected = f"{filename}.{extension}" if filename else f".{extension} file"
+    return f"The producer has no {expected} in {directory}"
+
+
 def check_dynawo_model_files(model_path: Path, filename: str = "") -> None:
     """
     Checks for the presence of essential Dynawo model files (.dyd, .par, .ini)
@@ -82,36 +103,13 @@ def check_dynawo_model_files(model_path: Path, filename: str = "") -> None:
         if ini_pattern.match(str(file)):
             has_ini = file.stem
 
-    if not has_dyd:
-        dycov_logging.get_logger("Sanity Checks").error(
-            f"The dynawo model must contain a {filename}.dyd file with the model definition."
-        )
-        raise FileNotFoundError(
-            errno.ENOENT, os.strerror(errno.ENOENT), f"Model {filename}.dyd file not found."
-        )
-    if not has_par:
-        dycov_logging.get_logger("Sanity Checks").error(
-            f"The dynawo model must contain a {filename}.par file with the model parameters."
-        )
-        raise FileNotFoundError(
-            errno.ENOENT, os.strerror(errno.ENOENT), f"Model {filename}.par file not found."
-        )
-    if not has_ini:
-        dycov_logging.get_logger("Sanity Checks").error(
-            f"The dynawo model must contain a {filename}.ini file with the model configuration."
-        )
-        raise FileNotFoundError(
-            errno.ENOENT, os.strerror(errno.ENOENT), f"Model {filename}.ini file not found."
-        )
-    # Verify that all three files (.dyd, .par, .ini) share the same base name
+    for extension, found in (("dyd", has_dyd), ("par", has_par), ("ini", has_ini)):
+        if not found:
+            raise FileNotFoundError(missing_model_file(model_path, extension, filename))
     if has_dyd != has_par or has_dyd != has_ini:
-        dycov_logging.get_logger("Sanity Checks").error(
-            "The dynawo model must contain a .dyd, .par and .ini file with the same name."
-        )
         raise FileNotFoundError(
-            errno.ENOENT,
-            os.strerror(errno.ENOENT),
-            "Model files do not have the same name.",
+            f"The .dyd, .par and .ini files of the producer in {model_path} do not have the same "
+            f"name: {has_dyd}, {has_par} and {has_ini}"
         )
 
 
@@ -132,7 +130,9 @@ def validate_xml_syntax(xml_file: Path) -> None:
     etree.parse(open(xml_file))
 
 
-def check_curves_files(model_path: Path, curves_path: Path, template: str) -> None:
+def check_curves_files(
+    model_path: Path, curves_path: Path, template: str, category: str | None = None
+) -> None:
     """
     Checks that a unit of the reference curves has its index, `CurvesFiles.ini`, and that it
     is not the one generated from the model and left to complete. A missing index is generated
@@ -147,6 +147,9 @@ def check_curves_files(model_path: Path, curves_path: Path, template: str) -> No
         Directory of the reference curves of the unit, under the root of the reference curves.
     template : str
         Kind of the model, as the producer gives it: 'model/PPM' or 'model/BESS'.
+    category : str | None
+        Category of the installation, which decides the tests of the index generated when the
+        selected revision of the DTR gives the fiche a version by category.
 
     Raises
     ------
@@ -175,7 +178,11 @@ def check_curves_files(model_path: Path, curves_path: Path, template: str) -> No
     if model_path:
         references_path = curves_path.parent
         create_producer_curves(
-            model_path, references_path, template.replace("/", "_"), delivery=True
+            model_path,
+            references_path,
+            template.replace("/", "_"),
+            delivery=True,
+            category=category,
         )
         message = (
             f" One has been generated from the model in each unit directory of "
@@ -411,11 +418,9 @@ def check_validation_model(
     """
     check_dynawo_model_files(model_path / "Zone3")
     if zone1_required and not z1_names:
-        dycov_logging.get_logger("Sanity Checks").error(
-            "The Zone1 model files are not present: the PCS of zone 1 need them."
-        )
         raise FileNotFoundError(
-            errno.ENOENT, os.strerror(errno.ENOENT), "Zone1 model files not found."
+            f"The producer has no Zone1 model in {model_path / 'Zone1'}: the PCS of zone 1 "
+            "need it."
         )
     if z1_names and z3_generators != len(z1_names):
         dycov_logging.get_logger("Sanity Checks").error(

@@ -190,11 +190,12 @@ available in ``PATH``, those tests will fail or be skipped depending on the
 test configuration. This is expected behavior and not an indication that
 something is wrong with your setup.
 
-CI also collects coverage data on every pull request:
+CI also measures the coverage of the installed package, in the same run as the
+tests, on every pull request and on every push to ``master``:
 
 .. code-block:: console
 
-   uv run pytest --cov=src --cov-report=xml
+   pytest -o pythonpath=. --cov=dycov --cov-report=xml
 
 There is no coverage gate yet — the coverage report is informational and
 will not cause a build failure.

@@ -13,6 +13,7 @@ from typing import Optional
 from lxml import etree
 
 from dycov.curves.dynawo.dictionary.translator import dynawo_translator
+from dycov.files import replace_placeholders
 from dycov.logging import dycov_logging
 from dycov.model.parameters import GenParams
 
@@ -42,7 +43,8 @@ def _connect_generator_to_ramp(
     dyd_root: etree.Element, ns: str, generator: GenParams, grp: str
 ) -> None:
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
-    _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", "ramp_y")
+    if variable:
+        _connect_generator(dyd_root, ns, generator.id, variable, "OmegaRef", "ramp_y")
 
 
 def _connect_generator_to_dynmodelomegaref(
@@ -73,9 +75,10 @@ def _connect_generator_to_infinitebus(
     dyd_root: etree.Element, ns: str, generator: GenParams
 ) -> None:
     _, variable = dynawo_translator.get_dynawo_variable(generator.lib, "NetworkFrequencyReference")
-    _connect_generator(
-        dyd_root, ns, generator.id, variable, "InfiniteBus", "infiniteBus_omegaRefPu"
-    )
+    if variable:
+        _connect_generator(
+            dyd_root, ns, generator.id, variable, "InfiniteBus", "infiniteBus_omegaRefPu"
+        )
 
 
 def _connect_generator(
@@ -108,11 +111,26 @@ def _add_generator_weight(parset: etree.Element, ns: str, grp: str) -> Optional[
     return grp + 1
 
 
+def _complete_event(path: Path, par_file: str, event_params: dict) -> None:
+    """Give the event an Omega model applies itself, as the ramp of the grid frequency does,
+    the instant, the duration and the size of the event of the test."""
+    variables = replace_placeholders.get_all_variables(path, par_file)
+    if not variables:
+        return
+    variables |= {
+        "event_start": event_params["start_time"],
+        "event_duration": event_params["duration_time"],
+        "event_step_value": event_params["step_value"],
+    }
+    replace_placeholders.dump_file(path, par_file, variables)
+
+
 def complete_omega(
     path: Path,
     dyd_file: str,
     par_file: str,
     generators: list,
+    event_params: dict,
 ) -> None:
     """Replace DYD/PAR Omega files placeholders with values.
 
@@ -126,7 +144,10 @@ def complete_omega(
         PAR filename
     generators: list
         Variable where the step is connected
+    event_params: dict
+        The event of the test: its ``start_time``, ``duration_time`` and ``step_value``
     """
+    _complete_event(path, par_file, event_params)
     dyd_tree = etree.parse(path / dyd_file, etree.XMLParser(remove_blank_text=True))
     dyd_root = dyd_tree.getroot()
     dyd_ns = etree.QName(dyd_root).namespace

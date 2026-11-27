@@ -1,6 +1,8 @@
 # Feasibility assessment: replacing the Dynawo CLI with PyPowsybl
 
-**Status: BLOCKED today by a Dynawo release-cycle mismatch (not architectural).**
+**Status: BLOCKED today by a Dynawo release-cycle mismatch (not architectural).** The study was
+closed and its tools and the `dynawo-pypowsybl` extra retired; they remain in the history of the
+repository.
 powsybl-dynawo pins to official Dynawo *releases* (latest = **1.7.0**); DyCoV runs Dynawo
 **1.8.0 development (master)**. So pypowsybl 1.15 generates connections for the 1.7.0
 interface, which 1.8.0-master has renamed → **no dynamic simulation completes** here, not

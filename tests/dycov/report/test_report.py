@@ -224,6 +224,25 @@ def test_a_test_without_a_type_draws_no_setpoint():
     assert _setpoints_by_figure(drawn) == {}
 
 
+def test_a_setpoint_step_draws_its_setpoint_over_a_curve_of_internal_node1(set_user_option):
+    """A Zone 1 that compares InternalNode1, as the Fiche I16.2 does, draws the active power
+    of the bus, which the figure names in full."""
+    set_user_option(_OC, "setpoint_change_test_type", "PSetpoint")
+    fig_p = FigureDescription(
+        name="fig_P",
+        variables="BusPDR_BUS_ActivePower",
+        ylabel="P",
+        setpoint="ActivePowerSetpointPu",
+    )
+
+    drawn = report._with_stepped_setpoint(fig_p, _OC, 1)
+
+    assert drawn.variables == [
+        {"type": "bus", "variable": "ActivePower"},
+        {"type": "generator", "variable": "ActivePowerSetpointPu"},
+    ]
+
+
 def test_a_setpoint_step_of_zone_3_draws_no_setpoint(set_user_option):
     set_user_option(_OC, "setpoint_change_test_type", "PSetpoint")
     fig_p = FigureDescription(name="fig_P", variables="BusPDR_BUS_ActivePower", ylabel="P")
@@ -360,6 +379,17 @@ def test_build_oc_notices_without_reference_curves():
     assert watermark == "\\SetWatermarkText{INVALID}"
 
 
+@pytest.mark.parametrize(
+    "summary, says_why", [(Compliance.FaultDipUnachievable, True), (Compliance.Compliant, False)]
+)
+def test_the_page_of_a_test_whose_dip_is_out_of_reach_says_why_it_has_no_curves(summary, says_why):
+    """#831: the page said only that the test had no figure, not that it was never simulated."""
+    notices, watermark = report._build_oc_notices({"missed_columns": [], "summary": summary})
+
+    assert ("the fault search found no impedance" in notices) is says_why
+    assert watermark == "\\SetWatermarkText{}"
+
+
 def test_build_oc_notices_without_reference_curves_and_with_missed_columns():
     notices, watermark = report._build_oc_notices(
         {"missed_columns": ["BusPDR_BUS_Voltage"], "incomplete_curves": True}
@@ -455,6 +485,53 @@ def test_the_summary_of_a_workbook_names_the_workbook_alone(monkeypatch, caplog)
     assert "***Workbook: Producer.xlsx***" in summary
     assert "Model dir" not in summary
     assert "Reference curves dir" not in summary
+
+
+@pytest.mark.parametrize("group_xfmrs, has_group_xfmr", [([], False), (None, True)])
+def test_each_unit_draws_the_switched_line_closing_and_opening_for_the_jumps_of_the_scr(
+    tmp_path, group_xfmrs, has_group_xfmr
+):
+    templates = (
+        Path(report.__file__).resolve().parent.parent
+        / "templates/revisions/20260723/reports/model/BESS/PCS_RTE-I16z1"
+    )
+    (tmp_path / "circuit_z1_switched_line.tikz").write_text(
+        (templates / "circuit_z1_switched_line.tikz").read_text()
+    )
+
+    report._render_zone1_circuits(
+        tmp_path, type("Producer", (), {"group_xfmrs": group_xfmrs}), 1, "Unit"
+    )
+
+    drawn_closing = (tmp_path / "Unit.circuit_z1_switched_line_closes.tikz").read_text()
+    drawn_opening = (tmp_path / "Unit.circuit_z1_switched_line_opens.tikz").read_text()
+    assert "[cspst]" in drawn_closing and "[ospst]" not in drawn_closing
+    assert "[ospst]" in drawn_opening and "[cspst]" not in drawn_opening
+    for drawn in (drawn_closing, drawn_opening):
+        assert "BLOCK" not in drawn
+        assert ("Group\\\\ transformer" in drawn) is has_group_xfmr
+
+    report._render_zone1_circuits(
+        tmp_path, type("Producer", (), {"group_xfmrs": [object()]}), 1, "Other"
+    )
+
+    assert (tmp_path / "Unit.circuit_z1_switched_line_closes.tikz").read_text() == drawn_closing
+    assert (tmp_path / "Unit.circuit_z1_switched_line_opens.tikz").read_text() == drawn_opening
+    assert (tmp_path / "Other.circuit_z1_switched_line_closes.tikz").exists()
+    assert (tmp_path / "Other.circuit_z1_switched_line_opens.tikz").exists()
+
+
+def test_no_report_of_a_pcs_defines_a_macro_its_copy_for_another_unit_would_define_again():
+    templates = Path(report.__file__).resolve().parent.parent / "templates"
+    reports_of_a_pcs = [
+        path
+        for path in templates.rglob("report.*.tex")
+        if "reports" in path.relative_to(templates).parts
+    ]
+
+    assert reports_of_a_pcs
+    for path in reports_of_a_pcs:
+        assert "\\newcommand" not in path.read_text(encoding="utf-8"), path
 
 
 class _LatexPcs:
@@ -649,3 +726,51 @@ def test_the_report_of_a_unit_names_the_files_of_the_unit(tmp_path):
     _prepare(latex_dir, zone=1, group_xfmrs=[], producer="Unit_B")
 
     assert "\\renewcommand{\\ProducerFiles}{UnitB}" in (latex_dir / "report.tex").read_text()
+
+
+def _test_of(pcs: str, operating_condition: str = "OC") -> Summary:
+    return Summary(
+        producer_name="Producer",
+        id=1,
+        zone=3,
+        pcs=pcs,
+        benchmark="Benchmark",
+        operating_condition=operating_condition,
+        compliance=Compliance.Compliant,
+        report_name="report.tex",
+    )
+
+
+def test_a_pcs_whose_execution_was_aborted_leaves_the_others_in_the_report(tmp_path, caplog):
+    (tmp_path / "Producer.report.RTE-I16z3.tex").write_text("")
+    tests = [
+        _test_of("PCS_RTE-I16z1", "First"),
+        _test_of("PCS_RTE-I16z1", "Second"),
+        _test_of("PCS_RTE-I16z3"),
+    ]
+    report_results = {
+        "Producer_PCS_RTE-I16z1": {},
+        "Producer_PCS_RTE-I16z3": {"producer": "Producer", "report_name": "report.RTE-I16z3.tex"},
+    }
+
+    with caplog.at_level(logging.WARNING, logger="DyCoV"):
+        reports = report._get_reports(tests, report_results, tmp_path)
+
+    assert reports == ["\\input{Producer.report.RTE-I16z3}"]
+    [warning] = [r.getMessage() for r in caplog.records if r.name == "DyCoV.Report"]
+    assert warning.endswith(
+        "Producer PCS_RTE-I16z1: its execution was aborted, so the report has no page of its tests"
+    )
+
+
+def test_the_summary_table_breaks_across_pages_with_its_header_on_each():
+    template = (
+        Path(report.__file__).resolve().parent.parent / "templates/reports/report.tex"
+    ).read_text()
+    summary = template[
+        template.index("\\section{Summary}") : template.index("{for report in reports}")
+    ]
+
+    assert "\\begin{longtable}" in summary
+    assert "\\endhead" in summary
+    assert "tabularx" not in summary

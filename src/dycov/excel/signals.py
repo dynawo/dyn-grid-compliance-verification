@@ -23,10 +23,12 @@ comes from ``excel_names.ini``, so the sheets keep carrying only what the user f
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from dycov.excel import names
 from dycov.excel import workbook as wb
+from dycov.logging import dycov_logging
 
 
 @dataclass
@@ -50,41 +52,82 @@ class ZoneSignals:
     without_row: list = field(default_factory=list)
 
 
+def _heads(value, header: str) -> bool:
+    """Whether a cell is the header *header*: its text starts with it as a whole word. A cell the
+    user fills, a folder such as ``.../Fiches/...`` or ``.../test_cases/...``, merely holds it."""
+    return re.match(rf"{re.escape(header)}(?!\w)", names.normalize(value)) is not None
+
+
 def _header_columns(grid, wanted: dict) -> tuple[int, dict] | None:
     """The first row holding every header in *wanted*, as ``(row, {key -> column})``."""
     for row_idx, row in enumerate(grid):
         found = {}
         for col, value in enumerate(row):
-            text = names.normalize(value)
             for key, header in wanted.items():
-                if header in text and key not in found:
+                if _heads(value, header) and key not in found:
                     found[key] = col
         if len(found) == len(wanted):
             return row_idx, found
     return None
 
 
-def _column_of(grid, header: str) -> int | None:
-    """The column of the cell holding *header*, wherever it sits in the sheet."""
-    for row in grid:
-        for col, value in enumerate(row):
-            if header in names.normalize(value):
+def _column_in_rows(grid, rows: tuple, header: str) -> int | None:
+    """The column of the header *header* in the first of *rows* that holds it."""
+    for row_idx in rows:
+        for col, value in enumerate(grid[row_idx] if 0 <= row_idx < len(grid) else ()):
+            if _heads(value, header):
                 return col
     return None
 
 
-def _labelled_value(grid, label: str) -> str | None:
-    """The value that follows a label cell: to its right, or in the cell just below it."""
+def _header_rows(row: int) -> tuple:
+    """The rows the header of the tests table spans around the row of its case header: the
+    templates put its group headers, the results file among them, on the row above the column
+    headers, and a case header merged over both rows keeps its text on the upper one."""
+    return row, row - 1, row + 1
+
+
+@dataclass
+class _TestsHeader:
+    """Where the tests table is: the row of its case header and the columns of the case and of
+    the results file of each test."""
+
+    row: int
+    case_column: int
+    file_column: int
+
+
+def _tests_header(grid) -> _TestsHeader | None:
+    """The header of the tests table: a case header with the header of the results file in the
+    rows of the header, the leftmost of them, the cases being the first column of the table, and
+    the topmost in that column. A cell the user fills that merely starts with the word of a
+    header has no such neighbour, or lies to the right of the cases or below their header."""
+    file_header = names.anchor("test_file")
+    case_headers = [names.anchor(key) for key in ("test_case", "test_fiche")]
+    candidates = []
     for row_idx, row in enumerate(grid):
         for col, value in enumerate(row):
-            if label not in names.normalize(value):
+            if not any(_heads(value, header) for header in case_headers):
+                continue
+            file_column = _column_in_rows(grid, _header_rows(row_idx), file_header)
+            if file_column is not None:
+                candidates.append(_TestsHeader(row_idx, col, file_column))
+    return min(candidates, key=lambda header: (header.case_column, header.row), default=None)
+
+
+def _labelled_value(grid, label: str) -> str | None:
+    """The value that follows the cell a label starts: to its right, or in the cell just below
+    it; None when both are empty, rather than the value of another cell that only mentions the
+    label, as the header of the tests table does."""
+    for row_idx, row in enumerate(grid):
+        for col, value in enumerate(row):
+            if not names.normalize(value).startswith(label):
                 continue
             right = wb._cell(grid, row_idx, col + 1)
             if right:
                 return right.strip()
             below = wb._cell(grid, row_idx + 1, col)
-            if below:
-                return below.strip()
+            return below.strip() if below else None
     return None
 
 
@@ -122,11 +165,11 @@ def _suffixed(name: str, curves_file: str, suffix: str, metadata: dict) -> Test:
     return Test(name=name + suffix, curves_file=suffixed_file, metadata=dict(metadata))
 
 
-def _metadata_columns(grid) -> dict:
-    """``{metadata key -> column}`` for the keys whose header the sheet carries."""
+def _metadata_columns(grid, header_rows: tuple) -> dict:
+    """``{metadata key -> column}`` for the keys whose header the tests table carries."""
     located = {}
     for key, header in names.metadata_columns().items():
-        column = _column_of(grid, header)
+        column = _column_in_rows(grid, header_rows, header)
         if column is not None:
             located[key] = column
     return located
@@ -149,20 +192,15 @@ def _parse_tests(grid, zone: str, suffixes: tuple = ("",)) -> tuple[list, list]:
     """The tests the rows of the tests table describe, and those of the revision of the DTR no
     row is there for, as ``(tests, without_row)``."""
     known = names.tests(zone)
-    case_column = None
-    for key in ("test_case", "test_fiche"):
-        case_column = _column_of(grid, names.anchor(key))
-        if case_column is not None:
-            break
-    file_column = _column_of(grid, names.anchor("test_file"))
-    if case_column is None or file_column is None:
+    header = _tests_header(grid)
+    if header is None:
         return [], []
-    metadata_columns = _metadata_columns(grid)
+    metadata_columns = _metadata_columns(grid, _header_rows(header.row))
 
     tests, seen = [], {}
-    for row in range(len(grid)):
-        case = wb._cell(grid, row, case_column)
-        curves_file = wb._cell(grid, row, file_column)
+    for row in range(header.row + 1, len(grid)):
+        case = wb._cell(grid, row, header.case_column)
+        curves_file = wb._cell(grid, row, header.file_column)
         if not case:
             continue
         with_ordinal, plain = _test_key(names.normalize(case), seen)
@@ -181,6 +219,14 @@ def _without_row(known: dict, seen: dict, suffixes: tuple) -> list:
         f"{case}/{ordinal}" for case, count in seen.items() for ordinal in range(1, count + 1)
     }
     return [name + suffix for key, name in known.items() if key not in rows for suffix in suffixes]
+
+
+def _names_curve_files(grid) -> bool:
+    return any(
+        isinstance(value, str) and value.strip().lower().endswith(".csv")
+        for row in grid
+        for value in row
+    )
 
 
 def parse_zone_signals(
@@ -211,6 +257,11 @@ def parse_zone_signals(
     grid = workbook[sheet_name]
     tests, without_row = _parse_tests(grid, zone, names.test_suffixes() if storage else ("",))
     if not tests:
+        if _names_curve_files(grid):
+            dycov_logging.get_logger("Excel").warning(
+                f"The sheet '{sheet_name}' names .csv files but no test of its tests table was "
+                f"recognised: its curves are left out. Check the headers and the case of each row."
+            )
         return ZoneSignals(zone=zone)
     return ZoneSignals(
         zone=zone,

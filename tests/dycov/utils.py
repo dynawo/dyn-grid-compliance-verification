@@ -47,10 +47,11 @@ def execute_tool_summary(
     producer_model_path: Optional[Path],
     producer_curves_path: Optional[Path],
     reference_curves_path: Optional[Path],
+    selected_pcs: Optional[str] = None,
 ):
     """Every test of the run, each with the PCS, benchmark and operating condition it belongs
     to. What the run executed and what each test could conclude are told apart here; the
-    verdict alone cannot."""
+    verdict alone cannot. *selected_pcs* limits the run to one PCS, as ``-p`` does."""
     with TemporaryDirectory() as tmp_dir:
         output_dir = Path(tmp_dir)
         assert output_dir.exists()
@@ -80,7 +81,7 @@ def execute_tool_summary(
             producer_model_path if producer_model_path else None,
             producer_curves_path if producer_curves_path else None,
             reference_curves_path if reference_curves_path else None,
-            None,
+            selected_pcs,
             output_dir,
             only_dtr,
             sim_type,

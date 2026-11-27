@@ -10,6 +10,7 @@
 import configparser
 import re
 from pathlib import Path
+from typing import Optional
 
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import (
@@ -55,6 +56,12 @@ def _has_producer_ini(name: str, directories: list[Path]) -> bool:
         directory.is_dir() and any(pattern.match(str(file)) for file in directory.iterdir())
         for directory in directories
     )
+
+
+def _optional_float(producer_config, section: str, key: str, default: float | None = None):
+    """A number the INI may leave out or leave empty, *default* then."""
+    text = producer_config.get(section, key, fallback="").strip()
+    return float(text) if text else default
 
 
 def _check_parameters_definition(producer_config, section, needs_consumption):
@@ -105,6 +112,8 @@ class ModelProducer(Producer):
 
         self._filename = None
         self._sim_type = None
+        self._installation_category = None
+        self._installation_categories = {}
 
         dycov_logging.get_logger("Producer").debug("Initializing Producer:")
         if self._is_dynawo_model:
@@ -204,6 +213,12 @@ class ModelProducer(Producer):
                 "Electric performance verification does not support the modeled generator type"
             )
 
+        # Each producer of the directory is an installation of its own, which its INI describes
+        self._installation_categories = {
+            name: self.__read_installation_category(zone=0, filename=name)
+            for name in self.get_filenames()
+        }
+
     def __set_model_validation_type(self):
         #  Expected input example:
         #  Dynawo
@@ -268,6 +283,42 @@ class ModelProducer(Producer):
         else:
             raise ValueError("Model validation does not support the modeled generator type")
 
+        self._installation_category = self.__read_installation_category(
+            zone=3, filename=self._filename
+        )
+
+    def __read_installation_category(self, zone: int, filename: Optional[str]) -> str:
+        """Reads the category of the installation, as the DTR defines it, from the INI file that
+        describes the complete installation.
+
+        Parameters
+        ----------
+        zone: int
+            Zone whose INI file describes the installation: 3 in a model validation, whose
+            Zone 1 describes a unit, and 0 in a performance verification.
+        filename: Optional[str]
+            Name of that INI file, without its extension; Producer when None.
+
+        Returns
+        -------
+        str
+            The category of the installation: A, B, C or D.
+        """
+        previous = self._zone, self._filename
+        self._zone, self._filename = zone, filename
+        try:
+            producer_config = self.__read_producer_ini()
+        finally:
+            self._zone, self._filename = previous
+        _check_parameters_definition(
+            producer_config, "DEFAULT", self._sim_type == MODEL_VALIDATION_BESS
+        )
+        return generator_variables.get_generator_category(
+            float(producer_config.get("DEFAULT", "u_nom")),
+            float(producer_config.get("DEFAULT", "p_max_injection")),
+            self._sim_type in (MODEL_VALIDATION_BESS, ELECTRIC_PERFORMANCE_BESS),
+        )
+
     def __set_dynawo_model_validation_type(self):
         self._zone = 1
         generators_z1 = list()
@@ -295,6 +346,7 @@ class ModelProducer(Producer):
             )
             generators_z1 += generators
         self._zone = 3
+        file_checks.check_dynawo_model_files(self._producer_model_path / "Zone3")
         generators_z3 = list()
         for self._filename in self.get_filenames(self._zone):
             (
@@ -351,12 +403,9 @@ class ModelProducer(Producer):
         return self.__read_producer_ini().get("DEFAULT", "generator_type")
 
     def __read_producer_ini(self):
-        pattern_ini = re.compile(
-            file_checks.model_file_regex(
-                "ini", "Producer" if self._filename is None else self._filename
-            )
+        producer_ini = self.__get_model_file(
+            "ini", "Producer" if self._filename is None else self._filename
         )
-        producer_ini = self.__get_file_by_pattern(pattern_ini)
 
         producer_config = configparser.ConfigParser(inline_comment_prefixes=("#",))
         producer_config.read(producer_ini)
@@ -372,24 +421,24 @@ class ModelProducer(Producer):
         self.p_max_injection_pu = (
             float(producer_config.get(default_section, "p_max_injection")) / self._s_nref
         )
-        self.p_max_consumption_pu = 0.0
-        if producer_config.has_option(default_section, "p_max_consumption"):
-            self.p_max_consumption_pu = (
-                float(producer_config.get(default_section, "p_max_consumption")) / self._s_nref
-            )
+        self.p_max_consumption_pu = (
+            _optional_float(producer_config, default_section, "p_max_consumption", 0.0)
+            / self._s_nref
+        )
         self.p_min_injection_pu = (
-            producer_config.getfloat(default_section, "p_min_injection", fallback=0.0)
+            _optional_float(producer_config, default_section, "p_min_injection", 0.0)
             / self._s_nref
         )
         self.p_min_consumption_pu = (
-            producer_config.getfloat(default_section, "p_min_consumption", fallback=0.0)
+            _optional_float(producer_config, default_section, "p_min_consumption", 0.0)
             / self._s_nref
         )
         self.q_max_pu = float(producer_config.get(default_section, "q_max")) / self._s_nref
         self.q_min_pu = float(producer_config.get(default_section, "q_min")) / self._s_nref
         self.u_nom = float(producer_config.get(default_section, "u_nom"))
         self.topology = producer_config.get(default_section, "topology")
-        self.s_nom = float(producer_config.get(default_section, "s_nom", fallback=self._s_nref))
+        self.s_nom = _optional_float(producer_config, default_section, "s_nom", self._s_nref)
+        self.x_eff = _optional_float(producer_config, "GFM Parameters", "Xeff")
 
     def __init_model(self) -> None:
         """Initializes the Producer-dependent model."""
@@ -427,14 +476,21 @@ class ModelProducer(Producer):
         parameter_checks.check_internal_line(self.intline)
         parameter_checks.check_generators(self.generators)
 
-    def __get_file_by_pattern(self, pattern) -> Path:
+    def __get_model_file(self, extension: str, filename: Optional[str]) -> Path:
+        """The file of the producer with the given extension, named filename when one is given,
+        in the directory of the zone being read.
+
+        Raises
+        ------
+        FileNotFoundError
+            If that directory holds no such file, naming the file and the directory.
+        """
         if self._producer_model_path is not None:
             producer_path = self._producer_model_path
         elif self._producer_curves_path is not None:
             producer_path = self._producer_curves_path
         else:
-            dycov_logging.get_logger("Producer").error("No producer model has been defined")
-            return None
+            raise ValueError("No producer model has been defined")
 
         if self._zone == 0:
             path = producer_path
@@ -442,11 +498,11 @@ class ModelProducer(Producer):
             path = producer_path / "Zone1"
         elif self._zone == 3:
             path = producer_path / "Zone3"
+        pattern = re.compile(file_checks.model_file_regex(extension, filename))
         for file in path.resolve().iterdir():
             if pattern.match(str(file)):
                 return path.resolve() / file
-        dycov_logging.get_logger("Producer").warning(f"No found pattern: {pattern} in {path}")
-        return None
+        raise FileNotFoundError(file_checks.missing_model_file(path, extension, filename))
 
     def get_filenames(self, zone: int = 0) -> list[str]:
         """Get the filenames of the producer model.
@@ -612,6 +668,7 @@ class ModelProducer(Producer):
                     self._producer_model_path,
                     self._reference_curves_path / filename,
                     self.get_sim_type_str(),
+                    self.get_installation_category(filename),
                 )
             self.__init_model()
 
@@ -642,12 +699,12 @@ class ModelProducer(Producer):
         Returns
         -------
         bool
-            The ConverterLVControl flag of the model's generating units, or its default, True,
-            for curves supplied without a model, which do not state it
+            Whether every generating unit of the model takes its references there, or True for
+            curves supplied without a model, which do not state it
         """
         if not self.is_dynawo_model():
             return True
-        return all(gen.converter_lv_control for gen in self.generators)
+        return all(gen.controls_internal_node2 for gen in self.generators)
 
     def is_user_curves(self) -> bool:
         """Check if the producer has a curves directory.
@@ -668,6 +725,24 @@ class ModelProducer(Producer):
             True if has a reference curves directory, False otherwise
         """
         return self._has_reference_curves_path
+
+    def get_installation_category(self, producer_name: Optional[str] = None) -> Optional[str]:
+        """Gets the category of the installation, as the DTR defines it: in a performance
+        verification, that of the producer named, each producer of the directory being an
+        installation described by the INI of its name; in a model validation, that of the one
+        installation its Zone 3 describes.
+
+        Parameters
+        ----------
+        producer_name: Optional[str]
+            The producer whose installation it is.
+
+        Returns
+        -------
+        Optional[str]
+            'A', 'B', 'C' or 'D', None for a producer the verification does not know.
+        """
+        return self._installation_categories.get(producer_name, self._installation_category)
 
     def get_category(self) -> str:
         """Gets the category of the unit, as the DTR defines it.
@@ -734,8 +809,7 @@ class ModelProducer(Producer):
         Path
             Path to the Producer DYD file
         """
-        pattern_dyd = re.compile(file_checks.model_file_regex("dyd", self._filename))
-        return self.__get_file_by_pattern(pattern_dyd)
+        return self.__get_model_file("dyd", self._filename)
 
     def get_producer_par(self) -> Path:
         """Gets the Producer PAR file.
@@ -745,8 +819,7 @@ class ModelProducer(Producer):
         Path
             Path to the Producer PAR file
         """
-        pattern_par = re.compile(file_checks.model_file_regex("par", self._filename))
-        return self.__get_file_by_pattern(pattern_par)
+        return self.__get_model_file("par", self._filename)
 
     def get_producer_curves_path(self) -> Path:
         """Gets the Producer Curves Directory.
