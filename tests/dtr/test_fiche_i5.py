@@ -21,7 +21,7 @@ import pytest
 
 import dycov
 from dycov.configuration.cfg import config
-from dycov.model.pcs import _version_for_category
+from dycov.model.pcs_layers import version_for_category
 
 BASE_REVISION = "20240215"
 PREVIOUS_REVISION = "20251013"
@@ -43,7 +43,7 @@ def fiche_i5(revision):
         delta, version = None, None
         if selected != BASE_REVISION:
             delta = _in(selected, technology) / "PCSDescription.ini"
-            version = _version_for_category(_in(selected, technology), category)
+            version = version_for_category(_in(selected, technology), category)
         config.load_pcs_config(
             TEMPLATES / "PCS" / "performance" / technology / "PCS_RTE-I5" / "PCSDescription.ini",
             None,

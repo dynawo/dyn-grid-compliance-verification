@@ -9,6 +9,7 @@
 #
 
 import signal
+import subprocess
 import sys
 import types
 
@@ -88,3 +89,21 @@ def test_terminate_all_children_invokes_dynawo_and_report(monkeypatch):
         # Clean up fakes
         sys.modules.pop("dycov.curves.dynawo.runtime.dynawo_simulator", None)
         sys.modules.pop("dycov.report.report", None)
+
+
+def test_a_shutdown_that_does_not_end_is_ended(tmp_path):
+    """#850: a pool whose forkserver the end signal also killed can wait forever for a worker it
+    cannot start; the run still ends, with the code of the signal."""
+    script = tmp_path / "stuck.py"
+    script.write_text(
+        "import threading\n"
+        "from dycov.core.graceful_shutdown import end_within\n"
+        "end_within(7, timeout=0.5)\n"
+        "threading.Event().wait()\n",
+        encoding="utf-8",
+    )
+
+    run = subprocess.run([sys.executable, str(script)], timeout=30, capture_output=True)
+
+    assert run.returncode == 7
+    assert b"did not end within 0.5 s" in run.stderr
