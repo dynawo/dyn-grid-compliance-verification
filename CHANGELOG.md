@@ -92,10 +92,12 @@ whose rows the next sections describe (#701).
 
 The searches for the impedance of the high-impedance and bolted faults run each of their
 simulations on the SIM solver and stop it 2 s after the fault is cleared, or 2 s after a permanent
-fault starts; a simulation that fails is retried as any other. The test is then simulated as
-before. The impedance they settle on may differ slightly from the one they found on IDA.
-`fault_search_solver_lib` and `fault_search_time_after_clearing`, in `[Dynawo]`, change both
-(#644).
+fault starts. A simulation that fails is retried as any other and, if SIM still cannot simulate it,
+simulated again on the solver of the test; a high-impedance search that ends without its dip on
+SIM, whose dip may jump past the target, is run again on the solver of the test. The test is then
+simulated as before. The impedance they settle on may differ slightly from the one they found on
+IDA. `fault_search_solver_lib` and `fault_search_time_after_clearing`, in `[Dynawo]`, change both
+(#644, #830).
 
 ### The IEC workbook carries the tables of the models
 
@@ -181,33 +183,69 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   and the installer checks for them before it starts (#768).
 - The figures of the GFM RoCoF tests give their initial frequency and RoCoF in Hz with the
   nominal frequency of the configuration, where they took 50 Hz (#770).
+- The continuous integration runs on pushes to master as well, builds the wheel and runs the tests
+  once, against the installed package, on current versions of its actions (#844).
 - The Epsilon of the GFM SCR jump figures is that of the producer's D and H, not that of one of
   their variations, and a hybrid run leaves it out as it does D and H (#771).
+- A run whose process group is told to end, as a closed terminal does, ends within 15 s of the
+  signal even when its pool waits for a worker it can no longer start, the signal having also ended
+  the process that starts them. Such a run says on its error output that its shutdown did not end
+  (#850).
 - The GFM envelopes scale the base angular frequency `Wb` of the PCS, given for 50 Hz, to the
   nominal frequency of the configuration (#779).
+- The native installer, the image and `build_and_install.sh` install the dependencies at the
+  versions `uv.lock` pins, which the release is tested with, where each installation took the
+  latest ones of the day (#841).
 - The SCR jump envelopes keep their shape outside the 30 ms hold after the event when the
   producer's minimum power is above zero or its maximum below zero (#780).
+- The minimum versions of numpy, pandas, SciPy, matplotlib and lxml are the oldest ones that
+  install on each Python version the tool supports, 3.13 and 3.14, and pass the tests, where they
+  named versions that do not install there. On pandas 2 the filter of the curves no longer
+  changes the curves it is given (#840).
 - In a model with several Zone 1 units, the report draws for each unit its own Zone 1
   schematic, where every unit got that of the unit rendered last (#793).
+- `tools/dynawo_par`, which the conversion of workbooks of the package replaced, is retired, and so
+  are the `dynawo-pypowsybl` extra, the `-p` option of `build_and_install.sh` and the tools of the
+  PyPowSyBl study, whose conclusions stay in the design documents. The package says it runs on
+  Linux and points its bug tracker at the issues of the repository, and no longer lists a data
+  file it does not ship (#847).
 - `generate_gfm_envelopes` stops, naming each value, when the producer's D, H or Xeff cannot give
   envelopes (#782).
+- `dycov anonymize` asks for its output directory, `-o`, without which it ended with a TypeError,
+  and for the curves to anonymize, `--curves` or `--results`. It refuses an output directory that is
+  or holds the `--curves` one, which it emptied, deleting the curves it was given (#836).
 - A list of the configuration may have spaces around its commas, or a comma at its end: a PCS
   listed after a space was looked for with that space in its name, and the run stopped with an
   error that said nothing about the cause. The voltage figure of the swell of fiche I16 zone 3
   for storage units, left out by such a space in the shipped description, is back (#792).
+- The index DyCoV generates in an empty directory of reference curves lists the tests of the
+  Fiche I16 the installation runs, as the description of its PCS gives them for the selected
+  revision of the DTR and its category: a storage of type C or D gets those of the Fiche I16.2,
+  where every model got the tests of the base revision of I16 (#835).
 - A producer model without its `Producer.ini`, its DYD or its PAR file ends the run with a single
   error that names the file and the directory it was looked for in, where it ended in a
   `TypeError` and a stack trace, or named no directory. A model directory of the other
   verification, such as the one of a model validation given to `performance`, is told this way;
   a Zone 1 unit without its DYD is not a unit of the model, and the count of units tells it
   (#637).
+- The voltage setpoint step of a Zone 1 unit that controls the voltage at InternalNode2 is checked
+  on the voltage there, which its figure draws the setpoint over, where its tracking errors and
+  step-response indicators were measured on the voltage at InternalNode1 (#834).
 - The dip a permanent bolted fault or a voltage table makes is measured to its real depth: the
   first measured none, and the second was measured from inside the smoothed step of the table, at
   about half its depth. The report draws the target of reactive current from it in the tests that
   check `imax_reac` (#814).
+- A Zone 1 test of a power park module that ends without curves, a fault whose dip is out of
+  reach for instance, no longer leaves the run without its PDF: its page says the test produced
+  no curve, as the pages of storage already did, and a fault whose dip is out of reach says it
+  was not simulated for that reason. A copy of the `commonz1.tex` of the power park modules in
+  your report templates still stops the PDF on such a page: copy it again (#831).
 - Every test of a parallel run gets its interactive HTML page: when the reports of several PCS
   were prepared at the same time, one could fail to create the HTML folder another had just
   created, and the page of its test was left out (#815).
+- An optional number of the producer INI left empty, `Xeff` of `[GFM Parameters]`,
+  `p_min_injection`, `p_min_consumption`, `p_max_consumption` or `s_nom`, reads as not given, where
+  it stopped the run before its first test (#832).
 - The ramp of the grid frequency of the Fiche I16 in Zone 3 is the one its PCS description declares:
   the simulation applied the start, the duration and the height written in the grid model, so a
   description of your own, a revision or a declaration of the Fiche F16 that changed them moved
@@ -221,6 +259,8 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
 - The lines the log writes once a test is over, while the report of its PCS is prepared, the
   next PCS is loaded or the summary of the run is written, no longer carry the label of that
   test (#825).
+- The shared page of the Fiche I16.2 gives the value of the step of the high-impedance faults,
+  the dip their search aims at, which its column left empty (#833).
 - A `reference_step_size` the tool rejects no longer ends the run without summary or report: the
   log names the file and line that define it, and the figures of its test show their default
   time range. A PCS whose report cannot be prepared leaves the PDF without its pages, where it

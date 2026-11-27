@@ -236,6 +236,19 @@ def setpoint_stepped_by(zone: int, test_type: str | None) -> str | None:
     )
 
 
+def tracked_on(zone: int, setpoint: str, controls_internal_node2: bool) -> str:
+    """What a step of a setpoint is tracked on: the setpoint itself, whose magnitude
+    ``setpoint_label`` names, or, when the zone draws it over another curve because of the node
+    the converter controls, the label of that curve, so that the check and the figure agree."""
+    drawn = next(
+        (each for each in _DRAWN_SETPOINTS_BY_ZONE.get(zone, ()) if each.name == setpoint), None
+    )
+    if drawn is None:
+        return setpoint
+    label = drawn.driven_label(controls_internal_node2)
+    return setpoint if label == setpoint_label(setpoint) else label
+
+
 def for_setpoint(zone: int, modified_setpoint: str, columns: Iterable[str]) -> str:
     """The column a setpoint step is tracked on: the magnitude the setpoint drives, in this zone.
 

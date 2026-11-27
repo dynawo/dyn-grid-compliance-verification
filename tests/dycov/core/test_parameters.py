@@ -14,9 +14,13 @@ import os
 import subprocess
 import sys
 import textwrap
+import threading
 import time
 from datetime import timedelta
 
+import pytest
+
+from dycov.core import parameters as parameters_module
 from dycov.core.parameters import Parameters, _purge_stale_temp_dirs
 
 PREFIX = "Dynawo_user_"
@@ -133,3 +137,23 @@ def test_purge_keeps_a_stale_directory_of_another_tool(tmp_path):
     _purge_stale_temp_dirs(base_dir=tmp_path, prefix=PREFIX, older_than=OLDER_THAN)
 
     assert foreign.exists()
+
+
+def test_an_end_signal_bounds_the_rest_of_the_shutdown(tmp_path, monkeypatch):
+    """#850: the shutdown a signal starts may never end on its own, as a pool left without its
+    forkserver does; the run is then ended with the code of the signal."""
+    handlers, bounded = {}, []
+    monkeypatch.setattr(parameters_module, "ABORT_EVENT", threading.Event())
+    monkeypatch.setattr(parameters_module, "terminate_all_children", lambda timeout: None)
+    monkeypatch.setattr(parameters_module, "end_within", bounded.append)
+    monkeypatch.setattr(
+        parameters_module, "install_signal_handlers", lambda on_exit: handlers.update(end=on_exit)
+    )
+    parameters = Parameters(None, None, tmp_path / "Results", True)
+    parameters.cleanup_working_dir(preserve_on_debug=False)
+
+    with pytest.raises(SystemExit) as end:
+        handlers["end"](143)
+
+    assert bounded == [143]
+    assert end.value.code == 143

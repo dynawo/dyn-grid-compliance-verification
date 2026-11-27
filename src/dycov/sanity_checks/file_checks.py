@@ -130,7 +130,9 @@ def validate_xml_syntax(xml_file: Path) -> None:
     etree.parse(open(xml_file))
 
 
-def check_curves_files(model_path: Path, curves_path: Path, template: str) -> None:
+def check_curves_files(
+    model_path: Path, curves_path: Path, template: str, category: str | None = None
+) -> None:
     """
     Checks that a unit of the reference curves has its index, `CurvesFiles.ini`, and that it
     is not the one generated from the model and left to complete. A missing index is generated
@@ -145,6 +147,9 @@ def check_curves_files(model_path: Path, curves_path: Path, template: str) -> No
         Directory of the reference curves of the unit, under the root of the reference curves.
     template : str
         Kind of the model, as the producer gives it: 'model/PPM' or 'model/BESS'.
+    category : str | None
+        Category of the installation, which decides the tests of the index generated when the
+        selected revision of the DTR gives the fiche a version by category.
 
     Raises
     ------
@@ -173,7 +178,11 @@ def check_curves_files(model_path: Path, curves_path: Path, template: str) -> No
     if model_path:
         references_path = curves_path.parent
         create_producer_curves(
-            model_path, references_path, template.replace("/", "_"), delivery=True
+            model_path,
+            references_path,
+            template.replace("/", "_"),
+            delivery=True,
+            category=category,
         )
         message = (
             f" One has been generated from the model in each unit directory of "

@@ -7,6 +7,7 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
+"""The process-wide logger of DyCoV and the handlers it is given."""
 
 import logging
 import shutil
@@ -50,31 +51,26 @@ class TestDycovLogger:
         assert isinstance(logger, DycovLogger)
         assert logger.level == logging.NOTSET
 
-    @pytest.mark.skip
-    def test_logger_initializes_with_console_and_file_handlers(self):
+    def test_logger_initializes_with_console_and_file_handlers(self, tmp_path):
         logger = DycovLogger("test_logger")
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            log_dir = Path(tmpdirname)
-            logger.init_handlers(
-                file_log_level=logging.INFO,
-                file_formatter="%(levelname)s:%(message)s",
-                file_max_bytes=1024,
-                console_log_level=logging.INFO,
-                console_formatter="%(levelname)s:%(message)s",
-                log_dir=log_dir,
-            )
-            assert any(isinstance(h, logging.StreamHandler) for h in logger.handlers)
-            assert any(
-                isinstance(h, logging.handlers.RotatingFileHandler) for h in logger.handlers
-            )
-            stream_handler = next(
-                h for h in logger.handlers if isinstance(h, logging.StreamHandler)
-            )
-            file_handler = next(
-                h for h in logger.handlers if isinstance(h, logging.handlers.RotatingFileHandler)
-            )
-            assert isinstance(stream_handler.formatter, CustomFormatter)
-            assert isinstance(file_handler.formatter, logging.Formatter)
+
+        logger.init_handlers(
+            file_log_level=logging.INFO,
+            file_formatter="%(levelname)s:%(message)s",
+            file_max_bytes=1024,
+            console_log_level=logging.INFO,
+            console_formatter="%(levelname)s:%(message)s",
+            log_dir=tmp_path,
+        )
+        handlers = list(logger.handlers)
+        for handler in handlers:
+            logger.removeHandler(handler)
+            handler.close()
+
+        [console] = [h for h in handlers if type(h) is logging.StreamHandler]
+        [log_file] = [h for h in handlers if isinstance(h, logging.handlers.RotatingFileHandler)]
+        assert isinstance(console.formatter, CustomFormatter)
+        assert type(log_file.formatter) is logging.Formatter
 
     def test_child_logger_inherits_log_level(self, registered_logger):
         logger = registered_logger("parent_logger")
@@ -99,25 +95,6 @@ class TestDycovLogger:
         )
 
         assert child_logger.isEnabledFor(logging.DEBUG)
-
-    @pytest.mark.skip
-    def test_console_output_uses_custom_formatter_with_colorama(self):
-        logger = DycovLogger("colorama_logger")
-        with tempfile.TemporaryDirectory() as tmpdirname:
-            log_dir = Path(tmpdirname)
-            logger.init_handlers(
-                file_log_level=logging.INFO,
-                file_formatter="%(levelname)s:%(message)s",
-                file_max_bytes=1024,
-                console_log_level=logging.INFO,
-                console_formatter="%(levelname)s:%(message)s",
-                log_dir=log_dir,
-            )
-            stream_handler = next(
-                h for h in logger.handlers if isinstance(h, logging.StreamHandler)
-            )
-            # Should use CustomFormatter if colorama is available
-            assert isinstance(stream_handler.formatter, CustomFormatter)
 
     def test_disable_file_handler(self):
         logger = DycovLogger("no_file_logger")

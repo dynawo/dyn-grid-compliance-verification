@@ -31,6 +31,8 @@ from dycov.validation import common
 
 # Number of decimal places to round for bisection method calculations
 BISECTION_ROUND = 10
+_OFFSET_BESIDE_A_FAILED_STEP = 0.05
+_STEPS_BESIDE_A_FAILED_STEP = 4
 CCT_REL_TOL = 0.0001
 
 _TSO_PAR = "TSOModel.par"
@@ -217,8 +219,9 @@ class BisectionEngine:
         ------
         SimulationOutcomeError
             If no fault value yields a successful simulation, unless Dynawo rejects the model
-            inputs, or if the required voltage dip cannot be achieved within the bisection
-            tolerance.
+            inputs, or if the required voltage dip cannot be achieved: within the bisection
+            tolerance, or because five steps in a row failed beside the last one that
+            succeeded.
         """
         fault_r_factor = config.get_float("GridCode", "fault_r_factor", 10.0)
         max_val = config.get_float("Global", "hiz_fault_max_impedance", 100.0)
@@ -227,9 +230,10 @@ class BisectionEngine:
         bisection_success = False
         hiz_rel_tol = config.get_float("Global", "hiz_fault_rel_tol", 1e-5)
         voltage_dip_classification = None
+        failures_in_a_row = 0
 
-        while True:
-            fault_xpu = round(((max_val + min_val) / 2), BISECTION_ROUND)
+        while failures_in_a_row <= _STEPS_BESIDE_A_FAILED_STEP:
+            fault_xpu = _hiz_step(min_val, max_val, failures_in_a_row)
             with self._isolated_copy(working_oc_dir) as working_oc_dir_fault:
                 fault_rpu = self._fault_rpu_from_xpu(fault_xpu, fault_r_factor)
                 dycov_logging.get_logger("Bisection").debug(
@@ -279,21 +283,19 @@ class BisectionEngine:
                     )
                     return
                 if fault_outcome.succeeded:
+                    failures_in_a_row = 0
                     if voltage_dip_classification == VoltDipResult.DIP_TOO_LARGE:
                         min_val = fault_xpu
                     elif voltage_dip_classification == VoltDipResult.DIP_TOO_SMALL:
                         max_val = fault_xpu
                     else:
                         break
+                elif voltage_dip_classification is None:
+                    dycov_logging.get_logger("Bisection").debug("Simulation fails")
+                    max_val = fault_xpu
                 else:
                     dycov_logging.get_logger("Bisection").debug("Simulation fails")
-                    if voltage_dip_classification is not None:
-                        if voltage_dip_classification == VoltDipResult.DIP_TOO_LARGE:
-                            max_val = fault_xpu
-                        elif voltage_dip_classification == VoltDipResult.DIP_TOO_SMALL:
-                            min_val = fault_xpu
-                    else:
-                        max_val = fault_xpu
+                    failures_in_a_row += 1
                 if self._is_bisection_complete(max_val, min_val, hiz_rel_tol, bm_name, oc_name):
                     break
 
@@ -312,7 +314,7 @@ class BisectionEngine:
                 "Voltage curve missing", SimulationError.VOLTAGE_CURVE_MISSING
             )
         elif voltage_dip_classification != VoltDipResult.DIP_CORRECT:
-            dycov_logging.get_logger("Bisection").error("The required dip was not achieved")
+            dycov_logging.get_logger("Bisection").warning("The required dip was not achieved")
             raise SimulationOutcomeError(
                 "Fault dip unachievable", SimulationError.FAULT_DIP_UNACHIEVABLE
             )
@@ -704,3 +706,13 @@ class BisectionEngine:
                 break
             counter += 1
         return time
+
+
+def _hiz_step(min_val: float, max_val: float, failures_in_a_row: int) -> float:
+    """The impedance of the next step of the high-impedance search: the middle of its bounds,
+    or, after steps that failed there, a point beside it, a growing fraction of the bounds away
+    on either side in turn. Once a step has given a dip, a step that fails says nothing of it,
+    so it moves neither bound; before, a failure lowers the upper one, as it always did."""
+    offset = (failures_in_a_row + 1) // 2 * _OFFSET_BESIDE_A_FAILED_STEP * (max_val - min_val)
+    side = -1 if failures_in_a_row % 2 else 1
+    return round((max_val + min_val) / 2 + side * offset, BISECTION_ROUND)
