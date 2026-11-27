@@ -187,6 +187,9 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   their variations, and a hybrid run leaves it out as it does D and H (#771).
 - The GFM envelopes scale the base angular frequency `Wb` of the PCS, given for 50 Hz, to the
   nominal frequency of the configuration (#779).
+- The native installer, the image and `build_and_install.sh` install the dependencies at the
+  versions `uv.lock` pins, which the release is tested with, where each installation took the
+  latest ones of the day (#841).
 - The SCR jump envelopes keep their shape outside the 30 ms hold after the event when the
   producer's minimum power is above zero or its maximum below zero (#780).
 - The minimum versions of numpy, pandas, SciPy, matplotlib and lxml are the oldest ones that
