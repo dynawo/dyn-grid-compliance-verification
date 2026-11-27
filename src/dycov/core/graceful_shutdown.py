@@ -9,6 +9,7 @@
 #
 from __future__ import annotations
 
+import os
 import signal
 import threading
 import types
@@ -44,6 +45,23 @@ def terminate_all_children(timeout: float = 5.0) -> None:
     """Stop all known external children (Dynawo + LaTeX)."""
     terminate_dynawo_children(timeout=timeout)
     terminate_report_children(timeout=timeout)
+
+
+def end_within(exit_code: int, timeout: float = 15.0) -> None:
+    """Ends the process with *exit_code* if the shutdown an end signal starts has not ended it
+    within *timeout* seconds. A signal sent to the whole process group also ends the forkserver
+    of a pool, which may then wait forever for a worker it can no longer start."""
+    timer = threading.Timer(timeout, _end_now, args=(exit_code, timeout))
+    timer.daemon = True
+    timer.start()
+
+
+def _end_now(exit_code: int, timeout: float) -> None:
+    # The logging handlers may be locked by the very thread that does not end.
+    os.write(
+        2, f"DyCoV: the shutdown did not end within {timeout:g} s, the run ends now\n".encode()
+    )
+    os._exit(exit_code)
 
 
 # ---------------------------------------------------------------------------
