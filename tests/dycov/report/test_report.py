@@ -379,6 +379,17 @@ def test_build_oc_notices_without_reference_curves():
     assert watermark == "\\SetWatermarkText{INVALID}"
 
 
+@pytest.mark.parametrize(
+    "summary, says_why", [(Compliance.FaultDipUnachievable, True), (Compliance.Compliant, False)]
+)
+def test_the_page_of_a_test_whose_dip_is_out_of_reach_says_why_it_has_no_curves(summary, says_why):
+    """#831: the page said only that the test had no figure, not that it was never simulated."""
+    notices, watermark = report._build_oc_notices({"missed_columns": [], "summary": summary})
+
+    assert ("the fault search found no impedance" in notices) is says_why
+    assert watermark == "\\SetWatermarkText{}"
+
+
 def test_build_oc_notices_without_reference_curves_and_with_missed_columns():
     notices, watermark = report._build_oc_notices(
         {"missed_columns": ["BusPDR_BUS_Voltage"], "incomplete_curves": True}
