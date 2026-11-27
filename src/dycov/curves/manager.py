@@ -375,8 +375,9 @@ class CurvesManager:
         Method
         ------
         This class method centralizes the overall procedure for the signal processing of all
-        curves. It follows these steps (their order is important):
-            * When needed, convert the signal from EMT (abc) to RMS (positive sequence).
+        curves, which are RMS already: the curves given in EMT (abc) form are converted to RMS
+        (positive sequence) as they are imported, so that the required curves are found. It
+        follows these steps (their order is important):
             * First resampling: for ensuring a constant time-step (uses monotone interp.).
               Note that each set of signals is interpolated to its own minimum observed step,
               in order to preserve their original time-resolution.
@@ -420,12 +421,9 @@ class CurvesManager:
         f_cutoff = config.get_float("GridCode", "cutoff", 15.0)
         parameter_checks.check_sampling_interval(t_com, f_cutoff)
 
-        # Reference signals should be converted to RMS PS (if they are EMT)
-        reference_curves = sigpro.ensure_rms_signals(csv_reference_curves)
-
         # First resampling: ensure a constant time-step signal
         calculated_curves = sigpro.resample_to_fixed_step(csv_calculated_curves)
-        reference_curves = sigpro.resample_to_fixed_step(reference_curves)
+        reference_curves = sigpro.resample_to_fixed_step(csv_reference_curves)
 
         # Apply alignment of event times
         calculated_curves = sigpro.apply_time_shift(

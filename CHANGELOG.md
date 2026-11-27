@@ -154,6 +154,9 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
 
 ### Fixed
 
+- Reference and producer curves given as abc waveforms are converted to RMS as they are read,
+  where they were reported missing: the reference ones were converted after the check for the
+  required curves, and the producer ones never (#695).
 - The summary table of the PDF report lists every test, page after page: it was cut at the end of
   its first page, so a run of more than about 56 tests, as every one of the Fiche I16.2 is, lost
   the rows after it, those of Zone 3 and of the failed tests among them.

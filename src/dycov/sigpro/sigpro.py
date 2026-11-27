@@ -50,7 +50,9 @@ def ensure_rms_signals(curves: pd.DataFrame) -> pd.DataFrame:
     """Ensures that the curves DataFrame contains RMS signals, converting from ABC if necessary.
 
     The function checks if the curves are in ABC format (identified by column names ending with
-    "_a", "_b", "_c") and converts them to positive-sequence RMS values if needed.
+    "_a", "_b", "_c") and converts them to positive-sequence RMS values if needed. Each converted
+    signal takes the place of its phase a, so the columns keep their order; a signal also given in
+    RMS keeps that one.
 
     Parameters
     ----------
@@ -62,38 +64,23 @@ def ensure_rms_signals(curves: pd.DataFrame) -> pd.DataFrame:
     pd.DataFrame
         DataFrame containing the curves in RMS format
     """
+    abc_signals = {column[:-2] for column in curves.columns if column.endswith("_a")}
+    if not abc_signals:
+        return curves
+
     time_step = np.mean(np.diff(curves["time"].to_numpy()))
     fs = 1 / time_step
 
     processed_curve_dict = {}
-    abc_items, rms_items = _find_abc_signal(curves)
-    for abc_item in abc_items:
-        a = curves[abc_item + "_a"]
-        b = curves[abc_item + "_b"]
-        c = curves[abc_item + "_c"]
-        ps_rms = _abc_to_psrms([a, b, c], fs)
-        processed_curve_dict[abc_item] = ps_rms
-
-    for rms_item in rms_items:
-        processed_curve_dict[rms_item] = curves[rms_item]
+    for column in curves.columns:
+        stem, suffix = column[:-2], column[-2:]
+        if stem not in abc_signals or suffix not in ("_a", "_b", "_c"):
+            processed_curve_dict[column] = curves[column]
+        elif suffix == "_a" and stem not in curves.columns:
+            abc = [curves[stem + phase] for phase in ("_a", "_b", "_c")]
+            processed_curve_dict[stem] = _abc_to_psrms(abc, fs)
 
     return pd.DataFrame.from_dict(processed_curve_dict, orient="columns")
-
-
-def _find_abc_signal(curves):
-    abc_items = []
-    rms_items = []
-    for col in curves.columns:
-        if col.endswith("_c"):
-            continue
-        if col.endswith("_b"):
-            continue
-        if col.endswith("_a"):
-            abc_items.append(col[:-2])
-        else:
-            rms_items.append(col)
-
-    return abc_items, rms_items
 
 
 def _build_fixed_tgrid(uniq_tgrid: np.ndarray, fs_max: float) -> np.ndarray:

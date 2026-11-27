@@ -9,6 +9,7 @@
 #
 
 import numpy as np
+import pytest
 
 from dycov.sigpro.sigpro import _abc_to_psrms, _shortfft
 
@@ -184,3 +185,62 @@ def test_apply_time_shift():
         assert False, "Expected ValueError for event out of range"
     except ValueError:
         pass
+
+
+def test_ensure_rms_signals_keeps_the_order_of_the_columns_and_the_other_signals():
+    import numpy as np
+    import pandas as pd
+
+    from dycov.sigpro.sigpro import ensure_rms_signals
+
+    t = np.linspace(0, 0.2, 2000)
+    wt = 2 * np.pi * 50 * t
+    df = pd.DataFrame(
+        {
+            "time": t,
+            "P": np.ones_like(t),
+            "V_a": np.sin(wt),
+            "V_b": np.sin(wt - 2 * np.pi / 3),
+            "V_c": np.sin(wt + 2 * np.pi / 3),
+            "V_ref": np.ones_like(t),
+            "Q_b": np.zeros_like(t),
+        }
+    )
+
+    out = ensure_rms_signals(df)
+
+    assert list(out.columns) == ["time", "P", "V", "V_ref", "Q_b"]
+    assert list(out["P"]) == list(df["P"])
+
+
+def test_ensure_rms_signals_leaves_rms_curves_as_they_are():
+    import pandas as pd
+
+    from dycov.sigpro.sigpro import ensure_rms_signals
+
+    df = pd.DataFrame({"time": [0.0], "BusPDR_BUS_Voltage": [1.0]})
+
+    assert ensure_rms_signals(df) is df
+
+
+@pytest.mark.parametrize("rms_first", [True, False])
+def test_ensure_rms_signals_keeps_the_rms_column_of_a_signal_also_given_in_abc(rms_first):
+    import numpy as np
+    import pandas as pd
+
+    from dycov.sigpro.sigpro import ensure_rms_signals
+
+    t = np.linspace(0, 0.2, 2000)
+    wt = 2 * np.pi * 50 * t
+    phases = {
+        "V_a": np.sin(wt),
+        "V_b": np.sin(wt - 2 * np.pi / 3),
+        "V_c": np.sin(wt + 2 * np.pi / 3),
+    }
+    rms = {"V": np.full_like(t, 1.04)}
+    df = pd.DataFrame({"time": t, **(rms | phases if rms_first else phases | rms)})
+
+    out = ensure_rms_signals(df)
+
+    assert list(out.columns) == ["time", "V"]
+    assert list(out["V"]) == list(df["V"])

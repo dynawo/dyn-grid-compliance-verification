@@ -11,7 +11,9 @@ comparison in model validation:
 - `signal_windows.py` — pre/during/post windows and exclusion zones for filtering and validation.
 
 The stages are orchestrated, in a fixed order, by `CurvesManager.apply_signal_processing`
-(`dycov/curves/manager.py`).
+(`dycov/curves/manager.py`), except the EMT→RMS conversion, which runs as the reference and
+producer curves are imported (`dycov/curves/importer/curves.py`), before the required curves are
+checked.
 
 The full workflow, and the choices and adaptations made with respect to IEC 61400-27-2, are
 documented in `docs/design/Signal_processing_workflow.md`; the theoretical rationale is developed
