@@ -138,6 +138,10 @@ wherever it does not oscillate. It then reduces the curves to the samples
 that carry their shape, keeping a floor of samples in the event window. Each of
 those is asked not to run by giving it a zero: ``--deripple 0`` keeps the
 oscillation, ``--compression 0`` keeps every sample, ``--noisestd 0`` adds no
-noise. You would use the command ``dycov anonymize``:
+noise. The output directory receives one folder per producer of the curves it
+is given, if they have one, each with a dictionary per curve and its index
+``CurvesFiles.ini``, which names only the files anonymized and none of the
+columns of the producer's files; the curves given are left as they are. You
+would use the command ``dycov anonymize``:
 
 .. include:: helps/anonymize.rst

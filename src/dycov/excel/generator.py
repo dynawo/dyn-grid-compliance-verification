@@ -18,6 +18,7 @@ Each output has its own module: this one only decides what to build and reports 
 from __future__ import annotations
 
 import configparser
+import os
 from pathlib import Path
 
 from dycov.configuration.cfg import config as cfg_config
@@ -63,6 +64,23 @@ def _submodel_report(resolved: dict, selections: list, control_params: list) -> 
     return "\n".join(lines)
 
 
+def _where_the_curves_go(missing_from: list) -> list:
+    """Where each missing ``.csv`` belongs: in the folder its signal sheet names, which both
+    ``excel2inputs`` and ``--excel`` read, the latter converting the workbook again elsewhere."""
+    lines = [
+        "                    put them in the folder each signal sheet names, which excel2inputs"
+        " and --excel both read, then convert the workbook again:"
+    ]
+    for folder, files in missing_from:
+        where = (
+            os.path.normpath(str(folder))
+            if folder
+            else "(the sheet names no folder: give it one in its results folder cell)"
+        )
+        lines.append("                    %s: %s" % (where, ", ".join(files)))
+    return lines
+
+
 def _reference_curves_report(curves: dict) -> str:
     """Report what the signal sheets produced, and which .csv files are still to be provided."""
     if not curves["tests"]:
@@ -77,10 +95,8 @@ def _reference_curves_report(curves: dict) -> str:
         "  .csv copied     : %d" % curves["copied"],
     ]
     if curves["missing"]:
-        lines.append(
-            "  .csv missing    : %d (copy them next to the .dict files: %s)"
-            % (len(curves["missing"]), ", ".join(curves["missing"][:4]))
-        )
+        lines.append("  .csv missing    : %d" % len(curves["missing"]))
+        lines += _where_the_curves_go(curves.get("missing_from", []))
     if curves["unfilled"]:
         lines.append(
             "  metadata to fill: %d (the workbook leaves some column empty for: %s)"

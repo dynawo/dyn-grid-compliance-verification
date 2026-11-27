@@ -21,7 +21,11 @@ from pathlib import Path
 from typing import Optional
 
 from dycov.configuration.cfg import config
-from dycov.core.graceful_shutdown import install_signal_handlers, terminate_all_children
+from dycov.core.graceful_shutdown import (
+    end_within,
+    install_signal_handlers,
+    terminate_all_children,
+)
 from dycov.files import manage_files
 from dycov.logging import dycov_logging
 from dycov.model.producer import Producer
@@ -282,13 +286,16 @@ class Parameters:
             """Minimal exit callback for signal handlers.
             - Mark global abort
             - Terminate external children (Dynawo + LaTeX)
+            - End the process if the rest of the shutdown does not end it in time
             - Exit from main thread using Pythonic exceptions so finally/atexit run
             """
             # 1) Mark global abort so long-running loops can break promptly
             ABORT_EVENT.set()
             # 2) Terminate external children (best-effort & idempotent)
             terminate_all_children(timeout=5.0)
-            # 3) Exit only from the main thread
+            # 3) A pool left without its forkserver never ends its shutdown
+            end_within(exit_code)
+            # 4) Exit only from the main thread
             if threading.current_thread() is threading.main_thread():
                 if exit_code == 130:  # SIGINT
                     raise KeyboardInterrupt()

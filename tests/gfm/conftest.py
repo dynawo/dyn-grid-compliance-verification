@@ -41,8 +41,15 @@ RUN_WITHOUT_FIGURES = textwrap.dedent(
 )
 
 
+@pytest.fixture(scope="session")
+def matplotlib_cache(tmp_path_factory) -> Path:
+    """The one font cache of every run of the session. A run that finds none, as under a new
+    home, builds it again first, which on macOS takes longer than the run itself."""
+    return tmp_path_factory.mktemp("matplotlib")
+
+
 @pytest.fixture
-def run_dycov(tmp_path):
+def run_dycov(tmp_path, matplotlib_cache):
     """Runs dycov with the given arguments, as a user would, under the given home."""
 
     def run(*args: str, home: Path) -> subprocess.CompletedProcess:
@@ -52,6 +59,7 @@ def run_dycov(tmp_path):
                 **os.environ,
                 "HOME": str(home),
                 "USERPROFILE": str(home),
+                "MPLCONFIGDIR": str(matplotlib_cache),
                 "PYTHONPATH": str(Path(dycov.__file__).resolve().parents[1]),
             },
             cwd=tmp_path,

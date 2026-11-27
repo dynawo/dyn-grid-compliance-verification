@@ -391,22 +391,14 @@ def _get_generator_droop_and_snom(parset, nsmap, lib):
 
 
 def _get_generator_ppc_local(parset, nsmap, lib):
-    _, ppc_local = par_access.get_parameter(parset, nsmap, lib, "PPCLocal")
-    return ppc_local.lower() == "true" if ppc_local is not None else True
+    return par_access.get_boolean(parset, nsmap, lib, "PPCLocal", default=True)
 
 
 def _get_generator_converter_lv_control(parset, nsmap, lib):
     stated = dynawo_translator.get_stated_flag(lib, "ConverterLVControl")
     if stated is not None:
         return stated
-    _, converter_lv_control_str = par_access.get_parameter(
-        parset, nsmap, lib, "ConverterLVControl"
-    )
-    return (
-        converter_lv_control_str.lower() == "true"
-        if converter_lv_control_str is not None
-        else True
-    )
+    return par_access.get_boolean(parset, nsmap, lib, "ConverterLVControl", default=True)
 
 
 def _get_generator_reference_impedance(parset, nsmap, lib) -> complex:
@@ -480,11 +472,10 @@ def get_line_values(
 def _starts_open(parset, nsmap, lib) -> bool:
     """Whether a line is open when the simulation starts: one of its switch-off signals holds
     it open from the start."""
-    for signal in ("SwitchOffSignal10", "SwitchOffSignal20"):
-        _, value = par_access.get_parameter(parset, nsmap, lib, signal)
-        if value is not None and value.strip().lower() == "true":
-            return True
-    return False
+    return any(
+        par_access.get_boolean(parset, nsmap, lib, signal, default=False)
+        for signal in ("SwitchOffSignal10", "SwitchOffSignal20")
+    )
 
 
 def _calculate_line_xpu(x_str: Optional[str], applied_line_xpu: float) -> float:

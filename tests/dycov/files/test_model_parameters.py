@@ -542,3 +542,52 @@ def test_classify_transformers_rejects_an_unknown_id():
 
     assert "Some_Xfmr" in str(excinfo.value)
     assert "Group_Xfmr" in str(excinfo.value)
+
+
+@pytest.mark.parametrize("written", ["TRUE", "True", "1", " true"])
+def test_a_boolean_dynawo_does_not_read_as_true_is_false_and_said(written, monkeypatch):
+    said = []
+    monkeypatch.setattr(par_access.dycov_logging, "warn_once", lambda _, m: said.append(m))
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {"WTG4B_ConverterLVControl": written})
+
+    converter_lv_control = model_parameters._get_generator_converter_lv_control(
+        [parset], {"ns": _NS}, "WTG4BWeccCurrentSource"
+    )
+
+    assert converter_lv_control is False
+    assert said == [
+        f"WTG4B_ConverterLVControl = {written!r} in the set parGen of the producer's PAR: Dynawo "
+        "reads it as false, write true or false."
+    ]
+
+
+@pytest.mark.parametrize("written, read", [("true", True), ("false", False)])
+def test_a_boolean_written_as_dynawo_reads_it_says_nothing(written, read, monkeypatch):
+    said = []
+    monkeypatch.setattr(par_access.dycov_logging, "warn_once", lambda _, m: said.append(m))
+    par_root = _make_root()
+    parset = _add_parset(par_root, "parGen", {"WTG4B_PPCLocal": written})
+
+    ppc_local = model_parameters._get_generator_ppc_local(
+        [parset], {"ns": _NS}, "WTG4BWeccCurrentSource"
+    )
+
+    assert ppc_local is read
+    assert said == []
+
+
+def test_a_line_whose_switch_off_signal_dynawo_reads_as_false_is_in_service(monkeypatch):
+    monkeypatch.setattr(par_access.dycov_logging, "warn_once", lambda *_: None)
+    dyd_root = _make_root()
+    _add_bbmodel(dyd_root, "SwitchedLine", "Line", "parSwitched")
+    par_root = _make_root()
+    _add_parset(
+        par_root,
+        "parSwitched",
+        {"line_RPu": "0.02", "line_XPu": "0.35", "line_SwitchOffSignal20": "TRUE"},
+    )
+
+    lines = model_parameters.get_line_values(dyd_root, par_root, 0.02, 0.35)
+
+    assert [line.id for line in lines] == ["SwitchedLine"]

@@ -347,3 +347,43 @@ def test_skip_voltage_droop_adjustment_of_the_global_section_keeps_the_mode(monk
     _adjust_iec_plant(par_root, generator, "Others", True)
 
     assert _control_mode(par_root) == {"WPP_MqG": "1", "WPP_MwpqMode": "0"}
+
+
+def _wecc_unit(par_root, flags):
+    parset = etree.SubElement(par_root, f"{{{_NS}}}set", id="parGen")
+    for name, value in flags.items():
+        etree.SubElement(parset, f"{{{_NS}}}par", type="BOOL", name=f"WTG4B_{name}", value=value)
+    generator = GenParams(
+        id="Wind_Turbine",
+        lib="WTG4BWeccCurrentSource",
+        par_id="parGen",
+        terminals=(Terminal(connected_equipment=None),),
+        s_nom=90,
+        i_max=None,
+        p=0.75,
+        q=0.0,
+        voltage_droop=0.3,
+        use_voltage_droop=False,
+    )
+    return generator, [parset]
+
+
+def test_the_control_flags_are_read_as_dynawo_reads_them(monkeypatch):
+    monkeypatch.setattr(par_access.dycov_logging, "warn_once", lambda *_: None)
+    flags = {"PfFlag": "false", "VFlag": "TRUE", "QFlag": "True", "PFlag": "true"}
+    generator, parset = _wecc_unit(_make_root(), flags)
+
+    read = producer_init._get_control_mode_parameters(generator, parset, {"ns": _NS}, 1)
+
+    assert read == {"PfFlag": "false", "VFlag": "false", "QFlag": "false", "PFlag": "true"}
+
+
+def test_a_voltage_droop_whose_flags_dynawo_reads_as_false_is_not_used(monkeypatch):
+    monkeypatch.setattr(par_access.dycov_logging, "warn_once", lambda *_: None)
+    generator, parset = _wecc_unit(_make_root(), {"RefFlag": "TRUE", "VCompFlag": "false"})
+
+    droop = producer_init._get_voltage_droop_parameters(generator, parset, {"ns": _NS}, 3)
+    producer_init._recalculate_voltage_ref(generator, droop)
+
+    assert droop == {"RefFlag": "false", "VCompFlag": "false"}
+    assert generator.use_voltage_droop is False

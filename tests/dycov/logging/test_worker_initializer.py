@@ -345,13 +345,18 @@ TERMINATED_POOL_RUN = textwrap.dedent(
     import time
     from multiprocessing import util
 
-    from dycov.core.graceful_shutdown import install_signal_handlers, terminate_all_children
+    from dycov.core.graceful_shutdown import (
+        end_within,
+        install_signal_handlers,
+        terminate_all_children,
+    )
     from dycov.curves.dynawo.runtime._process import _proc_registry
     from dycov.logging import worker_initializer
 
 
     def on_exit(exit_code):
         terminate_all_children(timeout=5.0)
+        end_within(exit_code)
         raise SystemExit(exit_code)
 
 
@@ -457,13 +462,18 @@ GROUP_SIGNALLED_RUN = textwrap.dedent(
 
     import dycov.curves.dynawo.runtime.dynawo_simulator
     import dycov.report.report
-    from dycov.core.graceful_shutdown import install_signal_handlers, terminate_all_children
+    from dycov.core.graceful_shutdown import (
+        end_within,
+        install_signal_handlers,
+        terminate_all_children,
+    )
     from dycov.curves.dynawo.runtime._process import _proc_registry
     from dycov.logging import worker_initializer
 
 
     def on_exit(exit_code):
         terminate_all_children(timeout=5.0)
+        end_within(exit_code)
         raise SystemExit(exit_code)
 
 

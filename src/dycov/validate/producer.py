@@ -58,6 +58,12 @@ def _has_producer_ini(name: str, directories: list[Path]) -> bool:
     )
 
 
+def _optional_float(producer_config, section: str, key: str, default: float | None = None):
+    """A number the INI may leave out or leave empty, *default* then."""
+    text = producer_config.get(section, key, fallback="").strip()
+    return float(text) if text else default
+
+
 def _check_parameters_definition(producer_config, section, needs_consumption):
     _check_renamed_parameters(producer_config, section)
 
@@ -415,25 +421,24 @@ class ModelProducer(Producer):
         self.p_max_injection_pu = (
             float(producer_config.get(default_section, "p_max_injection")) / self._s_nref
         )
-        self.p_max_consumption_pu = 0.0
-        if producer_config.has_option(default_section, "p_max_consumption"):
-            self.p_max_consumption_pu = (
-                float(producer_config.get(default_section, "p_max_consumption")) / self._s_nref
-            )
+        self.p_max_consumption_pu = (
+            _optional_float(producer_config, default_section, "p_max_consumption", 0.0)
+            / self._s_nref
+        )
         self.p_min_injection_pu = (
-            producer_config.getfloat(default_section, "p_min_injection", fallback=0.0)
+            _optional_float(producer_config, default_section, "p_min_injection", 0.0)
             / self._s_nref
         )
         self.p_min_consumption_pu = (
-            producer_config.getfloat(default_section, "p_min_consumption", fallback=0.0)
+            _optional_float(producer_config, default_section, "p_min_consumption", 0.0)
             / self._s_nref
         )
         self.q_max_pu = float(producer_config.get(default_section, "q_max")) / self._s_nref
         self.q_min_pu = float(producer_config.get(default_section, "q_min")) / self._s_nref
         self.u_nom = float(producer_config.get(default_section, "u_nom"))
         self.topology = producer_config.get(default_section, "topology")
-        self.s_nom = float(producer_config.get(default_section, "s_nom", fallback=self._s_nref))
-        self.x_eff = producer_config.getfloat("GFM Parameters", "Xeff", fallback=None)
+        self.s_nom = _optional_float(producer_config, default_section, "s_nom", self._s_nref)
+        self.x_eff = _optional_float(producer_config, "GFM Parameters", "Xeff")
 
     def __init_model(self) -> None:
         """Initializes the Producer-dependent model."""
@@ -667,6 +672,7 @@ class ModelProducer(Producer):
                     self._producer_model_path,
                     self._reference_curves_path / filename,
                     self.get_sim_type_str(),
+                    self.get_installation_category(filename),
                 )
             self.__init_model()
 

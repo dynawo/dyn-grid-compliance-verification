@@ -20,6 +20,7 @@ from dycov.curves.dynawo.dictionary.translator import dynawo_translator
 from dycov.files import manage_files
 from dycov.files.model_parameters import find_bbmodel_by_type, find_bbmodels
 from dycov.logging import dycov_logging
+from dycov.model import pcs_layers
 
 
 def _find_tap_changer_xfmrs(producer_dyd_root: etree.Element) -> list:
@@ -144,100 +145,6 @@ def _get_ppm_curves_template(xfmrs: list, gen_ppms: list) -> str:
     return curves_dictionary
 
 
-def _get_model_file_template(zone: str) -> str:
-    if zone == "Zone1":
-        return (
-            "#Curves for Zone1\n"
-            "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3 = \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR10 = \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3Qmin = \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800 = \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc500 = \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.PermanentBolted = \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.PermanentHiZ = \n"
-            "PCS_RTE-I16z1.SetPointStep.Active = \n"
-            "PCS_RTE-I16z1.SetPointStep.Reactive = \n"
-            "PCS_RTE-I16z1.SetPointStep.Voltage = \n"
-            "PCS_RTE-I16z1.GridVoltageStep.Rise = \n"
-            "PCS_RTE-I16z1.GridVoltageStep.Drop = \n"
-        )
-    else:
-        return (
-            "#Curves for Zone3\n"
-            "PCS_RTE-I16z3.USetPointStep.AReactance = \n"
-            "PCS_RTE-I16z3.USetPointStep.BReactance = \n"
-            "PCS_RTE-I16z3.PSetPointStep.Dec40 = \n"
-            "PCS_RTE-I16z3.PSetPointStep.Inc40 = \n"
-            "PCS_RTE-I16z3.QSetPointStep.Inc10 = \n"
-            "PCS_RTE-I16z3.QSetPointStep.Dec20 = \n"
-            "PCS_RTE-I16z3.ThreePhaseFault.TransientBolted = \n"
-            "PCS_RTE-I16z3.GridVoltageDip.Qzero = \n"
-            "PCS_RTE-I16z3.GridVoltageSwell.QMax = \n"
-            "PCS_RTE-I16z3.GridVoltageSwell.QMin = \n"
-            "PCS_RTE-I16z3.GridFreqRamp.W500mHz250ms = \n"
-            "PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4 = \n"
-        )
-
-
-def _get_bess_model_file_template(zone: str) -> str:
-    if zone == "Zone1":
-        return (
-            "#Curves for Zone1\n"
-            "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3Injection = \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3Consumption= \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR10Injection = \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR10Consumption= \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3QminInjection = \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.TransientBoltedSCR3QminConsumption= \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800Injection = \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc800Consumption= \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc500Injection = \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.TransientHiZTc500Consumption= \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.PermanentBoltedInjection = \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.PermanentBoltedConsumption= \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.PermanentHiZInjection = \n"
-            "PCS_RTE-I16z1.ThreePhaseFault.PermanentHiZConsumption= \n"
-            "PCS_RTE-I16z1.SetPointStep.ActiveInjection = \n"
-            "PCS_RTE-I16z1.SetPointStep.ActiveConsumption= \n"
-            "PCS_RTE-I16z1.SetPointStep.ReactiveInjection = \n"
-            "PCS_RTE-I16z1.SetPointStep.ReactiveConsumption= \n"
-            "PCS_RTE-I16z1.SetPointStep.VoltageInjection = \n"
-            "PCS_RTE-I16z1.SetPointStep.VoltageConsumption= \n"
-            "PCS_RTE-I16z1.GridVoltageStep.RiseInjection = \n"
-            "PCS_RTE-I16z1.GridVoltageStep.RiseConsumption= \n"
-            "PCS_RTE-I16z1.GridVoltageStep.DropInjection = \n"
-            "PCS_RTE-I16z1.GridVoltageStep.DropConsumption= \n"
-        )
-    else:
-        return (
-            "#Curves for Zone3\n"
-            "PCS_RTE-I16z3.USetPointStep.AReactanceInjection = \n"
-            "PCS_RTE-I16z3.USetPointStep.AReactanceConsumption= \n"
-            "PCS_RTE-I16z3.USetPointStep.BReactanceInjection = \n"
-            "PCS_RTE-I16z3.USetPointStep.BReactanceConsumption= \n"
-            "PCS_RTE-I16z3.PSetPointStep.Dec40Injection = \n"
-            "PCS_RTE-I16z3.PSetPointStep.Dec40Consumption= \n"
-            "PCS_RTE-I16z3.PSetPointStep.Inc40Injection = \n"
-            "PCS_RTE-I16z3.PSetPointStep.Inc40Consumption= \n"
-            "PCS_RTE-I16z3.QSetPointStep.Inc10Injection = \n"
-            "PCS_RTE-I16z3.QSetPointStep.Inc10Consumption= \n"
-            "PCS_RTE-I16z3.QSetPointStep.Dec20Injection = \n"
-            "PCS_RTE-I16z3.QSetPointStep.Dec20Consumption= \n"
-            "PCS_RTE-I16z3.ThreePhaseFault.TransientBoltedInjection = \n"
-            "PCS_RTE-I16z3.ThreePhaseFault.TransientBoltedConsumption= \n"
-            "PCS_RTE-I16z3.GridVoltageDip.QzeroInjection = \n"
-            "PCS_RTE-I16z3.GridVoltageDip.QzeroConsumption= \n"
-            "PCS_RTE-I16z3.GridVoltageSwell.QMaxInjection = \n"
-            "PCS_RTE-I16z3.GridVoltageSwell.QMaxConsumption= \n"
-            "PCS_RTE-I16z3.GridVoltageSwell.QMinInjection = \n"
-            "PCS_RTE-I16z3.GridVoltageSwell.QMinConsumption= \n"
-            "PCS_RTE-I16z3.GridFreqRamp.W500mHz250msInjection = \n"
-            "PCS_RTE-I16z3.GridFreqRamp.W500mHz250msConsumption= \n"
-            "PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Injection = \n"
-            "PCS_RTE-I16z3.Islanding.DeltaP10DeltaQ4Consumption= \n"
-        )
-
-
 _MODEL_CURVES_DICTIONARY = (
     "[Curves-Dictionary] \n"
     "time = \n"
@@ -249,6 +156,13 @@ _MODEL_CURVES_DICTIONARY = (
     "#    SignalName_b = \n"
     "#    SignalName_c = \n"
 )
+
+_PCS_OF_ZONE = {"Zone1": "PCS_RTE-I16z1", "Zone3": "PCS_RTE-I16z3"}
+
+
+def _tests_template(zone: str, tests: list) -> str:
+    """The tests of a zone, each waiting for the file of its curves."""
+    return f"#Curves for {zone}\n" + "".join(f"{test} = \n" for test in tests)
 
 
 def _get_model_zone_curves_template(xfmrs: list, zone: str, gens: list) -> str:
@@ -388,11 +302,13 @@ def _get_model_templates(
     curves_path: Path,
     template: str,
     delivery: bool,
+    category: str | None,
 ):
-    if template == "model_PPM":
-        file_template = _get_model_file_template
-    elif template == "model_BESS":
-        file_template = _get_bess_model_file_template
+    def file_template(zone: str) -> str:
+        sim_type = template.replace("_", "/", 1)
+        return _tests_template(
+            zone, pcs_layers.tests_it_runs(_PCS_OF_ZONE[zone], sim_type, category)
+        )
 
     zone = "Zone3"
     xfmrs = _get_xmfrs_models(model_path, zone, "Producer.dyd")
@@ -436,6 +352,7 @@ def create_producer_curves(
     curves_path: Path,
     template: str,
     delivery: bool = False,
+    category: str | None = None,
 ) -> None:
     """Create the curves file.
 
@@ -456,12 +373,16 @@ def create_producer_curves(
         True when curves_path holds the reference curves the producer delivers: the indexes and
         the records already there stay as they are, and the indexes written are marked as left
         to complete. Only model validation writes into a delivery.
+    category: str | None
+        Category of the installation, as the DTR defines it, which decides the tests of a
+        model validation when the selected revision of the DTR gives the fiche a version by
+        category.
     """
 
     if template.startswith("performance"):
         _get_performance_templates(model_path, curves_path, template)
     elif template.startswith("model"):
-        _get_model_templates(model_path, curves_path, template, delivery)
+        _get_model_templates(model_path, curves_path, template, delivery, category)
 
 
 def check_curves(curves: Path) -> bool:

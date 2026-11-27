@@ -9,7 +9,10 @@
 #
 
 import configparser
+import glob
 import re
+import shutil
+import tempfile
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -45,6 +48,8 @@ def anonymize(
 
     This function can either process curves from a specified folder or from a
     pipeline's results, apply noise, and generate new curve and dictionary files.
+    They are prepared in a copy next to `output_folder`, which receives one folder per
+    producer of the set, each with its index, and the source is left as it was.
 
     Parameters
     ----------
@@ -58,8 +63,8 @@ def anonymize(
         Path of a verification results directory. If provided, 'curves_calculated.csv'
         and 'simulation_inputs.ini' files will be copied from here. Defaults to None.
     curves_folder: Optional[Path]
-        Path of a set of curves. If not provided, `output_folder` will be used
-        as the source for curves. Defaults to None.
+        Path of a set of curves. If not provided, the curves are those `results` copies into
+        `output_folder`, which is emptied first. Defaults to None.
     compression: Optional[float]
         Relative epsilon for curve simplification, as a fraction of each signal's range,
         which also holds the curve to a sampling rate. Zero keeps every sample.
@@ -71,42 +76,91 @@ def anonymize(
         f"Anonymizing curves to {output_folder} with noise std {noisestd} "
         f"and frequency {frequency} Hz, compression {compression} and deripple {deripple}"
     )
-    if curves_folder is None:
-        curves_folder = output_folder
-
     manage_files.create_dir(output_folder)
+    _remove_interrupted_staging(output_folder)
 
-    if results:
-        dycov_logging.get_logger("Anonymizer").info(
-            f"Copying curves_calculated.csv and simulation_inputs.ini from {results} "
-            f"to {curves_folder}"
-        )
-        copy_from_pipeline(results, curves_folder)
+    with tempfile.TemporaryDirectory(
+        dir=output_folder.parent, prefix=_staging_prefix(output_folder)
+    ) as staging_dir:
+        staging = Path(staging_dir)
+        if curves_folder is not None:
+            _stage_curves(curves_folder, staging)
+        if results:
+            dycov_logging.get_logger("Anonymizer").info(
+                f"Copying curves_calculated.csv and simulation_inputs.ini from {results}"
+            )
+            copy_from_pipeline(results, staging)
 
-    # Detect producer dirs AFTER copying, so files are already in place
-    producer_dirs = [
-        d for d in sorted(curves_folder.iterdir()) if d.is_dir() and any(curve_files(d))
-    ]
-    if not producer_dirs:
-        producer_dirs = [curves_folder]
+        for curves_path in _producer_dirs(staging):
+            output_path = output_folder / curves_path.relative_to(staging)
+            dycov_logging.get_logger("Anonymizer").info(f"Processing producer path: {output_path}")
+            output_path.mkdir(parents=True, exist_ok=True)
 
-    for curves_path in producer_dirs:
-        dycov_logging.get_logger("Anonymizer").info(f"Processing producer path: {curves_path}")
-
-        # output_path mirrors the producer subdir name under output_folder,
-        # but must never coincide with curves_path (source == destination causes data loss)
-        relative = curves_path.relative_to(curves_folder)
-        output_path = output_folder / relative
-
-        create_curves_files_ini(curves_path)
-
-        metadata: Dict[str, Dict] = extract_metadata_from_logs(curves_path)
-        create_dict_files(curves_path, metadata)
-        _process_curves(curves_path, output_path, noisestd, frequency, compression, deripple)
+            create_curves_files_ini(curves_path)
+            metadata: Dict[str, Dict] = extract_metadata_from_logs(curves_path)
+            create_dict_files(curves_path, metadata)
+            _process_curves(curves_path, output_path, noisestd, frequency, compression, deripple)
+            (output_path / "CurvesFiles.ini").write_text(
+                _anonymized_index(curves_path / "CurvesFiles.ini", output_path)
+            )
 
     dycov_logging.get_logger("Anonymizer").info(
         f"Anonymization completed. Anonymized curves saved to {output_folder}"
     )
+
+
+def _staging_prefix(output_folder: Path) -> str:
+    return f".{output_folder.name}.staging."
+
+
+def _remove_interrupted_staging(output_folder: Path) -> None:
+    """Remove the copies a run into the same output left when a signal ended it."""
+    for staging in output_folder.parent.glob(glob.escape(_staging_prefix(output_folder)) + "*"):
+        shutil.rmtree(staging, ignore_errors=True)
+
+
+def _producer_dirs(curves_folder: Path) -> list:
+    """The folders of a set of curves: one per producer that holds curves, or the set itself."""
+    producer_dirs = [
+        d for d in sorted(curves_folder.iterdir()) if d.is_dir() and any(curve_files(d))
+    ]
+    return producer_dirs or [curves_folder]
+
+
+def _stage_curves(curves_folder: Path, staging: Path) -> None:
+    """Copy the files of every producer folder of the set into the folder the anonymization
+    prepares them in, which writes their index and dictionaries and consumes their records."""
+    for producer_dir in _producer_dirs(curves_folder):
+        target = staging / producer_dir.relative_to(curves_folder)
+        target.mkdir(parents=True, exist_ok=True)
+        for file in producer_dir.iterdir():
+            if file.is_file():
+                shutil.copy2(file, target / file.name)
+
+
+def _anonymized_index(index: Path, output_folder: Path) -> str:
+    """The index of the anonymized curves of a folder: each test names the ``.csv`` its curves
+    were anonymized into, a test whose curves were not is left out, and the dictionaries keep
+    none of the names of the producer's columns, which the dictionary of each curve declares."""
+    lines, section = [], None
+    for line in index.read_text().splitlines(keepends=True):
+        stripped = line.strip()
+        if stripped.startswith("["):
+            section = stripped
+        elif "=" in stripped and not stripped.startswith("#"):
+            if section != "[Curves-Files]":
+                continue
+            test, curves_file = (part.strip() for part in stripped.split("=", 1))
+            anonymized = f"{Path(curves_file).stem}.csv"
+            if not (output_folder / anonymized).is_file():
+                dycov_logging.get_logger("Anonymizer").warning(
+                    f"{test} is left out of the anonymized index: its curves file "
+                    f"{curves_file} is not one of the files anonymized"
+                )
+                continue
+            line = f"{test} = {anonymized}\n"
+        lines.append(line)
+    return "".join(lines)
 
 
 def _process_curves(

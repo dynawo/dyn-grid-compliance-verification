@@ -470,6 +470,22 @@ def _copy_curve_files_by_name(
         return []
 
 
+def _has_dictionary(copied_files: list[str]) -> bool:
+    return any(name.endswith(".dict") for name in copied_files)
+
+
+def _copy_test_dictionary(curves_dir: Path, target_path: Path, prefix_name: str) -> list[str]:
+    """The dictionary named after the test, which is how a workbook writes it whatever the name
+    of its curves file, so that several tests may share one recording."""
+    dictionaries = [
+        file for file in _curve_files(curves_dir, prefix_name) if file.suffix.lower() == ".dict"
+    ]
+    if not dictionaries:
+        return []
+    copy_file(dictionaries[0], target_path / f"{prefix_name}.dict")
+    return [f"{prefix_name}.dict"]
+
+
 def copy_base_curves_files(source_path: Path, target_path: Path, prefix_name: str) -> bool:
     """Copy all files that compose a curve from source to target.
 
@@ -479,7 +495,9 @@ def copy_base_curves_files(source_path: Path, target_path: Path, prefix_name: st
         - The associated dictionary file (.dict) - Mandatory for all curve types
 
     A curve renamed through the [Curves-Files] section (relative or absolute path) is
-    copied under prefix_name, the canonical test name every downstream lookup uses.
+    copied under prefix_name, the canonical test name every downstream lookup uses. Its
+    dictionary is the one of its own name or, without one, the one of the test's name next
+    to CurvesFiles.ini.
 
     Parameters
     ----------
@@ -512,12 +530,19 @@ def copy_base_curves_files(source_path: Path, target_path: Path, prefix_name: st
         copied_files = _copy_curve_files_by_name(
             base_source_path, target_path, base_name, prefix_name
         )
+        if copied_files and not _has_dictionary(copied_files):
+            copied_files += _copy_test_dictionary(curves_dir, target_path, prefix_name)
 
-        has_dict_file = any(f.endswith(".dict") for f in copied_files)
+        has_dict_file = _has_dictionary(copied_files)
         if copied_files and not has_dict_file:
+            test_dictionary = (
+                f" nor '{prefix_name}.dict' in '{curves_dir}'"
+                if (base_source_path, base_name.lower()) != (curves_dir, prefix_name.lower())
+                else ""
+            )
             dycov_logging.get_logger("Manage files").warning(
                 f"Expected curve dictionary '{base_name}.dict' not found in "
-                f"'{base_source_path}', the test runs as if it had no curves"
+                f"'{base_source_path}'{test_dictionary}, the test runs as if it had no curves"
             )
 
         return len(copied_files) >= 2 and has_dict_file

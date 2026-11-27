@@ -83,6 +83,14 @@ def test_curves_only_is_off_unless_asked_for(parser, arguments):
     assert parser.parse_args([*arguments, "--curves-only"]).curves_only is True
 
 
+def test_anonymize_asks_for_its_output_directory(parser, capsys):
+    """#836: the curves are written there, and read from there without --curves."""
+    with pytest.raises(SystemExit):
+        parser.parse_args(["anonymize"])
+
+    assert "the following arguments are required: -o/--output" in capsys.readouterr().err
+
+
 def test_print_completion_writes_the_script_and_exits(parser, capsys):
     with pytest.raises(SystemExit) as exit_info:
         parser.parse_args(["--print-completion", "bash"])

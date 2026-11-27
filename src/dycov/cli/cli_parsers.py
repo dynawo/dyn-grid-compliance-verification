@@ -829,7 +829,14 @@ def _add_anonymize_subparser(subparsers: argparse._SubParsersAction) -> None:
         "variable names and with (optional) noise added.",
     )
     _add_curves_argument(anonymize, is_required=False)
-    _add_output_argument(anonymize)
+    _add_output_argument(
+        anonymize,
+        explain=(
+            "Its content is replaced by the anonymized curves, so it can be neither the "
+            "--curves directory nor one that holds it."
+        ),
+        is_required=True,
+    )
     _add_noisestd_argument(anonymize)
     _add_frequency_argument(anonymize)
     _add_results_argument(anonymize)

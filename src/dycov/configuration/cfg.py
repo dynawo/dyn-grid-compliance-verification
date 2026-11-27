@@ -79,6 +79,8 @@ class Config:
         Name and text of each file given with --user-config, to locate an option in it when
         reporting errors. The text is kept because such a file may be a pipe, which cannot be
         read twice.
+    _pcs_description_paths: list
+        The files the PCS layers were last loaded from, as load_pcs_config took them.
     """
 
     _config_dir: Path
@@ -93,6 +95,7 @@ class Config:
     _pcs_default_files: list[str] = field(default_factory=list)
     _dtr_delta_files: list[str] = field(default_factory=list)
     _user_config_sources: list[tuple[str, str]] = field(default_factory=list)
+    _pcs_description_paths: list = field(default_factory=lambda: [None] * 4)
 
     def _layers(self) -> tuple[configparser.ConfigParser, ...]:
         """Configuration parsers, from the highest precedence to the lowest."""
@@ -272,6 +275,17 @@ class Config:
             pcs_dtr_version_path,
         )
         self._load_pcs_layer(self._pcs_default_config, self._pcs_default_files, pcs_path)
+        self._pcs_description_paths[:] = [
+            pcs_path,
+            user_pcs_path,
+            pcs_dtr_delta_path,
+            pcs_dtr_version_path,
+        ]
+
+    def pcs_description_paths(self) -> tuple:
+        """The files of the PCS layers in use, as load_pcs_config takes them, to put them back
+        after reading the description of another PCS."""
+        return tuple(self._pcs_description_paths)
 
     def _load_pcs_layer(
         self,
