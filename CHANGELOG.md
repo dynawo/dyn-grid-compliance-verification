@@ -189,6 +189,10 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   nominal frequency of the configuration (#779).
 - The SCR jump envelopes keep their shape outside the 30 ms hold after the event when the
   producer's minimum power is above zero or its maximum below zero (#780).
+- The minimum versions of numpy, pandas, SciPy, matplotlib and lxml are the oldest ones that
+  install on each Python version the tool supports, 3.13 and 3.14, and pass the tests, where they
+  named versions that do not install there. On pandas 2 the filter of the curves no longer
+  changes the curves it is given (#840).
 - In a model with several Zone 1 units, the report draws for each unit its own Zone 1
   schematic, where every unit got that of the unit rendered last (#793).
 - `generate_gfm_envelopes` stops, naming each value, when the producer's D, H or Xeff cannot give
