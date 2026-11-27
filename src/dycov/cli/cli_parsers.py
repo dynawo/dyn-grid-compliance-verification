@@ -49,9 +49,7 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
         "--print-completion",
         help="Print the shell completion script for the tool and exit.",
     )
-    _add_debug_argument(main_parser)
-    _add_diagnostic_argument(main_parser)
-    _add_user_config_argument(main_parser)
+    _add_global_arguments(main_parser)
 
     # Set up subparsers for different commands
     subparsers = main_parser.add_subparsers(dest="command", help="Available commands")
@@ -62,8 +60,30 @@ def setup_cli_parsers() -> argparse.ArgumentParser:
     _add_excel2inputs_subparser(subparsers)
     _add_anonymize_subparser(subparsers)
     _add_migrate_inputs_subparser(subparsers)
+    for command in subparsers.choices.values():
+        _add_global_arguments(command, after_the_command=True)
 
     return main_parser
+
+
+def _add_global_arguments(
+    parser: argparse.ArgumentParser, after_the_command: bool = False
+) -> None:
+    """Adds the options every command takes, before its name or after it. After it, an option
+    left out keeps the value given before the name, or its default, and only the long names are
+    taken: a one-letter -d would turn the letters glued to it into options of their own.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The main parser, or the parser of a command.
+    after_the_command: bool
+        Whether *parser* is the parser of a command.
+    """
+    default = argparse.SUPPRESS if after_the_command else None
+    _add_debug_argument(parser, default, short=not after_the_command)
+    _add_diagnostic_argument(parser, default)
+    _add_user_config_argument(parser, default)
 
 
 def _add_argument(
@@ -132,8 +152,16 @@ def _add_argument(
     )
 
 
-def _add_user_config_argument(parser: argparse.ArgumentParser) -> None:
-    """Adds the '--user-config' argument, a configuration file read on top of the user's own."""
+def _add_user_config_argument(parser: argparse.ArgumentParser, default=None) -> None:
+    """Adds the '--user-config' argument, a configuration file read on top of the user's own.
+
+    Parameters
+    ----------
+    parser: argparse.ArgumentParser
+        The parser to which the argument will be added.
+    default: optional
+        The value when the option is left out; None leaves it None.
+    """
     _add_argument(
         parser,
         "--user-config",
@@ -142,42 +170,50 @@ def _add_user_config_argument(parser: argparse.ArgumentParser) -> None:
             " its options take precedence. A file that cannot be read stops the run."
         ),
         arg_type=Path,
-        default=None,
+        default=default,
         completion=shtab.FILE,
     )
 
 
-def _add_diagnostic_argument(parser: argparse.ArgumentParser) -> None:
+def _add_diagnostic_argument(parser: argparse.ArgumentParser, default=None) -> None:
     """Adds the '--diagnostic' argument to the parser.
 
     Parameters
     ----------
     parser: argparse.ArgumentParser
         The parser to which the argument will be added.
+    default: optional
+        The value when the option is left out; None keeps the action's own.
     """
-    parser.add_argument(
+    _add_argument(
+        parser,
         "--diagnostic",
         action="store_true",
-        help=(
+        default=default,
+        help_msg=(
             "Run in diagnostic mode: enables debug logging, "
             "forces serial execution and dumps full configuration and PCS."
         ),
     )
 
 
-def _add_debug_argument(parser: argparse.ArgumentParser) -> None:
+def _add_debug_argument(parser: argparse.ArgumentParser, default=None, short: bool = True) -> None:
     """Adds the '--debug' argument to the given parser.
 
     Parameters
     ----------
     parser: argparse.ArgumentParser
         The parser to which the argument will be added.
+    default: optional
+        The value when the option is left out; None keeps the action's own.
+    short: bool
+        Whether '-d' names it too.
     """
     _add_argument(
         parser,
-        "-d",
-        "--debug",
+        *(("-d", "--debug") if short else ("--debug",)),
         action="store_true",
+        default=default,
         help_msg="Enable debug logging.",
     )
 
@@ -702,7 +738,8 @@ def _add_validate_subparser(subparsers: argparse._SubParsersAction) -> None:
             "       dycov validate -m MODEL  reference [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS]"
             " [-od] [--curves-only]\n"
             "       dycov validate -c CURVES reference [-h] [-l LAUNCHER] [-o OUTPUT] [-p PCS]"
-            " [-od]"
+            " [-od]\n"
+            "       each also takes [--debug] [--diagnostic] [--user-config USER_CONFIG]"
         ),
     )
     _add_launcher_argument(validate)
