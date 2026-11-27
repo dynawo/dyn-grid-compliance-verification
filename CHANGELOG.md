@@ -124,6 +124,17 @@ template into `workbooks/Producer_IEC.xlsx` or `workbooks/Producer_WECC.xlsx` an
 rows: a workbook without them is still read, and the conversion names the tests it has no row
 for (#679).
 
+### The workbooks offer True or False for every boolean parameter
+
+Every boolean parameter of both templates takes `True` or `False` from a list, and the conversion
+writes it as Dynawo reads it, `true` or `false`. A cell holding any other value, which Dynawo read
+as false without a word, now stops the conversion and names the sheet and the parameter;
+`vrai`/`faux`, `oui`/`non` and `1`/`0` are read too. The `Signaux zone 1` sheet gains two rows,
+the active and reactive power at node 1, which the report draws next to those at the point the
+converter controls. Copy the data of a workbook made on an earlier template into
+`workbooks/Producer_IEC.xlsx` or `workbooks/Producer_WECC.xlsx` to get both: a workbook without
+them is still read (#829).
+
 ### Your report templates replace the packaged ones
 
 A report template in `templates/reports` of the configuration directory replaces the packaged one

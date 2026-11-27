@@ -72,3 +72,7 @@ def test_a_curve_the_user_adds_is_not_reported_as_unknown(user_dictionary, caplo
 def test_a_name_the_generator_needs_says_where_to_define_it(user_dictionary):
     with pytest.raises(ValueError, match=names.NAMES_FILENAME):
         names.sheet("there_is_no_such_sheet")
+
+
+def test_a_ligature_reads_as_its_letters():
+    assert names.normalize("Tension au nœud 1") == names.normalize("Tension au noeud 1")

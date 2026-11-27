@@ -136,7 +136,10 @@ or how the `Model Map` key is formed). It reads:
   the comments it takes from the workbook (its origin sheet, the
   `table | variant`, and any per-parameter comment / base unit), and the Excel
   `type` is mapped to the Dynawo convention (`double → DOUBLE`,
-  `boolean → BOOL`).
+  `boolean → BOOL`). A boolean is written as Dynawo reads it, `true` or
+  `false`, from any value `[Boolean-Values]` lists, the `True`/`False` list of
+  the templates among them; any other value stops the conversion, naming its
+  sheet and parameter, since Dynawo reads whatever is not `true` as false.
 - **INI** — the filled `Producer.ini` (PDR limits, per-generator P/Q sharing,
   topology).
 - **Protection table file** — the WECC voltage ride-through protection reads its
