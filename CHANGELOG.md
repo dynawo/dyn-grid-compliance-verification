@@ -192,6 +192,12 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   stops when that file does not exist (#766).
 - The native installation lists `tex-gyre`, the fonts of the PDF manual the installer compiles,
   and the installer checks for them before it starts (#768).
+- A signal sheet of a workbook keeps its tests when its results folder, a file or a note holds
+  the word "Cas" or "Fiche": the cases of its tests table were looked for in the first cell of
+  the sheet holding that word, which a folder such as `.../Fiches/...` or `.../test_cases/...`
+  does, so the sheet described no test, silently. The tests table is now the one whose header
+  names the cases and the results file, and a sheet whose `.csv` files reach no test says so
+  (#861).
 - The figures of the GFM RoCoF tests give their initial frequency and RoCoF in Hz with the
   nominal frequency of the configuration, where they took 50 Hz (#770).
 - The continuous integration runs on pushes to master as well, builds the wheel and runs the tests
