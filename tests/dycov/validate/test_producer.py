@@ -599,3 +599,31 @@ def test_a_unit_model_without_its_zone3_dyd_is_told_so_before_any_unit_file(tmp_
         producer._ModelProducer__set_dynawo_model_validation_type()
 
     assert str(error.value) == f"The producer has no .dyd file in {model / 'Zone3'}"
+
+
+@pytest.mark.parametrize("written", ["", "   "])
+def test_an_effective_reactance_left_empty_is_not_given(monkeypatch, written):
+    producer = _producer_reading(
+        monkeypatch, _PRODUCER_INI + f"[GFM Parameters]\nXeff ={written}\n"
+    )
+
+    assert producer.x_eff is None
+
+
+def test_the_optional_numbers_of_the_ini_left_empty_take_their_defaults(monkeypatch):
+    ini = _PRODUCER_INI.replace(
+        "[DEFAULT]\n", "[DEFAULT]\np_min_injection =\np_min_consumption =\np_max_consumption =\n"
+    )
+    producer = _producer_reading(monkeypatch, ini)
+
+    assert (
+        producer.p_min_injection_pu,
+        producer.p_min_consumption_pu,
+        producer.p_max_consumption_pu,
+    ) == (0.0, 0.0, 0.0)
+
+
+def test_a_nominal_power_left_empty_is_the_base_of_the_system(monkeypatch):
+    producer = _producer_reading(monkeypatch, _PRODUCER_INI + "s_nom =\n")
+
+    assert producer.s_nom == 100.0

@@ -57,11 +57,15 @@ class DummyConfig:
 
 
 class DummyProducer:
-    def __init__(self, zone=1):
+    def __init__(self, zone=1, controls_internal_node2=False):
         self._zone = zone
+        self._controls_internal_node2 = controls_internal_node2
 
     def get_zone(self) -> int:
         return self._zone
+
+    def controls_internal_node2(self) -> bool:
+        return self._controls_internal_node2
 
 
 class DummyCurvesManager:
@@ -117,11 +121,12 @@ def _make_validator(
     zone=1,
     curves_manager=None,
     is_field_measurements=False,
+    controls_internal_node2=False,
 ):
     return ModelValidator(
         curves_manager=curves_manager or DummyCurvesManager(),
         pcs_bm_name="PCS_RTE-I16z3.GridFreqRamp",
-        producer=DummyProducer(zone=zone),
+        producer=DummyProducer(zone=zone, controls_internal_node2=controls_internal_node2),
         validations=validations or [],
         is_field_measurements=is_field_measurements,
         pcs_name="PCS_RTE-I16z3",
@@ -1656,3 +1661,51 @@ def test_a_test_names_the_magnitude_it_tracks_in_its_own_section(monkeypatch):
 
     assert validator._ModelValidator__tracked_magnitude("Ramp") == "active_current"
     assert validator._ModelValidator__tracked_magnitude("Other") is None
+
+
+@pytest.mark.parametrize(
+    "controls_internal_node2, tracked", [(False, "VoltageSetpointPu"), (True, "injector_voltage")]
+)
+def test_a_voltage_step_is_tracked_at_the_node_the_unit_controls(
+    monkeypatch, tmp_path, controls_internal_node2, tracked
+):
+    """#834: the figure draws the voltage setpoint over the node the unit controls, and the
+    check measures the voltage of that same node."""
+    asked = []
+    real = common.get_measurement_name
+
+    def spy(modified_setpoint, *args, **kwargs):
+        asked.append(modified_setpoint)
+        return real(modified_setpoint, *args, **kwargs)
+
+    monkeypatch.setattr(common, "get_measurement_name", spy)
+    flat = [0.5, 0.5, 0.5, 0.5]
+    curves = pd.DataFrame(
+        {
+            "time": [0.0, 1.0, 2.0, 3.0],
+            "BusPDR_BUS_Voltage": [1.0, 1.0, 1.01, 1.01],
+            "Unit_GEN_VoltageNode2": [1.0, 1.0, 1.05, 1.05],
+            "Unit_GEN_ActivePowerControlledNode": flat,
+            "Unit_GEN_ReactivePowerControlledNode": flat,
+            "Unit_GEN_ActiveCurrentNode2": flat,
+            "Unit_GEN_ReactiveCurrentNode2": flat,
+        }
+    )
+    validator = _make_validator(
+        validations=["setpoint_tracking_controlled_magnitude"],
+        zone=1,
+        curves_manager=_make_window_manager(calculated=curves, reference=curves),
+        controls_internal_node2=controls_internal_node2,
+    )
+    event_params = {
+        "start_time": 1.0,
+        "duration_time": 1.0,
+        "connect_to": "VoltageSetpointPu",
+        "step_value": 0.05,
+    }
+
+    results = validator.validate("oc", tmp_path, "outputs", event_params)
+
+    assert set(asked) == {tracked}
+    label = "injector_voltage" if controls_internal_node2 else "voltage"
+    assert results["setpoint_tracking_controlled_magnitude_label"] == label

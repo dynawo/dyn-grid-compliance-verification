@@ -76,27 +76,32 @@ Use them when opening new issues.
 
 ## 4. CI checks
 
-CI runs automatically on every pull request on Linux and macOS, with Python
-3.13 and Python 3.14.
+CI runs on every pull request and on every push to `master`, on Linux and macOS,
+with Python 3.13 and Python 3.14. It builds the wheel, installs it with the
+`[dev,test]` extras at the versions `uv.lock` pins, and checks the installed
+package, so a file the wheel leaves out fails the tests. A `uv.lock` that no
+longer matches `pyproject.toml` fails the installation: run `uv lock`.
 
 The following checks must pass before merging:
 
 | Check | Tool | Command |
 |-------|------|---------|
-| Linting | Ruff | `uv run ruff check src` |
-| Tests | pytest | `uv run pytest` |
-| Build | build | `uv run python -m build --wheel` |
+| Build | uv | `uv build --wheel` |
+| Linting | Ruff | `ruff check src tests` |
+| Formatting | Ruff | `ruff format --check src tests` |
+| Tests | pytest | `pytest -o pythonpath=. --cov=dycov` |
 
-Run them locally before pushing:
+Run them locally, in the environment of the project, before pushing:
 
 ```bash
-uv run ruff check src
-uv run pytest -q
+dycov_venv/bin/ruff check src tests
+dycov_venv/bin/ruff format --check src tests
+dycov_venv/bin/python -m pytest -q
 ```
 
-> **Note:** Coverage is collected by CI (`uv run pytest --cov=src`) but
-> there is no coverage gate yet. It is available for informational purposes
-> and may be enforced in a future release.
+> **Note:** Coverage is collected by CI (`--cov=dycov`) but there is no
+> coverage gate yet. It is available for informational purposes and may be
+> enforced in a future release.
 
 The `[dev,test]` extras include all tools needed for development:
 
@@ -131,13 +136,13 @@ Key conventions:
 Run Ruff to check your changes before pushing:
 
 ```bash
-uv run ruff check src
+dycov_venv/bin/ruff check src tests
 ```
 
 To auto-fix issues where possible:
 
 ```bash
-uv run ruff check src --fix
+dycov_venv/bin/ruff check src tests --fix
 ```
 
 ---

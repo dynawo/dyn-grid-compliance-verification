@@ -849,7 +849,11 @@ class ModelValidator(Validator):
             freq_peak = float(event_params["step_value"])
 
         tracked_magnitude = self.__tracked_magnitude(oc_name)
-        tracked = tracked_magnitude or event_params["connect_to"]
+        tracked = tracked_magnitude or compared_curves.tracked_on(
+            self._producer.get_zone(),
+            event_params["connect_to"],
+            self._producer.controls_internal_node2(),
+        )
         model_results = (
             self.__calculate(
                 self._producer.get_zone(),

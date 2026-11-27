@@ -14,6 +14,8 @@ shape the stdlib reader returns, so no ``.xlsx`` is needed to exercise the logic
 
 from __future__ import annotations
 
+import pytest
+
 from dycov.excel import workbook as W
 
 
@@ -209,3 +211,23 @@ def test_points_listed_one_per_row_are_still_parameters():
         ("TabletUoverUwtfilt11", "1.1"),
         ("TabletUoverUwtfilt12", "100"),
     ]
+
+
+def test_a_selected_variant_without_a_parameter_table_is_refused():
+    config = W.Config(selections=[("REGC", "REGC_C")])
+    variants = W.parse_variants({"Interface réseau": _shared_types_sheet()})
+
+    with pytest.raises(ValueError) as refusal:
+        W._selected_variants(config, variants)
+
+    assert "'REGC_C'" in str(refusal.value)
+    assert "REGC_A, REGC_B" in str(refusal.value)
+
+
+def test_the_selected_variants_follow_the_workbook_and_skip_disabled_blocks():
+    config = W.Config(selections=[("REGC", "REGC_B"), ("REPC", "Aucun")])
+    variants = W.parse_variants({"Interface réseau": _shared_types_sheet()})
+
+    selected = W._selected_variants(config, variants)
+
+    assert [(block, variant.name) for block, variant in selected] == [("REGC", "REGC_B")]

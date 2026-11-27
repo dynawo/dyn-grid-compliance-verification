@@ -22,6 +22,12 @@ the user documentation instead:
 | `docker/` | Image definition plus the build/export scripts and the end-user import/run helpers. |
 | `wsl/` | Windows WSL installer and launcher shipped to end users. |
 
+Every installation — `linux_install.sh`, the image and `build_and_install.sh` — installs the
+dependencies at the versions `uv.lock` pins, which the release is tested with, as constraints
+`uv export` writes from it. A change of `pyproject.toml` that touches them needs `uv lock`: an
+installation from a lock that no longer matches `pyproject.toml` stops and says so. Reading the
+lock takes `uv` 0.5.24 or later.
+
 ## Building a release
 
 ```bash

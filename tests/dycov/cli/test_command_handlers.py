@@ -179,6 +179,43 @@ def test_performance_refuses_curves_only_without_a_model(mocker):
     run_verification.assert_not_called()
 
 
+def _anonymize_args(output, curves=None, results=None):
+    args = MagicMock()
+    args.output, args.curves, args.results = output, curves, results
+    return args
+
+
+def _anonymize(mocker, tmp_path, monkeypatch, output, curves=None, results=None):
+    """What anonymize does with its arguments: the parser error, or None when it runs."""
+    from dycov.cli.command_handlers import handle_anonymize_command
+
+    monkeypatch.chdir(tmp_path)
+    anonymize = mocker.patch("dycov.cli.command_handlers.anonymizer.anonymize")
+    parser = MagicMock()
+    handle_anonymize_command(parser, _anonymize_args(output, curves, results))
+    if parser.error.called:
+        anonymize.assert_not_called()
+        return parser.error.call_args.args[0]
+    anonymize.assert_called_once()
+    return None
+
+
+def test_anonymize_asks_for_the_curves_to_anonymize(mocker, tmp_path, monkeypatch):
+    assert "give --curves or --results" in _anonymize(mocker, tmp_path, monkeypatch, "out")
+
+
+def test_anonymize_refuses_an_output_that_would_empty_its_curves(mocker, tmp_path, monkeypatch):
+    """#836: anonymize empties its output directory before it reads the curves."""
+    for output in ("curves", "."):
+        refusal = _anonymize(mocker, tmp_path, monkeypatch, output, curves="curves")
+        assert "would replace the curves it anonymizes" in refusal
+
+
+def test_anonymize_runs_with_curves_or_results_written_elsewhere(mocker, tmp_path, monkeypatch):
+    assert _anonymize(mocker, tmp_path, monkeypatch, "out", curves="curves") is None
+    assert _anonymize(mocker, tmp_path, monkeypatch, "out", results="Results") is None
+
+
 def _excel2inputs_args(excel="Producer.xlsx", output="output_dir"):
     args = MagicMock()
     args.excel = excel
