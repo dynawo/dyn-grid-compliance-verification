@@ -215,6 +215,9 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
 - Every test of a parallel run gets its interactive HTML page: when the reports of several PCS
   were prepared at the same time, one could fail to create the HTML folder another had just
   created, and the page of its test was left out (#815).
+- An optional number of the producer INI left empty, `Xeff` of `[GFM Parameters]`,
+  `p_min_injection`, `p_min_consumption`, `p_max_consumption` or `s_nom`, reads as not given, where
+  it stopped the run before its first test (#832).
 - The ramp of the grid frequency of the Fiche I16 in Zone 3 is the one its PCS description declares:
   the simulation applied the start, the duration and the height written in the grid model, so a
   description of your own, a revision or a declaration of the Fiche F16 that changed them moved
