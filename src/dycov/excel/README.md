@@ -38,8 +38,7 @@ report**: how many tests were described, how many `.csv` were copied, and which
 ones — or which metadata columns — are still to be filled in.
 
 The `.xlsx` is read with the package's own stdlib parsing engine
-(`workbook.py`: workbook reader, variant tables, `Général` config), which the
-legacy `tools/dynawo_par` also imports until its retirement.
+(`workbook.py`: workbook reader, variant tables, `Général` config).
 
 `dycov validate` and `dycov performance` take the workbook directly as well:
 
@@ -134,7 +133,7 @@ or how the `Model Map` key is formed). It reads:
   model and drops the block. Which parameters hold that branch is read from the
   Dynawo dictionary (`TransformerResistance`, …), so a family that spells them
   differently is an entry there and not a branch here. Each parameter carries
-  the Excel-derived comments of the `dynawo_par` format (its origin sheet, the
+  the comments it takes from the workbook (its origin sheet, the
   `table | variant`, and any per-parameter comment / base unit), and the Excel
   `type` is mapped to the Dynawo convention (`double → DOUBLE`,
   `boolean → BOOL`).

@@ -200,6 +200,11 @@ lacks the figure of the frequency of the converter that the RoCoF tests of the F
   changes the curves it is given (#840).
 - In a model with several Zone 1 units, the report draws for each unit its own Zone 1
   schematic, where every unit got that of the unit rendered last (#793).
+- `tools/dynawo_par`, which the conversion of workbooks of the package replaced, is retired, and so
+  are the `dynawo-pypowsybl` extra, the `-p` option of `build_and_install.sh` and the tools of the
+  PyPowSyBl study, whose conclusions stay in the design documents. The package says it runs on
+  Linux and points its bug tracker at the issues of the repository, and no longer lists a data
+  file it does not ship (#847).
 - `generate_gfm_envelopes` stops, naming each value, when the producer's D, H or Xeff cannot give
   envelopes (#782).
 - `dycov anonymize` asks for its output directory, `-o`, without which it ended with a TypeError,
