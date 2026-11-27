@@ -55,6 +55,7 @@ def test_reference_curves_report_names_what_is_still_missing():
             "tests": 3,
             "copied": 2,
             "missing": ["rise.csv"],
+            "missing_from": [(Path("/curves"), ["rise.csv"])],
             "unfilled": ["PCS_RTE-I16z1.SetPointStep.Active"],
             "without_row": ["PCS_RTE-I16z3.GridVoltageSwell.Qzero"],
         }
@@ -64,6 +65,26 @@ def test_reference_curves_report_names_what_is_still_missing():
     assert ".csv missing    : 1" in report and "rise.csv" in report
     assert "metadata to fill: 1" in report and "SetPointStep.Active" in report
     assert "rows missing    : 1" in report and "GridVoltageSwell.Qzero" in report
+
+
+def test_reference_curves_report_says_where_each_missing_curve_goes():
+    report = G._reference_curves_report(
+        {
+            "target": Path("/out/ReferenceCurves/Producer"),
+            "tests": 3,
+            "copied": 0,
+            "missing": ["a.csv", "b.csv", "c.csv"],
+            "missing_from": [(Path("/wb/../curves"), ["a.csv", "b.csv"]), (None, ["c.csv"])],
+            "unfilled": [],
+            "without_row": [],
+        }
+    )
+
+    assert ".csv missing    : 3" in report
+    assert "excel2inputs and --excel both read, then convert the workbook again" in report
+    assert "/curves: a.csv, b.csv" in report
+    assert "give it one in its results folder cell): c.csv" in report
+    assert "next to the .dict" not in report
 
 
 def test_reference_curves_report_says_when_the_sheets_describe_nothing():
