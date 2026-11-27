@@ -357,3 +357,23 @@ def test_the_curves_of_each_test_wait_on_disk_for_the_report(benchmark, monkeypa
         )
         assert results["curves_set_aside"].exists()
     assert benchmark._curves_manager.released
+
+
+def test_a_line_logged_once_the_tests_are_over_carries_no_test_label(
+    benchmark, monkeypatch, caplog
+):
+    from dycov.logging import dycov_logging
+    from dycov.model.compliance import Compliance
+
+    monkeypatch.setattr(
+        benchmark,
+        "_Benchmark__validate_operating_condition",
+        lambda op_cond: (True, Compliance.Compliant, {"summary": Compliance.Compliant}),
+        raising=False,
+    )
+
+    with caplog.at_level(logging.INFO, logger="DyCoV"):
+        benchmark.validate([], {})
+        dycov_logging.get_logger("Report").info("Preparing the report")
+
+    assert caplog.records[-1].getMessage() == "Preparing the report"

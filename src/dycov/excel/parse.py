@@ -180,9 +180,24 @@ def sheet_of(zone) -> str:
     return getattr(zone, "sheet", "the zone sheet")
 
 
+def boolean(value, where: str) -> bool:
+    """The truth a boolean cell states, refusing a value that states none: Dynawo reads anything
+    but ``true`` as false, so a cell holding ``1`` or ``VRAI`` would turn its parameter off
+    without a word."""
+    truthy, falsy = names.boolean_values()
+    text = names.normalize(str(value))
+    if text in truthy:
+        return True
+    if text in falsy:
+        return False
+    raise ValueError(
+        f"{where} holds {value!r}, which is not a boolean: choose True or False in its list."
+    )
+
+
 def is_true(value) -> bool:
     """Whether a workbook cell states a boolean truth, in French or in English."""
-    return str(value).strip().lower() in ("true", "1", "vrai", "oui", "yes")
+    return boolean(value, "a boolean cell")
 
 
 def zone_text(zone: dict, name: str) -> str:
@@ -347,7 +362,19 @@ def parse_zone(workbook: dict, sheet_name: str) -> ZoneValues:
         if not name:
             break
         values[name] = wb._cell(grid, r, value_col)
+    _check_boolean_rows(sheet_name, values)
     return ZoneValues(sheet_name, values)
+
+
+def _check_boolean_rows(sheet_name: str, values: dict) -> None:
+    """Refuse a boolean row of a zone sheet whose value is not one, an empty one included."""
+    row = names.row("Zone1", "converter_lv_control")
+    if row not in values:
+        return
+    where = f"row {row!r} of sheet {sheet_name!r}"
+    if not values[row]:
+        raise ValueError(f"{where} has no value: choose True or False in its list.")
+    boolean(values[row], where)
 
 
 def zone1_sheets(workbook: dict) -> list:
@@ -373,6 +400,17 @@ def _normalized_number(text: str) -> str:
     if value.is_integer() and abs(value) < 1e16:
         return str(int(value))
     return repr(value)
+
+
+def _par_value(param, param_type: str, sheet: str) -> str:
+    """The value as the PAR writes it: a number in its shortest form, a boolean as Dynawo reads
+    it."""
+    if param_type == "DOUBLE":
+        return _normalized_number(param.value)
+    if param_type == "BOOL":
+        where = f"parameter {param.name!r} of sheet {sheet!r}"
+        return str(boolean(param.value, where)).lower()
+    return param.value
 
 
 def parse_control_params(workbook: dict, converter_voltage: str | None = None) -> list:
@@ -402,13 +440,12 @@ def parse_control_params(workbook: dict, converter_voltage: str | None = None) -
                     merged = merged.replace(CONVERTER_VOLTAGE_CHOICE, converter_voltage)
                 comments.append(merged)
             param_type = wb._map_type(p.type)
-            value = _normalized_number(p.value) if param_type == "DOUBLE" else p.value
             result.append(
                 {
                     "block": block,
                     "name": p.name,
                     "type": param_type,
-                    "value": value,
+                    "value": _par_value(p, param_type, variant.sheet),
                     "comments": comments,
                 }
             )

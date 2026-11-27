@@ -25,7 +25,8 @@ import pytest
 
 import dycov
 from dycov.configuration.cfg import config
-from dycov.model.pcs import _version_for_category
+from dycov.model import pcs_layers
+from dycov.model.pcs_layers import version_for_category
 from dycov.validation import compared_curves
 
 REVISION = "20260723"
@@ -61,7 +62,7 @@ def version(revision):
             TEMPLATES / "PCS" / "model" / "BESS" / pcs / "PCSDescription.ini",
             None,
             _delta_of(pcs, "PCSDescription.ini"),
-            _version_for_category(_DELTA / "PCS" / "model" / "BESS" / pcs, category),
+            version_for_category(_DELTA / "PCS" / "model" / "BESS" / pcs, category),
         )
 
     yield load
@@ -75,7 +76,7 @@ def _operating_conditions(benchmark):
 def test_the_base_revision_has_no_version_of_a_fiche_by_category():
     """Before the revision 20260723 a storage installation of any type takes the Fiche I16."""
     assert not sorted((TEMPLATES / "PCS").glob("*/*/*/Type*.ini"))
-    assert _version_for_category(_DELTA / "PCS" / "model" / "BESS" / "PCS_RTE-I16z1", "C")
+    assert version_for_category(_DELTA / "PCS" / "model" / "BESS" / "PCS_RTE-I16z1", "C")
 
 
 @pytest.mark.parametrize("category", ["C", "D"])
@@ -308,7 +309,7 @@ def test_types_c_and_d_filter_at_30_hz_every_millisecond(version, pcs):
 def test_type_b_keeps_the_fiche_the_revision_writes_for_it(version, pcs):
     version(pcs, "B")
 
-    assert _version_for_category(_DELTA / "PCS" / "model" / "BESS" / pcs, "B") is None
+    assert version_for_category(_DELTA / "PCS" / "model" / "BESS" / pcs, "B") is None
     assert "ThreePhaseFault" in config.get_list("PCS-Benchmarks", pcs)
     assert config.get_float("GridCode", "cutoff", 0) == 15.0
 
@@ -335,3 +336,27 @@ def test_every_test_of_the_version_carries_its_report_template_in_the_delta(vers
         }
     )
     assert not missing
+
+
+@pytest.mark.parametrize(
+    "category, expected, absent",
+    [("C", "S_Fault4", "ThreePhaseFault"), ("B", "ThreePhaseFault", "S_Fault4")],
+)
+def test_the_tests_a_storage_runs_follow_its_category(revision, category, expected, absent):
+    """#835: the index generated for the reference curves of a storage lists the tests its
+    category runs, the Fiche I16.2 for types C and D."""
+    revision(REVISION)
+
+    tests = pcs_layers.tests_it_runs("PCS_RTE-I16z1", "model/BESS", category)
+
+    assert any(f".{expected}." in test for test in tests)
+    assert not any(f".{absent}." in test for test in tests)
+
+
+def test_the_tests_a_storage_runs_leave_out_the_optional_operating_conditions(revision):
+    revision(REVISION)
+
+    tests = pcs_layers.tests_it_runs("PCS_RTE-I16z1", "model/BESS", "C")
+
+    assert "PCS_RTE-I16z1.S_Fault4.OC2_SCR10" in tests
+    assert "PCS_RTE-I16z1.S_Fault4.OC1_SCR10" not in tests

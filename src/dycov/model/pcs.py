@@ -7,16 +7,15 @@
 #     omsg@aia.es
 #     demiguelm@aia.es
 #
-import configparser
 import copy
 from pathlib import Path
 from typing import Optional, Union
 
-from dycov.configuration import cfg
 from dycov.configuration.cfg import config
 from dycov.core.global_variables import CASE_SEPARATOR
 from dycov.core.parameters import Parameters
 from dycov.logging import dycov_logging
+from dycov.model import pcs_layers
 from dycov.model.benchmark import Benchmark
 from dycov.model.producer import Producer
 
@@ -106,11 +105,9 @@ class Pcs:
         self, producer: Producer, source_path: Path, templates_path: Path = None
     ) -> Union[Path, None]:
         templates = self._templates_path if templates_path is None else templates_path
-        path = source_path / templates / producer.get_sim_type_str() / self._name
-        if not path.exists():
-            return None
-
-        return _pcs_description_in(path)
+        return pcs_layers.description_path(
+            source_path, templates, producer.get_sim_type_str(), self._name
+        )
 
     def __get_delta_pcs_path(self, producer: Producer) -> Union[Path, None]:
         """The delta of this PCS: what the selected revision of the DTR writes differently.
@@ -140,23 +137,21 @@ class Pcs:
             / producer.get_sim_type_str()
             / self._name
         )
-        return _version_for_category(path, producer.get_installation_category(self._producer_name))
+        return pcs_layers.version_for_category(
+            path, producer.get_installation_category(self._producer_name)
+        )
 
     def __get_delta_templates_path(self) -> Union[Path, None]:
         """The templates of the delta of the selected revision of the DTR, which mirror the
         shipped ones, or None for the base revision, which has no delta."""
-        revision = config.get_value("DTR", "current")
-        if cfg.is_base_revision(revision):
-            return None
-
-        return self._templates_path.parent / "revisions" / revision / self._templates_path.name
+        return pcs_layers.delta_templates_path(self._templates_path)
 
     def __get_user_pcs_path(self, producer: Producer) -> Union[Path, None]:
         """The user's description of this PCS: the one delivered with the reference curves of
         the case, where the tests a fiche leaves to the producer are declared with their records,
         or else the one in the configuration directory."""
         if not producer.is_gfm() and producer.has_reference_curves_path():
-            delivered = _description_declaring(producer.get_reference_path(), self._name)
+            delivered = pcs_layers.description_declaring(producer.get_reference_path(), self._name)
             if delivered is not None:
                 return delivered
 
@@ -184,14 +179,17 @@ class Pcs:
         """
         pcs_results = {"id": self._id, "zone": self._zone, "producer": self._producer_name}
         success = False
-        for bm in self._bm_list:
-            success |= bm.validate(
-                summary_list,
-                pcs_results,
-            )
-            self._figures_description[self._name + CASE_SEPARATOR + bm.get_name()] = (
-                bm.get_figures_description()
-            )
+        try:
+            for bm in self._bm_list:
+                success |= bm.validate(
+                    summary_list,
+                    pcs_results,
+                )
+                self._figures_description[self._name + CASE_SEPARATOR + bm.get_name()] = (
+                    bm.get_figures_description()
+                )
+        finally:
+            dycov_logging.clear_test_context()
 
         return self._report_name, success, pcs_results
 
@@ -292,37 +290,7 @@ class Pcs:
         )
 
 
-def _pcs_description_in(path: Path) -> Union[Path, None]:
-    files = {file.stem.lower(): file for file in path.glob("*.[iI][nN][iI]")}
-    return files.get("pcsdescription")
-
-
 def _lists_none(value: Optional[str]) -> bool:
     """Whether a list of the configuration is the word ``none``, which a revision of the DTR
     writes to withdraw a fiche, where an empty one leaves the tests to declare."""
     return isinstance(value, str) and value.strip().lower() == "none"
-
-
-def _version_for_category(path: Path, category: Optional[str]) -> Union[Path, None]:
-    """The version of a fiche the DTR gives some categories of unit: a ``Type<categories>.ini``
-    in the directory of the delta of the PCS, named after the categories it is for
-    (``TypeCD.ini`` for the categories C and D), which patches the description the revision
-    gives the PCS."""
-    if category is None:
-        return None
-    for version in sorted(path.glob("Type*.[iI][nN][iI]")):
-        if category in version.stem[len("Type") :]:
-            return version
-    return None
-
-
-def _description_declaring(path: Path, pcs_name: str) -> Union[Path, None]:
-    """The ``<fiche>Description.ini`` delivered with the reference curves that declares the
-    benchmarks of the PCS, if any: such a file names the PCS it describes."""
-    for description in sorted(path.glob("*[dD]escription.[iI][nN][iI]")):
-        parser = configparser.ConfigParser(inline_comment_prefixes=("#",))
-        parser.optionxform = str
-        parser.read(description, encoding="utf-8")
-        if parser.has_option("PCS-Benchmarks", pcs_name):
-            return description
-    return None

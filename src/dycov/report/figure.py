@@ -87,6 +87,30 @@ def _get_xrange(
     return xmin, xmax
 
 
+def _graph_scale(operating_condition: str, unit_characteristics: dict) -> float:
+    """The size of the step a reference tracking test makes, which the tolerance that tells where
+    a curve settles is adapted to; 1 when the operating condition gives none, or one the tool
+    rejects."""
+    reference_step_size = config.get_value(operating_condition, "reference_step_size")
+    if reference_step_size is None:
+        return 1.0
+
+    try:
+        return abs(
+            value_registry.resolve_value_definition(
+                str(reference_step_size),
+                unit_characteristics,
+                origin=(operating_condition, "reference_step_size"),
+            )
+        )
+    except ValueError as e:
+        dycov_logging.warn_once(
+            "Figures",
+            f"{e} The figures of {operating_condition} show their default time range.",
+        )
+        return 1.0
+
+
 def _get_xrange_for_curve(
     operating_condition: str,
     unit_characteristics: dict,
@@ -94,20 +118,10 @@ def _get_xrange_for_curve(
     curve: list,
     sim_t_event_end: float,
 ) -> tuple[float, float]:
-    # Tolerance for reference tracking tests should be adapted to the magnitude of the step change
-    reference_step_size = config.get_value(operating_condition, "reference_step_size")
-    if reference_step_size is None:
-        graph_scale = 1.0
-    else:
-        graph_scale = abs(
-            value_registry.resolve_value_definition(
-                str(reference_step_size),
-                unit_characteristics,
-                origin=(operating_condition, "reference_step_size"),
-            )
-        )
     graph_rel_tol = config.get_float("Figures", "graph_rel_tol", 0.002)
-    graph_abs_tol = config.get_float("Figures", "graph_abs_tol", 0.01) * graph_scale
+    graph_abs_tol = config.get_float("Figures", "graph_abs_tol", 0.01) * _graph_scale(
+        operating_condition, unit_characteristics
+    )
 
     last_value = curve[-1]
     steady_pos = 0

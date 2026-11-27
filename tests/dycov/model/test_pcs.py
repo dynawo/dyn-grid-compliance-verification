@@ -152,6 +152,24 @@ def test_validate_aggregates_benchmarks(monkeypatch):
     assert figures["PCS_Test.BM_OK"] == {"fig_BM_OK": 1}
 
 
+def test_validate_leaves_no_test_label_behind_when_a_benchmark_aborts(monkeypatch):
+    from dycov.logging import dycov_logging
+    from dycov.logging.test_context import get_test_context
+
+    pcs = _make_pcs(monkeypatch, bms=("BM_KO",))
+
+    def validate_and_abort(summary_list, pcs_results):
+        dycov_logging.set_test_context("PCS_Test", "BM_KO", "OC", "Prod")
+        raise IOError("No space left on device")
+
+    monkeypatch.setattr(pcs._bm_list[0], "validate", validate_and_abort)
+
+    with pytest.raises(IOError):
+        pcs.validate([])
+
+    assert get_test_context() == ""
+
+
 def test_validate_all_fail(monkeypatch):
     pcs = _make_pcs(monkeypatch, bms=("BM_KO",))
 
@@ -231,13 +249,13 @@ def test_the_version_a_revision_writes_for_the_category_of_the_installation_patc
 
 
 def test_a_verification_that_gives_every_category_the_same_fiches_loads_no_version(tmp_path):
-    from dycov.model.pcs import _version_for_category
+    from dycov.model.pcs_layers import version_for_category
 
     (tmp_path / "TypeCD.ini").write_text("")
 
-    assert _version_for_category(tmp_path, None) is None
-    assert _version_for_category(tmp_path, "B") is None
-    assert _version_for_category(tmp_path, "D") == tmp_path / "TypeCD.ini"
+    assert version_for_category(tmp_path, None) is None
+    assert version_for_category(tmp_path, "B") is None
+    assert version_for_category(tmp_path, "D") == tmp_path / "TypeCD.ini"
 
 
 def test_prepare_pcs_config_loads_only_the_files_that_exist(monkeypatch, tmp_path):

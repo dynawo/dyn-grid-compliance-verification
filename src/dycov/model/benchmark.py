@@ -11,7 +11,6 @@ import logging
 import time
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Optional
 
 from dycov.configuration.cfg import config
 from dycov.configuration.dump import dump_effective_pcs_description
@@ -21,6 +20,7 @@ from dycov.core.validator import Validator
 from dycov.curves.manager import CurvesManager
 from dycov.files import manage_files
 from dycov.logging import dycov_logging
+from dycov.model import pcs_layers
 from dycov.model.compliance import Compliance
 from dycov.model.operating_condition import OperatingCondition
 from dycov.model.parameters import (
@@ -181,17 +181,8 @@ class Benchmark:
             for oc_name in oc_names
         ]
 
-    @staticmethod
-    def __optional_operating_point(pcs_bm_oc_name: str) -> Optional[str]:
-        """The operating point of the DTR an operating condition is, when the DTR asks for it
-        only under a condition the tool does not check on a model."""
-        return config.get_value(pcs_bm_oc_name, "optional_operating_point") or None
-
     def __is_run(self, pcs_bm_oc_name: str) -> bool:
-        """An optional operating condition is run when the ``run_<point>`` key of the PCS says
-        so for its operating point, and every other one always."""
-        point = self.__optional_operating_point(pcs_bm_oc_name)
-        return point is None or config.get_boolean(self._pcs_name, f"run_{point}", False)
+        return pcs_layers.is_run(self._pcs_name, pcs_bm_oc_name)
 
     def __report_left_out(self, pcs_benchmark_name: str, oc_names: list) -> None:
         if not oc_names:
@@ -203,7 +194,7 @@ class Benchmark:
         )
         points = sorted(
             {
-                self.__optional_operating_point(pcs_benchmark_name + CASE_SEPARATOR + oc_name)
+                pcs_layers.optional_operating_point(pcs_benchmark_name + CASE_SEPARATOR + oc_name)
                 for oc_name in oc_names
             }
         )
@@ -1001,6 +992,7 @@ class Benchmark:
             pcs_results[
                 self._pcs_name + CASE_SEPARATOR + self._name + CASE_SEPARATOR + op_cond.get_name()
             ] = manage_files.set_curves_aside(results, self.__working_oc_dir(op_cond.get_name()))
+            dycov_logging.clear_test_context()
 
         if self._curves_manager is not None:
             self._curves_manager.release_curves()

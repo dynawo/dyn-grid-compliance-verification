@@ -94,11 +94,14 @@ and only a description of the user may change it.
    called *Node2* in the DTR); the signals named after it
    (``*_GEN_ActiveCurrentNode2``, ``*_GEN_ReactiveCurrentNode2``,
    ``*_GEN_VoltageNode2``)
-   are measured there. A Zone 1 reference-curve dictionary declares six
+   are measured there. A Zone 1 reference-curve dictionary declares eight
    signals: those three, ``InternalNode1_BUS_Voltage`` (or its
-   ``BusPDR_BUS_Voltage`` alias), and the active and reactive power at the
+   ``BusPDR_BUS_Voltage`` alias), the active and reactive power at the
    node the converter controls,
-   ``*_GEN_ActivePowerControlledNode`` and ``*_GEN_ReactivePowerControlledNode``.
+   ``*_GEN_ActivePowerControlledNode`` and ``*_GEN_ReactivePowerControlledNode``,
+   and those at InternalNode1, ``InternalNode1_BUS_ActivePower`` and
+   ``InternalNode1_BUS_ReactivePower``, which the report draws without
+   comparing them.
    Dictionaries written before these signals were named after the nodes —
    ``InjTerminal`` for ``Node2``, ``ControlledPu`` for ``ControlledNode`` — are
    still accepted.
@@ -315,9 +318,12 @@ Accepted curve file formats:
   required but does not need to be the first column.
 
 Regardless of the format, **a companion DICT file is always mandatory**. It
-must have the same filename as the curve file but with the ``.dict``
-extension. This file provides two types of information that cannot be inferred
-from the curve file itself:
+has the same filename as the curve file but with the ``.dict`` extension or,
+when the index gives the test a curve file of another name and there is no
+DICT file of that name, the name of the test next to ``CurvesFiles.ini``, as
+the workbook writes it: several tests may then share one recording, each with
+its own DICT file. This file provides two
+types of information that cannot be inferred from the curve file itself:
 
 * the mapping between curve columns and the signal names expected by DyCoV,
 * simulation parameters used to obtain the curves (event timing, etc.).
@@ -325,7 +331,10 @@ from the curve file itself:
 The simulation parameters must be filled in. When a DICT file declares one of
 them without a value, DyCoV stops before simulating and names the file and the
 option: replacing the missing value with a default would validate the model
-against an event placed at another instant of time.
+against an event placed at another instant of time. The curves must also run
+far enough past the end of the event to leave the comparison a window after
+it: curves that end before are refused with a warning that gives the instant
+they must reach, and the test runs as if they were missing.
 
 For EUROSTAG and CSV files, the ``time`` entry of the ``[Curves-Dictionary]``
 section must name the column that holds the time steps. The shipped DICT
@@ -502,6 +511,13 @@ turbine is bound by ``IMaxPu`` and ``IMaxDipPu`` and also by ``TableIpMaxUwt``
 and ``TableIqMaxUwt``: left to Dynawo's defaults, the reactive current stays
 under 0.33 pu between 0.925 and 1.075 pu of voltage, whatever ``IMaxPu`` says,
 so give both. The IEC examples fill those two tables with Dynawo's defaults.
+A boolean parameter takes ``True`` or ``False`` from the list of its cell;
+``vrai``/``faux``, ``oui``/``non`` and ``1``/``0`` are read as well, and any
+other value stops the conversion, naming the sheet and the parameter, since
+Dynawo would read it as false. The ``Signaux zone 1`` sheet asks for the active
+and reactive power at node 1 besides those at the point the converter controls:
+the report draws them, without comparing them, and the PDF does so when that
+point is node 2.
 The command writes two trees next to the workbook — or under ``--output``, if
 you give one:
 
@@ -522,6 +538,13 @@ performance`` take the workbook directly and do the conversion themselves:
    dycov validate --excel Producer.xlsx
    dycov performance --excel Producer.xlsx
 
+Both routes take the ``.csv`` files from the folder the ``Signaux`` sheets
+name, and the conversion reports any it does not find there along with that
+folder. Put them in it and convert again: a file copied next to the ``.dict``
+files of the written tree is read by a run on that tree, but not by
+``--excel``, which converts the workbook again and leaves its test without
+reference curves.
+
 Performance is a zone-3 workflow and needs no reference curves, so of
 everything the conversion writes it uses only ``Dynawo/Zone3``. In both
 commands the workbook replaces the other inputs: giving a model, curves or a
@@ -537,8 +560,9 @@ the reference curves.
 
 The run reports what it could not complete rather than failing silently: the
 blocks of ``Général`` whose parameter sheet contributed nothing, the ``.csv``
-files named in the sheets that were not found in the results folder, the
-tests whose curve metadata is still blank, and the tests the revision of the
+files named in the sheets that were not found in the results folder, a
+signal sheet that names ``.csv`` files but whose tests table describes no test,
+the tests whose curve metadata is still blank, and the tests the revision of the
 DTR being validated runs that the workbook has no row for. The rows of the
 signal sheets are read as the tests of that revision: the template has a row
 for the tests of every revision, and a revision leaves out the rows it does not

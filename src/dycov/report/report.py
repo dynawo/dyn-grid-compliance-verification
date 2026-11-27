@@ -36,6 +36,7 @@ from dycov.core.global_variables import (
 from dycov.curves import naming
 from dycov.files import manage_files, value_registry
 from dycov.logging import dycov_logging
+from dycov.model.compliance import Compliance
 from dycov.report import figure, html
 from dycov.report.curve_classification import get_curve_style
 from dycov.report.LatexReportException import LatexReportException
@@ -177,9 +178,19 @@ def _get_reports(
     working_path: Path,
 ) -> list:
     reports = []
+    aborted = set()
     for pcs in sorted_summary:
         key = f"{pcs.producer_name}_{pcs.pcs}"
-        pcs_results = report_results[key]
+        pcs_results = report_results.get(key)
+        if not pcs_results:
+            if key not in aborted:
+                aborted.add(key)
+                dycov_logging.get_logger("Report").warning(
+                    f"{pcs.producer_name} {pcs.pcs}: its execution was aborted, so the report "
+                    "has no page of its tests"
+                )
+            continue
+
         report_name = f"{pcs_results['producer'].replace('_', '')}.{pcs_results['report_name']}"
         if any(report_name.replace(".tex", "") in report for report in reports):
             continue
@@ -247,8 +258,9 @@ def _build_notice_block(color: str, title: str, items: list) -> str:
 
 
 def _build_oc_notices(oc_results: dict) -> tuple[str, str]:
-    """Builds the notices block (missing curves and warnings) and the watermark command
-    of an operating-condition report page. Only missing curves invalidate the page."""
+    """Builds the notices block (missing curves, why a test has no curves, and warnings) and
+    the watermark command of an operating-condition report page. Only missing curves invalidate
+    the page."""
     notices = ""
     watermark = r"\SetWatermarkText{}"
     missing_curves = list(oc_results["missed_columns"])
@@ -259,6 +271,15 @@ def _build_oc_notices(oc_results: dict) -> tuple[str, str]:
     if missing_curves:
         notices += _build_notice_block("red", "Missing curves:", missing_curves)
         watermark = r"\SetWatermarkText{INVALID}"
+    if oc_results.get("summary") == Compliance.FaultDipUnachievable:
+        notices += _build_notice_block(
+            "orange",
+            "Not simulated:",
+            [
+                "the fault search found no impedance that gives the voltage dip the test "
+                "requires, so the test has no curves to compare"
+            ],
+        )
     return notices, watermark
 
 

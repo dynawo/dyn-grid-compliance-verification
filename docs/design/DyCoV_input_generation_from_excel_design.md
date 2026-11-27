@@ -59,8 +59,7 @@ importer.
 workflow: performance is zone 3 and needs no reference curves, so only `Dynawo/Zone3` is used and
 the metadata check does not apply. In both commands the workbook replaces the other inputs, so a
 model, curves or a reference directory given alongside it is refused.
-`.xlsx` is parsed with the tool's own standard-library engine (`workbook.py`), which the legacy
-`tools/dynawo_par` also imports until its retirement.
+`.xlsx` is parsed with the tool's own standard-library engine (`workbook.py`).
 
 **Sheets used**
 
@@ -88,9 +87,14 @@ arrives fully commented out, so uncommenting a name is what overrides it:
 | `[Zone1-Rows]`, `[Zone3-Rows]` | Row name of every electrical concept (`main_impedance = Z_cc_TP`). |
 | `[Zone1-Curves]`, `[Zone3-Curves]` | Row label → DyCoV curve, `{gen}` standing for the generator block. |
 | `[Zone1-Tests]`, `[Zone3-Tests]` | DTR case → `PCS.Benchmark.OperatingCondition` (§8); `[Zone3-Tests.<revision>]`, what a revision of the DTR changes. |
+| `[Boolean-Values]` | The values a boolean cell may hold, true and false. |
 
-Names are matched without accents and case-insensitively, and headers by substring, so
-`Paramètres (Dynawo)` still reads as `Paramètres`.
+Names are matched without accents and case-insensitively, a ligature as its letters (`nœud` as
+`noeud`), and headers by substring, so `Paramètres (Dynawo)` still reads as `Paramètres`. The signal
+sheets are the exception: a cell heads one of their tables when its text starts with the header as
+a whole word, and the tests table is the case header (`Cas`, else `Fiche`) with the header of the
+results file on its row or the row above, the two rows its header spans, where its metadata headers
+are looked for too. A folder or a file the user writes elsewhere in the sheet may hold those words.
 
 **Layout.** Nothing is addressed by a fixed column. In a control sheet, the header row is the first
 one naming parameters, values and types — requiring all three keeps the zone sheets' `Paramètres |
@@ -230,6 +234,13 @@ name, so the tool **prepends the resolved prefix** to every converter parameter 
 (`photovoltaics_Kqp`) and the DYD (`photovoltaics_terminal`). Beyond the name, the Excel supplies
 only the type, mapped to the Dynawo convention (`double → DOUBLE`), and the value.
 
+**A boolean is written as Dynawo reads it.** Dynawo takes a `BOOL` as true only when it reads
+`true`, and anything else as false without a word, so a cell holding `TRUE`, `1` or `VRAI` would
+turn its parameter off. The templates give every boolean cell a `True`/`False` list, and the PAR
+writes `true` or `false` from any of the values `[Boolean-Values]` lists; any other value stops
+the conversion, naming its sheet and parameter. `ConverterLVControl`, the boolean of the zone
+sheets, is held to the same values.
+
 **Resolution is unambiguous (injective).** The variant selection determines one model, so no
 separate model field is needed and technology (PV/BESS/Wind) is derived from the resolved `lib`,
 which also fixes the generator block's id (`PV_Array`, `Wind_Turbine`, `Bess`) and hence the names
@@ -343,8 +354,11 @@ would otherwise run without a reference and nothing would say why.
 
 - **`CurvesFiles.ini`** — the `.csv` of every described test, and one curve dictionary per zone.
 - **One `.dict` per test** — its zone's dictionary, plus the `[Curves-Metadata]` keys.
-- **The `.csv` files** — copied from the folder the sheet names; the ones not found are reported so
-  the user can drop them in.
+- **The `.csv` files** — copied from the folder the sheet names; the ones not found are reported
+  with that folder, where the user drops them in before converting again: `--excel` converts the
+  workbook again in a temporary directory and also takes the curves from the folder the sheet
+  names, so a file put next to the `.dict` files would reach a run on the written tree only. A
+  sheet whose folder cell is empty names no folder.
 
 **The metadata comes from the workbook, not from the model.** `sim_t_event_start`,
 `fault_duration`, `frequency_sampling` and `is_field_measurements` describe the user's own files,
@@ -370,7 +384,8 @@ both sheets, and only zone 3 runs it: its zone-1 row carries the note that marks
 applicable there, and no results file.
 
 The signal sheets are optional as a whole: an untouched one describes no test, and the model inputs
-are generated all the same.
+are generated all the same. A sheet that names `.csv` files but whose tests table describes no test
+says so, since its curves would otherwise be left out without a word.
 
 ---
 
