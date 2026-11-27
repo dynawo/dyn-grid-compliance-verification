@@ -18,7 +18,9 @@ collaborators correctly, not from complex logic.  We therefore:
 
 import configparser
 import logging
+from functools import partial
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pandas as pd
@@ -994,6 +996,47 @@ class TestSimulateOutcomeAssembly:
             )
         return outcome
 
+    @pytest.mark.parametrize(
+        "solver_flip, configured, expected",
+        [(False, True, False), (True, True, True), (True, False, False)],
+    )
+    def test_the_retries_switch_solver_only_when_both_allow_it(
+        self, solver_flip, configured, expected
+    ):
+        curves, _, _ = _make_real_curves()
+        settings = SimpleNamespace(enable_solver_flip=configured)
+        with (
+            patch(f"{_MODULE}.SolverRetryStrategy") as strat_cls,
+            patch(f"{_MODULE}.RetrySettings") as settings_cls,
+            patch(f"{_MODULE}.config") as mc,
+        ):
+            mc.get_float.side_effect = _cfg_get_float
+            settings_cls.from_config.return_value = settings
+            strat_cls.return_value.run.return_value = _attempt()
+            curves._DynawoCurves__simulate(
+                None, Path("/work"), Path("outputs"), "BM1", "OC1", solver_flip=solver_flip
+            )
+
+        assert strat_cls.call_args.args[0].enable_solver_flip is expected
+
+    def test_a_step_of_a_fault_search_that_fails_says_so_at_debug_level(self, caplog):
+        curves, _, _ = _make_real_curves()
+        with caplog.at_level(logging.DEBUG):
+            with (
+                patch(f"{_MODULE}.SolverRetryStrategy") as strat_cls,
+                patch(f"{_MODULE}.RetrySettings"),
+                patch(f"{_MODULE}.config") as mc,
+            ):
+                mc.get_float.side_effect = _cfg_get_float
+                strat_cls.return_value.run.return_value = _attempt(False, log="KINSOL fails")
+                curves._DynawoCurves__simulate(
+                    None, Path("/work"), Path("outputs"), "BM1", "OC1", disable_retry_logs=True
+                )
+
+        assert [r.levelno for r in caplog.records if "KINSOL fails" in r.getMessage()] == [
+            logging.DEBUG
+        ]
+
     def test_success_outcome_within_time(self):
         curves, _, _ = _make_real_curves()
 
@@ -1175,16 +1218,33 @@ def _jobs_attributes(working_dir: Path) -> tuple[dict, dict]:
     return dict(solver.attrib), dict(simulation.attrib)
 
 
+def _step_outcome(succeeded: bool, rejected_inputs: bool = False):
+    from dycov.curves.dynawo.orchestrator.curves import SimulateOutcome
+
+    return SimulateOutcome(
+        succeeded=succeeded,
+        time_exceeds=False,
+        has_curves=succeeded,
+        curves=pd.DataFrame(),
+        sim_time=1.0,
+        rejected_inputs=rejected_inputs,
+    )
+
+
 class TestFaultSearchStep:
-    def _step(self, curves, working_dir, stop_time):
+    def _step(self, curves, working_dir, stop_time, outcomes=None):
         seen = {}
+        runs = []
+        outcomes = list(outcomes or [_step_outcome(True)])
 
         def simulate(*args, **kwargs):
             seen["solver"] = curves._solver.solver_id
             seen["jobs"] = _jobs_attributes(working_dir)
             seen["kwargs"] = kwargs
-            return "outcome"
+            runs.append((curves._solver.solver_id, seen["jobs"][0]["lib"]))
+            return outcomes.pop(0)
 
+        seen["runs"] = runs
         curves._DynawoCurves__simulate = MagicMock(side_effect=simulate)
         with patch(f"{_MODULE}.config") as mc, patch(f"{_MODULE}.parameter_checks"):
             mc.get_value.side_effect = _cfg_get_value
@@ -1206,13 +1266,13 @@ class TestFaultSearchStep:
 
         outcome, seen = self._step(curves, tmp_path, stop_time=3.15)
 
-        assert outcome == "outcome"
+        assert outcome.succeeded
         assert seen["solver"] == "SIM"
         solver, simulation = seen["jobs"]
         assert solver["lib"] == "dynawo_SolverSIM"
         assert solver["parId"] == "SIM"
         assert float(simulation["stopTime"]) == pytest.approx(3.15)
-        assert seen["kwargs"] == {"disable_retry_logs": True}
+        assert seen["kwargs"] == {"disable_retry_logs": True, "solver_flip": False}
 
     def test_a_step_follows_the_solver_the_configuration_gives(self, tmp_path):
         curves, _, _ = _make_real_curves()
@@ -1224,6 +1284,54 @@ class TestFaultSearchStep:
 
         assert seen["solver"] == "IDA"
         assert seen["jobs"][0]["lib"] == "dynawo_SolverIDA"
+        assert seen["kwargs"]["solver_flip"] is True
+
+    def test_a_step_sim_cannot_simulate_is_simulated_again_on_the_solver_of_the_test(
+        self, tmp_path
+    ):
+        curves, _, _ = _make_real_curves()
+        (tmp_path / "TSOModel.jobs").write_text(_JOBS)
+
+        outcome, seen = self._step(
+            curves, tmp_path, 3.15, outcomes=[_step_outcome(False), _step_outcome(True)]
+        )
+
+        assert outcome.succeeded
+        assert seen["runs"] == [("SIM", "dynawo_SolverSIM"), ("IDA", "dynawo_SolverIDA")]
+        assert float(seen["jobs"][1]["stopTime"]) == pytest.approx(3.15)
+
+    def test_a_step_the_solver_of_the_test_cannot_simulate_either_fails(self, tmp_path):
+        curves, _, _ = _make_real_curves()
+        (tmp_path / "TSOModel.jobs").write_text(_JOBS)
+
+        outcome, seen = self._step(
+            curves, tmp_path, 3.15, outcomes=[_step_outcome(False), _step_outcome(False)]
+        )
+
+        assert not outcome.succeeded
+        assert len(seen["runs"]) == 2
+
+    def test_a_step_whose_inputs_dynawo_rejects_is_not_simulated_again(self, tmp_path):
+        curves, _, _ = _make_real_curves()
+        (tmp_path / "TSOModel.jobs").write_text(_JOBS)
+
+        outcome, seen = self._step(
+            curves, tmp_path, 3.15, outcomes=[_step_outcome(False, rejected_inputs=True)]
+        )
+
+        assert outcome.rejected_inputs
+        assert seen["runs"] == [("SIM", "dynawo_SolverSIM")]
+
+    def test_a_search_on_the_solver_of_the_test_does_not_repeat_its_steps(self, tmp_path):
+        curves, _, _ = _make_real_curves()
+        (tmp_path / "TSOModel.jobs").write_text(_JOBS)
+        values = dict(_CONFIG_VALUES) | {("Dynawo", "fault_search_solver_lib"): "dynawo_SolverIDA"}
+
+        with patch.dict(_CONFIG_VALUES, values):
+            outcome, seen = self._step(curves, tmp_path, 3.15, outcomes=[_step_outcome(False)])
+
+        assert not outcome.succeeded
+        assert seen["runs"] == [("IDA", "dynawo_SolverIDA")]
 
     @pytest.mark.parametrize(
         "start, duration, after, stop",
@@ -1270,6 +1378,74 @@ class TestFaultSearchStep:
         search = be.find_hiz_fault if fault == "hiz_fault" else be.find_bolted_fault
         step = search.call_args.kwargs["simulate_fn"]
         assert step.func == curves._DynawoCurves__simulate_fault_search_step
-        assert step.keywords == {"stop_time": pytest.approx(3.15)}
+        assert step.keywords["stop_time"] == pytest.approx(3.15)
+        if fault == "hiz_fault":
+            assert step.keywords["solver_lib"] == "dynawo_SolverSIM"
         assert search.call_args.kwargs["reset_solver_fn"] is curves._DynawoCurves__reset_solver
         curves._DynawoCurves__simulate.assert_called_once()
+
+    def _hiz_searches(self, outcomes, search_solver="dynawo_SolverSIM"):
+        """The solver of each high-impedance search, and how the last one ended."""
+        curves, _, _ = _make_real_curves()
+        solvers = []
+
+        def search(*args, simulate_fn, reset_solver_fn):
+            solvers.append(simulate_fn.keywords["solver_lib"])
+            outcome = outcomes.pop(0)
+            if outcome is not None:
+                raise SimulationOutcomeError(str(outcome), outcome)
+
+        curves._bisection = MagicMock()
+        curves._bisection.find_hiz_fault.side_effect = search
+        values = dict(_CONFIG_VALUES) | {("Dynawo", "fault_search_solver_lib"): search_solver}
+        step = MagicMock()
+        step.keywords = {}
+        ended = None
+        with patch.dict(_CONFIG_VALUES, values), patch(f"{_MODULE}.config") as mc:
+            mc.get_value.side_effect = _cfg_get_value
+            mc.get_float.side_effect = _cfg_get_float
+            try:
+                curves._DynawoCurves__find_hiz_fault(
+                    Path("/work"),
+                    Path("/jobs"),
+                    {"start_time": 1.0, "duration_time": 0.15, "step_value": 0.5},
+                    "BM",
+                    "OC",
+                    partial(lambda *a, **k: None, stop_time=3.15),
+                )
+            except SimulationOutcomeError as error:
+                ended = error.error
+        return solvers, ended
+
+    def test_a_hiz_search_that_reaches_its_dip_on_sim_is_not_repeated(self):
+        solvers, ended = self._hiz_searches([None])
+
+        assert solvers == ["dynawo_SolverSIM"]
+        assert ended is None
+
+    def test_a_hiz_search_that_misses_its_dip_on_sim_is_repeated_on_the_test_solver(self):
+        unachievable = SimulationError.FAULT_DIP_UNACHIEVABLE
+        solvers, ended = self._hiz_searches([unachievable, None])
+
+        assert solvers == ["dynawo_SolverSIM", "dynawo_SolverIDA"]
+        assert ended is None
+
+    def test_a_hiz_search_that_misses_its_dip_on_both_solvers_ends_without_it(self):
+        unachievable = SimulationError.FAULT_DIP_UNACHIEVABLE
+        solvers, ended = self._hiz_searches([unachievable, unachievable])
+
+        assert solvers == ["dynawo_SolverSIM", "dynawo_SolverIDA"]
+        assert ended == unachievable
+
+    def test_a_hiz_search_that_fails_otherwise_is_not_repeated(self):
+        solvers, ended = self._hiz_searches([SimulationError.FAULT_SIMULATION_FAILS])
+
+        assert solvers == ["dynawo_SolverSIM"]
+        assert ended == SimulationError.FAULT_SIMULATION_FAILS
+
+    def test_a_hiz_search_on_the_test_solver_runs_once(self):
+        unachievable = SimulationError.FAULT_DIP_UNACHIEVABLE
+        solvers, ended = self._hiz_searches([unachievable], search_solver="dynawo_SolverIDA")
+
+        assert solvers == ["dynawo_SolverIDA"]
+        assert ended == unachievable

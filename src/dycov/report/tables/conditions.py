@@ -30,6 +30,18 @@ _CONDITIONS = (
 )
 
 
+# The value a definition gives, stored under the name of the event that applies it: the step of a
+# high-impedance fault is the dip its search aims at, that of the grid frequency its own step.
+_STORED_AS = {"setpoint_step_value": ("setpoint_step_value", "hiz_dip", "grid_frequency_step")}
+
+
+def _value(key: str, ran_with_conditions: dict) -> str:
+    stored = (
+        ran_with.format_value(name, ran_with_conditions) for name in _STORED_AS.get(key, (key,))
+    )
+    return next((value for value in stored if value), "")
+
+
 def create_map(operating_condition: str, ran_with_conditions: Optional[dict] = None) -> list:
     """Creates a list to populate the table of the conditions of a test in the LaTeX reports,
     for a page shared by several tests, which cannot spell them out itself.
@@ -52,6 +64,6 @@ def create_map(operating_condition: str, ran_with_conditions: Optional[dict] = N
     for suffix, key, label in _CONDITIONS:
         definition = config.get_value(operating_condition + suffix, key)
         if definition:
-            value = ran_with.format_value(key, ran_with_conditions or {}) or ""
+            value = _value(key, ran_with_conditions or {})
             conditions.append([label, rf"\texttt{{\detokenize{{{definition}}}}}", value])
     return conditions

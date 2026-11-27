@@ -358,9 +358,12 @@ cd "$INSTALL_DIR"
 # 1. Create venv
 uv venv "$VENV" --python "$python_cmd"
 
-# 2. Install repo using uv
+# 2. Install repo using uv, at the versions its uv.lock pins, which the release is tested with
 . "$VENV"/bin/activate
-uv pip install -q "$TMP_LOCAL_REPO"
+constraints="$INSTALL_DIR/constraints.txt"
+uv export --locked --no-hashes --no-emit-project --all-extras --format requirements-txt \
+    --quiet --project "$TMP_LOCAL_REPO" --output-file "$constraints"
+uv pip install -q --constraint "$constraints" "$TMP_LOCAL_REPO"
 deactivate
 color_msg "Virtual environment created."
 
@@ -433,7 +436,8 @@ cp -a "$TMP_LOCAL_REPO"/docs/tutorials/*.md "$INSTALL_DIR"/tutorials/
 cp -a "$TMP_LOCAL_REPO"/docs/installation/*.md "$INSTALL_DIR"/installation/
 # shellcheck source=/dev/null
 . "$INSTALL_DIR"/activate_dycov
-uv pip install -q sphinx
+uv pip install -q --constraint "$constraints" sphinx
+rm -f "$constraints"
 cd "$TMP_LOCAL_REPO"/docs/manual
 # The installation log already collects their output. Their stdin is closed
 # because the documentation pipes this script into bash, and a child reading

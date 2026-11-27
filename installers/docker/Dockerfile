@@ -31,8 +31,9 @@ RUN apt-get update && apt-get -y upgrade \
 # Second layer:
 #   - Install the dycov tool itself using uv.
 #   - COPY THE EXAMPLES into a global location accessible to users
-COPY ./$dycov_PKG /tmp/
-RUN uv pip install --system /tmp/$dycov_PKG && rm /tmp/$dycov_PKG
+COPY ./$dycov_PKG ./constraints.txt /tmp/
+RUN uv pip install --system --constraint /tmp/constraints.txt /tmp/$dycov_PKG \
+  && rm /tmp/$dycov_PKG /tmp/constraints.txt
 
 # Create directory and copy examples
 COPY ./$dycov_EXAMPLES /opt/dycov/examples
