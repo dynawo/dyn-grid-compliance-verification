@@ -83,11 +83,14 @@ def _generates_all_but(skipped: str):
     which only prepares the directory of its operating condition, as an aborted one does."""
 
     def generate_pcs(pcs_args):
+        from dycov.gfm.report import PcsReport
+
         parameters, pcs_name, producer_name = pcs_args
         oc_dir = parameters.get_working_dir() / producer_name / pcs_name / "Benchmark" / "OC"
         oc_dir.mkdir(parents=True)
         if pcs_name != skipped:
             (oc_dir / "envelopes.csv").write_text("time\n")
+        return PcsReport(producer_name, pcs_name, None, [])
 
     return generate_pcs
 
@@ -98,6 +101,7 @@ def test_a_pcs_that_generates_nothing_is_reported_and_the_others_are_kept(
     from dycov.gfm import generator
 
     monkeypatch.setattr(generator, "_generate_pcs", _generates_all_but("PCS_Invalid"))
+    monkeypatch.setattr(generator.report, "create_pdf", lambda pcs_reports, parameters: None)
     gfm_generation = object.__new__(generator.GFMGeneration)
     gfm_generation._parameters = _DummyParameters(tmp_path)
     gfm_generation._pcs_list = [

@@ -135,4 +135,6 @@ complete processed curves.
 All knobs live in `[GridCode]` unless noted: `t_com`, `cutoff`, `t_integrator_tol`,
 `t_windowLPF_excl_start`, `t_windowLPF_excl_end`, `t_faultLPF_excl`, `t_faultQS_excl`,
 `t_clearQS_excl`, `disable_window_filtering`, and `disable_LP_filtering` (`[Debug]`). Defaults
-and constraints are documented in the developer manual's *Configuration* section.
+and constraints are documented in the developer manual's *Configuration* section. The producer
+curves of the Grid Forming tests are filtered at the `cutoff` of `[GFM]` instead, 30 Hz, the value
+the DTR asks for Grid Forming units.

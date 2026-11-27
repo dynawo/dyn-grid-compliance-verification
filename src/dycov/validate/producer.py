@@ -476,15 +476,19 @@ class ModelProducer(Producer):
         parameter_checks.check_internal_line(self.intline)
         parameter_checks.check_generators(self.generators)
 
-    def __get_model_file(self, extension: str, filename: Optional[str]) -> Path:
+    def __get_model_file(
+        self, extension: str, filename: Optional[str], zone: Optional[int] = None
+    ) -> Path:
         """The file of the producer with the given extension, named filename when one is given,
-        in the directory of the zone being read.
+        in the directory of the zone given, or of the zone being read without one.
 
         Raises
         ------
         FileNotFoundError
             If that directory holds no such file, naming the file and the directory.
         """
+        if zone is None:
+            zone = self._zone
         if self._producer_model_path is not None:
             producer_path = self._producer_model_path
         elif self._producer_curves_path is not None:
@@ -492,11 +496,11 @@ class ModelProducer(Producer):
         else:
             raise ValueError("No producer model has been defined")
 
-        if self._zone == 0:
+        if zone == 0:
             path = producer_path
-        elif self._zone == 1:
+        elif zone == 1:
             path = producer_path / "Zone1"
-        elif self._zone == 3:
+        elif zone == 3:
             path = producer_path / "Zone3"
         pattern = re.compile(file_checks.model_file_regex(extension, filename))
         for file in path.resolve().iterdir():
@@ -820,6 +824,26 @@ class ModelProducer(Producer):
             Path to the Producer PAR file
         """
         return self.__get_model_file("par", self._filename)
+
+    def get_producer_ini(self, zone: int, filename: str) -> Path:
+        """Gets the INI file of a unit of the producer.
+
+        Parameters
+        ----------
+        zone: int
+            Zone of the unit
+        filename: str
+            Name of the files of the unit
+
+        Returns
+        -------
+        Path
+            Path to the INI file of the unit, None when it does not exist
+        """
+        try:
+            return self.__get_model_file("ini", filename, zone)
+        except FileNotFoundError:
+            return None
 
     def get_producer_curves_path(self) -> Path:
         """Gets the Producer Curves Directory.

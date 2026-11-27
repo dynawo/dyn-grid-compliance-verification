@@ -102,9 +102,7 @@ class ProducerHelper(GFMProducer):
 
 class ParametersHelper(GFMParameters):
     def __init__(self, config_str: str):
-        Parameters.__init__(self, None, "", None, False)
-        self._emt = True
-        self._producer = ProducerHelper(config_str)
+        super().__init__(None, ProducerHelper(config_str), emt=True)
         self._pcs_section = "DEFAULT"
         self._bm_section = "DEFAULT"
         self._oc_section = "DEFAULT"
@@ -255,6 +253,7 @@ def test_scr_jump_s_scrup1_oc1():
 
 _PRODUCER_LIMITS = """
 [DEFAULT]
+generator_type = PPM
 p_max_injection = 110
 p_min_injection = -110
 u_nom = 225
@@ -294,7 +293,9 @@ def scr_jump_pcs():
     layer_defaults = config._pcs_default_config.defaults()
     leftover_defaults = dict(layer_defaults)
     layer_defaults.clear()
-    pcs_path = Path(dycov.__file__).parent / "templates/PCS/gfm/PCS_RTE-IGFM3/PCSDescription.ini"
+    pcs_path = (
+        Path(dycov.__file__).parent / "templates/PCS/gfm/PPM/PCS_RTE-IGFM3/PCSDescription.ini"
+    )
     config.load_pcs_config(pcs_path)
     yield
     config.load_pcs_config(None)
@@ -304,19 +305,16 @@ def scr_jump_pcs():
 def _figure_parameters(tmp_path, monkeypatch, producer: str) -> list[str]:
     producer_ini = tmp_path / "Producer.ini"
     producer_ini.write_text(producer)
-    parameters = GFMParameters(
-        producer_ini=producer_ini,
-        selected_pcs="PCS_RTE-IGFM3",
-        output_dir=tmp_path / "Results",
-        only_dtr=True,
-        emt=False,
-    )
+    run = Parameters(None, "PCS_RTE-IGFM3", tmp_path / "Results", True)
+    parameters = GFMParameters(run, GFMProducer(producer_ini))
     figures = []
     monkeypatch.setattr(gfm, "plot_results", lambda **kwargs: figures.append(kwargs))
     try:
-        GridForming().generate(tmp_path, parameters, "PCS_RTE-IGFM3", "S_SCRdown1", "OC1")
+        GridForming().generate(
+            tmp_path, parameters, "PCS_RTE-IGFM3", "S_SCRdown1", "OC1", "Producer"
+        )
     finally:
-        parameters.cleanup_working_dir(preserve_on_debug=False)
+        run.cleanup_working_dir(preserve_on_debug=False)
     (figure,) = figures
     return figure["params_list"]
 

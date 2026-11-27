@@ -34,6 +34,7 @@ class RoCoF(GFMCalculator):
         self._initial_active_power = gfm_params.get_initial_active_power()
         self._min_active_power = gfm_params.get_min_active_power()
         self._max_active_power = gfm_params.get_max_active_power()
+        self._magnitude = gfm_params.get_envelope_magnitude("P")
 
     def get_plot_parameter_names(self) -> list[str]:
         """
@@ -45,6 +46,17 @@ class RoCoF(GFMCalculator):
             A list of parameter names to be displayed.
         """
         return ["P0", "Q0", "Frequency0", "RoCoF", "RoCoFDuration", "SCR", "Xeff", "D", "H"]
+
+    def get_event_duration(self) -> float:
+        """
+        Retrieves how long the frequency ramp lasts.
+
+        Returns
+        -------
+        float
+            The RoCoF duration in seconds.
+        """
+        return self._rocof_duration
 
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float
@@ -68,8 +80,8 @@ class RoCoF(GFMCalculator):
         Returns
         -------
         tuple[str, np.ndarray, np.ndarray, np.ndarray]
-            The magnitude name ("P"), the main signal, the upper envelope and the lower
-            envelope.
+            The magnitude name ("P", or the one the PCS names), the main signal, the upper
+            envelope and the lower envelope.
 
         Raises
         ------
@@ -98,7 +110,7 @@ class RoCoF(GFMCalculator):
             p_down = self._delay_by_emt(p_down, time_array)
             p_pcc = self._delay_by_emt(p_pcc, time_array)
 
-        return "P", p_pcc, p_up, p_down
+        return self._magnitude, p_pcc, p_up, p_down
 
     def _get_delta_p(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float

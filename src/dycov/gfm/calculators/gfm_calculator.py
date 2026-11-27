@@ -63,6 +63,17 @@ class GFMCalculator(ABC):
             A list of parameter names to be displayed.
         """
 
+    def get_event_duration(self) -> float:
+        """
+        Retrieves how long the grid event lasts, the time between its two discontinuities.
+
+        Returns
+        -------
+        float
+            The event duration in seconds, 0 for an event made of a single step.
+        """
+        return 0.0
+
     @abstractmethod
     def calculate_envelopes(
         self, D: float, H: float, Xeff: float, time_array: np.ndarray, event_time: float

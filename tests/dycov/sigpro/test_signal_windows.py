@@ -181,3 +181,16 @@ def test_calculate_missing_exclusion_zone_keys(monkeypatch):
         signal_windows.calculate(
             time_values, t_fault, fault_duration, setpoint_tracking_controlled_magnitude
         )
+
+
+def test_filter_windows_split_the_curve_at_the_event_discontinuities():
+    windows = signal_windows.filter_windows([-1.0, 0.0, 1.0, 5.0], 0.0, 0.5)
+
+    assert windows == {"before": (-1.0, 0.0), "during": (0.0, 0.5), "after": (0.5, 5.0)}
+
+
+def test_filter_windows_of_a_single_step_event_has_no_during_window():
+    windows = signal_windows.filter_windows([0.0, 1.0, 5.0], 0.0, 0.0)
+
+    assert windows["during"] == (0.0, 0.0)
+    assert windows["after"] == (0.0, 5.0)

@@ -81,6 +81,9 @@ class DummyProducer:
     def is_dynawo_model(self):
         return self._is_dynawo_model
 
+    def is_gfm(self):
+        return False
+
     def is_user_curves(self):
         return self._is_user_curves
 
@@ -119,6 +122,7 @@ class DummyParameters(ValidationParameters):
         self._producer = DummyProducer(sim_type)
         self._working_dir = Path(tempfile.mkdtemp())
         self._verification_type = verification_type
+        self._gfm_envelopes = None
         self._curves_only = curves_only
 
     def get_launcher_dwo(self):

@@ -42,6 +42,9 @@ class ValidationParameters(Parameters):
         10 if it is a model validation.
     producer_workbook: Path
         Workbook the producer inputs were generated from, when there is one.
+    gfm_envelopes: Path
+        Directory of the envelopes the curves of the Grid Forming tests are checked against,
+        written by 'dycov generate_gfm_envelopes'.
     curves_only: bool
         Run the simulations and keep their curves, without the checks or the report.
     """
@@ -57,6 +60,7 @@ class ValidationParameters(Parameters):
         only_dtr: bool,
         verification_type: int,
         producer_workbook: Path = None,
+        gfm_envelopes: Path = None,
         curves_only: bool = False,
     ):
         # Inputs parameters
@@ -71,6 +75,7 @@ class ValidationParameters(Parameters):
             zone1_required=_requires_zone1(selected_pcs),
         )
         self._producer_workbook = producer_workbook
+        self._gfm_envelopes = gfm_envelopes
         self._curves_only = curves_only
 
     def get_sim_type(self) -> int:
@@ -87,6 +92,16 @@ class ValidationParameters(Parameters):
             * 12: Model validation for Storage Model.
         """
         return self._producer.get_sim_type()
+
+    def get_gfm_envelopes_path(self) -> Path:
+        """Get the directory of the Grid Forming envelopes, when it is given.
+
+        Returns
+        -------
+        Path
+            Directory of the envelopes, or None when they are generated from the producers.
+        """
+        return self._gfm_envelopes
 
     def is_dynawo_model_valid(self) -> bool:
         """Checks if the Dynawo model is valid.
